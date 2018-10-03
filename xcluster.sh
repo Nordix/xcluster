@@ -98,11 +98,13 @@ cmd_env() {
 	test -n "$__mem" || __mem=128
 	test -n "$__ipv4_base" || __ipv4_base=172.30
 	test -n "$__ipv6_prefix" || __ipv6_prefix=fd00:1723::
+	test -n "$__loader" || __loader=/lib64/ld-linux-x86-64.so.2
+	test -n "$__cached" || __cached=$XCLUSTER_HOME/cache
 
 	__ipver=4.9.0
 	__dropbearver=2016.74
-	__diskimver=diskim-v0.4.0
-	test -n "$DISKIM" || DISKIM=$XCLUSTER_WORKSPACE/$__diskimver/diskim.sh
+	__diskimver=v0.4.0
+	test -n "$DISKIM" || DISKIM=$XCLUSTER_WORKSPACE/diskim-$__diskimver/diskim.sh
 
 	if test "$cmd" = "env"; then
 		set | grep -E '^(__.+=|XCLUSTER|ARCHIVE=|DISKIM=)' | sort
@@ -170,6 +172,7 @@ cmd_nssetup() {
 	ip -6 addr add $__ipv6_prefix$__ipv4_base.0.$1/128 dev host$1
 	ip -6 ro add $__ipv6_prefix$__ipv4_base.1.$1/128 dev host$1
 	ip -6 ro add default via $__ipv6_prefix$__ipv4_base.1.$1
+	iptables -t nat -A POSTROUTING -s 192.168.2.0/24 -o host$1 -j MASQUERADE
 
 	cmd_br_setup 0
 	cmd_br_setup 1
@@ -241,7 +244,7 @@ cmd_iproute2_build() {
 		cd $d
 		./configure
 		KERNEL_INCLUDE=$__kobj/include \
-			make -j4 || die "Make iproute2 failed"
+			make -j $(nproc) || die "Make iproute2 failed"
 	fi
 }
 cmd_dropbear_build() {
@@ -260,14 +263,17 @@ cmd_dropbear_build() {
 	sed -ie 's,"/usr/bin:/bin","/usr/bin:/bin:/sbin:/usr/sbin",' options.h
 	./configure || die configure
 	print_compiler_flags
-	make -j 4 PROGRAMS='dropbear scp dbclient' || die make
+	make -j $(nproc) PROGRAMS='dropbear scp dbclient' || die make
 }
 
 ##  Image functions;
 ##   mkimage [--image=file] [--bootable] [--format=qcow2] [--size=2G]
+##   cache [--clear] [ovl|tar...]
 ##   ximage [--image=file] [--script=file] [ovl|tar...]
 ##   mkcdrom [--label=label] [--script=file] [--cidata=dir] [ovl|tar...]
-##   install_prog --root=dir [prog...]
+##   install_prog --dest=dir [prog...]
+##   cplib --dest=dir
+##   cploader --dest=dir
 ##   ovld ovl
 ##
 cmd_mkimage() {
@@ -279,12 +285,46 @@ cmd_mkimage() {
 		--format=$__format --size=$__size $dir/image
 }
 
+cmd_cache() {
+	cmd_env
+	test "$__clear" = "yes" && rm -rf "$__cached"
+	local d n dest
+	dest="$__cached/default"
+	if test -n "$SETUP"; then
+		echo "$SETUP" | grep -q , && die "SETUP has many items [$SETUP]"
+		dest="$__cached/$SETUP"
+	fi
+	mkdir -p $dest
+	for n in $@; do
+		d=$(cmd_ovld $n) || die "Can't find ovl [$n]"
+		test -x $d/tar || die "Not executable [$d/tar]"
+		$d/tar "$dest/$n.tar"
+		rm -f "$dest/$n.tar.xz"
+		pxz "$dest/$n.tar"
+	done
+}
+cmd_cached_tar() {
+	test -n "$1" || return 1
+	echo "$SETUP" | grep -q , && return 1
+	cmd_env
+	local dest="$__cached/default"
+	test -n "$SETUP" && dest="$__cached/$SETUP"
+	if test -r $dest/$1.tar.xz; then
+		echo $dest/$1.tar.xz
+		return 0
+	fi
+	return 1
+}
+
 cmd_ximage() {
 	cmd_env
-	local d ovls
+	local c d ovls
 	# Find ovls
 	for d in $@; do
-		if ! test -r $d; then
+		if c=$(cmd_cached_tar $d); then
+			echo "Use Cached [$c]"
+			d=$c
+		elif ! test -r $d; then
 			d=$(cmd_ovld $d) || return
 			test -x $d/tar || die "Not executable [$d/tar]"
 		fi
@@ -295,20 +335,36 @@ cmd_ximage() {
 }
 
 cmd_install_prog() {
-	test -n "$__root" || die 'No root'
-	mkdir -p $__root/bin || die "Mkdir failed [$__root/bin]"
+	test -n "$__root" && __dest=$__root		# backward compatibility
+	test -n "$__dest" || die 'No --dest'
+	mkdir -p $__dest/bin || die "Mkdir failed [$__dest/bin]"
 	local n f files
 	for n in $@; do
 		if test -x $n; then
 			f=$(readlink -f $n)
 		else
 			f=$(which $n)
-			test -n "$f" -a -x "$f" || die "Not found [$n]"
+			if ! test -n "$f" -a -x "$f"; then
+				log "WARNING: Program not found [$n]"
+				continue
+			fi
 		fi
-		cp $f $__root/bin
+		cp $f $__dest/bin
 		files="$files $f"
 	done
-	$DISKIM cplib --dest=$__root $files
+	$DISKIM cplib --dest=$__dest $files
+}
+
+cmd_cplib() {
+	$DISKIM cplib --dest=$__dest $@ || return 1
+}
+cmd_cploader() {
+	test -n "$__dest" || die 'No --dest'
+	test -d "$__dest" || die "Not a directory [$__dest]"
+	cmd_env
+	# TODO: Fix this!!
+	mkdir -p $__dest/lib64
+	cp -L /lib64/ld-linux-x86-64.so.2 $__dest/lib64
 }
 
 cmd_mkcdrom() {
@@ -354,8 +410,13 @@ cmd_cat_tar() {
 cmd_collect_tar() {
 	test -n "$__dest" || die "No dest"
 	test -d "$__dest" || die "Not a directory [$__dest]"
-	local d b i=0
+	local c d b i=0
 	for d in $@; do
+		# Check the cache
+		if c=$(cmd_cached_tar $d); then
+			echo "Use Cached [$c]"
+			d=$c
+		fi
 		if test -f $d; then
 			b=$(basename $d | cut -d. -f1)
 			cmd_cat_tar $d > "$__dest/$(printf "%02d$b.tar" $i)"
@@ -417,6 +478,13 @@ cmd_boot_vm() {
 	test -n "$__mtu" || __mtu=1500
 	local n dev tap append
 	for n in $(echo $__nets | tr , ' '); do
+
+		# Customized network setup, e.g. for ovs
+		if test -n "$__net_setup" -a -x "$__net_setup"; then
+			export __mtu
+			opt="$opt $($__net_setup $node $nodeid $n)" || return
+			continue
+		fi
 
 		dev=xcbr$n
 		ip link show dev $dev > /dev/null 2>&1 || \
@@ -520,7 +588,8 @@ cmd_start() {
 	local n dev
 	for n in 0 1 2; do
 		dev=xcbr$n
-		ip link show dev $dev > /dev/null 2>&1 || die "Bridge not setup [$dev]"
+		ip link show dev $dev > /dev/null 2>&1 || \
+			log "WARNING: Bridge not setup [$dev]"
 	done
 
 	test -n "$__nvm" || __nvm=4
@@ -589,13 +658,15 @@ cmd_scaleout() {
 	test -r $XCLUSTER_TMP/screen/session && cmd=cmd_svm
 	local n
 	for n in $@; do
-		__nets=$__bnet,1
+		__nets=0,1
 		if test $n -gt 220; then
+			# Tester
 			__bg='#004'
-			__nets=$__bnet,2
+			__nets=0,2
 		elif test $n -gt 200; then
+			# Router
 			__bg='#400'
-			__nets=$__bnet,1,2
+			__nets=$0,1,2
 		fi
 		$cmd $n
 	done
