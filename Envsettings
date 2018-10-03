@@ -1,7 +1,7 @@
 #! /bin/sh
 
 if test -z "$XCLUSTER_WORKSPACE"; then
-	export XCLUSTER_WORKSPACE=$HOME/tmp/xcluster/workspace
+	export XCLUSTER_WORKSPACE="$(readlink -f .)/workspace"
 	if ! test -d "$XCLUSTER_WORKSPACE"; then
 		mkdir -p "$XCLUSTER_WORKSPACE"
 		cat <<EOF
@@ -14,6 +14,9 @@ EOF
 	fi
 fi
 
+test -n "$ARCHIVE" || export ARCHIVE=$HOME/Downloads
+mkdir -p $ARCHIVE
+
 vm() {
 	local bg='#040'
 	test "$1" -gt 200 && bg='#400'
@@ -25,12 +28,19 @@ vm() {
 export XCLUSTER="$(readlink -f .)/xcluster.sh"
 alias xc=$XCLUSTER
 
-if test -n "$DISKIM" -a -x $DISKIM; then
+eval $($XCLUSTER env | grep -i DISKIM)
+export DISKIM
+if test -n "$DISKIM" -a -x "$DISKIM"; then
 	alias diskim=$DISKIM
 else
 	cat <<EOF
-"diskim" is missing. Install https://github.com/lgekman/diskim
-and set the \$DISKIM variable to the "diskim.sh" sctipt.
+"diskim" is missing. Install with;
+
+wget -O - -q \\
+ https://github.com/lgekman/diskim/releases/download/$__diskimver/diskim-$__diskimver.tar.xz \\
+ | tar -I pxz -C $XCLUSTER_WORKSPACE -xf -
+
 EOF
 fi
 
+which mke2fs > /dev/null || export PATH=$PATH:/sbin:/usr/sbin
