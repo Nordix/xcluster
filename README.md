@@ -21,7 +21,7 @@ image is shared among the VMs and the `qemu-img` "backing_file"
 function is used to allow individual writes (much like a layered
 file-system);
 
-<img src="xcluster-img.svg" alt="Figure of xcluster disks" width="50%" />
+<img src="xcluster-img.svg" alt="Figure of xcluster disks" width="80%" />
 
 The VMs are given "roles" depending on their hostname;
 
@@ -34,7 +34,7 @@ vm-250 -          Reserved
 
 By default `xcluster` starts with consoles in `xterm` windows;
 
-<img src="xcluster-screenshot.png" alt="xcluster screenshot" width="50%" />
+<img src="xcluster-screenshot.png" alt="xcluster screenshot" width="80%" />
 
 #### Overlays
 

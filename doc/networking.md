@@ -3,7 +3,7 @@
 The `xcluster` network is using linux bridges and tap devices (the
 normal way). The default network has 3 nets (i.e. 3 bridges);
 
-<img src="xcluster-network.svg" alt="Figure, xcluster network" width="50%" />
+<img src="xcluster-network.svg" alt="Figure, xcluster network" width="80%" />
 
  * Internal net - Intended mainly for control functions. All VMs shall
    be reachable via this network.  The `vm` function for open a

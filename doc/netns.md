@@ -15,7 +15,7 @@ For this reason `xcluster` should execute in it's own netns. To setup do;
 xc nsadd 1    # Requires "sudo"
 ```
 
-<img src="xcluster-netns.svg" alt="Figure of xcluster netns" width="50%" />
+<img src="xcluster-netns.svg" alt="Figure of xcluster netns" width="80%" />
 
 Routing and masquerade is setup so the host network (and internet) is
 reachable from the netns. Also traffic from the ["External
