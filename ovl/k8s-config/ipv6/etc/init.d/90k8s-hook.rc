@@ -1,0 +1,90 @@
+#! /bin/sh
+##
+## 90k8s-hook.rc
+##
+##   Called on start of an xcluster with Kubernetes. This script will
+##   monitor the k8s start and initiate things when Kubernetes has
+##   started.
+##
+##
+## Commands;
+##
+
+prg=$(basename $0)
+dir=$(dirname $0); dir=$(readlink -f $dir)
+me=$dir/$prg
+tmp=/tmp/$USER/${prg}_$$
+
+die() {
+    echo "ERROR: $*" >&2
+    rm -rf $tmp
+    exit 1
+}
+help() {
+    grep '^##' $0 | cut -c3-
+    rm -rf $tmp
+    exit 0
+}
+test -n "$1" || help
+echo "$1" | grep -qi "^help\|-h" && help
+
+log() {
+	echo "$(date +%T): $*" >&2
+}
+dbg() {
+	test -n "$__verbose" && echo "$prg: $*" >&2
+}
+
+##   start
+##   stop
+##
+cmd_start() {
+	hostname | grep -q vm-0 || return 0
+	# Restart myself in background
+	test -n "$__log" || __log=/var/log/$prg
+	($me waitfor_k8s > $__log < /dev/null 2>&1) &
+}
+cmd_stop() {
+	return 0
+}
+
+cmd_waitfor_k8s() {
+	log "Waiting for k8s..."
+	. /etc/profile
+	sleep 5
+	while ! kubectl version; do
+		sleep 3
+	done
+	for f in $(find /etc/kubernetes/init.d -maxdepth 1 -type f | sort); do
+		log "Process [$f]..."
+		test -x $f && $f start
+	done
+	log "Quitting..."
+}
+
+
+# Get the command
+cmd=$1
+shift
+grep -q "^cmd_$cmd()" $0 $hook || die "Invalid command [$cmd]"
+
+while echo "$1" | grep -q '^--'; do
+    if echo $1 | grep -q =; then
+	o=$(echo "$1" | cut -d= -f1 | sed -e 's,-,_,g')
+	v=$(echo "$1" | cut -d= -f2-)
+	eval "$o=\"$v\""
+    else
+	o=$(echo "$1" | sed -e 's,-,_,g')
+	eval "$o=yes"
+    fi
+    shift
+done
+unset o v
+long_opts=`set | grep '^__' | cut -d= -f1`
+
+# Execute command
+trap "die Interrupted" INT TERM
+cmd_$cmd "$@"
+status=$?
+rm -rf $tmp
+exit $status

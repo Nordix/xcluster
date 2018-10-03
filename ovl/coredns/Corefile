@@ -1,0 +1,5 @@
+.:53 {
+	proxy . /etc/resolv.conf
+	cache 3000
+	log
+}

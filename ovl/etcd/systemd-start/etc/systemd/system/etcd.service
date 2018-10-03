@@ -1,0 +1,13 @@
+[Unit]
+Description=Etcd
+After=network.target
+
+[Service]
+Type=forking
+ExecStart=/etc/systemd/bin/etcd
+TimeoutSec=10
+StandardOutput=tty
+StandardError=inherit
+
+[Install]
+WantedBy=multi-user.target

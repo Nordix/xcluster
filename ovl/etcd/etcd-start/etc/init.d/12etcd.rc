@@ -1,0 +1,20 @@
+#! /bin/sh
+
+die() {
+        echo "$@"
+        exit 1
+}
+
+hostname | grep -Eq 'vm-[0-9]+$' || die "Invalid hostname [$(hostname)]"
+i=$(hostname | cut -d- -f2 | sed -re 's,^0+,,')
+
+echo "export ETCDCTL_API=3" >> /etc/profile
+export ETCDCTL_API=3
+
+sed -i -e "s,HOSTNAME,$(hostname)," /etc/etcd.conf.yml
+sed -i -e "s,192.168.0.x,192.168.0.$i," /etc/etcd.conf.yml
+
+test $i -le 200 || exit 0
+
+etcd --config-file /etc/etcd.conf.yml > /var/log/etcd.log 2>&1 &
+

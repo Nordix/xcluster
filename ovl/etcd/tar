@@ -1,0 +1,36 @@
+#! /bin/sh
+
+dir=$(dirname $0); dir=$(readlink -f $dir)
+tmp=/tmp/${prg}_$$
+die() {
+    echo "ERROR: $*" >&2
+    rm -rf $tmp
+    exit 1
+}
+
+test -n "$1" || die "No out-file"
+
+#eimage=$EVIP_GIT/utils/eimage.sh
+#test -x $eimage || die "Not executable [$eimage]"
+
+rm -rf $tmp
+mkdir -p $tmp/bin
+#cp -R $dir/default/* $tmp
+for s in $(echo "$SETUP" | tr ',' ' '); do
+	test -d $dir/$s || continue
+	cp -R $dir/$s/* $tmp
+	user_setup=yes
+done
+
+test "$user_setup" = "yes" || cp -R $dir/systemd-start/* $tmp
+
+$dir/etcd.sh download
+$dir/etcd.sh etcd $tmp/bin
+
+# Install libraries
+#LD_LIBRARY_PATH=$tmp/usr/lib $eimage install_libs --xroot=$tmp $tmp/bin/*
+
+cd $tmp
+tar cf "$1" *
+cd - > /dev/null
+rm -rf $tmp
