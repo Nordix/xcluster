@@ -1,0 +1,10 @@
+#! /bin/sh
+
+export PATH="/bin:/sbin:/usr/bin:/usr/sbin"
+
+# Make syslog use local (Swedish/Hungarian) time
+export TZ=CET-1CEST-2,M3.5.0,M10.5.0/3
+
+# Start syslog
+klogd -c 4
+syslogd -s 1000 -b 10

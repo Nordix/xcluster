@@ -1,0 +1,27 @@
+#! /bin/sh
+
+export PATH="/bin:/sbin:/usr/bin:/usr/sbin"
+
+test -x /usr/sbin/ip && rm -f /sbin/ip
+
+echo 0 > /proc/sys/net/ipv6/conf/all/accept_dad
+echo 0 > /proc/sys/net/ipv6/conf/default/accept_dad
+
+ip link set lo up
+ip addr add 127.0.0.0/8 dev lo
+inetd
+
+ip link show dev eth0 > /dev/null 2>&1 || exit 0
+b0=$(ip link show dev eth0 | grep 'link/ether' | cut -d: -f6 | cut -d ' ' -f1)
+i=$(printf "%u" 0x$b0)
+
+echo 0 > /proc/sys/net/ipv6/conf/eth0/accept_dad
+ip link set eth0 up
+ip addr add 192.168.0.$i/24 dev eth0
+ip -6 addr add 2000::$i/64 dev eth0
+ip -6 addr add 2000::192.168.0.$i/64 dev eth0
+
+which dropbear > /dev/null || exit 0
+mkdir -p /etc/dropbear
+touch /var/log/lastlog
+dropbear -B -R

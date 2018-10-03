@@ -1,0 +1,14 @@
+[Unit]
+Description=Syslog
+Before=sysinit.target
+DefaultDependencies=no
+
+[Service]
+Type=forking
+ExecStart=/etc/systemd/bin/syslog
+TimeoutSec=10
+StandardOutput=tty
+StandardError=inherit
+
+[Install]
+WantedBy=sysinit.target

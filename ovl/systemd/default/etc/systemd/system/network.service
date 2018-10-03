@@ -1,0 +1,14 @@
+[Unit]
+Description=Network
+Before=network.target
+
+[Service]
+Type=forking
+ExecStart=/etc/systemd/bin/network
+TimeoutSec=10
+StandardOutput=tty
+StandardError=inherit
+
+[Install]
+WantedBy=network.target
+

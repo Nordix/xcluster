@@ -1,0 +1,42 @@
+#! /bin/sh
+# NOTE: A common pattern is to specify "-" (stdout) as out-file,
+#  so there must be NO log printouts to stdout!
+
+dir=$(dirname $0); dir=$(readlink -f $dir)
+tmp=/tmp/${prg}_$$
+die() {
+	echo "ERROR: $*" >&2
+	rm -rf $tmp
+	exit 1
+}
+log() {
+	echo "INFO: $*" >&2
+}
+
+test -n "$1" || die "No out-file"
+
+rm -rf $tmp
+mkdir -p $tmp/sbin $tmp
+for s in $(echo "$SETUP" | tr ',' ' '); do
+	test -d $dir/$s || continue
+	cp -R $dir/$s/* $tmp
+done
+test -r $tmp/etc/init.d/init.hook || cp -R $dir/default/* $tmp
+
+d=$($dir/systemd.sh d)
+test -d $d/sbin || die "Not a directory [$d/sbin]"
+cp -R $d/sbin $tmp
+mkdir -p $tmp/lib
+cp $d/libsystemd.so $tmp/lib
+
+lutild=$XCLUSTER_WORKSPACE/util-linux-2.31
+cp $lutild/nsenter $tmp/sbin
+
+# Install libraries
+$XCLUSTER cplib --dest=$tmp $tmp/sbin/*
+cp -L $lutild/.libs/libmount.so.1 $tmp/lib/x86_64-linux-gnu
+
+cd $tmp
+tar cf "$1" *
+cd - > /dev/null
+rm -rf $tmp

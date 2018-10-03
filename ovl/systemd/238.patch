@@ -1,0 +1,11 @@
+--- src/core/mount-setup.c.bak	2018-03-26 19:59:56.396543464 +0200
++++ src/core/mount-setup.c	2018-03-26 20:00:25.005453921 +0200
+@@ -300,7 +300,7 @@
+ 
+                                         t = set_remove(controllers, *i);
+                                         if (!t) {
+-                                                free(*i);
++                                                //free(*i);
+                                                 continue;
+                                         }
+                                 }

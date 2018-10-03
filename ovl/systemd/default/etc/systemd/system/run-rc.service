@@ -1,0 +1,13 @@
+[Unit]
+Description=Run the rc files in /etc/init.d
+After=network.target
+
+[Service]
+Type=forking
+ExecStart=/etc/systemd/bin/run-rc
+TimeoutSec=10
+StandardOutput=tty
+StandardError=inherit
+
+[Install]
+WantedBy=multi-user.target

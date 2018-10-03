@@ -1,0 +1,6 @@
+#! /bin/sh
+export PATH="/bin:/sbin:/usr/bin:/usr/sbin"
+mountpoint -q /dev/pts || mount /dev/pts
+export ENV=/etc/profile
+getty 0 /dev/ttyS0
+

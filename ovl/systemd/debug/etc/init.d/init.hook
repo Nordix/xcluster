@@ -1,0 +1,31 @@
+#! /bin/sh
+# Start the system with systemd.
+
+if ip link show dev eth0 > /dev/null 2>&1; then
+  b0=$(ip link show dev eth0 | grep 'link/ether' | cut -d: -f6 | cut -d ' ' -f1)
+  printf "vm-%03u" 0x$b0 > /etc/hostname
+fi
+
+# Systemd mounts this. Avoid double-mount
+#umount /dev/shm
+#Keep on debug
+
+# Systemd wants this link. Otherwise;
+#  "System is tainted: var-run-bad"
+rm -rf /var/run
+mkdir -p /var
+ln -s /run /var/run
+
+# Otherwise nothing is started on a reset!!
+rm -f /etc/machine-id
+
+# Enable core dumps
+# NOTE; Needs patch! Disabled in; src/basic/util.c
+echo "/var/log/dumps/core.%e.%p" > /proc/sys/kernel/core_pattern
+
+getty 0 /dev/ttyS0 &
+# Run the old startup
+(sleep 2; mount /dev/pts; /etc/init.d/rcS) &
+
+
+exec /sbin/systemd --machine-id=$(printf "%032x" 0x$b0)

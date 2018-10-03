@@ -1,0 +1,10 @@
+#! /bin/sh
+
+export PATH="/bin:/sbin:/usr/bin:/usr/sbin"
+export TZ=CET-1CEST-2,M3.5.0,M10.5.0/3
+
+for n in `find /etc/init.d -name "*.rc" | sort`; do
+    $n start
+done
+
+exit 0

@@ -1,0 +1,15 @@
+[Unit]
+Description=Login
+After=multi-user.target
+
+[Service]
+Type=simple
+ExecStart=/etc/systemd/bin/login
+TimeoutSec=10
+StandardOutput=tty
+StandardError=inherit
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
+
