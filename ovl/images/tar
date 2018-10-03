@@ -1,0 +1,24 @@
+#! /bin/sh
+# NOTE: A common pattern is to specify "-" (stdout) as out-file,
+#  so there must be NO log printouts to stdout!
+
+dir=$(dirname $0); dir=$(readlink -f $dir)
+
+die() {
+	echo "ERROR: $*" >&2
+	rm -rf $tmp
+	exit 1
+}
+log() {
+	echo "INFO: $*" >&2
+}
+test -n "$1" || die "No out-file"
+
+eval $($XCLUSTER env)
+test -r $XCLUSTER_TMP/images.tar || die "No images built"
+if test "$1" = "-"; then
+	cat $XCLUSTER_TMP/images.tar
+else
+	cp $XCLUSTER_TMP/images.tar "$1"
+fi
+
