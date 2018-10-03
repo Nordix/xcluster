@@ -1,0 +1,25 @@
+#! /bin/sh
+
+test -x /usr/sbin/ip && rm -f /sbin/ip
+
+ip link set lo up
+ip addr add 127.0.0.0/8 dev lo
+inetd
+
+ip link show dev eth0 > /dev/null 2>&1 || exit 0
+b0=$(ip link show dev eth0 | grep 'link/ether' | cut -d: -f6 | cut -d ' ' -f1)
+i=$(printf "%u" 0x$b0)
+
+hostname $(printf 'vm-%03u' $i)
+
+# Get the mtu from the kernel command line. The mtu shall be the same
+# on eth0 as on the supporting tap-device.
+eval $(grep -oE 'mtu0=[0-9]+' /proc/cmdline)
+test -n "$mtu0" && ip link set eth0 mtu $mtu0
+
+# Be warned;
+# Error: an inet prefix is expected rather than "192.168.0.08/24".
+
+ip link set eth0 up
+ip addr add 192.168.0.$i/24 dev eth0
+ip -6 addr add 2000::$i/64 dev eth0

@@ -1,0 +1,78 @@
+#! /bin/sh
+# NOTE: A common pattern is to specify "-" (stdout) as out-file,
+#  so there must be NO log printouts to stdout!
+
+dir=$(dirname $0); dir=$(readlink -f $dir)
+tmp=/tmp/$USER/xcluster_$$
+die() {
+	echo "ERROR: $*" >&2
+	rm -rf $tmp
+	exit 1
+}
+log() {
+	echo "INFO: $*" >&2
+}
+
+test -n "$1" || die "No out-file"
+test -n "$XCLUSTER" || die 'Not set [$XCLUSTER]'
+test -x "$XCLUSTER" || die "Not executable $XCLUSTER]"
+eval $($XCLUSTER env)
+
+mkdir -p $tmp/bin $tmp/lib64 $tmp/sbin
+
+f=/lib64/ld-linux-x86-64.so.2
+test -r $f || die "Loader not readable [$f]"
+cp -L $f $tmp/lib64
+
+f=/sbin/ldconfig.real
+test -x $f || die "Not executable [$f]"
+cp $f $tmp/sbin/ldconfig
+
+f=$XCLUSTER_WORKSPACE/$__bbver/busybox
+test -x $f || die "Not executable [$f]"
+cp $f $tmp/bin
+
+dropbeard=$XCLUSTER_WORKSPACE/dropbear-$__dropbearver
+for f in dropbear scp dbclient; do
+	test -x $dropbeard/$f || die "Not executable [$dropbeard/$f]"
+	cp $dropbeard/$f $tmp/bin
+done
+
+for f in $XCLUSTER_WORKSPACE/iproute2-$__ipver/ip/ip; do
+	test -x $f || die "Not executable [$f]"
+	cp $f $tmp/sbin
+done
+$DISKIM cplib --dest=$tmp $tmp/bin/* $tmp/sbin/*
+
+# libnss_files.so is needed for /etc/services parsing
+mkdir -p $tmp/lib/x86_64-linux-gnu
+for n in libnss_files.so.2 libnss_dns.so.2 libresolv.so.2 libpthread.so.0; do
+	f=/lib/x86_64-linux-gnu/$n
+	test -r $f || die "Not readable [$f]"
+	cp -L $f $tmp/lib/x86_64-linux-gnu
+done
+
+INSTALL_MOD_PATH=$tmp make -C $__kobj modules_install 1>&2 > /dev/null \
+	|| die "Failed to install modules from [$__kobj]"
+
+$XCLUSTER install_prog --root=$tmp tcpdump netstat strace
+
+if test "$__bootable" = "yes"; then
+	test -r $__kbin || die "Not readable [$__kbin]"
+	mkdir -p $tmp/boot
+	cp $__kbin $tmp/boot
+	cat > $tmp/boot/extlinux.conf <<EOF
+PROMPT 0
+TIMEOUT 0
+DEFAULT default
+LABEL default
+  KERNEL bzImage
+  APPEND noapic root=/dev/vda rw init=/init
+EOF
+fi
+
+cp -R $dir/rootfs/* $tmp
+cd $tmp
+tar cf $1 *
+cd
+rm -rf $tmp

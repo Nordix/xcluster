@@ -1,0 +1,5 @@
+#! /bin/sh
+which dropbear > /dev/null || exit 0
+mkdir -p /etc/dropbear
+touch /var/log/lastlog
+dropbear -B -R

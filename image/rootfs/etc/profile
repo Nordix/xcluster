@@ -1,0 +1,6 @@
+# Shell init
+export TZ=`cat /etc/TZ`
+alias ls='ls --color=never -F'
+alias ll='ls --color=never -Fl'
+alias ssh='dbclient -y -y'
+PS1='\h \w \$ '

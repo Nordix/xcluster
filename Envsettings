@@ -1,0 +1,36 @@
+#! /bin/sh
+
+if test -z "$XCLUSTER_WORKSPACE"; then
+	export XCLUSTER_WORKSPACE=$HOME/tmp/xcluster/workspace
+	if ! test -d "$XCLUSTER_WORKSPACE"; then
+		mkdir -p "$XCLUSTER_WORKSPACE"
+		cat <<EOF
+
+The \$XCLUSTER_WORKSPACE is set to;
+
+  XCLUSTER_WORKSPACE=$XCLUSTER_WORKSPACE
+
+EOF
+	fi
+fi
+
+vm() {
+	local bg='#040'
+	test "$1" -gt 200 && bg='#400'
+	test "$1" -gt 220 && bg='#004'
+	XXTERM=XCLUSTER exec xterm -T "vm-$1" -fg wheat -bg "$bg" \
+		-e "telnet 192.168.0.$1" &
+}
+
+export XCLUSTER="$(readlink -f .)/xcluster.sh"
+alias xc=$XCLUSTER
+
+if test -n "$DISKIM" -a -x $DISKIM; then
+	alias diskim=$DISKIM
+else
+	cat <<EOF
+"diskim" is missing. Install https://github.com/lgekman/diskim
+and set the \$DISKIM variable to the "diskim.sh" sctipt.
+EOF
+fi
+
