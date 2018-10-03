@@ -1,0 +1,21 @@
+apiVersion: apps/v1beta1
+kind: Deployment
+metadata:
+  name: alpine-deployment
+spec:
+  selector:
+    matchLabels:
+      app: alpine
+  replicas: 4
+  template:
+    metadata:
+      labels:
+        app: alpine
+    spec:
+      containers:
+      - name: alpine
+        image: docker.io/library/alpine:3.8
+        command:
+          - /bin/sh
+          - "-c"
+          - "sleep 60m"
