@@ -35,7 +35,7 @@ Build images
 ------------
 
 There are
-[many-ways](]https://www.projectatomic.io/blog/2018/03/the-many-ways-to-build-oci-images/)
+[many-ways](https://www.projectatomic.io/blog/2018/03/the-many-ways-to-build-oci-images/)
 to build OCI images. Neither is good.
 
 Uses the (configurable) root directory `/var/lib/containers/storage`.

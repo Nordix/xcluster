@@ -153,9 +153,10 @@ Pods, Containers and Images
 ### Images
 
 [Images](https://kubernetes.io/docs/concepts/containers/images/) are
-"Pre-pulled" in xcluster since we run "off-line".  The image "pull"
-operation is quite complicated with `cri-o`, please read more in the
-[images](../images/README.md) overlay.
+"Pre-pulled" in xcluster since we often run "off-line" and since it is
+much faster. The image "pull" operation is quite complicated with
+`cri-o`, please read more in the [images](../images/README.md)
+overlay.
 
 
 
