@@ -83,6 +83,31 @@ You must be a member of the `kvm` group to be able to run VMs;
 sudo usermod -aG kvm <your-user>
 ```
 
+#### Environment and default options
+
+Options to the `xcluster` functions can be specified on the command
+line as "long options" for instance `--nrouters=2` or as an
+environment variable;
+
+```
+xc start --nrouter=2
+# same as;
+__nrouters=2 xc start
+# same as;
+export __nrouters=2
+xc start
+```
+
+This makes it very easy to set default options. The current
+environment settings and default options can be printed with;
+
+```
+xc env
+# If you need to use the settings in a script do;
+eval $($XCLUSTER env)
+```
+
+
 #### The $ARCHIVE variable
 
 `Xcluster` uses the $ARCHIVE directory to store for instance
