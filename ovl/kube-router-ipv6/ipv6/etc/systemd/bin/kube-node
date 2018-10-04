@@ -1,0 +1,61 @@
+#! /bin/sh
+
+export PATH="/bin:/sbin:/usr/bin:/usr/sbin"
+
+die() {
+        echo "$@"
+        exit 1
+}
+
+hostname | grep -Eq 'vm-[0-9]+$' || die "Invalid hostname [$(hostname)]"
+i=$(hostname | cut -d- -f2 | sed -re 's,^0+,,')
+test $i -le 200 || exit 0
+
+. /etc/profile
+
+# Cri-o *requires* a default route. Any route seems to do nicely, even
+# an ipv4 route on a ipv6 cluster.
+ip -6 route add default \
+	nexthop via 1000::1:192.168.1.201 nexthop via 1000::1:192.168.1.202
+
+crio -log-level debug > /var/log/crio.log 2>&1 &
+sleep 0.2
+
+# See;
+# https://stackoverflow.com/questions/46726216/kubelet-fails-to-get-cgroup-stats-for-docker-and-kubelet-services
+
+kubelet --container-runtime=remote --address=:: --node-ip=1000::1:192.168.1.$i \
+	--container-runtime-endpoint=unix:///var/run/crio/crio.sock \
+	--image-service-endpoint=unix:///var/run/crio/crio.sock \
+	--register-node=true --kubeconfig $KUBECONFIG \
+	--network-plugin=cni --allow-privileged \
+	--runtime-cgroups=/systemd/system.slice \
+	--kubelet-cgroups=/systemd/system.slice > /var/log/kubelet.log 2>&1 &
+
+kube-proxy --config /etc/kubernetes/kube-proxy.config \
+	> /var/log/kube-proxy.log 2>&1 &
+
+# NOTE: --proxy-mode=ipvs does not vork for ipv6 due to a bug in Kubernetes.
+#	--feature-gates=SupportIPVSProxyMode=true --proxy-mode=ipvs \
+# For --proxy-mode=iptables you must add;
+ip -6 ro add local fd00:4000::/112 dev lo
+
+start_kube_router() {
+	kube-router --run-service-proxy=false -v=63 \
+		--cluster-cidr=1000::2:11.0.0.0/112 \
+		--kubeconfig $KUBECONFIG --run-router=true \
+		--run-firewall=false --enable-overlay=false --advertise-pod-cidr=false \
+		--advertise-external-ip=false --advertise-loadbalancer-ip=false \
+		--advertise-cluster-ip=false --routes-sync-period=10s
+}
+monitor_kube_router() {
+	local log=/var/log/kube-router.log
+	while true; do
+		echo "======= $(date) kube_router starting..." >> $log			
+		start_kube_router >> $log 2>&1
+		echo "======= $(date) kube_router crashed" >> $log
+		sleep 5
+	done
+}
+
+(sleep 5; monitor_kube_router) > /dev/null 2>&1 &
