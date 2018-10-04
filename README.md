@@ -152,6 +152,8 @@ above. You can login to a vm using `vm`;
 ```
 xc start
 vm 1
+# If the windows closes immediately, to troubleshoot do;
+xtermopt=-hold xc start --nrouters=0 --nvm=2
 ```
 
 This is the base `xcluster`. All VMs are connected to a network and
