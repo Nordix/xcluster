@@ -50,6 +50,10 @@ ovl directories. Example;
 xc mkcdrom systemd etcd; xc start
 ```
 
+**Note** the "normal" way to add sw it to create an overlay, include it in
+`xc mkcdrom` and re-start. Since re-start is so fast it is slower and
+clumsier to copy sw to running VMs, e.g. with `ssh`.
+[read more](doc/overlays.md).
 
 
 ### Execution environment and dependencies

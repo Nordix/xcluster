@@ -1,6 +1,6 @@
 # Build xcluster
 
-Described howto build kernel, images and some overlays (including
+Describes howto build kernel, images and some overlays (including
 Kubernetes) from scratch. This may be necessary for instance if your
 distribution is incompatible with the binary release.
 
@@ -51,7 +51,15 @@ xc stop
 exit        # from the netns
 ```
 
-## Ovl systemd
+## Overlays
+
+Clear the cache;
+
+```
+xc cache --clear
+```
+
+### Systemd
 
 This is by far the worst overlay to build. Read more in the overlay
 [readme](../ovl/systemd/README.md).
@@ -70,7 +78,7 @@ xc cache systemd
 SETUP=ipv6 xc cache systemd
 ```
 
-## Ovl iptools
+### Iptools
 
 Tools such as `iptables` or `ipset` must be built to a specific kernel
 so they can not be taken from your host machine.
@@ -97,6 +105,22 @@ cd $($XCLUSTER ovld etcd)
 # Cache it;
 xc cache etcd
 SETUP=ipv6 xc cache etcd
+```
+
+### Ovl gobgp
+
+```
+cd $($XCLUSTER ovld gobgp)
+./gobgp.sh zdownload
+./gobgp.sh zbuild
+go get -u github.com/golang/dep/cmd/dep
+go get -u github.com/osrg/gobgp
+cd $GOPATH/src/github.com/osrg/gobgp
+dep ensure
+go install ./cmd/...
+# Cache it;
+xc cache gobgp
+SETUP=ipv6 xc cache gobgp
 ```
 
 ### Kubernetes
@@ -151,7 +175,19 @@ xc cache skopeo
 SETUP=ipv6 xc cache skopeo
 ```
 
-#### Pre-pulled images
+### Kube-router
+
+```
+go get -u github.com/cloudnativelabs/kube-router
+go get github.com/matryer/moq
+cd $GOPATH/src/github.com/cloudnativelabs/kube-router
+make clean; make
+# Cache it;
+xc cache kube-router
+# (ipv6 not supported yet)
+```
+
+### Pre-pulled images
 
 Some kubernetes images must be built and be "pre-pulled". Read more in
 the image overlay [readme](../ovl/images/README.md). To build an image
@@ -198,3 +234,31 @@ xc ximage systemd etcd iptools kubernetes coredns mconnect images
 
 Test it as described in the [Quick-start](../README.md#quick-start).
 
+## Release
+
+Build everything as described above.
+
+Make sure the ovl cache looks like this;
+
+```
+> xc cache --list
+Cache dir [.../workspace/xcluster/cache];
+ipv6/gobgp.tar.xz
+ipv6/iptools.tar.xz
+ipv6/systemd.tar.xz
+ipv6/etcd.tar.xz
+ipv6/skopeo.tar.xz
+default/kube-router.tar.xz
+default/gobgp.tar.xz
+default/iptools.tar.xz
+default/systemd.tar.xz
+default/etcd.tar.xz
+default/skopeo.tar.xz
+```
+
+Create the release tar and compress it;
+
+```
+./xcadmin.sh release --version=v0.2
+pxz /tmp/xcluster-v0.2.tar
+```

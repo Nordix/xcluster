@@ -2,21 +2,17 @@ Xcluster overlay - externalip
 =============================
 
 A very small overlay on top of Kubernetes to use `externalIPs` in
-services for `mconnect` and `busybox` applications.
+the service for `mconnect`.
 
 Usage
 -----
 
 ```
-images make coredns busybox docker.io/nordixorg/mconnect:0.2
 xc mkcdrom externalip; xc start
 # On cluster;
 kubectl apply -f /etc/kubernetes/mconnect.yaml
 # Outside cluster;
 mconnect -address 10.0.0.2:5001 -nconn 400
-telnet 10.0.0.2 1023
-ssh -p 1022 root@10.0.0.2 hostname
-wget -q -O - http://10.0.0.2:1080/cgi-bin/info
 ```
 For ipv6;
 
@@ -24,18 +20,16 @@ For ipv6;
 SETUP=ipv6 xc mkcdrom externalip; xc start
 # On cluster;
 kubectl apply -f /etc/kubernetes/mconnect.yaml
-kubectl apply -f /etc/kubernetes/busybox.yaml
 # Outside cluster;
-kubectl config use-context xcluster6
 mconnect -address [1000::2]:5001 -nconn 400
-telnet 1000::2 1023
-ssh -p 1022 root@1000::2 hostname
-wget -q -O - http://[1000::2]:1080/cgi-bin/info
 ```
 
 
 The ipv6/ecmp/ssh bug
 ---------------------
+
+This bug it fixed in kernel 4.18, but may be present in earlier
+kernels.
 
 ```
 > ssh -p 1022 root@1000::2 hostname
