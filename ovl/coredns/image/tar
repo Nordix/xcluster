@@ -19,13 +19,6 @@ test -x $prg || die "Not executable [$prg]"
 mkdir -p $tmp/bin
 cp $prg $tmp/bin
 
-for s in $(echo "$SETUP" | tr ',' ' '); do
-	test -d $dir/$s || continue
-	cp -R $dir/$s/* $tmp
-	setup_copied=yes
-done
-test "$setup_copied" != "yes" && cp -R $dir/default/* $tmp
-
 which jq > /dev/null || die "Can't find [jq]"
 cp $(which jq) $tmp/bin
 

@@ -10,9 +10,6 @@ die() {
 
 test -n "$1" || die "No out-file"
 
-#eimage=$EVIP_GIT/utils/eimage.sh
-#test -x $eimage || die "Not executable [$eimage]"
-
 rm -rf $tmp
 mkdir -p $tmp/bin
 #cp -R $dir/default/* $tmp
