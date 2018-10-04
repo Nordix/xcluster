@@ -268,7 +268,7 @@ cmd_dropbear_build() {
 
 ##  Image functions;
 ##   mkimage [--image=file] [--bootable] [--format=qcow2] [--size=2G]
-##   cache [--clear] [ovl|tar...]
+##   cache [--clear] [--list] [ovl|tar...]
 ##   ximage [--image=file] [--script=file] [ovl|tar...]
 ##   mkcdrom [--label=label] [--script=file] [--cidata=dir] [ovl|tar...]
 ##   install_prog --dest=dir [prog...]
@@ -287,6 +287,11 @@ cmd_mkimage() {
 
 cmd_cache() {
 	cmd_env
+	if test "$__list" = "yes"; then
+		echo "Cache dir [$__cached];"
+		find "$__cached" -type f | sed -e "s,$__cached/,,"
+		return 0
+	fi
 	test "$__clear" = "yes" && rm -rf "$__cached"
 	local d n dest
 	dest="$__cached/default"

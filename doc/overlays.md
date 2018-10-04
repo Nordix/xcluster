@@ -52,11 +52,14 @@ Overlays may be cached. This server two purposes;
 
  2. Pre-build overlays that are particularly hard to build
 
-The `xcluster` binary release contains some cached overlays.
-
 Overlays are not cached automatically you must cache them;
 
 ```
 xc cache systemd etc
+xc cache --list
 xc cache --clear   # Clears the cache
 ```
+
+The `xcluster` binary release contains some cached overlays for
+Kubernetes setup that you usually should keep.
+
