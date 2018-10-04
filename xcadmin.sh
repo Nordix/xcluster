@@ -32,8 +32,27 @@ dbg() {
 	test -n "$__verbose" && echo "$prg: $*" >&2
 }
 
+##   ovlindex --src=dir
+##     Print a overlay-index on stdout.
+##
+cmd_ovlindex() {
+	cat <<EOF
+# Overlay index
 
-##   relese --vestion=ver
+EOF
+	test -n "$__src" || return 0
+	mkdir -p $tmp
+	find "$__src" -maxdepth 2 -mindepth 2 -name README.md > $tmp/ovls
+	local f n
+	for f in $(sort < $tmp/ovls); do
+		n=$(echo $f | sed -s 's,/README.md,,')
+		n=$(basename $n)
+		echo " * [$n]($f)"
+	done
+}
+
+
+##   release --version=ver
 ##     Create a release tar archive.
 ##
 cmd_release() {
@@ -47,7 +66,7 @@ cmd_release() {
 	T=$tmp/xcluster
 	mkdir -p $T
 	cp -R $d/* $T
-	rm -rf $T/.git
+	rm -rf $T/.git $T/xcadmin.sh
 
 	H=$T/workspace/xcluster
 	mkdir -p $H

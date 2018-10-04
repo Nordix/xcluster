@@ -14,6 +14,7 @@ More info;
  * [Networking](doc/networking.md). Default network setup.
  * [Network name space](doc/netns.md). Setup a netn for running `xcluster` and DNS
  * [Overlays](doc/overlays.md). How they work and how they are created
+ * [Overlay index](ovl-index.md)
  * [Disk-image and kernel](doc/image.md). How they are created and extended.
 
 An `xcluster` consists of a number of identical (kvm) VMs. The disk
