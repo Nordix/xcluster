@@ -1,0 +1,48 @@
+#! /bin/sh
+# NOTE: A common pattern is to specify "-" (stdout) as out-file,
+#  so there must be NO log printouts to stdout!
+
+dir=$(dirname $0); dir=$(readlink -f $dir)
+tmp=/tmp/${prg}_$$
+die() {
+	echo "ERROR: $*" >&2
+	rm -rf $tmp
+	exit 1
+}
+log() {
+	echo "INFO: $*" >&2
+}
+
+test -n "$1" || die "No out-file"
+
+# Local help script
+lscript=$dir/gobgp.sh
+
+rm -rf $tmp
+mkdir -p $tmp/sbin
+for s in $(echo "$SETUP" | tr ',' ' '); do
+	test -d $dir/$s || continue
+	cp -R $dir/$s/* $tmp
+	setup_copied=yes
+done
+test "$setup_copied" != "yes" && cp -R $dir/default/* $tmp
+
+for n in $GOPATH/bin/gobgp $GOPATH/bin/gobgpd; do
+	test -x $n || die "Not executable [$n]"
+	cp $n $tmp/sbin
+done
+
+# Copy "zebra"
+d=$($lscript zdir)
+f=$d/zebra/.libs/zebra
+test -x $f || die "Not executable [$f]"
+cp $f $tmp/sbin
+f=$d/lib/.libs/libzebra.so.1
+test -r $f || die "Not readable [$f]"
+mkdir -p $tmp/lib64
+cp -L $f $tmp/lib64
+
+cd $tmp
+tar cf "$1" *
+cd - > /dev/null
+rm -rf $tmp
