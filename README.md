@@ -53,9 +53,14 @@ xc mkcdrom systemd etcd; xc start
 
 ### Execution environment and dependencies
 
-`Xcluster` is developed on `Ubuntu 18.04.1 LTS`. It will probably not
-work on other distributions (mainly due to variations in libs) but the
-necessary adaptions should not be overwhelming.
+`Xcluster` is developed on `Ubuntu 18.04.1 LTS`. It seems to work fine
+also on Ubuntu 16.04 LTS but it will probably not work on other
+distributions (mainly due to variations in libs). If you run on
+another distribution than Ubuntu 18.04 you *may* run into problems
+with pre-built images and cached overlays from the binary release when
+you add own programs (because of library version probems). In that
+case there may be no other option than to rebuild all images and
+overlays locally [from scratch](doc/build.md).
 
 You must grant execution without `root` for some binaries;
 
