@@ -1,0 +1,50 @@
+#! /bin/sh
+
+prg=$(basename $0)
+dir=$(dirname $0); dir=$(readlink -f $dir)
+tmp=/tmp/${prg}_$$
+die() {
+    echo "ERROR: $*" >&2
+    rm -rf $tmp
+    exit 1
+}
+
+test -n "$1" || die "No out-file"
+
+sysd=$XCLUSTER_WORKSPACE/sys
+if ! test -x $sysd/usr/sbin/xtables-multi; then
+	cat >&2 <<EOF
+
+Iptools are not built. Please do;
+
+  $dir/iptools.sh download
+  $dir/iptools.sh build
+
+EOF
+	die "Iptools not built"
+fi
+
+mkdir -p $tmp
+for s in $(echo "$SETUP" | tr ',' ' '); do
+	if ! test -d $dir/$s; then
+		continue
+	fi
+	cp -R $dir/$s/* $tmp
+done
+
+mkdir -p $tmp/usr/sbin $tmp/usr/lib
+cp -R $sysd/usr/sbin $tmp/usr
+cp -R $sysd/usr/lib $tmp/usr
+
+# Install libraries
+$XCLUSTER cplib --dest=$tmp $tmp/usr/sbin/*
+
+ln -s ../xtables $tmp/usr/lib/x86_64-linux-gnu/xtables
+
+# Clean-up work-around
+rm -rf $tmp/$sysd $tmp/home $tmp/usr/lib/pkgconfig
+
+cd $tmp
+tar cf "$1" *
+cd - > /dev/null
+rm -rf $tmp
