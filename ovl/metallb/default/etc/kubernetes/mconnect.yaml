@@ -1,0 +1,33 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: mconnect
+  annotations:
+    metallb.universe.tf/allow-shared-ip: ekvm
+spec:
+  selector:
+    app: ekvm
+  ports:
+  - port: 5001
+  loadBalancerIP: 10.0.0.2
+  type: LoadBalancer
+---
+apiVersion: apps/v1beta1
+kind: Deployment
+metadata:
+  name: mconnect-deployment
+spec:
+  selector:
+    matchLabels:
+      app: ekvm
+  replicas: 4
+  template:
+    metadata:
+      labels:
+        app: ekvm
+    spec:
+      containers:
+      - name: mconnect
+        image: docker.io/nordixorg/mconnect:0.2
+        ports:
+        - containerPort: 5001

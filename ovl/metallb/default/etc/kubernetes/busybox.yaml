@@ -1,0 +1,56 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: ekvm-busybox
+  annotations:
+    metallb.universe.tf/allow-shared-ip: ekvm
+spec:
+  selector:
+    app: ekvm
+  ports:
+  - port: 1023
+    name: telnet
+    targetPort: 23
+  - port: 1022
+    name: ssh
+    targetPort: 22
+  - port: 1080
+    name: http
+    targetPort: 80
+#  externalTrafficPolicy: Local
+  loadBalancerIP: 10.0.0.2
+  type: LoadBalancer
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ekvm-busybox-deployment
+spec:
+  selector:
+    matchLabels:
+      app: ekvm
+  replicas: 4
+  template:
+    metadata:
+      labels:
+        app: ekvm
+    spec:
+      containers:
+      - name: ekvm-busybox
+        image: example.com/ekvm-busybox:0.0.1
+        ports:
+        - containerPort: 23
+          name: telnet
+        - containerPort: 22
+          name: ssh
+        - containerPort: 80
+          name: http
+        livenessProbe:
+          exec:
+            command:
+            - test
+            - "!"
+            - -r
+            - /tmp/disaster
+          initialDelaySeconds: 15
+          timeoutSeconds: 1

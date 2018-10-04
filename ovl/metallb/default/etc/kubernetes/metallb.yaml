@@ -1,0 +1,21 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: metallb
+spec:
+  selector:
+    matchLabels:
+      app: metallb
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: metallb
+    spec:
+      hostNetwork: true
+      containers:
+      - name: metallb
+        image: example.com/metallb:0.7.3
+        securityContext:
+          privileged: true
+

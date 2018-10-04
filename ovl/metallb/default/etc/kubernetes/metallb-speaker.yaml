@@ -1,0 +1,21 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: metallb-speaker
+spec:
+  selector:
+    matchLabels:
+      app: metallb-speaker
+  template:
+    metadata:
+      labels:
+        app: metallb-speaker
+    spec:
+      hostNetwork: true
+      containers:
+      - name: metallb
+        image: example.com/metallb:0.7.3
+        command:
+          - /bin/speaker-launcher
+        securityContext:
+          privileged: true

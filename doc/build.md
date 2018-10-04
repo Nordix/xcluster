@@ -212,10 +212,24 @@ mkdir -p $GOPATH/bin
 mv coredns $GOPATH/bin
 ```
 
+Build metallb. For now a home-built image is used so it must be
+pre-pulled.
+
+```
+go get -u go.universe.tf/metallb
+cd $GOPATH/src/go.universe.tf/metallb
+git checkout v0.7.3
+go install go.universe.tf/metallb/speaker
+go install go.universe.tf/metallb/controller
+strip $GOPATH/bin/controller $GOPATH/bin/speaker
+```
+
+Create the images overlay;
+
 ```
 cd $($XCLUSTER ovld images)
 docker rmi example.com/coredns:0.1
-./images.sh make coredns docker.io/nordixorg/mconnect:0.2
+./images.sh make coredns metallb docker.io/nordixorg/mconnect:0.2
 eval $($XCLUSTER env | grep XCLUSTER_TMP)
 ls $XCLUSTER_TMP   # An "images.tar" should be here
 ```
