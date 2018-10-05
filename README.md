@@ -17,7 +17,7 @@ More info;
  * [Overlay index](ovl-index.md)
  * [Disk-image and kernel](doc/image.md). How they are created and extended.
  * [Build from scratch](doc/build.md). If the binary release can't be used.
- * [Headless operation](doc/ci). For instance for CI.
+ * [Headless operation](doc/ci.md). For instance for CI.
 
 An `xcluster` consists of a number of identical (kvm) VMs. The disk
 image is shared among the VMs and the `qemu-img` "backing_file"
