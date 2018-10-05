@@ -43,3 +43,21 @@ xc mystart
 ```
 
 Copy `cmd_start()` to your hook and modify it to your needs.
+
+### Alternative network
+
+If the network topology is ok but you want to use something else than
+the default bridge/tap networking, for instance
+[ovs](https://www.openvswitch.org/) then you can secify a script with
+the `__net_setup` variable. The script will be called for each vm
+like;
+
+```
+$__net_setup <node> <net>
+# Example; $__net_setup 3 1
+```
+
+Your script must do necessary configuration and print out options to
+`kvm`. The easiest is to copy from the `cmd_boot_vm()` function in
+`xcluster.sh` and modify.
+
