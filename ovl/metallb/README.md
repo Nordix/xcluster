@@ -21,13 +21,31 @@ Metallb has two major (independent) functions;
 Usage
 -----
 
+Assuming `xcluster` k8s image;
+
+```
+xc mkcdrom metallb gobgp; xc start
+# On cluster;
+kubectl apply -f https://raw.githubusercontent.com/google/metallb/v0.7.3/manifests/metallb.yaml
+kubectl apply -f /etc/kubernetes/metallb-config.yaml
+kubectl apply -f /etc/kubernetes/mconnect.yaml
+# On a router vm;
+gobgp neighbor
+ip ro
+mconnect -address 10.0.0.2:5001 -nconn 1000
+```
+
+## Home-built pod
+
+For internal experiments a local pod can be used;
+
 Ipv4 setup;
 
 ```
 images make coredns metallb docker.io/nordixorg/mconnect:0.2
 xc mkcdrom metallb gobgp images; xc start
 # On cluster;
-kubectl apply -f /etc/kubernetes/metallb-config.yaml
+kubectl apply -f /etc/kubernetes/metallb-config-internal.yaml
 kubectl apply -f /etc/kubernetes/metallb.yaml
 kubectl apply -f /etc/kubernetes/metallb-speaker.yaml
 kubectl apply -f /etc/kubernetes/mconnect.yaml
