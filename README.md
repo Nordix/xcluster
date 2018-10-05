@@ -12,10 +12,12 @@ More info;
 
  * [Quick Start](#quick-start)
  * [Networking](doc/networking.md). Default network setup.
- * [Network name space](doc/netns.md). Setup a netn for running `xcluster` and DNS
+ * [Network name space](doc/netns.md). Setup a netns for running `xcluster` and DNS
  * [Overlays](doc/overlays.md). How they work and how they are created
  * [Overlay index](ovl-index.md)
  * [Disk-image and kernel](doc/image.md). How they are created and extended.
+ * [Build from scratch](doc/build.md). If the binary release can't be used.
+ * [Headless operation](doc/ci). For instance for CI.
 
 An `xcluster` consists of a number of identical (kvm) VMs. The disk
 image is shared among the VMs and the `qemu-img` "backing_file"
@@ -81,7 +83,8 @@ suggestion, there may be others;
 apt install -y jq net-tools libelf-dev pkg-config libmnl-dev \
  libdb-dev docbook-utils libpopt-dev gperf libcap-dev libgcrypt20-dev \
  libgpgme-dev libglib2.0-dev gawk libreadline-dev libc-ares-dev xterm \
- qemu-kvm curl pxz bison flex libc6:i386 uuid libgmp-dev libncurses-dev
+ qemu-kvm curl pxz bison flex libc6:i386 uuid libgmp-dev libncurses-dev \
+ screen
 apt-add-repository -y ppa:projectatomic/ppa
 apt update
 apt install -y skopeo
