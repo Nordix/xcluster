@@ -262,7 +262,15 @@ default/skopeo.tar.xz
 Create the release tar and compress it;
 
 ```
+ver=v0.3
 cd $(dirname $XCLUSTER)
-./xcadmin.sh release --version=v0.2
-pxz /tmp/xcluster-v0.2.tar
+./xcadmin.sh release --version=$ver
+pxz /tmp/xcluster-$ver.tar
+```
+
+Test!
+
+```
+git tag $ver
+git push origin $ver
 ```
