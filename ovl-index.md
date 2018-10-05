@@ -6,6 +6,7 @@
  * [gobgp](ovl/gobgp/README.md)
  * [images](ovl/images/README.md)
  * [iptools](ovl/iptools/README.md)
+ * [k8s-config](ovl/k8s-config/README.md)
  * [kubernetes](ovl/kubernetes/README.md)
  * [kube-router-ipv6](ovl/kube-router-ipv6/README.md)
  * [kube-router](ovl/kube-router/README.md)
