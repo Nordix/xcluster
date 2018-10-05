@@ -632,6 +632,61 @@ cmd_start() {
 
 }
 
+cmd_starts() {
+	cmd_env
+
+	local n dev
+	for n in 0 1 2; do
+		dev=xcbr$n
+		ip link show dev $dev > /dev/null 2>&1 || \
+			log "WARNING: Bridge not setup [$dev]"
+	done
+
+	test -n "$__nvm" || __nvm=4
+	__quiet=yes
+	if ! cmd_status; then
+		stop
+		sleep 1
+	fi
+	rm -rf $XCLUSTER_TMP/screen $XCLUSTER_TMP/*.img
+
+	# Create a screen session
+	local T=$XCLUSTER_TMP/screen
+	rm -rf $T
+	mkdir -p $T
+	local session=$(mktemp -u xcluster-XXXX)
+	echo $session > $T/session
+	local screen_rc=$T/screen.rc
+	echo logfile "$T/screenlog.%t" > $screen_rc
+	echo screen -t tmp -L 100 sleep 5 >> $screen_rc
+	screen -d -m -c $screen_rc -S $session || die "Screen failed"
+
+	__nets=$__bnet,1
+	for n in $(seq $__nvm); do
+		cmd_svm $n
+	done
+
+	test "$__nrouters" || __nrouters=2
+	if test $__nrouters -gt 0; then
+		local last=$((200+__nrouters))
+		__nets=$__bnet,1,2
+		for n in $(seq 201 $last); do
+			cmd_svm $n
+		done
+	fi
+
+	test "$__ntesters" || __ntesters=0
+	if test $__ntesters -gt 0; then
+		local last=$((220+__ntesters))
+		__nets=$__bnet,2
+		for n in $(seq 221 $last); do
+			cmd_svm $n
+		done
+	fi
+
+	echo "Screen session [$session]"
+}
+
 cmd_stop() {
 	test -n "$__nvm" || __nvm=100
 	test -n "$__nrouters" || __nrouters=2
