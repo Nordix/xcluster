@@ -20,7 +20,10 @@ export XCLUSTER_WORKSPACE=$HOME/tmp/xlcuster/workspace
 mkdir -p $XCLUSTER_WORKSPACE   # Keep separated from the xcluster repo
 cd xcluster
 . ./Envsettings
-# Install diskim according to the printout
+# Install diskim if necessary;
+wget -O - -q \
+ https://github.com/lgekman/diskim/releases/download/v0.4.0/diskim-v0.4.0.tar.xz \
+ | tar -I pxz -C /home/guest/xcluster/workspace -xf -
 ```
 
 ## Kernel and base image
@@ -42,13 +45,10 @@ xc mkimage
 Your base system is ready. Test it;
 
 ```
-xc nsadd 1
-xc nsenter 1
 cd $HOME/xcluster
 . ./Envsettings
 xc start --nrouters=0 --nvm=2
 xc stop
-exit        # from the netns
 ```
 
 ## Overlays

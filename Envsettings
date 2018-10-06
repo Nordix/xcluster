@@ -30,18 +30,7 @@ alias xc=$XCLUSTER
 
 eval $($XCLUSTER env | grep -i DISKIM)
 export DISKIM
-if test -n "$DISKIM" -a -x "$DISKIM"; then
-	alias diskim=$DISKIM
-else
-	cat <<EOF
-"diskim" is missing. Install with;
-
-wget -O - -q \\
- https://github.com/lgekman/diskim/releases/download/$__diskimver/diskim-$__diskimver.tar.xz \\
- | tar -I pxz -C $XCLUSTER_WORKSPACE -xf -
-
-EOF
-fi
+alias diskim=$DISKIM
 
 which mke2fs > /dev/null || export PATH=$PATH:/sbin:/usr/sbin
 
