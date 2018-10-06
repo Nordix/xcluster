@@ -205,11 +205,12 @@ mconnect -address mconnect.default.svc.xcluster:5001 -nconn 1000
 ```
 
 To be able to download images from the internet you must setup a local
-dns server, please see instructions [here](doc/netns.md). The node and
-router VM must also be configured with approriate routes. The easiest
-way is to use the `externalip` overlay;
+dns server. The node and router VM must also be configured with
+approriate routes. The easiest way is to use the `externalip` overlay;
 
 ```
+cd $(dirname $XCLUSTER)
+./bin/coredns -conf "$($XCLUSTER ovld coredns)/Corefile.k8s" > /tmp/$USER/coredns.log 2>&1 &
 xc mkcdrom externalip; xc start
 ```
 

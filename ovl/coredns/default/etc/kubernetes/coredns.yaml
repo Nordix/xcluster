@@ -6,7 +6,7 @@ data:
   Corefile: |
     .:53 {
         kubernetes xcluster
-        proxy . 192.168.0.250
+        proxy . 192.168.0.250:10053
         cache 300
         log stdout
     }
