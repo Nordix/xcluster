@@ -26,7 +26,7 @@ support for fetching logs from the VMs but it should not be hard to do
 with `ssh` and some scripting.
 
 
-## Object Under Test
+## Object Under Test (OUT)
 
 The project build should produce an extended `xcluster` image with the
 OUT installed and ready (as an "artifact"). Test programs and test
@@ -38,9 +38,10 @@ pre-installed image which guarantees the same environment as the CI
 test.
 
 
-## Jenkins executors
+## Many xclusters on the same host
 
-A number of `xlcuster` netns (or more complete containers) can be
-setup with a `ssh` server. Jenkins agents can then be started with
-`ssh`. This procedure has been tested and works well, but I am sure
-there are other ways.
+A test server will probably allow multiple tests and clusters must be
+separated. The best is probably to use a netns or perhaps a
+container. In main netns user-space networks can be separates by
+specifying different "BASE" addresses. See the
+`config/net-setup-userspace.sh` file.

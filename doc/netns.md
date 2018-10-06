@@ -12,6 +12,7 @@ management program or that the management program interfere with the
 For this reason `xcluster` should execute in it's own netns. To setup do;
 
 ```
+sudo setcap cap_net_admin,cap_sys_admin+ep /bin/ip   # (once)
 xc nsadd 1    # Requires "sudo"
 ```
 

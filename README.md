@@ -17,7 +17,7 @@ More info;
  * [Overlay index](ovl-index.md)
  * [Disk-image and kernel](doc/image.md). How they are created and extended.
  * [Build from scratch](doc/build.md). If the binary release can't be used.
- * [Headless operation](doc/ci.md). For instance for CI.
+ * [Xcluster for CI](doc/ci.md). Headless operation.
 
 An `xcluster` consists of a number of identical (kvm) VMs. The disk
 image is shared among the VMs and the `qemu-img` "backing_file"
@@ -68,13 +68,6 @@ with pre-built images and cached overlays from the binary release when
 you add own programs (because of library version probems). In that
 case there may be no other option than to rebuild all images and
 overlays locally [from scratch](doc/build.md).
-
-You must grant execution without `root` for some binaries;
-
-```
-sudo setcap cap_net_admin,cap_sys_admin+ep /bin/ip
-sudo setcap cap_net_admin,cap_sys_admin+ep /sbin/xtables-multi
-```
 
 Some additional packets may have to be installed. Below is a
 suggestion, there may be others;
@@ -135,23 +128,11 @@ want something better.
 Download from the release page and install;
 
 ```
-ver=v0.1
+ver=v0.3
 cd $HOME
 tar xf Downloads/xcluster-$ver.tar.xz
 cd xcluster
 . ./Envsettings
-# (ignore the "diskim" warning)
-```
-
-Create and enter a network namespace ([netns](doc/netns.md)) on your
-host for `xcluster` experiments. This requires `sudo`;
-
-```
-xc nsadd 1
-xc nsenter 1
-cd $HOME/xcluster
-. ./Envsettings
-# (again ignore the "diskim" warning)
 ```
 
 Start an empty cluster. Xterms shall pop-up like in the screenshot
@@ -159,23 +140,21 @@ above. You can login to a vm using `vm`;
 
 ```
 xc start
-vm 1
 # If the windows closes immediately, to troubleshoot do;
 xtermopt=-hold xc start --nrouters=0 --nvm=2
 ```
 
-This is the base `xcluster`. All VMs are connected to a network and
-are reachable with ipv4 or ipv6 with `ssh` or `telnet`. Experiment some
-and then stop the ckuster;
+This is the base `xcluster`. All VMs are connected to the "internal"
+network and are reachable with `ssh` or `telnet`. Experiment some and
+then stop the ckuster;
 
 ```
-ssh root@2000::3
+vm 1          # "vm" is a shell function that opens an xterm on the vm
+ssh root@localhost -p 12101   # Qemu port forwarding is used
 xc stop
 ```
 
 ### Xcluster with Kubernetes
-
-In the netns;
 
 ```
 cd $HOME/xcluster
