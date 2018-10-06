@@ -17,7 +17,7 @@ echo "export ETCDCTL_API=3" >> /etc/profile
 test $i -le 3 || exit 0
 
 sed -i -e "s,HOSTNAME,$(hostname)," /etc/etcd.conf.yml
-sed -i -e "s,2000::x,2000::$i," /etc/etcd.conf.yml
+sed -i -e "s,192.168.1.x,192.168.1.$i," /etc/etcd.conf.yml
 
 export ETCDCTL_API=3
 # Bind fails for ipv6 if this is started to fast. Don't know why.

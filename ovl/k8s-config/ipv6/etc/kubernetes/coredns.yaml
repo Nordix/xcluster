@@ -7,7 +7,7 @@ data:
     .:53 {
         log stdout
         kubernetes xcluster
-        proxy . 2000::250
+        proxy . [2000::250]:10053
         cache 30
     }
 ---

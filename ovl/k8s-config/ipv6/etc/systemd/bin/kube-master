@@ -15,7 +15,7 @@ test $i -eq 1 || exit 0
 . /etc/profile
 
 sleep 1
-MASTER_IP=2000::1
+MASTER_IP=1000::1:192.168.1.1
 kube-apiserver --token-auth-file=/srv/kubernetes/known_tokens.csv \
 	--allow-privileged=true \
 	--insecure-bind-address=$MASTER_IP --advertise-address=$MASTER_IP \
