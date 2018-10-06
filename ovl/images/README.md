@@ -1,75 +1,112 @@
 Xcluster overlay - images
 =========================
 
-Handles pre-pulled images in cri-o
+Handles pre-pulled images in `xcluster`.
 
-`Cri-o` stores images with
-[containers/storage](https://github.com/containers/storage). This is
-very complicated and the lib requires "root" and uses hard-coded
-paths. The unpacking, e.g using
-[skopeo](https://github.com/containers/skopeo) is also horrible slow
-and causes the start-up to fail (overloads the `mqueue` I think) in
-xcluster.
-
-All-in-all it's a mess.
+To install pre-pulled images on the `xcluster` disk image or as an
+overlay saves time since nothing has to be dowloaded. In some
+environments it is also hard to get external connectivity inside the
+VMs.
 
 What we want to do is to create an overlay with the
-`containers-storage` structure containing all images from
-start. Unfortunately we must do this is one file, it can not be done
-from the overlay's containing the images, and it requires "sudo".
+`containers-storage` structure containing all images we need. This is
+not so simple and it requires "sudo", at least for now.
+
+The way this is done at the moment is;
+
+ * Pull or import the image to you local docker-daemon. You should see
+   it with `docker images`.
+
+ * Use `skopeo` to copy all pre-pulled images to a containers-storage
+   on `/tmp/var`. This requires `sudo`.
+
+ * Tar the `/tmp/var` structure. This also requires `sudo` since
+   `skopeo` protects the dir.
+
+ * Use the tar-file as an `xcluster` overlay.
 
 
-Usage
------
+## Preparations
+
+```
+cd $($XCLUSTER ovld images)
+sudo mkdir /etc/containers
+sudo cp policy.json storage.conf /etc/containers
+```
+
+## Usage
+
+An image overlay is created with the `images.sh` script. By default it
+is created in the `$XCLUSTER_TMP` directory. The items may be;
+
+ * A docker image reference. The version must be included.
+ * An overlay dir. The `image/` dir in the overlay will be used.
+ * An overlay dir and subdir, like `proxy/image2`
 
 ```
 # ("images" alias defined in $h/Envsettings)
-images make coredns docker.io/nordixorg/mconnect:0.2
+images make coredns docker.io/nordixorg/mconnect:0.2 ...  # Requires "sudo"
+eval $($XCLUSTER env | grep XCLUSTER_TMP)
+ls $XCLUSTER_TMP/images.tar
 xc mkcdrom [overlays...] images
 ```
 
-You will be prompted for `password` for `sudo skopeo`.
+You will be prompted for `password`.
+
+You may notice that the `xc mkcdrom` can take just `images` as
+parameter? The secret is in the `tar` script in the images ovl dir.
+
+### Check images on a VM
+
+On the VMs an alias will be set to list the pre-pulled images;
+
+```
+alias images="crictl --runtime-endpoint=unix:///var/run/crio/crio.sock images"
+```
 
 
-Build images
-------------
+Build local images
+------------------
+
+The principle is;
+
+ * Create a tar-file with the root fs.
+
+ * Import it with `docker import`
+
+As you may have noticed `xcluster` is not unfamiliar with tar files
+and the procedures used for "overlays" fits perfectly for this
+purpose. When a overlay dir is given to `images.sh` it looks for an
+`image/' subdir in that overlay dir. In the `image/` subdir there must
+be a `tar` script, working exactly as for overlays.
+
+In the `image/` dir there must also be a manifest named
+`manifest.json`. The only things used are;
+
+ 1. Name
+ 2. Version
+ 3. Start command
+
+With the `images/` subdir, the `images/tar` script and the
+`images/manifest.json` the overlay dir can be specified as an item to
+`images.sh`.
+
+
+
+## Problems and future plans
+
+The current procedure su*** !
+
+What I want is a way to import images from a docker registry or a tar
+directly to a containers-storage structure as non-root. `skopeo` would
+be perfect if it allowed a destination dir to be specified.
 
 There are
 [many-ways](https://www.projectatomic.io/blog/2018/03/the-many-ways-to-build-oci-images/)
 to build OCI images. Neither is good.
 
-Uses the (configurable) root directory `/var/lib/containers/storage`.
 
-
-### Pre-pull
-
-To pre-pull images, which is necessary in `xcluster` is very hard. The
-images must be visible on;
-
-```
-> crictl --runtime-endpoint=unix:///var/run/crio/crio.sock images
-IMAGE                          TAG                 IMAGE ID            SIZE
-docker.io/nordixorg/mconnect   0.2                 d52a1329f66d7       1.89MB
-example.com/coredns            0.1                 9914622955cf0       38.7MB
-k8s.gcr.io/pause               3.1                 da86e6ba6ca19       746kB
-```
-
-The current approach is;
-
-* Use the old ACI manifest but import the images to `docker` locally.
-
-* Use `skopeo` (with sudo) to create a tar-file with the images in
-  containers-storage format.
-
-* Use the tar-file as an `xcluster` overlay.
-
-An advantage is that the `xcluster` image starts up with the images loaded
-nad ready. With `rkt` the images were installed on each node on
-startup.
-
-
-Tools
------
+### Tools
 
 The tools and `cri-o` itself uses the libraries in
 [containers/storage](https://github.com/containers/storage) to handle
@@ -77,15 +114,11 @@ images. The library (and hence all tools) uses config in
 `/etc/containers/storage.conf` (hard-coded!). The lib also reqires
 "root".
 
-You should install `storage.conf` and `policy.json` from this overlay.
-
-### skopeo
-
 Skopeo is used by `xcluster` so it must be installed. This other tools are
 optional.
 
 Skopeo is hard to build locally but fortunately the Ubuntu package
-works fine;
+works;
 
 ```
 sudo apt-add-repository ppa:projectatomic/ppa
@@ -95,8 +128,6 @@ mkdir /tmp/x
 skopeo --insecure-policy copy docker://k8s.gcr.io/pause:3.1 dir:/tmp/x
 skopeo --insecure-policy copy docker://k8s.gcr.io/pause:3.1 oci:/tmp/x:k8s.gcr.io/pause:3.1
 ```
-
-### containers-storage
 
 There is a `containers-storage` utility bundled with the lib.  Build
 with;
@@ -108,7 +139,7 @@ go install ./cmd/...
 strip $GOPATH/bin/containers-storage
 ```
 
-### image-tools
+#### image-tools
 
 ```
 go get github.com/opencontainers/image-tools
@@ -117,8 +148,7 @@ go install ./cmd/...
 strip $GOPATH/bin/oci-image-tool
 ```
 
-
-### Test commands
+#### Test commands
 
 ```
 skopeo --debug inspect docker://docker.io/fedora

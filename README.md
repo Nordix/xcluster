@@ -18,6 +18,7 @@ More info;
  * [Disk-image and kernel](doc/image.md). How they are created and extended.
  * [Build from scratch](doc/build.md). If the binary release can't be used.
  * [Xcluster for CI](doc/ci.md). Headless operation.
+ * [Pre-pulled images](ovl/images/README.md).
 
 An `xcluster` consists of a number of identical (kvm) VMs. The disk
 image is shared among the VMs and the `qemu-img` "backing_file"
