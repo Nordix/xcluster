@@ -113,6 +113,11 @@ xc env
 eval $($XCLUSTER env)
 ```
 
+#### Timezone
+
+The timezone in the VMs is set (by you) using the
+[timezone overlay](ovl/timezone/README.md).
+
 
 #### The $ARCHIVE variable
 
