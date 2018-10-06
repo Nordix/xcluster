@@ -27,8 +27,7 @@ in the xcluster to access the internet via the router VMs.
 
 ## DNS
 
-The VMs are setup to use a DNS server on the host (within the netns of
-course);
+The VMs are setup to use a DNS server on the host.
 
 ```
 vm-201 ~ # cat /etc/resolv.conf 

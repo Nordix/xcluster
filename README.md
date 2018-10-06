@@ -180,43 +180,13 @@ for basic connectivity tests;
 kubectl apply -f /etc/kubernetes/mconnect.yaml
 kubectl get pods
 kubectl get svc
-mconnect -address mconnect.default.svc.xcluster:5001 -nconn 1000
+mconnect -address mconnect.default.svc.xcluster:5001 -nconn 400
 ```
-
-To be able to download images from the internet you must setup a local
-dns server. The node and router VM must also be configured with
-approriate routes. The easiest way is to use the `externalip` overlay;
-
-```
-cd $(dirname $XCLUSTER)
-./bin/coredns -conf "$($XCLUSTER ovld coredns)/Corefile.k8s" > /tmp/$USER/coredns.log 2>&1 &
-xc mkcdrom externalip; xc start
-```
-
-Note that you don't have to stop `xcluster` before re-starting, the
-old cluster will be stopped automatically (and all associated windows
-closed).
-
-Now from a VM test connectivity and start a `alpine` pod which will
-trig a downliad of the image;
-
-```
-vm 4
-# On the node;
-nslookup www.google.com
-ping -c 1 www.google.com
-images
-kubectl apply -f /etc/kubernetes/alpine.yaml
-# (wait some time...)
-images   # docker.io/library/alpine should appear
-kubectl get pods
-```
-
 
 #### Kubernetes ipv6-only
 
 ```
-SETUP=ipv6 xc mkcdrom etcd coredns k8s-config externalip; xc start
+SETUP=ipv6 xc mkcdrom etcd k8s-config externalip; xc start
 vm 1
 # On the cluster node;
 kubectl get nodes -o wide
@@ -230,5 +200,5 @@ As you can see the `mconnect` service has an external ip
 ```
 vm 201
 # On the router vm;
-mconnect -address [1000::2]:5001 -nconn 1000
+mconnect -address [1000::2]:5001 -nconn 400
 ```
