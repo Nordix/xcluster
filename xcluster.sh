@@ -591,11 +591,13 @@ cmd_start() {
 	cmd_env
 
 	local n dev
-	for n in 0 1 2; do
-		dev=xcbr$n
-		ip link show dev $dev > /dev/null 2>&1 || \
-			log "WARNING: Bridge not setup [$dev]"
-	done
+	if test -z "$__net_setup"; then
+		for n in 0 1 2; do
+			dev=xcbr$n
+			ip link show dev $dev > /dev/null 2>&1 || \
+				log "WARNING: Bridge not setup [$dev]"
+		done
+	fi
 
 	test -n "$__nvm" || __nvm=4
 	__quiet=yes
@@ -636,11 +638,13 @@ cmd_starts() {
 	cmd_env
 
 	local n dev
-	for n in 0 1 2; do
-		dev=xcbr$n
-		ip link show dev $dev > /dev/null 2>&1 || \
-			log "WARNING: Bridge not setup [$dev]"
-	done
+	if test -z "$__net_setup"; then
+		for n in 0 1 2; do
+			dev=xcbr$n
+			ip link show dev $dev > /dev/null 2>&1 || \
+				log "WARNING: Bridge not setup [$dev]"
+		done
+	fi
 
 	test -n "$__nvm" || __nvm=4
 	__quiet=yes
