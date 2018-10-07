@@ -9,12 +9,12 @@ clouds.
 
 Metallb has two major (independent) functions;
 
-* Maintain and assign external addresses to services with `type:
-  LoadBalancer` (controller)
+* controller - Maintain and assign external addresses to services with `type:
+  LoadBalancer`
 
-* Announce the external addresses via BGP or L2 (speaker)
+* speaker - Announce the external addresses via BGP or L2
 
-<img src="metallb-overview.svg" alt="metallb-overview" width="60%" />
+<img src="metallb-overview.svg" alt="metallb-overview" width="80%" />
 
 
 
@@ -32,8 +32,27 @@ kubectl apply -f /etc/kubernetes/mconnect.yaml
 # On a router vm;
 gobgp neighbor
 ip ro
-mconnect -address 10.0.0.2:5001 -nconn 1000
+mconnect -address 10.0.0.2:5001 -nconn 400
 ```
+
+External addressing, for instance to get `raw.githubusercontent.com`
+above, does not work if user-space networks are used. In this case the
+image must be pre-pulled, and the manifest must be on the VM;
+
+```
+curl -L  https://raw.githubusercontent.com/google/metallb/v0.7.3/manifests/metallb.yaml \
+ > $($XCLUSTER ovld metallb)/default/etc/metallb.yaml
+images make coredns docker.io/nordixorg/mconnect:0.2 \
+ metallb/speaker:v0.7.3 metallb/controller:v0.7.3
+xc mkcdrom metallb gobgp images; xc start
+# On cluster;
+images         # to check that the metallb images are pre-pulled
+kubectl apply -f /etc/kubernetes/metallb-config.yaml
+kubectl apply -f /etc/metallb.yaml
+kubectl get pods -n metallb-system
+kubectl apply -f /etc/kubernetes/mconnect.yaml
+```
+
 
 ## Home-built pod
 
