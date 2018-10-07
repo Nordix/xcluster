@@ -25,15 +25,15 @@
      inkscape:pageopacity="0.0"
      inkscape:pageshadow="2"
      inkscape:zoom="1"
-     inkscape:cx="482.4305"
+     inkscape:cx="308.4305"
      inkscape:cy="348.69073"
      inkscape:document-units="px"
      inkscape:current-layer="layer1"
      showgrid="false"
      inkscape:window-width="2004"
      inkscape:window-height="1140"
-     inkscape:window-x="2830"
-     inkscape:window-y="94"
+     inkscape:window-x="2560"
+     inkscape:window-y="33"
      inkscape:window-maximized="0"
      inkscape:snap-others="false"
      inkscape:object-nodes="false"
@@ -211,7 +211,7 @@
         <dc:format>image/svg+xml</dc:format>
         <dc:type
            rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
-        <dc:title></dc:title>
+        <dc:title />
       </cc:Work>
     </rdf:RDF>
   </metadata>
@@ -511,5 +511,75 @@
        d="m 256,156 50,43"
        id="path6531"
        inkscape:connector-curvature="0" />
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-weight:normal;font-size:14.66666698px;line-height:1.25;font-family:sans-serif;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none"
+       x="107.87823"
+       y="195.26434"
+       id="text945"><tspan
+         sodipodi:role="line"
+         id="tspan943"
+         x="107.87823"
+         y="195.26434">vm-001</tspan></text>
+    <text
+       id="text949"
+       y="308.26434"
+       x="107.87823"
+       style="font-style:normal;font-weight:normal;font-size:14.66666698px;line-height:1.25;font-family:sans-serif;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none"
+       xml:space="preserve"><tspan
+         y="308.26434"
+         x="107.87823"
+         id="tspan947"
+         sodipodi:role="line">vm-002</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-weight:normal;font-size:14.66666698px;line-height:1.25;font-family:sans-serif;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none"
+       x="107.87823"
+       y="419.26434"
+       id="text953"><tspan
+         sodipodi:role="line"
+         id="tspan951"
+         x="107.87823"
+         y="419.26434">vm-003</tspan></text>
+    <text
+       id="text957"
+       y="530.26434"
+       x="107.87823"
+       style="font-style:normal;font-weight:normal;font-size:14.66666698px;line-height:1.25;font-family:sans-serif;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none"
+       xml:space="preserve"><tspan
+         y="530.26434"
+         x="107.87823"
+         id="tspan955"
+         sodipodi:role="line">vm-004</tspan></text>
+    <text
+       id="text961"
+       y="251.26434"
+       x="394.87823"
+       style="font-style:normal;font-weight:normal;font-size:14.66666698px;line-height:1.25;font-family:sans-serif;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none"
+       xml:space="preserve"><tspan
+         y="251.26434"
+         x="394.87823"
+         id="tspan959"
+         sodipodi:role="line">vm-201</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-weight:normal;font-size:14.66666698px;line-height:1.25;font-family:sans-serif;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none"
+       x="394.87823"
+       y="359.26434"
+       id="text965"><tspan
+         sodipodi:role="line"
+         id="tspan963"
+         x="394.87823"
+         y="359.26434">vm-202</tspan></text>
+    <text
+       id="text969"
+       y="194.26434"
+       x="681.87823"
+       style="font-style:normal;font-weight:normal;font-size:14.66666698px;line-height:1.25;font-family:sans-serif;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none"
+       xml:space="preserve"><tspan
+         y="194.26434"
+         x="681.87823"
+         id="tspan967"
+         sodipodi:role="line">vm-221</tspan></text>
   </g>
 </svg>
