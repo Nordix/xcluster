@@ -78,6 +78,9 @@ mkdir -p $tmp/usr/share/containers/oci/hooks.d
 mkdir -p $tmp/etc/ssl/certs
 cp /etc/ssl/certs/ca-certificates.crt $tmp/etc/ssl/certs/
 
+jq=$(which jq)
+test -n "$jq" && cp $jq $tmp/bin
+
 # Install libraries
 $XCLUSTER cplib --dest=$tmp $tmp/bin/*
 
