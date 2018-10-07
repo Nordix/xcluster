@@ -1,7 +1,18 @@
 # Xcluster networking
 
-The `xcluster` network is using linux bridges and tap devices (the
-normal way). The default network has 3 nets (i.e. 3 bridges);
+The `xcluster` networkin uses 2 setups;
+
+* User-space networking. This is used when `xcluster` is executed in
+  main netns. It does not require root or sudo or any network
+  preparations.
+
+* Linux bridges and tap devices. This is used when `xcluster` is
+  executed in it's own netns. This requires a network setup using
+  sudo/root which is done with `xc nsadd`. Execution requires that the
+  `ip` program can run as non-root (using "setcap"). This setup is
+  much faster and closer to the real thing than user-space networking.
+
+The default network has 3 nets. The image shows the bridges;
 
 <img src="xcluster-network.svg" alt="Figure, xcluster network" width="80%" />
 
@@ -20,15 +31,18 @@ normal way). The default network has 3 nets (i.e. 3 bridges);
 The base image only setup the Internal net on the VMs. The other
 networks are configured by overlays.
 
-The `xcbr0` and `xcbr2` bridge interfaces are configured with
-addresses to be usable from the host. The `xcbr1` should normally not
-be used by the host.
-
 The addresses are assigned from the hostname of the VM. The last digit
 in the address is the number from the hostname, e.g. 1 for
 "vm-001". For now the hostname number is taken from the lsb of the MAC
 address on the interface towards the Internal net (eth0). This may
 however change for instance if the MAC addresses can't be controlled.
+
+With user-space networking the internal net is a qemu "user"
+network. It allows connectivity with the host but does not support
+traffic between VMs. So for instance you can't reach vm-002 from vm-001
+using the `192.168.0.2` address. The other nets are qemu "socket"
+networks (UML/multicast) they provide connectivity between VMs but can
+not be used for connectivity with the host.
 
 
 ## Customizing
@@ -58,6 +72,8 @@ $__net_setup <node> <net>
 ```
 
 Your script must do necessary configuration and print out options to
-`kvm`. The easiest is to copy from the `cmd_boot_vm()` function in
-`xcluster.sh` and modify.
+`kvm`. See the
+[net-setup-userspace.sh](../config/net-setup-userspace.sh) script for
+an example.
+
 
