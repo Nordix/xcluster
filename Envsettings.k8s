@@ -1,6 +1,6 @@
 #! /bin/sh
 
-test -n "$XCLUSTER_WORKSPACE" || . ./Envsettings
+test -n "$XCLUSTER" || . ./Envsettings
 
 # Kubernetes settings;
 # Make sure the guest /dev/random is connected to the host /dev/urandom
