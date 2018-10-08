@@ -78,6 +78,10 @@ mkdir -p $tmp/usr/share/containers/oci/hooks.d
 mkdir -p $tmp/etc/ssl/certs
 cp /etc/ssl/certs/ca-certificates.crt $tmp/etc/ssl/certs/
 
+n=$GOPATH/bin/coredns
+test -x $n || n=$(dirname $XCLUSTER)/bin/coredns
+test -x $n && cp $n $tmp/bin
+
 jq=$(which jq)
 test -n "$jq" && cp $jq $tmp/bin
 

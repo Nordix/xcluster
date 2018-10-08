@@ -11,3 +11,11 @@ export __kvm_opt
 export __mem=768
 export __image=$XCLUSTER_WORKSPACE/xcluster/hd-k8s.img
 alias images="$($XCLUSTER ovld images)/images.sh"
+
+if ! netstat -lutan | grep -q :::10053; then
+	cdns=$GOPATH/bin/coredns
+	test -x $cdns || $(dirname $XCLUSTER)/bin/coredns
+	test -x $n && $cdns -conf $($XCLUSTER ovld coredns)/Corefile.k8s \
+		> /tmp/$USER/coredns.log 2>&1 &
+	unset cdns
+fi
