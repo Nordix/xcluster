@@ -34,7 +34,13 @@ alias diskim=$DISKIM
 
 which mke2fs > /dev/null || export PATH=$PATH:/sbin:/usr/sbin
 
-ip netns id $$ | grep -q -E "^${USER}_xcluster[0-9]+\$" && return
+if ip netns id $$ | grep -q -E "^${USER}_xcluster[0-9]+\$"; then
+	# We are in a netns. Reset the $__net_setup is it is set for main
+	# netns.
+	echo $__net_setup | grep -q '/config/net-setup-userspace.sh' && \
+		unset __net_setup
+	return
+fi
 
 # We are not in a xcluster netns. Use user-space networking.
 
