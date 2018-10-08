@@ -165,7 +165,7 @@ xc stop
 ```
 cd $HOME/xcluster
 . ./Envsettings.k8s
-xc start
+xc mkcdrom externalip; xc start
 ```
 
 
@@ -187,6 +187,8 @@ kubectl apply -f /etc/kubernetes/mconnect.yaml
 kubectl get pods
 kubectl get svc
 mconnect -address mconnect.default.svc.xcluster:5001 -nconn 400
+# On a router;
+mconnect -address 10.0.0.2:5001 -nconn 400
 ```
 
 #### Kubernetes ipv6-only
