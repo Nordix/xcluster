@@ -35,7 +35,7 @@ net_uml() {
 }
 
 if test "$2" -eq 0; then
-	if kvm -version grep -qE 'QEMU emulator version 2\.[1-5]\.'; then
+	if kvm -version | grep -qE 'QEMU emulator version 2\.[1-5]\.'; then
 		net_user_old_qemu $1 $2
 	else
 		net_user $1 $2
