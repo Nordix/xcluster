@@ -46,3 +46,15 @@ should be applied.
 cd $GOPATH/src/github.com/cloudnativelabs/kube-router
 rm -f kube-router; make
 ```
+
+## Development cycle
+
+```
+# Start;
+SETUP=ipv6 xc mkcdrom etcd k8s-config externalip kube-router-ipv6; xc start
+# Check things...
+cd $GOPATH/src/github.com/cloudnativelabs/kube-router
+# Edit some files...
+rm -f kube-router; make
+# Goto "Start" (without any "xc stop")
+```

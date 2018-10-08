@@ -134,7 +134,7 @@ want something better.
 Download from the release page and install;
 
 ```
-ver=v0.3
+ver=v0.4
 cd $HOME
 tar xf Downloads/xcluster-$ver.tar.xz
 cd xcluster
@@ -168,15 +168,15 @@ cd $HOME/xcluster
 xc start
 ```
 
-A Kubernetes cluster is started. The cluster is "offline", i.e. only
-"pre-pulled" images can be used. Open a terminal on a node with `vm`;
+
+Open a terminal on a node with `vm`;
 
 ```
 vm 4
 # On the cluster node;
 kubectl version
 kubectl get nodes
-images  # alias that lists the loaded images
+images  # alias that lists the pre-pulled images
 ```
 
 The [mconnect](https://github.com/Nordix/mconnect) image can be used

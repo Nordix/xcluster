@@ -35,9 +35,8 @@ ip ro
 mconnect -address 10.0.0.2:5001 -nconn 400
 ```
 
-External addressing, for instance to get `raw.githubusercontent.com`
-above, does not work if user-space networks are used. In this case the
-image must be pre-pulled, and the manifest must be on the VM;
+Images can be pre-pulled for faster (and safer) operation for instance
+in CI environment;
 
 ```
 curl -L  https://raw.githubusercontent.com/google/metallb/v0.7.3/manifests/metallb.yaml \
