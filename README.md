@@ -12,8 +12,8 @@ More info;
 
  * [Quick Start](#quick-start)
  * [Misc info](doc/misc.md). Prettiy xterms, use master-branch, and more...
- * [Networking](doc/networking.md). Default network setup.
- * [Network name space](doc/netns.md). Setup a netns for running `xcluster` and DNS
+ * [Networking](doc/networking.md). Default network and DNS setup.
+ * [Network name space](doc/netns.md). Setup a netns for running `xcluster`.
  * [Overlays](doc/overlays.md). How they work and how they are created
  * [Overlay index](ovl-index.md)
  * [Disk-image and kernel](doc/image.md). How they are created and extended.

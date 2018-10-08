@@ -45,6 +45,37 @@ networks (UML/multicast) they provide connectivity between VMs but can
 not be used for connectivity with the host.
 
 
+## DNS
+
+A `coredns` is started outside the xcluster on port `10053`. A
+`coredns` (shown as k8s in the figure) on the cluster is setup that
+proxies to the outside dns;
+
+<img src="xcluster-dns.svg" alt="Figure, xcluster dns" width="70%" />
+
+A `coredns` binary is bundled in the `xcluster` binary release and is
+used unless a `$GOPATH/bin/coredns` exists. In Linux (in the clib to
+be precise) you can not tell the resolver to use any other port than
+the standard `53` so a dns server on the cluster is needed even if k8s
+is not used so they are started on the routers and tester VMs.
+
+If you are using a [netns](netns.md) for `xcluster` you must ensure
+that your Linux system does not setup a local dns;
+
+```
+# (On your host, NOT in a VM;)
+$ cat /etc/resolv.conf 
+...
+nameserver 127.0.1.1
+```
+
+If you see a local address as nameserver you must disable it. Follow
+[these](https://askubuntu.com/questions/907246/how-to-disable-systemd-resolved-in-ubuntu)
+instructions.
+
+Note if you are using `xcluster` i main netns with user-space
+networking the local dns is perfectly fine.
+
 ## Customizing
 
 To alter the network setup, for instance adding another network, you
