@@ -172,7 +172,7 @@ cmd_nssetup() {
 	ip -6 addr add $__ipv6_prefix$__ipv4_base.0.$1/128 dev host$1
 	ip -6 ro add $__ipv6_prefix$__ipv4_base.1.$1/128 dev host$1
 	ip -6 ro add default via $__ipv6_prefix$__ipv4_base.1.$1
-	iptables -t nat -A POSTROUTING -s 192.168.2.0/24 -o host$1 -j MASQUERADE
+	iptables -t nat -A POSTROUTING -s 192.168.0.0/24 -o host$1 -j MASQUERADE
 
 	cmd_br_setup 0
 	cmd_br_setup 1
