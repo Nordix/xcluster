@@ -48,6 +48,33 @@ kubectl apply -f /etc/kubernetes/mconnect.yaml
 mconnect -address [1000::2]:5001 -nconn 400
 ```
 
+### Access with kubectl from your host
+
+For user-space networking port forwarding from `$XCLUSTER_K8S_PORT`
+(default 18080) is setup to the k8s api-server.  Use that address in
+`$HOME/.kube/config`;
+
+```
+> cat ~/.kube/config
+apiVersion: v1
+clusters:
+- cluster:
+    server: http://127.0.0.1:18080
+  name: xcluster
+contexts:
+- context:
+    cluster: xcluster
+    user: root
+  name: xcluster
+current-context: xcluster
+kind: Config
+preferences: {}
+users:
+- name: root
+  user:
+    as-user-extra: {}
+```
+
 
 Build
 -----
@@ -216,48 +243,6 @@ mkdir -p work/default/etc/systemd
 cp -r kubernetes/default/etc/systemd/bin work/default/etc/systemd
 cp -r cni-bridge/default/etc/systemd/bin work/default/etc/systemd
 ```
-
-Misc
-----
-
-### Access with kubectl from your host
-
-Since the API address `192.168.0.1:8080` (or [2000::1]:8080) is
-available from a shell in the xcluster netns you can extend your
-`$HOME/.kube/config` and perform the `kubectl` directly. Here is an
-example;
-
-```
-> cat ~/.kube/config
-apiVersion: v1
-clusters:
-- cluster:
-    server: http://192.168.0.1:8080
-  name: xcluster
-- cluster:
-    server: http://[2000::1]:8080
-  name: xcluster6
-contexts:
-- context:
-    cluster: xcluster
-    user: root
-  name: xcluster
-- context:
-    cluster: xcluster6
-    user: root
-  name: xcluster6
-current-context: xcluster
-kind: Config
-preferences: {}
-users:
-- name: root
-  user:
-    as-user-extra: {}
-> kubectl config use-context xcluster6
-```
-
-Last is an example how to switch to ipv6.
-
 
 Problems
 --------

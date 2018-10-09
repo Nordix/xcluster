@@ -17,7 +17,7 @@ test $i -eq 1 || exit 0
 MASTER_IP=192.168.1.1
 kube-apiserver --token-auth-file=/srv/kubernetes/known_tokens.csv \
 	--allow-privileged=true \
-	--insecure-bind-address=$MASTER_IP --advertise-address=$MASTER_IP \
+	--insecure-bind-address=0.0.0.0 --advertise-address=$MASTER_IP \
 	--authorization-mode=AlwaysAllow \
 	--etcd-servers=http://localhost:2379 --anonymous-auth=false \
 	--service-cluster-ip-range=12.0.0.0/16 \
