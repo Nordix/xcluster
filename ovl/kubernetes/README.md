@@ -107,9 +107,10 @@ tiller > /tmp/$USER/tiller.log 2>&1 &
 
 #### Use helm
 
-You can now use helm as usual.
+Set the variable for local `tiller` thenuse helm as usual;
 
 ```
+export HELM_HOST=localhost:44134
 helm install --name metallb stable/metallb
 ```
 
