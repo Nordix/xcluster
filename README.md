@@ -11,6 +11,7 @@ Start](#quick-start) section or the Kubernetes
 More info;
 
  * [Quick Start](#quick-start)
+ * [Troubleshooting](doc/troubleshooting.md)
  * [Misc info](doc/misc.md). Prettiy xterms, use master-branch, and more...
  * [Networking](doc/networking.md). Default network and DNS setup.
  * [Network name space](doc/netns.md). Setup a netns for running `xcluster`.
