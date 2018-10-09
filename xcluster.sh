@@ -665,7 +665,7 @@ cmd_starts() {
 	echo screen -t tmp -L 100 sleep 5 >> $screen_rc
 	screen -d -m -c $screen_rc -S $session || die "Screen failed"
 
-	__nets=$__bnet,1
+	__nets=0,1
 	for n in $(seq $__nvm); do
 		cmd_svm $n
 	done
@@ -673,7 +673,7 @@ cmd_starts() {
 	test "$__nrouters" || __nrouters=2
 	if test $__nrouters -gt 0; then
 		local last=$((200+__nrouters))
-		__nets=$__bnet,1,2
+		__nets=0,1,2
 		for n in $(seq 201 $last); do
 			cmd_svm $n
 		done
@@ -682,7 +682,7 @@ cmd_starts() {
 	test "$__ntesters" || __ntesters=0
 	if test $__ntesters -gt 0; then
 		local last=$((220+__ntesters))
-		__nets=$__bnet,2
+		__nets=0,2
 		for n in $(seq 221 $last); do
 			cmd_svm $n
 		done
