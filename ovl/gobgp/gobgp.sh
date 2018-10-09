@@ -94,7 +94,7 @@ cmd_zbuild() {
 		# create it's files/sockets in a soft-link dir it seems :-(
 		# So do a full change in the config.h
 		sed -i -e 's,/var/run,/run,' config.h
-		make -j4 || die "Build quagga failed"
+		make -j$(nproc) || die "Build quagga failed"
 		log "Built [$zebra]"
 	else
 		dbg "Already built [$zebra]"
