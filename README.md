@@ -144,7 +144,8 @@ cd xcluster
 ```
 
 Start an empty cluster. Xterms shall pop-up like in the screenshot
-above. You can login to a vm using `vm`;
+above. If they don't, please check the
+[troubleshooting](doc/troubleshooting.md) doc.
 
 ```
 xc start
@@ -153,8 +154,8 @@ xtermopt=-hold xc start --nrouters=0 --nvm=2
 ```
 
 This is the base `xcluster`. All VMs are connected to the "internal"
-network and are reachable with `ssh` or `telnet`. Experiment some and
-then stop the ckuster;
+network and are reachable with `ssh` or `telnet`. You can login to a
+vm using `vm` function. Experiment some and then stop the ckuster;
 
 ```
 vm 1          # "vm" is a shell function that opens an xterm on the vm
