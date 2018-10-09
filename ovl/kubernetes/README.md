@@ -75,6 +75,44 @@ users:
     as-user-extra: {}
 ```
 
+### Helm
+
+With `xcluster` the simplest is to run `tiller`
+[locally](https://docs.helm.sh/using_helm/#running-tiller-locally). This
+removes a port forwarding problems with user-space networking. Tiller
+executes on your host and only needs access to the k8s api-server,
+same as `kubectl`.
+
+Prerequisite; Install a `$HOME/.kube/config` as above.
+
+**Note**: Do not use ~~helm init~~.
+
+#### Install
+
+Download from the helm
+[release-page](https://github.com/helm/helm/releases). Pick a Linux
+binary. Unpack it at some place of your liking and add it to your
+`$PATH`.
+
+#### Start tiller
+
+You can start it in background with redirects to a log file or in
+foreground in a shell to see what's happening;
+
+```
+tiller
+# or
+tiller > /tmp/$USER/tiller.log 2>&1 &
+```
+
+#### Use helm
+
+You can now use helm as usual.
+
+```
+helm install --name metallb stable/metallb
+```
+
 
 Build
 -----

@@ -6,7 +6,7 @@ intended for development and test of network functions.
 To see how `xcluster` can be used with
 [Kubernetes](https://kubernetes.io/) please see the [Quick
 Start](#quick-start) section or the Kubernetes
-[overlay](ovl/kubernetes/README.md).
+[overlay](ovl/kubernetes/README.md) (e.g helm).
 
 More info;
 
@@ -159,7 +159,7 @@ vm using `vm` function. Experiment some and then stop the ckuster;
 
 ```
 vm 1          # "vm" is a shell function that opens an xterm on the vm
-ssh root@localhost -p 12101   # Qemu port forwarding is used
+ssh root@localhost -p 12301   # Qemu port forwarding is used
 xc stop
 ```
 
