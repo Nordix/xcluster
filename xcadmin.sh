@@ -52,6 +52,148 @@ EOF
 }
 
 
+##   build_release <workdir>
+##     Builds xcluster from scratch (more or less). This is both a
+##     test and a release procedure.
+##
+cmd_build_release() {
+	local begin now
+	begin=$(date +%s)
+
+	test -n "$KUBERNETESD" || export KUBERNETESD=$ARCHIVE/kubernetes/server/bin
+	test -x $KUBERNETESD/kubelet || die "No k8s in [$KUBERNETESD]"
+
+	test -n "$1" || die "No workdir"
+	test -e "$1" && die "Already exist [$1]"
+	mkdir -p "$1" ||  die "Could not create [$1]"
+	cd "$1"
+	local workdir=$(readlink -f .)
+
+
+	# Clone
+	#local url=https://github.com/Nordix/xcluster.git
+	local url=file:///home/uablrek/go/src/github.com/Nordix/xcluster
+	git clone $url || die "Failed to clone xcluster"
+
+	# Setup env
+	export XCLUSTER_WORKSPACE=$workdir/workspace
+	mkdir -p $XCLUSTER_WORKSPACE
+	cd xcluster
+	. ./Envsettings
+	eval $($XCLUSTER env)
+
+	# Install diskim
+	ar=diskim-$__diskimver.tar.xz
+	url=https://github.com/lgekman/diskim/releases/download/$__diskimver
+	test -r $ARCHIVE/$ar || curl -L $url/$ar > $ARCHIVE/$ar || \
+		die "Failed to dovnload diskim-$__diskimver"
+	tar -I pxz -C $XCLUSTER_WORKSPACE -xf $ARCHIVE/$ar || \
+		die "Failed to unpack diskim-$__diskimver"
+	sed -ie "s,-j4,-j$(nproc)," $DISKIM
+
+	# Build the image overlay early to get the "sudo" over with
+	go get -u github.com/coredns/coredns
+	cd $GOPATH/src/github.com/coredns/coredns
+	make || die "make coredns"
+	mkdir -p $GOPATH/bin
+	mv coredns $GOPATH/bin
+	docker rmi example.com/coredns:0.1
+	local images=$($XCLUSTER ovld images)/images.sh
+	$images make coredns docker.io/nordixorg/mconnect:0.2 || \
+		die "images make"
+
+	# Create the base image
+	$XCLUSTER kernel_build || die "kernel_build"
+	$XCLUSTER busybox_build || die "busybox_build"
+	$XCLUSTER iproute2_build || log "iproute2_build fails always, go on..."
+	$XCLUSTER dropbear_build || die dropbear_build
+	$XCLUSTER mkimage
+
+	# Overlays;
+	$XCLUSTER cache --clear
+
+
+	# Overlay systemd
+	cd $($XCLUSTER ovld systemd)
+	./systemd.sh download
+	./systemd.sh unpack
+	cd $XCLUSTER_WORKSPACE/util-linux-2.31
+	./configure; make -j$(nproc) || die util-linux-2.31
+	cd -
+	./systemd.sh make clean
+	./systemd.sh make -j$(nproc) || die systemd
+	$XCLUSTER cache systemd
+	SETUP=ipv6 $XCLUSTER cache systemd
+
+	# Iptools
+	cd $($XCLUSTER ovld iptools)
+	./iptools.sh download
+	./iptools.sh build
+	$XCLUSTER cache iptools
+	SETUP=ipv6 $XCLUSTER cache iptools
+
+	# Etcd
+	cd $($XCLUSTER ovld etcd)
+	./etcd.sh download
+	$XCLUSTER cache etcd
+	SETUP=ipv6 $XCLUSTER cache etcd
+
+	# Gobgp
+	cd $($XCLUSTER ovld gobgp)
+	./gobgp.sh zdownload
+	./gobgp.sh zbuild || die Zebra
+	go get -u github.com/golang/dep/cmd/dep
+	go get -u github.com/osrg/gobgp
+	cd $GOPATH/src/github.com/osrg/gobgp
+	dep ensure
+	go install ./cmd/... || die gobgp
+	$XCLUSTER cache gobgp
+	SETUP=ipv6 $XCLUSTER cache gobgp
+
+	# Cri-o
+	go get github.com/kubernetes-incubator/cri-tools/cmd/crictl
+	cd $GOPATH/src/github.com/kubernetes-incubator/cri-tools
+	make || die cri-o
+	go get -u github.com/kubernetes-incubator/cri-o
+	cd $GOPATH/src/github.com/kubernetes-incubator/cri-o
+	git checkout -b release-1.12
+	make install.tools || die cri-o
+	make || die cri-o
+	strip bin/*
+
+	# Plugins
+	go get github.com/containernetworking/plugins/
+	cd $GOPATH/src/github.com/containernetworking/plugins
+	./build.sh || die Plugins
+	strip bin/*
+
+	# Kubernetes
+	strip $KUBERNETESD/*
+	cd $($XCLUSTER ovld kubernetes)
+	./kubernetes.sh runc_download
+
+	# Skopeo
+	$XCLUSTER cache skopeo
+	SETUP=ipv6 $XCLUSTER cache skopeo
+
+	# Kube-router
+	go get -u github.com/cloudnativelabs/kube-router
+	go get github.com/matryer/moq
+	cd $GOPATH/src/github.com/cloudnativelabs/kube-router
+	make clean; make || die Kube-router
+	$XCLUSTER cache kube-router
+
+	# Create the k8s image
+	cd $workdir/xcluster
+	. ./Envsettings.k8s
+	$XCLUSTER mkimage
+	$XCLUSTER ximage systemd etcd iptools kubernetes coredns mconnect images
+
+	now=$(date +%s)
+	echo "Elapsed time; $((now-begin)) sec"
+}
+
+
 ##   release --version=ver
 ##     Create a release tar archive.
 ##
