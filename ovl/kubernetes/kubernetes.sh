@@ -53,12 +53,14 @@ cmd_ca() {
 ##   runc_download
 ##
 cmd_runc_download() {
+	local runc=$ARCHIVE/runc.amd64
+	test -x $runc && return 0
 	local ver=v1.0.0-rc5
 	local url=https://github.com/opencontainers/runc/releases/download
-	curl -L $url/$ver/runc.amd64 > $ARCHIVE/runc.amd64
-	chmod a+x $ARCHIVE/runc.amd64
-	strip $ARCHIVE/runc.amd64
-	ls -lh $ARCHIVE/runc.amd64 >&2
+	curl -L $url/$ver/runc.amd64 > $runc
+	chmod a+x $runc
+	strip $runc
+	ls -lh $runc >&2
 }
 
 # Check the hook
