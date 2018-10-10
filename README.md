@@ -8,6 +8,15 @@ To see how `xcluster` can be used with
 Start](#quick-start) section or the Kubernetes
 [overlay](ovl/kubernetes/README.md) (e.g helm).
 
+An `xcluster` consists of a number of identical (kvm) VMs. The disk
+image is shared among the VMs and the `qemu-img` "backing_file"
+function is used to allow individual writes (much like a layered
+file-system). On start specified packages
+([overlays](doc/overlays.md)) are installed.
+
+<img src="xcluster-img.svg" alt="Figure of xcluster disks" width="80%" />
+
+
 More info;
 
  * [Quick Start](#quick-start)
@@ -21,13 +30,6 @@ More info;
  * [Build from scratch](doc/build.md). If the binary release can't be used.
  * [Xcluster for CI](doc/ci.md). Headless operation.
  * [Pre-pulled images](ovl/images/README.md).
-
-An `xcluster` consists of a number of identical (kvm) VMs. The disk
-image is shared among the VMs and the `qemu-img` "backing_file"
-function is used to allow individual writes (much like a layered
-file-system);
-
-<img src="xcluster-img.svg" alt="Figure of xcluster disks" width="80%" />
 
 The VMs are given "roles" depending on their hostname;
 
@@ -55,10 +57,10 @@ ovl directories. Example;
 xc mkcdrom systemd etcd; xc start
 ```
 
-**Note** the "normal" way to add sw it to create an overlay, include it in
-`xc mkcdrom` and re-start. Since re-start is so fast it is slower and
-clumsier to copy sw to running VMs, e.g. with `ssh`.
-[read more](doc/overlays.md).
+**NOTE**; You do not normally install SW on a running `xcluster`,
+instead you create an overlay, include it in `xc mkcdrom` and
+re-start. Since re-start is so fast it is slower and clumsier to copy
+sw to running VMs, e.g. with `ssh`.  [read more](doc/overlays.md).
 
 
 ### Execution environment and dependencies

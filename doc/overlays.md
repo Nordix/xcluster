@@ -11,15 +11,42 @@ ovl directories. Example;
 xc mkcdrom systemd etcd; xc start
 ```
 
-An overlay can either be a tar file or a directory containing a `tar`
-script;
+**NOTE**; You do not normally install SW on a running `xcluster`,
+instead you create an overlay, include it in `xc mkcdrom` and
+re-start. This is not what you are used to from other systems but has
+number of advantages, for instance;
+
+ * You always start from the same point. The system is never "tainted"
+   by some previous action. This is a really big advantage for testing
+   but also for development.
+
+ * The system setup is simple to preserve, re-create and document in
+   the ovl dir.
+
+ * To switch between wastly different setups is done in seconds, for
+   instance switch to ipv6-only for Kubernetes.
+
+
+An overlay can be created from directory containing a `tar` script;
 
 ```
-> ls -F $($XCLUSTER ovld skopeo)
-README.md  tar*
+> ls -F $($XCLUSTER ovld timezone)
+default/ README.md  tar*
 ```
 
-Xcluster will search for the ovl's in the `$XCLUSTER_OVLPATH`.
+The `timezone` overlay dir is a good template.
+
+Xcluster will search for the ovl directories in the
+`$XCLUSTER_OVLPATH`. Copy the `timezone` dir to some place of your
+liking and add to the `$XCLUSTER_OVLPATH`;
+
+```
+mkdir -p $HOME/work/xcluster-ovls
+cp -r $($XCLUSTER ovld timezone) $HOME/work/xcluster-ovls/work
+export XCLUSTER_OVLPATH="$HOME/work/xcluster-ovls/work:$XCLUSTER_OVLPATH"
+# (modify you "work" overlay dir)
+xc mkcdrom work; xc start
+```
 
 The "tar" script must create a tar file for the overlay and take the
 out-file as parameter. The out file may be "-" for 'stdout' which
