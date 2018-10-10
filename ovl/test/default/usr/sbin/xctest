@@ -1,0 +1,140 @@
+#! /bin/sh
+##
+## xctest --
+##
+##   Perform tests of the "xcluster" platform.
+##
+## Commands;
+##
+
+prg=$(basename $0)
+dir=$(dirname $0); dir=$(readlink -f $dir)
+tmp=/tmp/${prg}_$$
+
+die() {
+    echo "ERROR: $*" >&2
+    rm -rf $tmp
+    exit 1
+}
+help() {
+    grep '^##' $0 | cut -c3-
+    rm -rf $tmp
+    exit 0
+}
+test -n "$1" || help
+echo "$1" | grep -qi "^help\|-h" && help
+
+log() {
+	echo "$prg: $*" >&2
+}
+dbg() {
+	test -n "$__verbose" && echo "$prg: $*" >&2
+}
+
+##   k8s
+
+##     Perform tests on a xcluster with Kubernetes. External
+##     connectivity is required. That usually means;
+##
+##       # (a k8s hd image assumed)
+##       xc mkcdrom externalip test; xc start
+##
+cmd_k8s() {
+	tlog "On-cluster xcluster tests start"
+	begin=$(date +%s)
+	local tcases="images start_mconnect local_mconnect start_alpine"
+	__timeout=10
+	mkdir -p $HOME/.kube
+	cp /etc/kubernetes/kubeconfig $HOME/.kube/config
+	local tc
+	begin=$(date +%s)
+	for tc in $tcases; do
+		test_$tc
+	done
+	now=$(date +%s)
+	tlog "On-cluster xcluster tests end. Elapsed time $((now-begin)) sec"
+	return 0
+}
+tlog() {
+	echo "$(date +%T) $*" >&2
+}
+tcase() {
+	now=$(date +%s)
+	local msg="$(date +%T) ($((now-begin))): TEST CASE: $*"
+	echo $msg
+	echo $msg >&2
+}
+tdie() {
+	echo "$(date +%T) ($((now-begin))): FAILED: $*" >&2
+	rm -rf $tmp
+	exit 1
+}
+test_images() {
+	tcase "Check images"
+	mkdir -p $tmp
+	crictl --runtime-endpoint=unix:///var/run/crio/crio.sock images \
+		> $tmp/images || tdie
+	local i
+	for i in pause coredns mconnect; do
+		grep $i $tmp/images || tdie "Image missing [$i]"
+	done
+}
+test_start_mconnect() {
+	tcase "Start mconnect"
+	kubectl apply -f /etc/kubernetes/mconnect.yaml || tdie
+	sleep 1
+	kubectl get svc | grep mconnect | grep 10.0.0.2 || tdie
+	start=$(date +%s)
+	now=$start
+	while ! kubectl get pods 2>&1 | grep -E '^mconnect.*Running'; do
+		test $((now-start)) -ge $__timeout && tdie Timeout
+		sleep 1
+		now=$(date +%s)
+	done
+}
+test_local_mconnect() {
+	tcase "Local mconnect"
+	mkdir -p $tmp
+	mconnect -address mconnect.default.svc.xcluster:5001 -nconn 100 \
+		2>&1 | tee $tmp/mconnect.log || tdie
+	grep -q 'Failed connects; 0$' $tmp/mconnect.log || tdie
+	grep -q 'Failed reads; 0$' $tmp/mconnect.log || tdie
+}
+test_start_alpine() {
+	tcase "Start alpine"
+	kubectl apply -f /etc/kubernetes/alpine.yaml || tdie
+	sleep 12
+	start=$(date +%s)
+	now=$start
+	while ! kubectl get pods 2>&1 | grep -E '^alpine.*Running'; do
+		test $((now-start)) -ge $__timeout && tdie Timeout
+		sleep 1
+		now=$(date +%s)
+	done
+}
+
+# Get the command
+cmd=$1
+shift
+grep -q "^cmd_$cmd()" $0 $hook || die "Invalid command [$cmd]"
+
+while echo "$1" | grep -q '^--'; do
+    if echo $1 | grep -q =; then
+	o=$(echo "$1" | cut -d= -f1 | sed -e 's,-,_,g')
+	v=$(echo "$1" | cut -d= -f2-)
+	eval "$o=\"$v\""
+    else
+	o=$(echo "$1" | sed -e 's,-,_,g')
+	eval "$o=yes"
+    fi
+    shift
+done
+unset o v
+long_opts=`set | grep '^__' | cut -d= -f1`
+
+# Execute command
+trap "die Interrupted" INT TERM
+cmd_$cmd "$@"
+status=$?
+rm -rf $tmp
+exit $status

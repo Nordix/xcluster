@@ -51,6 +51,156 @@ EOF
 	done
 }
 
+##   test [--xterm] [test...]
+##     Test xcluster
+##
+cmd_test() {
+	test -n "$XCLUSTER" || die 'Not set [$XCLUSTER]'
+	test -x "$XCLUSTER" || die "Not executable [$XCLUSTER]"
+	eval $($XCLUSTER env)
+
+	start=starts
+	test "$__xterm" = "yes" && start=start
+
+	# Remove overlays
+	rm -f $XCLUSTER_TMP/cdrom.iso
+	
+	# Go!
+	begin=$(date +%s)
+	tlog "Xcluster test started $(date +%F)"
+	__timeout=10
+
+	if test -n "$1"; then
+		for t in $@; do
+			test_$t
+		done
+	else
+		for t in basic k8s; do
+			test_$t
+		done
+	fi	
+
+	now=$(date +%s)
+	tlog "Xcluster test ended. Elapsed time $((now-begin)) sec"
+}
+
+test_basic() {
+	tcase "Start xcluster"
+
+	# Use the standard image (not k8s)
+	export __image=$XCLUSTER_HOME/hd.img
+
+	$XCLUSTER $start
+	sleep 2
+
+	tcase "VM connectivity"
+	test_vm || tdie
+
+	tcase "Scale out to 8 vms"
+	$XCLUSTER scaleout 5 6 7 8
+	sleep 2
+	test_vm 1 2 3 4 5 6 7 8 201 202 || tdie
+
+	tcase "Scale in some vms"
+	$XCLUSTER scalein 2 4 6 8 202
+	sleep 0.5
+	test_vm 1 3 5 7 201 || tdie
+	test_novm 2 4 6 8 202
+
+	tcase "Stop xcluster"
+	$XCLUSTER stop
+}
+test_k8s() {
+	# Kubernetes tests;
+	export __image=$XCLUSTER_HOME/hd-k8s.img
+	tcase "Start xcluster"
+	$XCLUSTER mkcdrom externalip test
+	$XCLUSTER $start
+	sleep 2
+
+	tcase "VM connectivity"
+	test_vm || tdie
+
+
+	tcase "Wait for k8s nodes"
+	sleep 5
+	start=$(date +%s)
+	now=$start
+	while ! kubectl get nodes 2>&1 | grep vm-001; do
+		test $((now-start)) -ge $__timeout && tdie Timeout
+		sleep 1
+		now=$(date +%s)
+	done
+
+	tcase "Wait for the coredns pod"
+	sleep 10
+	start=$(date +%s)
+	now=$start
+	while ! kubectl get pods 2>&1 | grep -E '^coredns.*Running'; do
+		test $((now-start)) -ge $__timeout && tdie Timeout
+		sleep 1
+		now=$(date +%s)
+	done
+
+	tcase "Perform on-cluster tests"
+	tlog "--------------------------------------------------"
+	rsh 4 xctest k8s || tdie	
+	tlog "--------------------------------------------------"
+
+	tcase "Stop xcluster"
+	$XCLUSTER stop
+}
+
+tlog() {
+	echo "$(date +%T) $*" >&2
+}
+tcase() {
+	now=$(date +%s)
+	local msg="$(date +%T) ($((now-begin))): TEST CASE: $*"
+	echo $msg
+	echo $msg >&2
+}
+tdie() {
+	echo "$(date +%T) ($((now-begin))): FAILED: $*" >&2
+	rm -rf $tmp
+	exit 1
+}
+test_vm() {
+	local vms='1 2 3 4 201 202'
+	test -n "$1" && vms=$@
+	local start=$(date +%s)
+	now=$start
+	local failed=yes
+	while test "$failed" = "yes"; do
+		failed=no
+		for vm in $vms; do
+			if ! rsh $vm hostname; then
+				failed=yes
+				break
+			fi
+		done
+		test "$failed" = "no" && return 0
+		test $((now-start)) -ge $__timeout && tdie Timeout
+		sleep 1
+		now=$(date +%s)
+	done
+	return 1
+}
+test_novm() {
+	local vms='1 2 3 4 201 202'
+	test -n "$1" && vms=$@
+	for vm in $vms; do
+		rsh $vm hostname && return 1
+	done
+	return 0
+}
+rsh() {
+	local vm=$1
+	shift
+	local p=$((12300+vm))
+	ssh -q -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -p $p \
+		root@127.0.0.1 $@
+}
 
 ##   build_release <workdir>
 ##     Builds xcluster from scratch (more or less). This is both a
@@ -188,6 +338,7 @@ cmd_build_release() {
 	. ./Envsettings.k8s
 	$XCLUSTER mkimage
 	$XCLUSTER ximage systemd etcd iptools kubernetes coredns mconnect images
+	chmod 444 $__image		# To avoid users overwrite with "xc mkimage"
 
 	now=$(date +%s)
 	echo "Elapsed time; $((now-begin)) sec"
