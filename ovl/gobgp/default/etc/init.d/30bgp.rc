@@ -32,6 +32,10 @@ global:
   use-multiple-paths:
     config:
       enabled: true
+  apply-policy:
+    config:
+      import-policy-list:
+      - "p1"
 
 peer-groups:
   - config:
@@ -54,6 +58,22 @@ dynamic-neighbors:
   - config:
       prefix: "1000::1:0:0/96"
       peer-group: "k8s"
+defined-sets:
+  prefix-sets:
+  - prefix-set-name: "ps1"
+    prefix-list:
+    - ip-prefix: "192.168.0.0/24"
+    - ip-prefix: "192.168.1.0/24"
+    - ip-prefix: "192.168.2.0/24"
+policy-definitions:
+  - name: "p1"
+    statements:
+    - name: "s1"
+      conditions:
+        match-prefix-set:
+          prefix-set: "ps1"
+      actions:
+        route-disposition: "reject-route"
 zebra:
   config:
     enabled: true
