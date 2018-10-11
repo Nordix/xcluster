@@ -558,7 +558,7 @@ cmd_xvm() {
 		> /dev/null < /dev/null 2>&1 &
 }
 cmd_geometry() {
-    eval ${XCLUSTER_LAYOUT:-"dx=750;dy=260;sz=80x12"}
+    eval ${XCLUSTER_LAYOUT:-"dx=550;dy=220;sz=80x12"}
     eval ${XCLUSTER_OFFSET:-"xo=20;yo=50"}
     test -n "$1" || die "No X position"
     test -n "$2" || die "No Y position"
