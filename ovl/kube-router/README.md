@@ -23,9 +23,9 @@ Usage
 # (with a k8s hd image;)
 xc mkcdrom gobgp kube-router; xc start
 # On cluster;
-gobgp neighbor
-kubectl apply -f /etc/kubernetes/mconnect.yaml
 /bin/gobgp neighbor    # /sbin/gobgp is not compatible with kube-router
+kubectl apply -f /etc/kubernetes/mconnect.yaml
+mconnect -address mconnect.default.svc.xcluster:5001 -nconn 400
 # On router
 gobgp neighbor
 gobgp global rib

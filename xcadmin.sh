@@ -75,7 +75,7 @@ cmd_test() {
 			test_$t
 		done
 	else
-		for t in basic k8s; do
+		for t in basic k8s k8s_ipv6 k8s_kube_router; do
 			test_$t
 		done
 	fi	
@@ -121,35 +121,56 @@ test_k8s() {
 	tcase "VM connectivity"
 	test_vm || tdie
 
-
-	tcase "Wait for k8s nodes"
-	sleep 5
-	start=$(date +%s)
-	now=$start
-	while ! kubectl get nodes 2>&1 | grep vm-001; do
-		test $((now-start)) -ge $__timeout && tdie Timeout
-		sleep 1
-		now=$(date +%s)
-	done
-
-	tcase "Wait for the coredns pod"
-	sleep 10
-	start=$(date +%s)
-	now=$start
-	while ! kubectl get pods 2>&1 | grep -E '^coredns.*Running'; do
-		test $((now-start)) -ge $__timeout && tdie Timeout
-		sleep 1
-		now=$(date +%s)
-	done
-
 	tcase "Perform on-cluster tests"
 	tlog "--------------------------------------------------"
 	rsh 4 xctest k8s || tdie	
+	rsh 201 xctest router_k8s || tdie
 	tlog "--------------------------------------------------"
 
 	tcase "Stop xcluster"
 	$XCLUSTER stop
 }
+test_k8s_ipv6() {
+	# Kubernetes tests with ipv6-only;
+	export __image=$XCLUSTER_HOME/hd-k8s.img
+	tcase "Start xcluster with k8s ipv6-only"
+	SETUP=ipv6 $XCLUSTER mkcdrom etcd k8s-config externalip test
+	$XCLUSTER $start
+	sleep 2
+
+	tcase "VM connectivity"
+	test_vm || tdie
+
+	tcase "Perform on-cluster tests"
+	tlog "--------------------------------------------------"
+	rsh 4 xctest k8s --ipv6 || tdie
+	rsh 201 xctest router_k8s --ipv6 || tdie
+	tlog "--------------------------------------------------"
+
+	tcase "Stop xcluster"
+	$XCLUSTER stop
+}
+test_k8s_kube_router() {
+	# Kubernetes tests with kube-router;
+	export __image=$XCLUSTER_HOME/hd-k8s.img
+	tcase "Start xcluster with kube-router"
+	$XCLUSTER mkcdrom gobgp kube-router test
+	$XCLUSTER $start
+	sleep 2
+
+	tcase "VM connectivity"
+	test_vm || tdie
+
+	tcase "Perform on-cluster tests"
+	tlog "--------------------------------------------------"
+	rsh 4 xctest k8s_kube_router || tdie	
+	rsh 201 xctest router_kube_router || tdie
+	tlog "--------------------------------------------------"
+
+	tcase "Stop xcluster"
+	$XCLUSTER stop
+}
+
 
 tlog() {
 	echo "$(date +%T) $*" >&2

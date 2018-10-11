@@ -31,8 +31,7 @@ dbg() {
 	test -n "$__verbose" && echo "$prg: $*" >&2
 }
 
-##   k8s
-
+##   k8s [--ipv6]
 ##     Perform tests on a xcluster with Kubernetes. External
 ##     connectivity is required. That usually means;
 ##
@@ -40,21 +39,81 @@ dbg() {
 ##       xc mkcdrom externalip test; xc start
 ##
 cmd_k8s() {
-	tlog "On-cluster xcluster tests start"
+	tlog "On-cluster xcluster tests start on $(hostname)"
 	begin=$(date +%s)
 	local tcases="images start_mconnect local_mconnect start_alpine"
 	__timeout=10
 	mkdir -p $HOME/.kube
 	cp /etc/kubernetes/kubeconfig $HOME/.kube/config
 	local tc
-	begin=$(date +%s)
+
+	test_nodes
+	test_coredns
+
 	for tc in $tcases; do
 		test_$tc
 	done
+
 	now=$(date +%s)
 	tlog "On-cluster xcluster tests end. Elapsed time $((now-begin)) sec"
 	return 0
 }
+##   router_k8s
+##     K8s test on a router
+##
+cmd_router_k8s() {
+	tlog "On-router xcluster tests start on $(hostname); k8s"
+	begin=$(date +%s)
+	__timeout=10
+
+	test_external_mconnect
+
+	now=$(date +%s)
+	tlog "On-router xcluster tests end. Elapsed time $((now-begin)) sec"
+	return 0
+}
+##   k8s_kube_router
+##     Kube-router test on k8s
+##
+cmd_k8s_kube_router() {
+	tlog "On-cluster xcluster tests start on $(hostname); kube_router"
+	begin=$(date +%s)
+	local tcases="images start_mconnect local_mconnect"
+	mkdir -p $HOME/.kube
+	cp /etc/kubernetes/kubeconfig $HOME/.kube/config
+	local tc
+
+	__timeout=10
+	test_nodes
+	__timeout=30
+	test_coredns
+	test_peers
+	__timeout=10
+
+	begin=$(date +%s)
+	for tc in $tcases; do
+		test_$tc
+	done
+
+	now=$(date +%s)
+	tlog "On-cluster xcluster tests end. Elapsed time $((now-begin)) sec"
+	return 0
+}
+##   router_kube_router
+##     Kube-router test on a router
+##
+cmd_router_kube_router() {
+	tlog "On-router xcluster tests start on $(hostname); kube_router"
+	begin=$(date +%s)
+	__timeout=10
+
+	test_external_mconnect
+
+	now=$(date +%s)
+	tlog "On-router xcluster tests end. Elapsed time $((now-begin)) sec"
+	return 0
+}
+
 tlog() {
 	echo "$(date +%T) $*" >&2
 }
@@ -68,6 +127,28 @@ tdie() {
 	echo "$(date +%T) ($((now-begin))): FAILED: $*" >&2
 	rm -rf $tmp
 	exit 1
+}
+test_nodes() {
+	tcase "Wait for k8s nodes"
+	sleep 5
+	start=$(date +%s)
+	now=$start
+	while ! kubectl get nodes 2>&1 | grep vm-001; do
+		test $((now-start)) -ge $__timeout && tdie Timeout
+		sleep 1
+		now=$(date +%s)
+	done
+}
+test_coredns() {
+	tcase "Wait for the coredns pod"
+	sleep 10
+	start=$(date +%s)
+	now=$start
+	while ! kubectl get pods 2>&1 | grep -E '^coredns.*Running'; do
+		test $((now-start)) -ge $__timeout && tdie Timeout
+		sleep 1
+		now=$(date +%s)
+	done
 }
 test_images() {
 	tcase "Check images"
@@ -83,7 +164,11 @@ test_start_mconnect() {
 	tcase "Start mconnect"
 	kubectl apply -f /etc/kubernetes/mconnect.yaml || tdie
 	sleep 1
-	kubectl get svc | grep mconnect | grep 10.0.0.2 || tdie
+	if test "$__ipv6" = "yes"; then
+		kubectl get svc | grep mconnect | grep 1000::2 || tdie
+	else
+		kubectl get svc | grep mconnect | grep 10.0.0.2 || tdie
+	fi
 	start=$(date +%s)
 	now=$start
 	while ! kubectl get pods 2>&1 | grep -E '^mconnect.*Running'; do
@@ -91,17 +176,38 @@ test_start_mconnect() {
 		sleep 1
 		now=$(date +%s)
 	done
+	sleep 3   # Give k8s time to setup the service
 }
 test_local_mconnect() {
 	tcase "Local mconnect"
 	mkdir -p $tmp
 	mconnect -address mconnect.default.svc.xcluster:5001 -nconn 100 \
 		2>&1 | tee $tmp/mconnect.log || tdie
+	cat $tmp/mconnect.log
+	grep -q 'Failed connects; 0$' $tmp/mconnect.log || tdie
+	grep -q 'Failed reads; 0$' $tmp/mconnect.log || tdie
+}
+test_external_mconnect() {
+	tcase "External mconnect"
+	mkdir -p $tmp
+	if test "$__ipv6" = "yes"; then
+		mconnect -address [1000::2]:5001 -nconn 100 \
+			2>&1 | tee $tmp/mconnect.log || tdie
+		cat $tmp/mconnect.log
+	else
+		mconnect -address 10.0.0.2:5001 -nconn 100 \
+			2>&1 | tee $tmp/mconnect.log || tdie
+		cat $tmp/mconnect.log
+	fi
 	grep -q 'Failed connects; 0$' $tmp/mconnect.log || tdie
 	grep -q 'Failed reads; 0$' $tmp/mconnect.log || tdie
 }
 test_start_alpine() {
 	tcase "Start alpine"
+	if test "$__ipv6" = "yes"; then
+		tlog "SKIPPED"
+		return 0
+	fi
 	kubectl apply -f /etc/kubernetes/alpine.yaml || tdie
 	sleep 12
 	start=$(date +%s)
@@ -111,6 +217,29 @@ test_start_alpine() {
 		sleep 1
 		now=$(date +%s)
 	done
+}
+test_peers() {
+	tcase "Kube-router peers"
+	start=$(date +%s)
+	now=$start
+	while ! check_peers; do
+		test $((now-start)) -ge $__timeout && tdie Timeout
+		sleep 1
+		now=$(date +%s)
+	done
+}
+check_peers() {
+	mkdir -p $tmp
+	/bin/gobgp neighbor > $tmp/neighbor
+	local i
+	for i in 1 2 3 4 201 202; do
+		test $i -eq $(mynode) && continue
+		grep -E "^192.168.1.$i.*Establ" $tmp/neighbor || return 1
+	done
+	return 0
+}
+mynode() {
+	hostname | cut -d- -f2 | sed -re 's,^0+,,'
 }
 
 # Get the command
