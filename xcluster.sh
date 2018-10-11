@@ -545,8 +545,11 @@ cmd_xvm() {
 	echo help | telnet 127.0.0.1 $((XCLUSTER_MONITOR_BASE+nodeid)) 2>&1 | \
         grep -q 'Connection refused' || die "Node already active [$nodeid]"
 
-	local x=$(((nodeid-1) / 4 % 2 + 1))
-	local y=$(((nodeid-1) % 4 + 1))
+	local x y base=$nodeid
+	test $nodeid -gt 200 && base=$((base+4))
+	test $nodeid -gt 220 && base=$((base+6))
+	x=$(((base-1) / 4 % 2 + 1))
+	y=$(((base-1) % 4 + 1))
 	local geometry="$(cmd_geometry $x $y)"
 
 	test -n "$__bg" || __bg='#040'
@@ -615,7 +618,6 @@ cmd_start() {
 	test "$__nrouters" || __nrouters=2
 	if test $__nrouters -gt 0; then
 		__nets=0,1,2
-		XCLUSTER_OFFSET="xo=790;yo=80"
 		__bg='#400'
 		for n in $(seq 201 $((200+__nrouters))); do
 			cmd_xvm $n
@@ -626,7 +628,6 @@ cmd_start() {
 	if test $__ntesters -gt 0; then
 		__nets=0,2
 		__bg='#004'
-		XCLUSTER_OFFSET="xo=100;yo=100"
 		for n in $(seq 221 $((220+__ntesters))); do
 			cmd_xvm $n
 		done
@@ -730,7 +731,7 @@ cmd_scaleout() {
 		elif test $n -gt 200; then
 			# Router
 			__bg='#400'
-			__nets=$0,1,2
+			__nets=0,1,2
 		fi
 		$cmd $n
 	done
