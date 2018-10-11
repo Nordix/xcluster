@@ -259,18 +259,19 @@ default/etcd.tar.xz
 default/skopeo.tar.xz
 ```
 
+Test
+```
+cd $(dirname $XCLUSTER)
+./xcadmin.sh test > /tmp/$USER/xctest.log
+```
+
 Create the release tar and compress it;
 
 ```
-ver=v0.3
+ver=v0.6
 cd $(dirname $XCLUSTER)
 ./xcadmin.sh release --version=$ver
 pxz /tmp/xcluster-$ver.tar
-```
-
-Test!
-
-```
 git tag $ver
 git push origin $ver
 ```
