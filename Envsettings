@@ -24,6 +24,9 @@ vm() {
 	XXTERM=XCLUSTER exec xterm -T "vm-$1" -fg wheat -bg "$bg" \
 		-e "telnet 192.168.0.$1" &
 }
+cdo() {
+	cd $($XCLUSTER ovld $1)
+}
 
 export XCLUSTER="$(readlink -f .)/xcluster.sh"
 alias xc=$XCLUSTER

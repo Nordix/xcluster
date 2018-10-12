@@ -4,6 +4,12 @@ Contains tips, tricks, Q&A, recipes and general information in no
 particular order.
 
 
+## cdo
+
+The `cdo` function (defined in `Envsettings` let you cd to a ovl directory;
+```
+cdo metallb
+```
 
 ## Use the master branch with a binary release
 
