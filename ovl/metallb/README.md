@@ -27,6 +27,7 @@ Assuming `xcluster` k8s image;
 xc mkcdrom metallb gobgp; xc start
 # On cluster;
 kubectl apply -f https://raw.githubusercontent.com/google/metallb/v0.7.3/manifests/metallb.yaml
+kubectl get pods -n metallb-system
 kubectl apply -f /etc/kubernetes/metallb-config.yaml
 kubectl apply -f /etc/kubernetes/mconnect.yaml
 # On a router vm;
