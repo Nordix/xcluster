@@ -25,15 +25,25 @@ Assuming `xcluster` k8s image;
 
 ```
 xc mkcdrom metallb gobgp; xc start
-# On cluster;
 kubectl apply -f https://raw.githubusercontent.com/google/metallb/v0.7.3/manifests/metallb.yaml
+# On cluster;
 kubectl get pods -n metallb-system
 kubectl apply -f /etc/kubernetes/metallb-config.yaml
 kubectl apply -f /etc/kubernetes/mconnect.yaml
+kubectl get svc
 # On a router vm;
 gobgp neighbor
 ip ro
 mconnect -address 10.0.0.2:5001 -nconn 400
+```
+
+Helm installstion (inatall helm and start `tiller` as described in the
+[kubernets ovelay](../kubernetes.README.md);
+
+```
+xc mkcdrom metallb gobgp; xc start
+helm install --name metallb stable/metallb
+kubectl apply -f $($XCLUSTER ovld metallb)/default/etc/kubernetes/metallb-config-helm.yaml
 ```
 
 Images can be pre-pulled for faster (and safer) operation for instance
