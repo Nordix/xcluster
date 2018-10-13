@@ -31,6 +31,8 @@ dbg() {
 	test -n "$__verbose" && echo "$prg: $*" >&2
 }
 
+test -n "$__timeout" || __timeout=10
+
 ##   k8s [--ipv6]
 ##     Perform tests on a xcluster with Kubernetes. External
 ##     connectivity is required. That usually means;
@@ -41,21 +43,33 @@ dbg() {
 cmd_k8s() {
 	tlog "On-cluster xcluster tests start on $(hostname)"
 	begin=$(date +%s)
-	local tcases="images start_mconnect local_mconnect start_alpine"
-	__timeout=10
-	mkdir -p $HOME/.kube
-	cp /etc/kubernetes/kubeconfig $HOME/.kube/config
+
+	cmd_wait_for_k8s
+
+	local tcases="test_images cmd_tcase_start_mconnect test_local_mconnect test_start_alpine"
 	local tc
 
-	test_nodes
-	test_coredns
-
 	for tc in $tcases; do
-		test_$tc
+		$tc
 	done
 
 	now=$(date +%s)
 	tlog "On-cluster xcluster tests end. Elapsed time $((now-begin)) sec"
+	return 0
+}
+##   wait_for_k8s
+##
+cmd_wait_for_k8s() {
+	tlog "On-cluster $(hostname); Wait for Kubernetes"
+	local begin=$(date +%s)
+	mkdir -p $HOME/.kube
+	cp /etc/kubernetes/kubeconfig $HOME/.kube/config
+
+	test_nodes
+	test_coredns
+
+	now=$(date +%s)
+	tlog "Kubernetes ready. Elapsed time $((now-begin)) sec"
 	return 0
 }
 ##   router_k8s
@@ -78,7 +92,7 @@ cmd_router_k8s() {
 cmd_k8s_kube_router() {
 	tlog "On-cluster xcluster tests start on $(hostname); kube_router"
 	begin=$(date +%s)
-	local tcases="images start_mconnect local_mconnect"
+	local tcases="test_images cmd_tcase_start_mconnect test_local_mconnect"
 	mkdir -p $HOME/.kube
 	cp /etc/kubernetes/kubeconfig $HOME/.kube/config
 	local tc
@@ -92,7 +106,7 @@ cmd_k8s_kube_router() {
 
 	begin=$(date +%s)
 	for tc in $tcases; do
-		test_$tc
+		$tc
 	done
 
 	now=$(date +%s)
@@ -115,16 +129,16 @@ cmd_router_kube_router() {
 }
 
 tlog() {
-	echo "$(date +%T) $*" >&2
+	echo "  $(date +%T) $*" >&2
 }
 tcase() {
 	now=$(date +%s)
 	local msg="$(date +%T) ($((now-begin))): TEST CASE: $*"
-	echo $msg
-	echo $msg >&2
+	echo "  $msg"
+	echo "  $msg" >&2
 }
 tdie() {
-	echo "$(date +%T) ($((now-begin))): FAILED: $*" >&2
+	echo "  $(date +%T) ($((now-begin))): FAILED: $*" >&2
 	rm -rf $tmp
 	exit 1
 }
@@ -160,7 +174,7 @@ test_images() {
 		grep $i $tmp/images || tdie "Image missing [$i]"
 	done
 }
-test_start_mconnect() {
+cmd_tcase_start_mconnect() {
 	tcase "Start mconnect"
 	kubectl apply -f /etc/kubernetes/mconnect.yaml || tdie
 	sleep 1

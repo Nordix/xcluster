@@ -75,7 +75,7 @@ cmd_test() {
 			test_$t
 		done
 	else
-		for t in basic k8s k8s_ipv6 k8s_kube_router; do
+		for t in basic k8s k8s_ipv6 k8s_kube_router k8s_metallb; do
 			test_$t
 		done
 	fi	
@@ -114,7 +114,8 @@ test_k8s() {
 	# Kubernetes tests;
 	export __image=$XCLUSTER_HOME/hd-k8s.img
 	tcase "Start xcluster"
-	$XCLUSTER mkcdrom externalip test
+	test "$__pre_pull" = "yes" && images=images
+	$XCLUSTER mkcdrom externalip test $images
 	$XCLUSTER $start
 	sleep 2
 
@@ -122,10 +123,8 @@ test_k8s() {
 	test_vm || tdie
 
 	tcase "Perform on-cluster tests"
-	tlog "--------------------------------------------------"
 	rsh 4 xctest k8s || tdie	
 	rsh 201 xctest router_k8s || tdie
-	tlog "--------------------------------------------------"
 
 	tcase "Stop xcluster"
 	$XCLUSTER stop
@@ -134,7 +133,8 @@ test_k8s_ipv6() {
 	# Kubernetes tests with ipv6-only;
 	export __image=$XCLUSTER_HOME/hd-k8s.img
 	tcase "Start xcluster with k8s ipv6-only"
-	SETUP=ipv6 $XCLUSTER mkcdrom etcd k8s-config externalip test
+	test "$__pre_pull" = "yes" && images=images
+	SETUP=ipv6 $XCLUSTER mkcdrom etcd k8s-config externalip test $images
 	$XCLUSTER $start
 	sleep 2
 
@@ -142,10 +142,8 @@ test_k8s_ipv6() {
 	test_vm || tdie
 
 	tcase "Perform on-cluster tests"
-	tlog "--------------------------------------------------"
 	rsh 4 xctest k8s --ipv6 || tdie
 	rsh 201 xctest router_k8s --ipv6 || tdie
-	tlog "--------------------------------------------------"
 
 	tcase "Stop xcluster"
 	$XCLUSTER stop
@@ -162,15 +160,36 @@ test_k8s_kube_router() {
 	test_vm || tdie
 
 	tcase "Perform on-cluster tests"
-	tlog "--------------------------------------------------"
 	rsh 4 xctest k8s_kube_router || tdie	
 	rsh 201 xctest router_kube_router || tdie
-	tlog "--------------------------------------------------"
 
 	tcase "Stop xcluster"
 	$XCLUSTER stop
 }
 
+test_k8s_metallb() {
+	# Kubernetes tests with kube-router;
+	export __image=$XCLUSTER_HOME/hd-k8s.img
+	tcase "Start xcluster for test with metallb"
+	test "$__pre_pull" = "yes" && images=images
+	$XCLUSTER mkcdrom gobgp metallb test $images
+	$XCLUSTER $start
+	sleep 2
+
+	tcase "VM connectivity"
+	test_vm || tdie
+
+	tcase "Wait for Kubernetes"
+	rsh 4 xctest wait_for_k8s || tdie
+
+	tcase_tiller
+	tcase_helm_install_metallb
+	rsh 4 xctest tcase_start_mconnect  || tdie
+	rsh 201 xctest router_k8s || tdie
+
+	tcase "Stop xcluster"
+	$XCLUSTER stop
+}
 
 tlog() {
 	echo "$(date +%T) $*" >&2
@@ -222,6 +241,30 @@ rsh() {
 	ssh -q -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -p $p \
 		root@127.0.0.1 $@
 }
+tcase_tiller() {
+	tcase "Start tiller"
+	ps axxxwww | grep -v grep | grep tiller && return 0
+	which tiller > /dev/null || tdie "Tiller not found"
+	tiller > /tmp/$USER/tiller.log 2>&1 &
+	sleep 0.5
+}
+tcase_helm_install_metallb() {
+	tcase "Install metallb with helm"
+	which helm > /dev/null || tdie "Helm not found"
+	test -n "$HELM_HOST" || export HELM_HOST=localhost:44134
+	helm install --name metallb stable/metallb 2>&1 || tdie Helm
+	sleep 10
+	local start=$(date +%s)
+	local now=$start
+	while ! kubectl get pods | grep -qE '^metallb-controller.*Running'; do
+		test $((now-start)) -ge $__timeout && tdie Timeout
+		sleep 1
+		now=$(date +%s)
+	done
+	kubectl apply -f \
+		$($XCLUSTER ovld metallb)/default/etc/kubernetes/metallb-config-helm.yaml
+}
+
 
 ##   build_release <workdir>
 ##     Builds xcluster from scratch (more or less). This is both a
@@ -380,7 +423,7 @@ cmd_release() {
 	T=$tmp/xcluster
 	mkdir -p $T
 	cp -R $d/* $T
-	rm -rf $T/.git $T/xcadmin.sh
+	rm -rf $T/.git
 
 	H=$T/workspace/xcluster
 	mkdir -p $H
