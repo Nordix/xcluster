@@ -85,14 +85,16 @@ same as `kubectl`.
 
 Prerequisite; Install a `$HOME/.kube/config` as above.
 
-**Note**: Do not use ~~helm init~~.
-
 #### Install
 
 Download from the helm
 [release-page](https://github.com/helm/helm/releases). Pick a Linux
 binary. Unpack it at some place of your liking and add it to your
-`$PATH`.
+`$PATH`. Do;
+
+```
+helm init --client-only
+```
 
 #### Start tiller
 
