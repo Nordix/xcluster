@@ -38,7 +38,7 @@ mconnect -address 10.0.0.2:5001 -nconn 400
 ```
 
 Helm installstion (inatall helm and start `tiller` as described in the
-[kubernets ovelay](../kubernetes.README.md);
+[kubernets ovelay](../kubernetes/README.md);
 
 ```
 xc mkcdrom metallb gobgp; xc start
