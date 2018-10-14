@@ -54,12 +54,3 @@ You can also load directly from a public docker registry, please see
 
 You can refere to your local images with `example.com`.
 
-
-
-
-kubectl get pods
-kubectl apply -f /etc/kubernetes/alpine.yaml
-tail -f /tmp/uablrek/coredns.log 
-
-
-https://github.com/kubernetes-sigs/cri-o/issues/1768
