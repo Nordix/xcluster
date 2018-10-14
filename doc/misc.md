@@ -6,7 +6,7 @@ particular order.
 
 ## cdo
 
-The `cdo` function (defined in `Envsettings` let you cd to a ovl directory;
+The `cdo` function (defined in `Envsettings`) let you cd to a ovl directory;
 ```
 cdo metallb
 ```
@@ -74,7 +74,7 @@ To position the `xterm` windows use the variables `$XCLUSTER_LAYOUT`
 and `$XCLUSTER_OFFSET`. The defaults are;
 
 ```
-export XCLUSTER_LAYOUT="dx=750;dy=260;sz=80x12"
+export XCLUSTER_LAYOUT="dx=550;dy=220;sz=80x12"
 export XCLUSTER_OFFSET="xo=20;yo=50"
 ```
 
