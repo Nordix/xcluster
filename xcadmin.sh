@@ -2,7 +2,7 @@
 ##
 ## xcadmin.sh --
 ##
-##   Admin scrit for Xcluster.
+##   Admin script for Xcluster.
 ##
 ## Commands;
 ##
@@ -51,220 +51,6 @@ EOF
 	done
 }
 
-##   test [--xterm] [test...]
-##     Test xcluster
-##
-cmd_test() {
-	test -n "$XCLUSTER" || die 'Not set [$XCLUSTER]'
-	test -x "$XCLUSTER" || die "Not executable [$XCLUSTER]"
-	eval $($XCLUSTER env)
-
-	start=starts
-	test "$__xterm" = "yes" && start=start
-
-	# Remove overlays
-	rm -f $XCLUSTER_TMP/cdrom.iso
-	
-	# Go!
-	begin=$(date +%s)
-	tlog "Xcluster test started $(date +%F)"
-	__timeout=10
-
-	if test -n "$1"; then
-		for t in $@; do
-			test_$t
-		done
-	else
-		for t in basic k8s k8s_ipv6 k8s_kube_router k8s_metallb; do
-			test_$t
-		done
-	fi	
-
-	now=$(date +%s)
-	tlog "Xcluster test ended. Elapsed time $((now-begin)) sec"
-}
-
-test_basic() {
-	tcase "Start xcluster"
-
-	# Use the standard image (not k8s)
-	export __image=$XCLUSTER_HOME/hd.img
-
-	$XCLUSTER $start
-	sleep 2
-
-	tcase "VM connectivity"
-	test_vm || tdie
-
-	tcase "Scale out to 8 vms"
-	$XCLUSTER scaleout 5 6 7 8
-	sleep 2
-	test_vm 1 2 3 4 5 6 7 8 201 202 || tdie
-
-	tcase "Scale in some vms"
-	$XCLUSTER scalein 2 4 6 8 202
-	sleep 0.5
-	test_vm 1 3 5 7 201 || tdie
-	test_novm 2 4 6 8 202
-
-	tcase "Stop xcluster"
-	$XCLUSTER stop
-}
-test_k8s() {
-	# Kubernetes tests;
-	export __image=$XCLUSTER_HOME/hd-k8s.img
-	tcase "Start xcluster"
-	test "$__pre_pull" = "yes" && images=images
-	$XCLUSTER mkcdrom externalip test $images
-	$XCLUSTER $start
-	sleep 2
-
-	tcase "VM connectivity"
-	test_vm || tdie
-
-	tcase "Perform on-cluster tests"
-	rsh 4 xctest k8s || tdie	
-	rsh 201 xctest router_k8s || tdie
-
-	tcase "Stop xcluster"
-	$XCLUSTER stop
-}
-test_k8s_ipv6() {
-	# Kubernetes tests with ipv6-only;
-	export __image=$XCLUSTER_HOME/hd-k8s.img
-	tcase "Start xcluster with k8s ipv6-only"
-	test "$__pre_pull" = "yes" && images=images
-	SETUP=ipv6 $XCLUSTER mkcdrom etcd k8s-config externalip test $images
-	$XCLUSTER $start
-	sleep 2
-
-	tcase "VM connectivity"
-	test_vm || tdie
-
-	tcase "Perform on-cluster tests"
-	rsh 4 xctest k8s --ipv6 || tdie
-	rsh 201 xctest router_k8s --ipv6 || tdie
-
-	tcase "Stop xcluster"
-	$XCLUSTER stop
-}
-test_k8s_kube_router() {
-	# Kubernetes tests with kube-router;
-	export __image=$XCLUSTER_HOME/hd-k8s.img
-	tcase "Start xcluster with kube-router"
-	$XCLUSTER mkcdrom gobgp kube-router test
-	$XCLUSTER $start
-	sleep 2
-
-	tcase "VM connectivity"
-	test_vm || tdie
-
-	tcase "Perform on-cluster tests"
-	rsh 4 xctest k8s_kube_router || tdie	
-	rsh 201 xctest router_kube_router || tdie
-
-	tcase "Stop xcluster"
-	$XCLUSTER stop
-}
-
-test_k8s_metallb() {
-	# Kubernetes tests with kube-router;
-	export __image=$XCLUSTER_HOME/hd-k8s.img
-	tcase "Start xcluster for test with metallb"
-	test "$__pre_pull" = "yes" && images=images
-	$XCLUSTER mkcdrom gobgp metallb test $images
-	$XCLUSTER $start
-	sleep 2
-
-	tcase "VM connectivity"
-	test_vm || tdie
-
-	tcase "Wait for Kubernetes"
-	rsh 4 xctest wait_for_k8s || tdie
-
-	tcase_tiller
-	tcase_helm_install_metallb
-	rsh 4 xctest tcase_start_mconnect  || tdie
-	rsh 201 xctest router_k8s || tdie
-
-	tcase "Stop xcluster"
-	$XCLUSTER stop
-}
-
-tlog() {
-	echo "$(date +%T) $*" >&2
-}
-tcase() {
-	now=$(date +%s)
-	local msg="$(date +%T) ($((now-begin))): TEST CASE: $*"
-	echo $msg
-	echo $msg >&2
-}
-tdie() {
-	echo "$(date +%T) ($((now-begin))): FAILED: $*" >&2
-	rm -rf $tmp
-	exit 1
-}
-test_vm() {
-	local vms='1 2 3 4 201 202'
-	test -n "$1" && vms=$@
-	local start=$(date +%s)
-	now=$start
-	local failed=yes
-	while test "$failed" = "yes"; do
-		failed=no
-		for vm in $vms; do
-			if ! rsh $vm hostname; then
-				failed=yes
-				break
-			fi
-		done
-		test "$failed" = "no" && return 0
-		test $((now-start)) -ge $__timeout && tdie Timeout
-		sleep 1
-		now=$(date +%s)
-	done
-	return 1
-}
-test_novm() {
-	local vms='1 2 3 4 201 202'
-	test -n "$1" && vms=$@
-	for vm in $vms; do
-		rsh $vm hostname && return 1
-	done
-	return 0
-}
-rsh() {
-	local vm=$1
-	shift
-	local p=$((12300+vm))
-	ssh -q -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -p $p \
-		root@127.0.0.1 $@
-}
-tcase_tiller() {
-	tcase "Start tiller"
-	ps axxxwww | grep -v grep | grep tiller && return 0
-	which tiller > /dev/null || tdie "Tiller not found"
-	tiller > /tmp/$USER/tiller.log 2>&1 &
-	sleep 0.5
-}
-tcase_helm_install_metallb() {
-	tcase "Install metallb with helm"
-	which helm > /dev/null || tdie "Helm not found"
-	test -n "$HELM_HOST" || export HELM_HOST=localhost:44134
-	helm install --name metallb stable/metallb 2>&1 || tdie Helm
-	sleep 10
-	local start=$(date +%s)
-	local now=$start
-	while ! kubectl get pods | grep -qE '^metallb-controller.*Running'; do
-		test $((now-start)) -ge $__timeout && tdie Timeout
-		sleep 1
-		now=$(date +%s)
-	done
-	kubectl apply -f \
-		$($XCLUSTER ovld metallb)/default/etc/kubernetes/metallb-config-helm.yaml
-}
-
 
 ##   build_release <workdir>
 ##     Builds xcluster from scratch (more or less). This is both a
@@ -286,7 +72,7 @@ cmd_build_release() {
 
 	# Clone
 	#local url=https://github.com/Nordix/xcluster.git
-	local url=file:///home/uablrek/go/src/github.com/Nordix/xcluster
+	local url=file:///$HOME/go/src/github.com/Nordix/xcluster
 	git clone $url || die "Failed to clone xcluster"
 
 	# Setup env
@@ -306,7 +92,7 @@ cmd_build_release() {
 	sed -ie "s,-j4,-j$(nproc)," $DISKIM
 
 	# Build the image overlay early to get the "sudo" over with
-	go get -u github.com/coredns/coredns
+	go get github.com/coredns/coredns
 	cd $GOPATH/src/github.com/coredns/coredns
 	make || die "make coredns"
 	mkdir -p $GOPATH/bin
@@ -356,11 +142,13 @@ cmd_build_release() {
 	cd $($XCLUSTER ovld gobgp)
 	./gobgp.sh zdownload
 	./gobgp.sh zbuild || die Zebra
-	go get -u github.com/golang/dep/cmd/dep
-	go get -u github.com/osrg/gobgp
+	go get github.com/golang/dep/cmd/dep
+	go get github.com/osrg/gobgp
 	cd $GOPATH/src/github.com/osrg/gobgp
+	# **NOTE** 'master* does NOT work!!!
+	git checkout v1.33
 	dep ensure
-	go install ./cmd/... || die gobgp
+	go install ./gobgp/... ./gobgpd/... || die gobgp
 	$XCLUSTER cache gobgp
 	SETUP=ipv6 $XCLUSTER cache gobgp
 
@@ -370,7 +158,6 @@ cmd_build_release() {
 	make || die cri-o
 	go get -u github.com/kubernetes-incubator/cri-o
 	cd $GOPATH/src/github.com/kubernetes-incubator/cri-o
-	git checkout -b release-1.12
 	make install.tools || die cri-o
 	make || die cri-o
 	strip bin/*
@@ -391,10 +178,7 @@ cmd_build_release() {
 	SETUP=ipv6 $XCLUSTER cache skopeo
 
 	# Kube-router
-	go get -u github.com/cloudnativelabs/kube-router
-	go get github.com/matryer/moq
-	cd $GOPATH/src/github.com/cloudnativelabs/kube-router
-	make clean; make || die Kube-router
+	$me build_kube_router
 	$XCLUSTER cache kube-router
 
 	# Create the k8s image
@@ -407,7 +191,14 @@ cmd_build_release() {
 	now=$(date +%s)
 	echo "Elapsed time; $((now-begin)) sec"
 }
-
+cmd_build_kube_router() {
+	export GOROOT=$HOME/bin/go-1.10.4
+	export PATH=$GOROOT/bin:$PATH
+	go get -u github.com/cloudnativelabs/kube-router
+	go get github.com/matryer/moq
+	cd $GOPATH/src/github.com/cloudnativelabs/kube-router
+	make clean; make || die Kube-router
+}
 
 ##   release --version=ver
 ##     Create a release tar archive.

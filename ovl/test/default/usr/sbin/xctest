@@ -99,7 +99,7 @@ cmd_k8s_kube_router() {
 
 	__timeout=10
 	test_nodes
-	__timeout=30
+	__timeout=60
 	test_coredns
 	test_peers
 	__timeout=10

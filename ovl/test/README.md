@@ -1,15 +1,7 @@
-# Xcluster tests
+# Xcluster test overlay
 
 Contains test programs for `xcluster` itself and for Kubernetes on
 xcluster.
-
-No "tool" or procedure is imposed or recommended. To do that at early
-stages usually leads to regrets. A wise advice I once got;
-
-> It doesn't matter how you write the tests, just write them!
-
-The danger is to spend too much time searching for the perfect tool so
-at the end of the day no tests are written.
 
 
 ## Usage
@@ -19,7 +11,6 @@ xc mkcdrom externalip test; xc start
 # On cluster;
 xctest k8s
 # Or;
-xc mkcdrom externalip test
 $(dirname $XCLUSTER)/xcadmin.sh test --xterm > /tmp/$USER/xctest.log
 ```
 

@@ -30,6 +30,7 @@ More info;
  * [Build from scratch](doc/build.md). If the binary release can't be used.
  * [Xcluster for CI](doc/ci.md). Headless operation.
  * [Pre-pulled images](ovl/images/README.md).
+ * [Test](test/README.md)
 
 The VMs are given "roles" depending on their hostname;
 
