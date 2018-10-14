@@ -12,6 +12,8 @@
  * [kube-router](ovl/kube-router/README.md)
  * [mconnect](ovl/mconnect/README.md)
  * [metallb](ovl/metallb/README.md)
+ * [private-reg](ovl/private-reg/README.md)
  * [skopeo](ovl/skopeo/README.md)
  * [systemd](ovl/systemd/README.md)
+ * [test](ovl/test/README.md)
  * [timezone](ovl/timezone/README.md)
