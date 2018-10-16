@@ -54,3 +54,23 @@ You can also load directly from a public docker registry, please see
 
 You can refere to your local images with `example.com`.
 
+
+## Cri-o configuration
+
+Here is a snipplet from `/etc/crio/crio.conf` to configure a local
+private registry. Since the local registry comes before the default
+`docker.io` it will function as a cache.
+
+```
+# insecure_registries is used to skip TLS verification when pulling images.
+insecure_registries = [
+ "172.17.0.2/16"
+]
+
+# registries is used to specify a comma separated list of registries to be used
+# when pulling an unqualified image (e.g. fedora:rawhide).
+registries = [
+ "172.17.0.2:5000",
+ "docker.io"
+]
+```
