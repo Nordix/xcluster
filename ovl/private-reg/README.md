@@ -27,6 +27,7 @@ docker container stop registry
 docker container rm -v registry
 ```
 
+
 ## Usage
 
 ```
@@ -52,7 +53,34 @@ skopeo inspect --tls-verify=false docker://172.17.0.2:5000/library/alpine:3.8
 You can also load directly from a public docker registry, please see
 `man skopeo`.
 
-You can refere to your local images with `example.com`.
+
+## DNS spoofing
+
+If you have manifests with fully qualified image references, that is
+it includes the registry host, you can "trick" the image pulling to
+use your local registry anyway.
+
+Firsts you must start a docker registry on the standard port. Assuming
+you don't have a local http server running, do;
+
+```
+# Stop the old registry (if necessary);
+docker container stop registry
+docker container rm -v registry
+# Start with port forwarding on port 80;
+docker run -d --restart=always -p 80:5000 --name registry registry:2
+```
+
+Then add the domain name (DN) for the host in the `/etc/hosts`
+file. The simplest way is to edit the `tar` script in this ovl
+dir. The `example.com` is already added.
+
+Load your private registry with `skopeo` as described above and test
+on cluster with;
+
+```
+crictl --runtime-endpoint=unix:///var/run/crio/crio.sock pull example.com/metallb:0.7.3
+```
 
 
 ## Cri-o configuration

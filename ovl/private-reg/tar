@@ -30,7 +30,7 @@ done
 test "$setup_copied" != "yes" && test -d $dir/default && cp -R $dir/default/* $tmp
 
 sed -ie "s,%localreg%,$regip," $tmp/etc/crio/crio.conf
-echo "$regip example.com" >> $tmp/etc/hosts
+echo "192.168.0.250 example.com" >> $tmp/etc/hosts
 
 cd $tmp
 tar cf "$1" *
