@@ -221,9 +221,12 @@ check_novm() {
 rsh() {
 	local vm=$1
 	shift
-	local p=$((12300+vm))
-	ssh -q -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -p $p \
-		root@127.0.0.1 $@
+	local sshopt="-o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no"
+	if ip link show xcbr1 > /dev/null 2>&1; then
+		ssh -q $sshopt root@192.168.0.$vm $@
+	else
+		ssh -q $sshopt -p $((12300+vm)) root@127.0.0.1 $@
+	fi
 }
 tcase_tiller() {
 	tcase "Start tiller"
