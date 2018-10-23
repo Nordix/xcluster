@@ -19,7 +19,6 @@ for n in controller speaker; do
 	test -x $f || die "Not executable [$f]"
 	cp $f $tmp/bin
 done
-gcc -o $tmp/bin/speaker-launcher $dir/../speaker-launcher.c
 
 for s in $(echo "$SETUP" | tr ',' ' '); do
 	test -d $dir/$s || continue
