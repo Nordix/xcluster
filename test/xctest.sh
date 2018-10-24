@@ -241,6 +241,7 @@ tcase_helm_install_metallb() {
 	test -n "$HELM_HOST" || export HELM_HOST=localhost:44134
 	helm install --name metallb stable/metallb 2>&1 || tdie Helm
 	sleep 10
+	__timeout=20
 	local start=$(date +%s)
 	local now=$start
 	while ! kubectl get pods | grep -qE '^metallb-controller.*Running'; do
@@ -250,6 +251,7 @@ tcase_helm_install_metallb() {
 	done
 	kubectl apply -f \
 		$($XCLUSTER ovld metallb)/default/etc/kubernetes/metallb-config-helm.yaml
+	__timeout=10
 }
 
 
