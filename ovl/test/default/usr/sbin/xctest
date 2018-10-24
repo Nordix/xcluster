@@ -32,6 +32,7 @@ dbg() {
 }
 
 test -n "$__timeout" || __timeout=10
+test -r /etc/TZ && export TZ=$(cat /etc/TZ)
 
 ##   k8s [--ipv6]
 ##     Perform tests on a xcluster with Kubernetes. External
