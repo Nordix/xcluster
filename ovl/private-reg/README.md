@@ -27,6 +27,26 @@ docker container stop registry
 docker container rm -v registry
 ```
 
+### Ipv6
+
+Read the Docker
+[documentation](https://docs.docker.com/v17.09/engine/userguide/networking/default_network/ipv6/).
+
+Enable ipv6 for Docker;
+
+```
+# cat /etc/docker/daemon.json
+{
+  "ipv6": true,
+  "fixed-cidr-v6": "fd00:2008::/64"
+}
+# systemctl reload docker
+```
+
+Inspect the assigned ipv6 address;
+```
+docker inspect -f '{{range .NetworkSettings.Networks}}{{.GlobalIPv6Address}}{{end}}' registry
+```
 
 ## Usage
 

@@ -14,6 +14,11 @@ log() {
 }
 test -n "$1" || die "No out-file"
 
+# Get the IPv6 address to the local registry
+regip=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.GlobalIPv6Address}}{{end}}' registry)
+test -n "$regip" || log 'No local ipv6 docker registry'
+#log "Address [$regip]"
+
 rm -rf $tmp
 mkdir -p $tmp/etc
 for s in $(echo "$SETUP" | tr ',' ' '); do
@@ -22,6 +27,9 @@ for s in $(echo "$SETUP" | tr ',' ' '); do
 	setup_copied=yes
 done
 test "$setup_copied" != "yes" -a -d $dir/default && cp -R $dir/default/* $tmp
+
+sed -ie "s,%localreg%,$regip," $tmp/etc/crio/crio.conf
+
 
 cd $tmp
 tar cf "$1" *

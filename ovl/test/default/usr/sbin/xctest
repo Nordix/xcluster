@@ -219,10 +219,6 @@ test_external_mconnect() {
 }
 test_start_alpine() {
 	tcase "Start alpine"
-	if test "$__ipv6" = "yes"; then
-		tlog "SKIPPED"
-		return 0
-	fi
 	kubectl apply -f /etc/kubernetes/alpine.yaml || tdie
 	sleep 12
 	start=$(date +%s)
