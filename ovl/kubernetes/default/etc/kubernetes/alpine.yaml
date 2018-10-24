@@ -19,3 +19,8 @@ spec:
           - /bin/sh
           - "-c"
           - "sleep 60m"
+        env:
+          - name: MY_NODE_NAME
+            valueFrom:
+              fieldRef:
+                fieldPath: spec.nodeName
