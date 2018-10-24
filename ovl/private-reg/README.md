@@ -74,6 +74,18 @@ You can also load directly from a public docker registry, please see
 `man skopeo`.
 
 
+### List contents
+
+```
+regip=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' registry)
+curl -X GET http://$regip:5000/v2/_catalog
+# Tags for an image;
+curl -X GET http://$regip:5000/v2/library/alpine/tags/list
+curl -s -X GET http://$regip:5000/v2/library/alpine/tags/list | jq .
+```
+
+
+
 ## DNS spoofing
 
 If you have manifests with fully qualified image references, that is
