@@ -52,6 +52,21 @@ cmd_in_docker() {
 	skopeo inspect docker-daemon:$1 > /dev/null 2>&1
 }
 
+##   docker_lsreg
+##     List the contents of the local registry.
+##
+cmd_docker_lsreg() {
+	local regip=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' registry)
+	test -n "$regip" || die "Can't get address of the local registry"
+	local i
+	for i in $(curl -s -X GET http://$regip:5000/v2/_catalog | jq .repositories[] | tr -d '"'); do
+		echo "$i:"
+		echo -n "  "
+		curl -s -X GET http://$regip:5000/v2/$i/tags/list | jq -c .tags
+	done
+
+}
+
 #   get_manifest <rootfs>
 #
 cmd_get_manifest() {
