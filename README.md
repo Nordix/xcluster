@@ -43,7 +43,8 @@ vm-250 -          Reserved
 
 By default `xcluster` starts with consoles in `xterm` windows;
 
-<img src="xcluster-screenshot.png" alt="xcluster screenshot" width="80%" />
+<iframe width="1280" height="720" src="https://www.youtube.com/embed/benldT1Ev-I" frameborder="0" allow="autoplay; encrypted-media" allowfullscreen></iframe>
+
 
 #### Overlays
 
