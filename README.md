@@ -41,7 +41,8 @@ vm-221 - vm-240   Tester VMs
 vm-250 -          Reserved
 ```
 
-By default `xcluster` starts with consoles in `xterm` windows;
+By default `xcluster` starts with consoles in `xterm` windows. This
+short (<3min) demo shows Kubernetes ipv6-only on `xcluster`;
 
 
 [![Xcluster demo video](http://img.youtube.com/vi/benldT1Ev-I/0.jpg)](http://www.youtube.com/watch?v=benldT1Ev-I)
