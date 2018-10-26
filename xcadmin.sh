@@ -110,8 +110,6 @@ cmd_build_release() {
 	$XCLUSTER mkimage
 
 	# Overlays;
-	$XCLUSTER cache --clear
-
 
 	# Overlay systemd
 	cd $($XCLUSTER ovld systemd)
@@ -122,21 +120,15 @@ cmd_build_release() {
 	cd -
 	./systemd.sh make clean
 	./systemd.sh make -j$(nproc) || die systemd
-	$XCLUSTER cache systemd
-	SETUP=ipv6 $XCLUSTER cache systemd
 
 	# Iptools
 	cd $($XCLUSTER ovld iptools)
 	./iptools.sh download
 	./iptools.sh build
-	$XCLUSTER cache iptools
-	SETUP=ipv6 $XCLUSTER cache iptools
 
 	# Etcd
 	cd $($XCLUSTER ovld etcd)
 	./etcd.sh download
-	$XCLUSTER cache etcd
-	SETUP=ipv6 $XCLUSTER cache etcd
 
 	# Gobgp
 	cd $($XCLUSTER ovld gobgp)
@@ -149,8 +141,6 @@ cmd_build_release() {
 	git checkout v1.33
 	dep ensure
 	go install ./gobgp/... ./gobgpd/... || die gobgp
-	$XCLUSTER cache gobgp
-	SETUP=ipv6 $XCLUSTER cache gobgp
 
 	# Cri-o
 	go get github.com/kubernetes-incubator/cri-tools/cmd/crictl
@@ -173,13 +163,10 @@ cmd_build_release() {
 	cd $($XCLUSTER ovld kubernetes)
 	./kubernetes.sh runc_download
 
-	# Skopeo
-	$XCLUSTER cache skopeo
-	SETUP=ipv6 $XCLUSTER cache skopeo
-
 	# Kube-router
 	$me build_kube_router
-	$XCLUSTER cache kube-router
+
+	cmd_cache_refresh
 
 	# Create the k8s image
 	cd $workdir/xcluster
@@ -198,6 +185,20 @@ cmd_build_kube_router() {
 	go get github.com/matryer/moq
 	cd $GOPATH/src/github.com/cloudnativelabs/kube-router
 	make clean; make || die Kube-router
+}
+cmd_cache_refresh() {
+	$XCLUSTER cache --clear
+	$XCLUSTER cache systemd
+	SETUP=ipv6 $XCLUSTER cache systemd
+	$XCLUSTER cache iptools
+	SETUP=ipv6 $XCLUSTER cache iptools
+	$XCLUSTER cache etcd
+	SETUP=ipv6 $XCLUSTER cache etcd
+	$XCLUSTER cache gobgp
+	SETUP=ipv6 $XCLUSTER cache gobgp
+	$XCLUSTER cache skopeo
+	SETUP=ipv6 $XCLUSTER cache skopeo
+	$XCLUSTER cache kube-router
 }
 
 ##   release --version=ver

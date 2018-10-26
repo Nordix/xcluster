@@ -42,7 +42,7 @@ ip -6 ro add local fd00:4000::/112 dev lo
 
 start_kube_router() {
 	kube-router --run-service-proxy=false -v=63 \
-		--cluster-cidr=1000::2:11.0.0.0/112 \
+		--cluster-cidr=1000::2:11.0.0.0/112 --router-id="0.0.0.$i" \
 		--kubeconfig $KUBECONFIG --run-router=true \
 		--run-firewall=false --enable-overlay=false --advertise-pod-cidr=false \
 		--advertise-external-ip=false --advertise-loadbalancer-ip=false \

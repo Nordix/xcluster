@@ -4,9 +4,11 @@ A very lightweight and configurable cluster environment primarily
 intended for development and test of network functions.
 
 To see how `xcluster` can be used with
-[Kubernetes](https://kubernetes.io/) please see the [Quick
-Start](#quick-start) section or the Kubernetes
-[overlay](ovl/kubernetes/README.md) (e.g helm).
+[Kubernetes](https://kubernetes.io/) please see the demo video below
+and the [Quick Start](#quick-start) section. See also the Kubernetes
+[overlay](ovl/kubernetes/README.md) and fast `kube-proxy` ipv6
+development in the [kube-proxy-ipv6](ovl/kube-proxy-ipv6/README.md)
+overlay.
 
 An `xcluster` consists of a number of identical (kvm) VMs. The disk
 image is shared among the VMs and the `qemu-img` "backing_file"
@@ -141,7 +143,7 @@ want something better.
 Download from the release page and install;
 
 ```
-ver=v0.4
+ver=v1.0
 cd $HOME
 tar xf Downloads/xcluster-$ver.tar.xz
 cd xcluster
