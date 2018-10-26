@@ -6,7 +6,7 @@ A [Kubernetes](https://kubernetes.io/) cluster.
 This overlay provides a platform with ultra fast turn-around times and
 very flexible network setup. The main purpose is development and
 trouble shooting of Kubernetes network functions. Read more in the
-[kube-proxy-ipv6](../ovl/kube-proxy-ipv6/README.md) overlay.
+[kube-proxy-ipv6](../kube-proxy-ipv6/README.md) overlay.
 
 This is *not* a generic Kubernetes cluster that is suitable for any
 purpose, for instance application development.
