@@ -1,5 +1,4 @@
 #! /bin/sh
-echo "nameserver fd00:4000::2" > /etc/resolv.conf
 test "$(hostname)" = "vm-002" || exit 0
 . /etc/profile
 while ! kubectl apply -f /etc/kubernetes/coredns.yaml; do

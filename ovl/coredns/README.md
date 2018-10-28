@@ -66,3 +66,9 @@ nslookup -port=10053 -type=AAAA www.ericsson.se ::1
 
 The `Corefile.k8s` file assumes that the "translateAll" PR is applied
 [#4](https://github.com/serverwentdown/dns64/pull/4).
+
+From a VM use;
+
+```
+nslookup www.google.se [2000::250]:10053
+```

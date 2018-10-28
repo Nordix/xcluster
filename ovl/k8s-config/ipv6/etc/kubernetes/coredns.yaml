@@ -8,7 +8,8 @@ data:
         log stdout
         kubernetes xcluster
         proxy . [2000::250]:10053
-        cache 30
+        cache 500
+        log
     }
 ---
 apiVersion: extensions/v1beta1
