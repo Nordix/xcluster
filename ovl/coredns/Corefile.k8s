@@ -1,5 +1,9 @@
 .:10053 {
 	proxy . /etc/resolv.conf
+	dns64 {
+		translateAll true
+		upstream 192.168.1.254
+	}
 	cache 3000
 	log
 }

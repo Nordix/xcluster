@@ -3,7 +3,7 @@ Xcluster ovl - CoreDNS
 
 Adds CoreDNS in a Kubernetes cluster.
 
-Also described howto setup `CoreDNS` locally.
+Also describes howto setup `CoreDNS` locally.
 
 Usage
 -----
@@ -46,3 +46,23 @@ sudo setcap 'cap_net_bind_service=+ep' /home/uablrek/go/bin/coredns
 cfg=$($XCLUSTER ovld coredns)/Corefile
 coredns -conf $cfg > /tmp/$USER/coredns.log 2>&1 &
 ```
+
+## DNS64
+
+Add the plugin in `plugin.cfg`. **NOTE** that the order is important!
+Insert the dns64 plugin after `log` for instance;
+
+```
+log:log
+dns64:github.com/serverwentdown/dns64
+...
+```
+
+Rebuild `coredns` and start.
+
+```
+nslookup -port=10053 -type=AAAA www.ericsson.se ::1
+```
+
+The `Corefile.k8s` file assumes that the "translateAll" PR is applied
+[#4](https://github.com/serverwentdown/dns64/pull/4).
