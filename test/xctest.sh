@@ -230,7 +230,7 @@ rsh() {
 }
 tcase_tiller() {
 	tcase "Start tiller"
-	ps axxxwww | grep -v grep | grep tiller && return 0
+	netstat -putan | grep ':44134 ' && return 0
 	which tiller > /dev/null || tdie "Tiller not found"
 	tiller > /tmp/$USER/tiller.log 2>&1 &
 	sleep 0.5

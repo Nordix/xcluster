@@ -13,6 +13,9 @@ test $i -le 200 || exit 0
 
 . /etc/profile
 
+# Add route to the private Docker registry
+ip -6 route add fd00:2008::/64 via 2000::250
+
 # Cri-o *requires* a default route. Any route seems to do nicely, even
 # an ipv4 route on a ipv6 cluster.
 ip -6 route add default \
