@@ -23,8 +23,11 @@ for s in $(echo "$SETUP" | tr ',' ' '); do
 done
 test "$setup_copied" != "yes" && test -d $dir/default && cp -R $dir/default/* $tmp
 
+x=$GOPATH/bin/skopeo
+test -x $x || x=$(which skopeo)
+test -n "$x" -a -x "$x" || die 'Skopeo not found'
 mkdir -p $tmp/bin
-cp $(which skopeo) $tmp/bin
+cp $x $tmp/bin
 $XCLUSTER cplib --dest=$tmp $tmp/bin/skopeo
 
 cd $tmp
