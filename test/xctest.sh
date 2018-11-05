@@ -214,7 +214,14 @@ check_novm() {
 	local vms='1 2 3 4 201 202'
 	test -n "$1" && vms=$@
 	for vm in $vms; do
-		rsh $vm hostname && return 1
+		if ip link show xcbr1 > /dev/null 2>&1; then
+			# In a netns we have "real" ip targets which means that a
+			# connect may block for a long time. So use "nc" with a
+			# timeout instead of ssh.
+			echo hostname | nc -N -w 1 192.168.0.$vm 23 /dev/null && return 1
+		else
+			rsh $vm hostname && return 1
+		fi
 	done
 	return 0
 }
