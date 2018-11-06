@@ -33,6 +33,7 @@ More info;
  * [Xcluster for CI](doc/ci.md). Headless operation.
  * [Pre-pulled images](ovl/images/README.md).
  * [Test](test/README.md)
+ * [Fedora](doc/fedora.md). Not maintained.
 
 The VMs are given "roles" depending on their hostname;
 
@@ -72,12 +73,13 @@ sw to running VMs, e.g. with `ssh`.  [read more](doc/overlays.md).
 
 `Xcluster` is developed on `Ubuntu 18.04.1 LTS`. It seems to work fine
 also on Ubuntu 16.04 LTS but it will probably not work on other
-distributions (mainly due to variations in libs). If you run on
-another distribution than Ubuntu 18.04 you *may* run into problems
-with pre-built images and cached overlays from the binary release when
-you add own programs (because of library version probems). In that
-case there may be no other option than to rebuild all images and
-overlays locally [from scratch](doc/build.md).
+distributions (mainly due to variations in libs). Xcluster can be
+started on [Fedora](doc/fedora.md) but this environment is not
+maintained. If you run on another distribution than Ubuntu 18.04 you
+*may* run into problems with pre-built images and cached overlays from
+the binary release when you add own programs (because of library
+version probems). In that case there may be no other option than to
+rebuild all images and overlays locally [from scratch](doc/build.md).
 
 First you must be able to run a `kvm`;
 ```
@@ -97,7 +99,7 @@ Some additional packets may have to be installed. Below is the bare
 minimum for development you will need [more](doc/build.md);
 
 ```
-sudo apt install -y xterm pxz genisoimage jq
+sudo apt install -y xterm pxz genisoimage jq screen
 ```
 
 For image handling you will also need
