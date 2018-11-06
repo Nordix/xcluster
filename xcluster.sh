@@ -490,6 +490,7 @@ cmd_boot_vm() {
 		# Customized network setup, e.g. for ovs
 		if test -n "$__net_setup" -a -x "$__net_setup"; then
 			export __mtu
+			export __kvm
 			opt="$opt $($__net_setup $node $nodeid $n)" || return
 			continue
 		fi
