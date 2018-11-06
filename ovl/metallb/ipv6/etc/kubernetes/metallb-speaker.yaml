@@ -16,6 +16,13 @@ spec:
       - name: metallb
         image: example.com/metallb:0.7.3
         command:
-          - /bin/speaker-launcher
+          - /bin/speaker
         securityContext:
           privileged: true
+        env:
+          - name: METALLB_NODE_NAME
+            valueFrom:
+              fieldRef:
+                fieldPath: spec.nodeName
+          - name: METALLB_BGP_MP
+            value: "yes"
