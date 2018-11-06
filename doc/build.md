@@ -6,6 +6,23 @@ distribution is incompatible with the binary release.
 
 Also how to create a binary release is described here.
 
+## Additional dependencies
+
+```
+apt install -y jq net-tools libelf-dev pkg-config libmnl-dev \
+ libdb-dev docbook-utils libpopt-dev gperf libcap-dev libgcrypt20-dev \
+ libgpgme-dev libglib2.0-dev gawk libreadline-dev libc-ares-dev xterm \
+ qemu-kvm curl pxz bison flex libc6:i386 uuid libgmp-dev libncurses-dev \
+ screen
+apt-add-repository -y ppa:projectatomic/ppa
+apt update
+apt install -y skopeo
+```
+
+For image handling you will also need
+[docker](https://www.digitalocean.com/community/tutorials/how-to-install-and-use-docker-on-ubuntu-18-04).
+
+
 ## Environment setup
 
 Clone the `xcluster` repository. Then setup your environment for

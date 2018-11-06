@@ -79,25 +79,30 @@ you add own programs (because of library version probems). In that
 case there may be no other option than to rebuild all images and
 overlays locally [from scratch](doc/build.md).
 
-Some additional packets may have to be installed. Below is a
-suggestion, there may be others;
+First you must be able to run a `kvm`;
+```
+> kvm-ok
+INFO: /dev/kvm exists
+KVM acceleration can be used
+# If it looks as above; fine! go on...
+# If "kvm-ok" does not exist, install as below;
+sudo apt install -y qemu-kvm
+# To start kvm you must be in the "kvm" group;
+sudo usermod -aG kvm $USER
+id
+# (you may have to logout/in to enable the new group)
+```
+
+Some additional packets may have to be installed. Below is the bare
+minimum for development you will need [more](doc/build.md);
 
 ```
-apt install -y jq net-tools libelf-dev pkg-config libmnl-dev \
- libdb-dev docbook-utils libpopt-dev gperf libcap-dev libgcrypt20-dev \
- libgpgme-dev libglib2.0-dev gawk libreadline-dev libc-ares-dev xterm \
- qemu-kvm curl pxz bison flex libc6:i386 uuid libgmp-dev libncurses-dev \
- screen
-apt-add-repository -y ppa:projectatomic/ppa
-apt update
-apt install -y skopeo
+sudo apt install -y xterm pxz genisoimage jq
 ```
 
-You must be a member of the `kvm` group to be able to run VMs;
+For image handling you will also need
+[docker](https://www.digitalocean.com/community/tutorials/how-to-install-and-use-docker-on-ubuntu-18-04).
 
-```
-sudo usermod -aG kvm <your-user>
-```
 
 #### Environment and default options
 
@@ -136,9 +141,26 @@ downloaded archives. It defaults to `$HOME/Downloads` but you might
 want something better.
 
 
+
 <a name="quick-start">
 
 ## Quick start
+
+Verify that `kvm` is installed and can be used and install
+dependencies if necessary;
+
+```
+> kvm-ok
+INFO: /dev/kvm exists
+KVM acceleration can be used
+> id
+# (you must be member of the "kvm" group)
+> sudo apt install -y xterm pxz genisoimage jq
+```
+
+If necessary install `kvm` as described
+[above](#execution-environment-and-dependencies).
+
 
 Download from the release page and install;
 
