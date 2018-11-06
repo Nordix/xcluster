@@ -511,9 +511,9 @@ cmd_boot_vm() {
 			ip link set up $tap
 		fi
 
-		local b0=$(printf '%x' $nodeid)
-		opt="$opt -net nic,vlan=$n,macaddr=0:0:0:1:$b1:$b0,model=virtio"
-		opt="$opt -net tap,vlan=$n,script=no,downscript=/tmp/rmtap,ifname=$tap"
+		local b0=$(printf '%02x' $nodeid)
+		opt="$opt -netdev tap,id=net$n,script=no,downscript=/tmp/rmtap,ifname=$tap"
+		opt="$opt -device virtio-net-pci,netdev=net$n,mac=00:00:00:01:0$b1:$b0"
 	done
 
 	# Allow ^C in the terminals without killing the entire VM
@@ -715,7 +715,7 @@ stop() {
 	local nodeid port
 	for nodeid in $(seq $nvm) $(seq 201 $lastr) $(seq 221 $lastt); do
 		port=$((XCLUSTER_MONITOR_BASE+nodeid))
-		echo quit | telnet localhost $port > /dev/null 2>&1
+		echo quit | nc localhost $port > /dev/null 2>&1
 	done
 	kill $(grep -s XXTERM=XCLUSTER /proc/*/environ | cut -d/ -f3) > /dev/null 2>&1
 	return 0
@@ -744,7 +744,7 @@ cmd_scalein() {
 	local n port
 	for n in $@; do
 		port=$((XCLUSTER_MONITOR_BASE+n))
-		echo quit | telnet localhost $port > /dev/null 2>&1
+		echo quit | nc localhost $port > /dev/null 2>&1
 	done
 	return 0
 }
