@@ -99,7 +99,7 @@ cmd_get_rootfs() {
 	echo $d/$rootfs
 }
 
-##   mkimage --manifest=manifest <dir>
+##   mkimage [--manifest=manifest] [--force] <dir>
 ##     Create an image in local docker from the <dir>. An executable
 ##     "tar" script must exist in the directory.
 ##
@@ -107,7 +107,8 @@ cmd_mkimage() {
 	test -n "$1" || die "No rootfs"
 	test -d "$1" || die "Not a directory [$1]"
 	test -x "$1/tar" || die "Not executable [$1/tar]"
-	test -n "$__manifest" || die 'Manifest missing'
+	test -n "$__manifest" || __manifest="$(readlink -f $1)/manifest.json"
+	test -r "$__manifest" || die "Not readable [$__manifest]"
 	which jq > /dev/null || die "Not executable [jq]"
 
 	local n v c tar
@@ -116,6 +117,7 @@ cmd_mkimage() {
 	n=$(jq -r .name $__manifest)
 	c=$(jq -rc '.app.exec' $__manifest)
 
+	test "$__force" = "yes" && docker rmi $n:$v > /dev/null 2>&1
 	if $(cmd_in_docker "$n:$v"); then
 		log "Cached [$n:$v]"
 	else
