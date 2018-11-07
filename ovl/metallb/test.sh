@@ -42,6 +42,7 @@ tcase() {
 	echo $msg >&2
 }
 tdie() {
+	local now=$(date +%s)
 	echo "$(date +%T) ($((now-begin))): FAILED: $*" >&2
 	rm -rf $tmp
 	exit 1
@@ -63,14 +64,51 @@ env() {
 	xctest="$(dirname $XCLUSTER)/test/xctest.sh"
 	images="$($XCLUSTER ovld images)/images.sh"
 }
+
+cmd_test() {
+	env
+	cmd_build_img
+	cmd_xcstart
+	cmd_tcase tcase_metallb || tdie
+	__vm=201; cmd_tcase tcase_noroutes || tdie; __vm=1
+	cmd_tcase tcase_mconnect || tdie
+	__vm=201; cmd_tcase tcase_routes || tdie; __vm=1
+	cmd_tcase tcase_svc_rm || tdie
+	__vm=201; cmd_tcase tcase_noroutes || tdie; __vm=1
+	cmd_tcase tcase_mconnect || tdie
+	__vm=201; cmd_tcase tcase_routes || tdie; __vm=1
+	
+	$XCLUSTER stop
+	local now=$(date +%s)
+	tlog "Stop. Elapsed time: $((now-begin))"
+}
+
 cmd_xcstart() {
 	env
 	tlog "Starting xcluster"
-	$XCLUSTER mkcdrom metallb gobgp > /dev/null 2>&1 || tdie "mkcdrom"
+	if test "$__ipv6" = "yes"; then
+		SETUP=ipv6 $XCLUSTER mkcdrom etcd coredns metallb gobgp private-reg \
+			k8s-config > /dev/null 2>&1 || tdie "mkcdrom"
+	else
+		$XCLUSTER mkcdrom metallb gobgp private-reg \
+			> /dev/null 2>&1 || tdie "mkcdrom"
+	fi
 	$XCLUSTER starts || tdie "starts"
 	$xctest k8s_wait || tdie "k8s_wait"
 }
 
+cmd_build_img() {
+	env
+	$images mkimage --force ./image
+	local img=library/metallb:0.7.3
+	skopeo copy --dest-tls-verify=false \
+		docker-daemon:$img docker://172.17.0.2:5000/$img
+}
+
+cmd_tcase() {
+	test -n "$__vm" || __vm=1
+	rsh $__vm /sbin/test.sh $@
+}
 
 
 # Get the command
