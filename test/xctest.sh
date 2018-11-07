@@ -32,6 +32,47 @@ dbg() {
 	test -n "$__verbose" && echo "$prg: $*" >&2
 }
 
+##   k8s_wait
+##     Wait for Kubernetes. When CoreDNS is Running k8s is assumed to be ready.
+##
+cmd_k8s_wait() {
+	begin=$(date +%s)
+	tlog "Kubernetes check"
+
+	# Check connectivity
+	test -n "$__nvm" || __nvm=4
+	test -n "$__nrouters" || __nrouters=2
+	test -n "$__ntesters" || __ntesters=0
+
+	__timeout=10
+	check_vm $(seq 1 $__nvm) $(seq 201 $((200+__nrouters))) \
+		$(seq 221 $((220+__ntesters))) > /dev/null
+	tlog "VMs OK"
+
+	__timeout=10
+	local start=$(date +%s)
+	local now=$start
+	while ! kubectl get nodes 2> /dev/null | grep -qE 'Ready'; do
+		test $((now-start)) -ge $__timeout && tdie Timeout
+		sleep 1
+		now=$(date +%s)
+	done
+	tlog "Nodes Ready"
+
+	__timeout=25
+	start=$(date +%s)
+	now=$start
+	while ! kubectl get pods 2> /dev/null | grep -qE '^coredns.*Running'; do
+		test $((now-start)) -ge $__timeout && tdie Timeout
+		sleep 1
+		now=$(date +%s)
+	done
+	tlog "CoreDNS Running"
+
+	return 0
+}
+
+
 ##   test --list
 ##   test [--xterm] [test...] > logfile
 ##     Test xcluster
@@ -260,6 +301,7 @@ tcase_helm_install_metallb() {
 		$($XCLUSTER ovld metallb)/default/etc/kubernetes/metallb-config-helm.yaml
 	__timeout=10
 }
+
 
 
 # Get the command
