@@ -72,7 +72,7 @@ kubectl apply -f /etc/kubernetes/mconnect.yaml
 
 For internal experiments a local pod can be used;
 
-Ipv4 setup;
+Ipv4 pre-pulled setup;
 
 ```
 images make coredns metallb docker.io/nordixorg/mconnect:0.2
@@ -85,19 +85,37 @@ kubectl apply -f /etc/kubernetes/mconnect.yaml
 kubectl get pods
 kubectl logs pod/...
 kubectl get svc
+mconnect -address mconnect.default.svc.xcluster:5001 -nconn 400
 # On router;
 gobgp neighbor
 ip ro
 # Outside cluster;
-mconnect -address 10.0.0.2:5001 -nconn 1000
+mconnect -address 10.0.0.2:5001 -nconn 400
+```
+
+Ipv4 private-reg setup;
+
+```
+cdo metallb
+images mkimage --force ./image
+img=library/metallb:0.7.3
+skopeo copy --dest-tls-verify=false docker-daemon:$img docker://172.17.0.2:5000/$img
+xc mkcdrom metallb gobgp private-reg; xc start
+# On cluster
+crictl --runtime-endpoint=unix:///var/run/crio/crio.sock pull library/metallb:0.7.3
 ```
 
 
 IPv6 setup;
 
 ```
+# Pre-pull
 images make coredns metallb docker.io/nordixorg/mconnect:0.2
 SETUP=ipv6 xc mkcdrom etcd coredns k8s-config metallb gobgp images; xc start
+# Private reg
+SETUP=ipv6 xc mkcdrom etcd coredns metallb gobgp private-reg k8s-config; xc start
+# Outside cluster;
+mconnect -address [1000::]:5001 -nconn 400
 ```
 
 

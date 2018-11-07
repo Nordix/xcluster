@@ -1,7 +1,7 @@
 {
     "acKind":"ImageManifest",
     "acVersion":"0.8.11",
-    "name":"example.com/metallb",
+    "name":"library/metallb",
     "labels":[
 	{"name":"version","value":"0.7.3"},
 	{"name":"arch","value":"amd64"},
