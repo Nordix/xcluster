@@ -209,7 +209,9 @@ test_k8s_metallb() {
 
 	tcase_tiller
 	tcase_helm_install_metallb
-	rsh 4 xctest tcase_start_mconnect  || tdie
+	rsh 4 xctest tcase_check_metallb || tdie
+	rsh 4 xctest tcase_start_mconnect || tdie
+	rsh 4 xctest tcase_check_loadbalancererip --timeout=90 || tdie
 	rsh 201 xctest router_k8s || tdie
 
 	tcase "Stop xcluster"

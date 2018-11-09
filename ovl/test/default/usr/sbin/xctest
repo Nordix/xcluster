@@ -33,6 +33,7 @@ dbg() {
 
 test -n "$__timeout" || __timeout=10
 test -r /etc/TZ && export TZ=$(cat /etc/TZ)
+begin=0
 
 ##   k8s [--ipv6]
 ##     Perform tests on a xcluster with Kubernetes. External
@@ -134,11 +135,14 @@ tlog() {
 }
 tcase() {
 	now=$(date +%s)
+	test $begin -eq 0 && begin=$now
 	local msg="$(date +%T) ($((now-begin))): TEST CASE: $*"
 	echo "  $msg"
 	echo "  $msg" >&2
 }
 tdie() {
+	now=$(date +%s)
+	test $begin -eq 0 && begin=$now
 	echo "  $(date +%T) ($((now-begin))): FAILED: $*" >&2
 	rm -rf $tmp
 	exit 1
@@ -178,12 +182,8 @@ test_images() {
 cmd_tcase_start_mconnect() {
 	tcase "Start mconnect"
 	kubectl apply -f /etc/kubernetes/mconnect.yaml || tdie
+
 	sleep 1
-	if test "$__ipv6" = "yes"; then
-		kubectl get svc | grep mconnect | grep 1000::2 || tdie
-	else
-		kubectl get svc | grep mconnect | grep 10.0.0.2 || tdie
-	fi
 	start=$(date +%s)
 	now=$start
 	while ! kubectl get pods 2>&1 | grep -E '^mconnect.*Running'; do
@@ -191,8 +191,39 @@ cmd_tcase_start_mconnect() {
 		sleep 1
 		now=$(date +%s)
 	done
-	sleep 3   # Give k8s time to setup the service
 }
+
+cmd_tcase_check_metallb() {
+	tcase "Check metallb"
+	start=$(date +%s)
+	now=$start
+	while ! kubectl get pods 2>&1 | grep -E '^metallb-controller.*Running'; do
+		kubectl get pods 2>&1 grep metallb
+		test $((now-start)) -ge $__timeout && tdie Timeout
+		sleep 1
+		now=$(date +%s)
+	done
+	while ! kubectl get pods 2>&1 | grep -E '^metallb-speaker.*Running'; do
+		test $((now-start)) -ge $__timeout && tdie Timeout
+		sleep 1
+		now=$(date +%s)
+	done
+}
+
+cmd_tcase_check_loadbalancererip() {
+	tcase "Check LoadBalancerIP"
+	local addr='10.0.0.2'
+	test "$__ipv6" && addr='1000::2'
+	start=$(date +%s)
+	now=$start
+	while ! kubectl get svc mconnect 2>&1 | grep $addr; do
+		kubectl get svc mconnect 2>&1
+		test $((now-start)) -ge $__timeout && tdie Timeout
+		sleep 1
+		now=$(date +%s)
+	done
+}
+
 test_local_mconnect() {
 	tcase "Local mconnect"
 	mkdir -p $tmp
