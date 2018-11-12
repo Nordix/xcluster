@@ -48,7 +48,7 @@ cmd_k8s() {
 
 	cmd_wait_for_k8s
 
-	local tcases="test_images cmd_tcase_start_mconnect test_local_mconnect test_start_alpine"
+	local tcases="test_images cmd_tcase_start_mconnect cmd_tcase_check_loadbalancererip test_local_mconnect test_start_alpine"
 	local tc
 
 	for tc in $tcases; do
@@ -94,7 +94,7 @@ cmd_router_k8s() {
 cmd_k8s_kube_router() {
 	tlog "On-cluster xcluster tests start on $(hostname); kube_router"
 	begin=$(date +%s)
-	local tcases="test_images cmd_tcase_start_mconnect test_local_mconnect"
+	local tcases="test_images cmd_tcase_start_mconnect cmd_tcase_check_loadbalancererip test_local_mconnect"
 	mkdir -p $HOME/.kube
 	cp /etc/kubernetes/kubeconfig $HOME/.kube/config
 	local tc
