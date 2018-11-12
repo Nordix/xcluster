@@ -65,9 +65,11 @@ env() {
 	images="$($XCLUSTER ovld images)/images.sh"
 }
 
+##   test [--no-image] [--ipv6]
+##
 cmd_test() {
 	env
-	cmd_build_img
+	test "$__no_image" = "yes" || cmd_build_img
 	cmd_xcstart
 	cmd_tcase tcase_metallb || tdie
 	__vm=201; cmd_tcase tcase_noroutes || tdie; __vm=1
@@ -83,6 +85,8 @@ cmd_test() {
 	tlog "Stop. Elapsed time: $((now-begin))"
 }
 
+##   xcstart [--ipv6]
+##
 cmd_xcstart() {
 	env
 	tlog "Starting xcluster"
@@ -97,6 +101,8 @@ cmd_xcstart() {
 	$xctest k8s_wait || tdie "k8s_wait"
 }
 
+##   build_img
+##
 cmd_build_img() {
 	env
 	$images mkimage --force ./image
