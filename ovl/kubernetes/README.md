@@ -26,7 +26,7 @@ don't have to repeat the Kubernetes overlays for all `mkcdrom` calls;
 ```
 export __image=$XCLUSTER_WORKSPACE/xcluster/hd-k8s.img
 xc mkimage
-images make coredns docker.io/nordixorg/mconnect:0.2
+images make coredns nordixorg/mconnect:1.1
 xc ximage systemd etcd iptools kubernetes coredns mconnect images
 xc mkcdrom externalip; xc start
 # On cluster;

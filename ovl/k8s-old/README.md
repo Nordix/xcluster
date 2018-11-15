@@ -9,7 +9,7 @@ Use older versions (<v1.12) of Kubernetes in `xcluster`.
 eval $($XCLUSTER env | grep XCLUSTER_HOME=)
 export __image=$XCLUSTER_HOME/hd-k8s-v1.9.img
 xc mkimage
-images make coredns docker.io/nordixorg/mconnect:0.2
+images make coredns nordixorg/mconnect:1.1
 SETUP=v1.9 xc ximage systemd etcd iptools k8s-old coredns mconnect images
 xc mkcdrom externalip; xc starts
 # On cluster;

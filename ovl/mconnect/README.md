@@ -14,5 +14,5 @@ cd $($XCLUSTER ovld mconnect)/image
 docker rm -f $(docker ps -a -q)
 docker rmi example.com/mconnect:0.1
 images mkimage --manifest=manifest.json .
-docker build --tag docker.io/nordixorg/mconnect:$ver .
+docker build --tag nordixorg/mconnect:$ver .
 ```
