@@ -180,7 +180,7 @@ cd $GOPATH/src/github.com/kubernetes-incubator/cri-tools
 make
 go get -u github.com/kubernetes-incubator/cri-o
 cd $GOPATH/src/github.com/kubernetes-incubator/cri-o
-git checkout -b release-1.12
+git checkout release-1.12
 make install.tools
 make
 git status --ignored

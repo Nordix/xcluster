@@ -35,6 +35,7 @@ SETUP=ipv6 xc mkcdrom etcd k8s-config externalip kube-router-ipv6; xc start
 gobgp neighbor
 kubectl apply -f /etc/kubernetes/mconnect.yaml
 ip -6 ro
+gobgp -a ipv6 global rib
 ```
 
 ## Build

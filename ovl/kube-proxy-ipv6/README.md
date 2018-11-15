@@ -8,12 +8,13 @@ archive very fast development turn-around times.
 
 ## Usage
 
-Edit the `tar` script and files undes `ipv6/` in this ovl directory
+Edit the `tar` script and files under `ipv6/` in this ovl directory
 to your needs, then do;
 
 ```
 SETUP=ipv6 xc mkcdrom etcd k8s-config externalip kube-proxy-ipv6; xc start
 # On cluster;
+kubectl apply -f /etc/kubernetes/mconnect.yaml
 ipvsadm -L -n
 less /var/log/kube-proxy.log
 ```
@@ -31,7 +32,7 @@ base commit used here is `022c05c141`.
 ```
 cd $GOPATH/src/k8s.io/kubernetes
 make WHAT=cmd/kube-proxy
-SETUP=ipv6 xc mkcdrom etcd k8s-config externalip kube-proxy-ipv6; xc start
+SETUP=ipv6 xc mkcdrom etcd k8s-config externalip kube-proxy-ipv6; xc starts
 # On cluster;
 kubectl apply -f /etc/kubernetes/mconnect.yaml
 ipvsadm -L -n
