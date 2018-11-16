@@ -78,19 +78,6 @@ networking the local dns is perfectly fine.
 
 ## Customizing
 
-To alter the network setup, for instance adding another network, you
-must create you own start-function in the `xcluster.sh` script. You
-should not edit the script but use a "hook";
-
-```
-export XCLUSTER_HOOK=$MY_EXPERIMENT_DIR/xcluster.hook
-xc mystart
-```
-
-Copy `cmd_start()` to your hook and modify it to your needs.
-
-### Alternative network
-
 If the network topology is ok but you want to use something else than
 the default bridge/tap networking, for instance
 [ovs](https://www.openvswitch.org/) then you can secify a script with
@@ -107,4 +94,21 @@ Your script must do necessary configuration and print out options to
 [net-setup-userspace.sh](../config/net-setup-userspace.sh) script for
 an example.
 
+If you need more networks use `--nets-vm` and `--nets_router`
+options. Please see the [multinet](../ovl/multinet/README.md) ovl for
+an example.
+
+
+### Full custom
+
+To completely alter the network setup you must create you own
+start-function in the `xcluster.sh` script. You should not edit the
+script but use a "hook";
+
+```
+export XCLUSTER_HOOK=$MY_EXPERIMENT_DIR/xcluster.hook
+xc mystart
+```
+
+Copy `cmd_start()` to your hook and modify it to your needs.
 

@@ -100,6 +100,8 @@ cmd_env() {
 	test -n "$__ipv6_prefix" || __ipv6_prefix=fd00:1723::
 	test -n "$__loader" || __loader=/lib64/ld-linux-x86-64.so.2
 	test -n "$__cached" || __cached=$XCLUSTER_HOME/cache
+	test -n "$__nets_vm" || __nets_vm=0,1
+	test -n "$__nets_router" || __nets_router=0,1,2
 
 	__ipver=4.9.0
 	__dropbearver=2016.74
@@ -614,14 +616,14 @@ cmd_start() {
 	fi
 	rm -rf $XCLUSTER_TMP/screen $XCLUSTER_TMP/*.img
 
-	__nets=0,1
+	__nets=$__nets_vm
 	for n in $(seq $__nvm); do
 		cmd_xvm $n
 	done
 
 	test "$__nrouters" || __nrouters=2
 	if test $__nrouters -gt 0; then
-		__nets=0,1,2
+		__nets=$__nets_router
 		__bg='#400'
 		for n in $(seq 201 $((200+__nrouters))); do
 			cmd_xvm $n
@@ -670,7 +672,7 @@ cmd_starts() {
 	echo screen -t tmp -L 100 sleep 5 >> $screen_rc
 	screen -d -m -c $screen_rc -S $session || die "Screen failed"
 
-	__nets=0,1
+	__nets=$__nets_vm
 	for n in $(seq $__nvm); do
 		cmd_svm $n
 	done
@@ -678,7 +680,7 @@ cmd_starts() {
 	test "$__nrouters" || __nrouters=2
 	if test $__nrouters -gt 0; then
 		local last=$((200+__nrouters))
-		__nets=0,1,2
+		__nets=$__nets_router
 		for n in $(seq 201 $last); do
 			cmd_svm $n
 		done
@@ -727,7 +729,7 @@ cmd_scaleout() {
 	test -r $XCLUSTER_TMP/screen/session && cmd=cmd_svm
 	local n
 	for n in $@; do
-		__nets=0,1
+		__nets=$__nets_vm
 		if test $n -gt 220; then
 			# Tester
 			__bg='#004'
@@ -735,7 +737,7 @@ cmd_scaleout() {
 		elif test $n -gt 200; then
 			# Router
 			__bg='#400'
-			__nets=0,1,2
+			__nets=$__nets_router
 		fi
 		$cmd $n
 	done
