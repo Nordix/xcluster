@@ -14,5 +14,5 @@ test $i -le 200 || exit 0
 echo "export KUBECONFIG=/etc/kubernetes/kubeconfig" >> /etc/profile
 mkdir -p /var/lib/kubelet
 
-rm -f /etc/cni/net.d/bridge.conf
+rm -f /etc/cni/net.d/cni.conf
 
