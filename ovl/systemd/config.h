@@ -35,7 +35,7 @@
 #define DEFAULT_HIERARCHY 0
 #define NOBODY_USER_NAME "nobody"
 #define NOBODY_GROUP_NAME "nobody"
-#define FALLBACK_HOSTNAME "ekvm"
+#define FALLBACK_HOSTNAME "xcluster"
 #define UMOUNT_PATH "/bin/false"
 #define MOUNT_PATH "/bin/false"
 #define KEXEC "/bin/false"

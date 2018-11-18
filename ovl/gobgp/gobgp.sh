@@ -2,7 +2,7 @@
 ##
 ## gobgp.sh --
 ##
-##   Scriptlets for the "gobgp" ekvm overlay.
+##   Scriptlets for the "gobgp" xcluster overlay.
 ##
 ## Commands;
 ##

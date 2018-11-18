@@ -2,7 +2,7 @@
 ##
 ## etcd.sh --
 ##
-##   Help script for the "etcd" ekvm-ovl.
+##   Help script for the "etcd" xcluster-ovl.
 ##
 ## Commands;
 ##
