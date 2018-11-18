@@ -9,6 +9,19 @@ spec:
   - port: 5001
   type: NodePort
 ---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mconnect-udp
+spec:
+  selector:
+    app: mconnect
+  ports:
+  - name: udp
+    port: 5001
+    protocol: UDP
+  type: NodePort
+---
 apiVersion: apps/v1beta1
 kind: Deployment
 metadata:

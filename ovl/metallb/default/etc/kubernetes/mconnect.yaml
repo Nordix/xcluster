@@ -3,12 +3,28 @@ kind: Service
 metadata:
   name: mconnect
   annotations:
-    metallb.universe.tf/allow-shared-ip: ekvm
+    metallb.universe.tf/allow-shared-ip: mconnect
 spec:
   selector:
-    app: ekvm
+    app: mconnect
   ports:
   - port: 5001
+  loadBalancerIP: 10.0.0.2
+  type: LoadBalancer
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mconnect-udp
+  annotations:
+    metallb.universe.tf/allow-shared-ip: mconnect
+spec:
+  selector:
+    app: mconnect
+  ports:
+  - name: udp
+    port: 5001
+    protocol: UDP
   loadBalancerIP: 10.0.0.2
   type: LoadBalancer
 ---
@@ -19,12 +35,12 @@ metadata:
 spec:
   selector:
     matchLabels:
-      app: ekvm
+      app: mconnect
   replicas: 4
   template:
     metadata:
       labels:
-        app: ekvm
+        app: mconnect
     spec:
       containers:
       - name: mconnect

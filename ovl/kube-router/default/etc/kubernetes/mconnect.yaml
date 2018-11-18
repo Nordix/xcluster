@@ -4,9 +4,23 @@ metadata:
   name: mconnect
 spec:
   selector:
-    app: ekvm
+    app: mconnect
   ports:
   - port: 5001
+  externalIPs:
+  - 10.0.0.2
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mconnect-udp
+spec:
+  selector:
+    app: mconnect
+  ports:
+  - name: udp
+    port: 5001
+    protocol: UDP
   externalIPs:
   - 10.0.0.2
 ---
@@ -17,12 +31,12 @@ metadata:
 spec:
   selector:
     matchLabels:
-      app: ekvm
+      app: mconnect
   replicas: 4
   template:
     metadata:
       labels:
-        app: ekvm
+        app: mconnect
     spec:
       containers:
       - name: mconnect
