@@ -30,12 +30,15 @@ mconnect -address 10.0.0.2:5001 -nconn 400
 Ipv6;
 
 ```
-SETUP=ipv6 xc mkcdrom etcd k8s-config externalip kube-router-ipv6; xc start
+SETUP=ipv6 xc mkcdrom etcd k8s-config externalip kube-router-ipv6 private-reg; xc start
 # On cluster;
 gobgp neighbor
 kubectl apply -f /etc/kubernetes/mconnect.yaml
 ip -6 ro
 gobgp -a ipv6 global rib
+kubectl apply -f  /etc/kubernetes/mconnect.yaml
+kubectl get pods
+mconnect -address mconnect.default.svc.xcluster:5001 -nconn 100
 ```
 
 ## Build
@@ -52,7 +55,7 @@ rm -f kube-router; make
 
 ```
 # Start;
-SETUP=ipv6 xc mkcdrom etcd k8s-config externalip kube-router-ipv6; xc start
+SETUP=ipv6 xc mkcdrom etcd k8s-config externalip kube-router-ipv6 private-reg; xc start
 # Check things...
 cd $GOPATH/src/github.com/cloudnativelabs/kube-router
 # Edit some files...
