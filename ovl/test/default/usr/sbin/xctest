@@ -48,7 +48,7 @@ cmd_k8s() {
 
 	cmd_wait_for_k8s
 
-	local tcases="test_images cmd_tcase_start_mconnect cmd_tcase_check_loadbalancererip test_local_mconnect test_start_alpine"
+	local tcases="test_images cmd_tcase_start_mconnect cmd_tcase_check_loadbalancererip test_local_mconnect test_local_mconnect_udp test_start_alpine"
 	local tc
 
 	for tc in $tcases; do
@@ -83,6 +83,7 @@ cmd_router_k8s() {
 	__timeout=10
 
 	test_external_mconnect
+	test_external_mconnect_udp
 
 	now=$(date +%s)
 	tlog "On-router xcluster tests end. Elapsed time $((now-begin)) sec"
@@ -94,7 +95,7 @@ cmd_router_k8s() {
 cmd_k8s_kube_router() {
 	tlog "On-cluster xcluster tests start on $(hostname); kube_router"
 	begin=$(date +%s)
-	local tcases="test_images cmd_tcase_start_mconnect cmd_tcase_check_loadbalancererip test_local_mconnect"
+	local tcases="test_images cmd_tcase_start_mconnect cmd_tcase_check_loadbalancererip test_local_mconnect test_local_mconnect_udp"
 	mkdir -p $HOME/.kube
 	cp /etc/kubernetes/kubeconfig $HOME/.kube/config
 	local tc
@@ -224,29 +225,41 @@ cmd_tcase_check_loadbalancererip() {
 	done
 }
 
-test_local_mconnect() {
-	tcase "Local mconnect"
+local_mconnect() {
+	tcase "Local mconnect $1"
 	mkdir -p $tmp
-	mconnect -address mconnect.default.svc.xcluster:5001 -nconn 100 \
+	mconnect -address mconnect$1.default.svc.xcluster:5001 -nconn 100 $1 \
 		2>&1 | tee $tmp/mconnect.log || tdie
 	cat $tmp/mconnect.log
 	grep -q 'Failed connects; 0$' $tmp/mconnect.log || tdie
 	grep -q 'Failed reads; 0$' $tmp/mconnect.log || tdie
 }
-test_external_mconnect() {
-	tcase "External mconnect"
+external_mconnect() {
+	tcase "External mconnect $1"
 	mkdir -p $tmp
 	if test "$__ipv6" = "yes"; then
-		mconnect -address [1000::2]:5001 -nconn 100 \
+		mconnect -address [1000::2]:5001 -nconn 100 $1 \
 			2>&1 | tee $tmp/mconnect.log || tdie
 		cat $tmp/mconnect.log
 	else
-		mconnect -address 10.0.0.2:5001 -nconn 100 \
+		mconnect -address 10.0.0.2:5001 -nconn 100 $1 \
 			2>&1 | tee $tmp/mconnect.log || tdie
 		cat $tmp/mconnect.log
 	fi
 	grep -q 'Failed connects; 0$' $tmp/mconnect.log || tdie
 	grep -q 'Failed reads; 0$' $tmp/mconnect.log || tdie
+}
+test_local_mconnect() {
+	local_mconnect
+}
+test_external_mconnect() {
+	external_mconnect
+}
+test_local_mconnect_udp() {
+	local_mconnect -udp
+}
+test_external_mconnect_udp() {
+	external_mconnect -udp
 }
 test_start_alpine() {
 	tcase "Start alpine"
