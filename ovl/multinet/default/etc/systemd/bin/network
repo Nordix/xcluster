@@ -1,0 +1,67 @@
+#! /bin/sh
+
+export PATH="/bin:/sbin:/usr/bin:/usr/sbin"
+
+test -x /usr/sbin/ip && rm -f /sbin/ip
+
+echo 0 > /proc/sys/net/ipv6/conf/all/accept_dad
+echo 0 > /proc/sys/net/ipv6/conf/default/accept_dad
+
+ip link set lo up
+ip addr add 127.0.0.0/8 dev lo
+inetd
+
+ip link show dev eth0 > /dev/null 2>&1 || exit 0
+b0=$(ip link show dev eth0 | grep 'link/ether' | cut -d: -f6 | cut -d ' ' -f1)
+i=$(printf "%u" 0x$b0)
+
+ifup() {
+	local dev=$1
+	local net=$2
+    echo 0 > /proc/sys/net/ipv6/conf/$dev/accept_dad
+	ip addr add 192.168.$net.$i/24 dev $dev
+	ip -6 addr add 2000:$net::192.168.$net.$i/64 dev $dev
+	ip -6 addr add 2000:$net::$i/64 dev $dev
+	ip link set up dev $dev
+}
+
+ifup eth0 0
+
+if which dropbear > /dev/null; then
+	mkdir -p /etc/dropbear
+	touch /var/log/lastlog
+	dropbear -B -R
+fi
+
+mnet_vm() {
+    echo 1 > /proc/sys/net/ipv4/conf/all/forwarding
+    echo 1 > /proc/sys/net/ipv6/conf/all/forwarding
+	echo 1 > /proc/sys/net/ipv4/fib_multipath_hash_policy
+	ifup eth1 1
+	ifup eth2 3
+	ifup eth3 4
+	ifup eth4 5
+}
+
+mnet_router() {
+    echo 1 > /proc/sys/net/ipv4/conf/all/forwarding
+    echo 1 > /proc/sys/net/ipv6/conf/all/forwarding
+	echo 1 > /proc/sys/net/ipv4/fib_multipath_hash_policy
+	ifup eth1 1
+	ifup eth2 2
+	return 0
+}
+
+mnet_tester() {
+	ifup eth1 2
+	return 0
+}
+
+case $(hostname) in
+	vm-0*)
+		mnet_vm;;
+	vm-20*)
+		mnet_router;;
+	vm-22*)
+		mnet_tester;;
+esac

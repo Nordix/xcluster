@@ -22,3 +22,10 @@ eval $($XCLUSTER env | grep XCLUSTER_HOME=)
 export __image=$XCLUSTER_HOME/hd.img
 SETUP=test xc mkcdrom multinet; xc start --nets-vm=0,1,3,4,5
 ```
+
+With systemd (e.g. in k8s);
+```
+eval $($XCLUSTER env | grep XCLUSTER_HOME=)
+export __image=$XCLUSTER_HOME/hd-k8s.img
+xc mkcdrom multinet; xc start --nets-vm=0,1,3,4,5
+```
