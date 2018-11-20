@@ -1,0 +1,31 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: multus-alpine
+spec:
+  selector:
+    matchLabels:
+      app: multus-alpine
+  template:
+    metadata:
+      labels:
+        app: multus-alpine
+      annotations:
+        k8s.v1.cni.cncf.io/networks: '[
+            { "name": "ipvlan" },
+            { "name": "macvlan" },
+            { "name": "host-device" }
+        ]'
+    spec:
+      containers:
+      - name: multus-alpine
+        image: library/alpine:3.8
+        command:
+          - /bin/sh
+          - "-c"
+          - "sleep 60m"
+        env:
+          - name: NODE_NAME
+            valueFrom:
+              fieldRef:
+                fieldPath: spec.nodeName
