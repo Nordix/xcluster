@@ -87,7 +87,7 @@ cmd_env() {
 	test -n "$ARCHIVE" || ARCHIVE=$HOME/Downloads
 	export ARCHIVE
 
-	test -n "$__kver" || __kver=linux-4.18.5
+	test -n "$__kver" || __kver=linux-4.19.3
 	test -n "$__kobj" || __kobj=$XCLUSTER_HOME/obj
 	test -n "$__kbin" || __kbin=$XCLUSTER_HOME/bzImage
 	test -n "$__kcfg" || __kcfg=$dir/config/$__kver
@@ -213,7 +213,7 @@ cmd_br_setup() {
 }
 
 ##  Build functions;
-##   kernel_build [--kver=linux-4.18.5] [--kobj=dir] [--kbin=file] \
+##   kernel_build [--kver=linux-x.x.x] [--kobj=dir] [--kbin=file] \
 ##      [--kcfg=file] [--menuconfig]
 ##   busybox_build [--menuconfig]
 ##   dropbear_build
