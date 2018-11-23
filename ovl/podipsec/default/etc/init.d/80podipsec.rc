@@ -1,0 +1,39 @@
+#! /bin/sh
+
+die() {
+    echo "ERROR: $*" >&2
+    exit 1
+}
+
+hostname | grep -Eq 'vm-[0-9]+$' || die "Invalid hostname [$(hostname)]"
+i=$(hostname | cut -d- -f2 | sed -re 's,^0+,,')
+
+test $i -le 200 || exit 0
+
+pod_encrypt() {
+	local x
+	for x in $(seq 1 8); do
+		test $x -eq $i && continue
+		# Security Policies;
+		ip xfrm policy add dst 11.0.$x.0/24 dir out \
+			tmpl src 192.168.1.$i dst 192.168.1.$x \
+			proto esp spi $i reqid $x mode tunnel
+		ip xfrm policy add src 11.0.$x.0/24 dir in \
+			tmpl src 192.168.1.$x dst 192.168.1.$i \
+			proto esp spi $x reqid $x mode tunnel
+		ip xfrm policy add src 11.0.$x.0/24 dir fwd \
+			tmpl src 192.168.1.$x dst 192.168.1.$i \
+			proto esp spi $x reqid $x mode tunnel
+		# Security Associations;
+		ip xfrm state add src 192.168.1.$i dst 192.168.1.$x \
+			proto esp spi $i reqid $x mode tunnel enc aes $key
+		ip xfrm state add src 192.168.1.$x dst 192.168.1.$i \
+			proto esp spi $x reqid $x mode tunnel enc aes $key
+	done
+}
+
+key=0x4ed470a579967edf6845f90f25ecdaa6435aa1c2c45c06a8fbf35aae63fb4d58
+cfg=/etc/ipsec/conf
+test -r $cfg && . $cfg
+
+pod_encrypt
