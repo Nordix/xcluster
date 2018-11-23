@@ -16,9 +16,12 @@ spec:
       - name: alpine
         image: library/alpine:3.8
         command:
-          - /bin/sh
-          - "-c"
-          - "sleep 60m"
+          - "/usr/bin/nc"
+          - "-lk"
+          - "-p"
+          - "5001"
+          - "-e"
+          - "hostname"
         env:
           - name: MY_NODE_NAME
             valueFrom:
