@@ -103,7 +103,7 @@ cmd_env() {
 	test -n "$__nets_vm" || __nets_vm=0,1
 	test -n "$__nets_router" || __nets_router=0,1,2
 
-	__ipver=4.9.0
+	__ipver=4.19.0
 	__dropbearver=2016.74
 	__diskimver=v0.4.0
 	test -n "$DISKIM" || DISKIM=$XCLUSTER_WORKSPACE/diskim-$__diskimver/diskim.sh
