@@ -17,7 +17,7 @@
  * [metallb](ovl/metallb/README.md)
  * [multinet](ovl/multinet/README.md)
  * [multus](ovl/multus/README.md)
- * [podipsec](ovl/podipsec/README.md)
+ * [podsec](ovl/podsec/README.md)
  * [private-reg](ovl/private-reg/README.md)
  * [skopeo](ovl/skopeo/README.md)
  * [systemd](ovl/systemd/README.md)

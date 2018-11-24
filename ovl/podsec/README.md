@@ -1,14 +1,15 @@
-# Xcluster ovl - podipsec
+# Xcluster ovl - podsec
 
 Encrypts all pod-to-pod traffic between pods on different nodes in a
-K8s cluster using `IPSec`. Traffic between pods on the same node is
-not encrypted.
+K8s cluster. Traffic between pods on the same node is not encrypted.
+
+
+## IPSec
 
 There is **no** IKE, e.g StrongSwan, in this setup. Encrypted ESP
 tunnels are setup using `ip xfrm`.
 
-
-## Usage
+### Usage
 
 The `alpine` pod can be used as an example.
 
