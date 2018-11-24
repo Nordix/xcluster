@@ -15,7 +15,7 @@ tunnels are setup using `ip xfrm`.
 The `alpine` pod can be used as an example.
 
 ```
-xc mkcdrom podipsec private-reg; xc start
+xc mkcdrom podsec private-reg; xc start
 # On cluster;
 kubectl apply -f /etc/kubernetes/alpine.yaml
 kubectl get pods -o wide
@@ -26,3 +26,19 @@ nc 11.0.3.2 5001 < /dev/null
 tcpdump -ni eth1 esp
 ```
 
+Key rotation is missing. The initial key is used forever.
+
+
+## WireGuard
+
+Using [WireGuard]().
+
+### Usage
+
+```
+SETUP=wireguard xc mkcdrom wireguard podsec private-reg; xc start
+# Test as for IPSec
+```
+
+Configuration is much harder than with IPSec since each client is
+identified with it's public key so no common key can be used.
