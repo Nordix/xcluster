@@ -3,6 +3,7 @@
 Encrypts all pod-to-pod traffic between pods on different nodes in a
 K8s cluster. Traffic between pods on the same node is not encrypted.
 
+<img src="podsec.svg" alt="Figure of pod security" width="80%" />
 
 ## IPSec
 
