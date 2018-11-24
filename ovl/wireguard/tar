@@ -1,0 +1,35 @@
+#! /bin/sh
+# NOTE: A common pattern is to specify "-" (stdout) as out-file,
+#  so there must be NO log printouts to stdout!
+
+dir=$(dirname $0); dir=$(readlink -f $dir)
+tmp=/tmp/$USER/xcluster_$$
+die() {
+	echo "ERROR: $*" >&2
+	rm -rf $tmp
+	exit 1
+}
+log() {
+	echo "INFO: $*" >&2
+}
+
+test -n "$1" || die "No out-file"
+
+mkdir -p $tmp
+for s in $(echo "$SETUP" | tr ',' ' '); do
+	test -d $dir/$s || continue
+	cp -R $dir/$s/* $tmp
+	setup_copied=yes
+done
+test "$setup_copied" != "yes" && test -d $dir/default && cp -R $dir/default/* $tmp
+
+wgd=$XCLUSTER_WORKSPACE/WireGuard-0.0.20181119
+f=$wgd/src/tools/wg
+test -x $f || die "Not executable [$f]"
+mkdir -p $tmp/bin
+$XCLUSTER install_prog --dest=$tmp $f
+
+cd $tmp
+tar cf "$1" *
+cd - > /dev/null
+rm -rf $tmp
