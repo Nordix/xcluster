@@ -17,6 +17,12 @@ The `alpine` pod can be used as an example.
 ```
 xc mkcdrom podsec private-reg; xc start
 # On cluster;
+ip xfrm state
+ip xfrm policy
+ip xfrm monitor all
+# Test;
+kubectl apply -f /etc/kubernetes/mconnect.yaml
+mconnect -address mconnect.default.svc.xcluster:5001 -nconn 12
 kubectl apply -f /etc/kubernetes/alpine.yaml
 kubectl get pods -o wide
 kubectl exec -it <pod> sh
@@ -37,7 +43,11 @@ Using [WireGuard]().
 
 ```
 SETUP=wireguard xc mkcdrom wireguard podsec private-reg; xc start
-# Test as for IPSec
+# On Cluster
+wg
+# Test as for IPSec.
+# At some other place;
+tcpdump -ni eth1 udp
 ```
 
 Configuration is much harder than with IPSec since each client is
