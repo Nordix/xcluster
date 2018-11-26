@@ -173,7 +173,6 @@ cmd_build_release() {
 	. ./Envsettings.k8s
 	$XCLUSTER mkimage
 	$XCLUSTER ximage systemd etcd iptools kubernetes coredns mconnect images
-	chmod 444 $__image		# To avoid users overwrite with "xc mkimage"
 
 	now=$(date +%s)
 	echo "Elapsed time; $((now-begin)) sec"
@@ -199,6 +198,8 @@ cmd_cache_refresh() {
 	$XCLUSTER cache skopeo
 	SETUP=ipv6 $XCLUSTER cache skopeo
 	$XCLUSTER cache kube-router
+	$XCLUSTER cache wireguard
+	SETUP=test $XCLUSTER cache wireguard
 }
 
 ##   release --version=ver
@@ -222,6 +223,7 @@ cmd_release() {
 	for n in bzImage cache hd.img hd-k8s.img; do
 		cp -r $XCLUSTER_HOME/$n $H
 	done
+	chmod 444 $H/hd*
 
 	H=$T/workspace/dropbear-$__dropbearver
 	mkdir -p $H
@@ -245,7 +247,7 @@ cmd_release() {
 	done
 	cd $tmp
 	ar=/tmp/xcluster-$__version.tar
-	tar -cf $ar xcluster
+	tar --group=0 --owner=0 -cf $ar xcluster
 	cd
 	echo "Created [$ar]"
 }
