@@ -315,14 +315,14 @@ cmd_cache() {
 }
 cmd_cached_tar() {
 	test -n "$1" || return 1
-	echo "$SETUP" | grep -q , && return 1
 	cmd_env
-	local dest="$__cached/default"
-	test -n "$SETUP" && dest="$__cached/$SETUP"
-	if test -r $dest/$1.tar.xz; then
-		echo $dest/$1.tar.xz
-		return 0
-	fi
+	local n
+	for n in $(echo "$SETUP" | tr ',' ' ') default; do
+		if test -r $__cached/$n/$1.tar.xz; then
+			echo $__cached/$n/$1.tar.xz
+			return 0
+		fi
+	done
 	return 1
 }
 
