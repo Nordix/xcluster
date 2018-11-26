@@ -45,6 +45,7 @@ Using [WireGuard]().
 SETUP=wireguard xc mkcdrom wireguard podsec private-reg; xc start
 # On Cluster
 wg
+ifconfig wg0
 # Test as for IPSec.
 # At some other place;
 tcpdump -ni eth1 udp
