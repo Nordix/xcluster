@@ -118,6 +118,36 @@ mynode() {
 	hostname | cut -d- -f2 | sed -re 's,^0+,,'
 }
 
+##  rsh <vm> command...
+##    NOTE: Called from host (not within the cluster).
+##    Executes a command on a vm.
+##
+rsh() {
+	local vm=$1
+	shift
+	local sshopt="-o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no"
+	if ip link show xcbr1 > /dev/null 2>&1; then
+		ssh -q $sshopt root@192.168.0.$vm $@
+	else
+		ssh -q $sshopt -p $((12300+vm)) root@127.0.0.1 $@
+	fi
+}
+
+##  check_vm [vms...]
+##    NOTE: Called from host (not within the cluster).
+##    Check connectivity with the vm's.
+##
+check_vm() {
+	local vms='1 2 3 4 201 202'
+	test -n "$1" && vms=$@
+	for vm in $vms; do
+		rsh $vm hostname || return 1
+	done
+	return 0
+}
+
+
+
 if test "$selftest" = "yes"; then
 	tmp=/tmp/xtest_selftest_$$
 

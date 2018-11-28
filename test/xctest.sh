@@ -43,8 +43,8 @@ cmd_k8s_wait() {
 	test -n "$__nrouters" || __nrouters=2
 	test -n "$__ntesters" || __ntesters=0
 
-	check_vm $(seq 1 $__nvm) $(seq 201 $((200+__nrouters))) \
-		$(seq 221 $((220+__ntesters))) > /dev/null
+	tex check_vm $(seq 1 $__nvm) $(seq 201 $((200+__nrouters))) \
+		$(seq 221 $((220+__ntesters))) || tdie
 	tlog "VMs OK"
 
 	tex "rsh 1 kubectl get nodes 2>&1 | ogrep -qE 'Ready'"
@@ -108,17 +108,17 @@ test_basic() {
 	sleep 2
 
 	tcase "VM connectivity"
-	check_vm || tdie
+	tex check_vm || tdie
 
 	tcase "Scale out to 8 vms"
 	$XCLUSTER scaleout 5 6 7 8
 	sleep 2
-	check_vm 1 2 3 4 5 6 7 8 201 202 || tdie
+	tex check_vm 1 2 3 4 5 6 7 8 201 202 || tdie
 
 	tcase "Scale in some vms"
 	$XCLUSTER scalein 2 4 6 8 202
 	sleep 0.5
-	check_vm 1 3 5 7 201 || tdie
+	tex check_vm 1 3 5 7 201 || tdie
 	check_novm 2 4 6 8 202
 
 	tcase "Stop xcluster"
@@ -133,7 +133,7 @@ test_k8s() {
 	sleep 2
 
 	tcase "VM connectivity"
-	check_vm || tdie
+	tex check_vm || tdie
 
 	tcase "Perform on-cluster tests"
 	rsh 4 xctest k8s || tdie	
@@ -151,7 +151,7 @@ test_k8s_ipv6() {
 	sleep 2
 
 	tcase "VM connectivity"
-	check_vm || tdie
+	tex check_vm || tdie
 
 	tcase "Perform on-cluster tests"
 	rsh 4 xctest k8s --ipv6 || tdie
@@ -169,7 +169,7 @@ test_k8s_kube_router() {
 	sleep 2
 
 	tcase "VM connectivity"
-	check_vm || tdie
+	tex check_vm || tdie
 
 	tcase "Perform on-cluster tests"
 	rsh 4 xctest k8s_kube_router || tdie	
@@ -188,7 +188,7 @@ test_k8s_metallb() {
 	sleep 2
 
 	tcase "VM connectivity"
-	check_vm || tdie
+	tex check_vm || tdie
 
 	tcase "Wait for Kubernetes"
 	rsh 4 xctest wait_for_k8s || tdie
@@ -204,27 +204,6 @@ test_k8s_metallb() {
 	$XCLUSTER stop
 }
 
-check_vm() {
-	local vms='1 2 3 4 201 202'
-	test -n "$1" && vms=$@
-	local start=$(date +%s)
-	now=$start
-	local failed=yes
-	while test "$failed" = "yes"; do
-		failed=no
-		for vm in $vms; do
-			if ! rsh $vm hostname; then
-				failed=yes
-				break
-			fi
-		done
-		test "$failed" = "no" && return 0
-		test $((now-start)) -ge $__timeout && tdie Timeout
-		sleep 1
-		now=$(date +%s)
-	done
-	return 1
-}
 check_novm() {
 	local vms='1 2 3 4 201 202'
 	test -n "$1" && vms=$@
@@ -244,16 +223,7 @@ cmd_rsh() {
 	test -n "$2" || die "Syntax err"
 	rsh $@
 }
-rsh() {
-	local vm=$1
-	shift
-	local sshopt="-o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no"
-	if ip link show xcbr1 > /dev/null 2>&1; then
-		ssh -q $sshopt root@192.168.0.$vm $@
-	else
-		ssh -q $sshopt -p $((12300+vm)) root@127.0.0.1 $@
-	fi
-}
+
 tcase_tiller() {
 	tcase "Start tiller"
 	netstat -putan | grep ':44134 ' && return 0
