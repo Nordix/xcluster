@@ -12,13 +12,13 @@ __timeout=10
 __retries=10
 __interval=1
 begin=$(date +%s)
-
+indent="  "
 
 ##  tlog message...
 ##    Logs to stderr with time stamp.
 ##
 tlog() {
-	echo "  $(date +%T) $*" >&2
+	echo "$indent$(date +%T) $*" >&2
 }
 
 ##  tcase slogan...
@@ -27,8 +27,8 @@ tlog() {
 tcase() {
 	tcstart=$(date +%s)
 	local msg="$(date +%T) ($((tcstart-begin))): TEST CASE: $*"
-	echo "  $msg"
-	echo "  $msg" >&2
+	echo "$indent$msg"
+	echo "$indent$msg" >&2
 }
 
 ##  tdie [message...]
@@ -36,7 +36,7 @@ tcase() {
 ##
 tdie() {
 	now=$(date +%s)
-	echo "  $(date +%T) ($((now-begin))): FAILED: $*" >&2
+	echo "$indent$(date +%T) ($((now-begin))): FAILED: $*" >&2
 	rm -rf $tmp
 	exit 1
 }

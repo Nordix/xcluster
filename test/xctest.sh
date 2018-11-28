@@ -36,37 +36,23 @@ dbg() {
 ##     Wait for Kubernetes. When CoreDNS is Running k8s is assumed to be ready.
 ##
 cmd_k8s_wait() {
-	begin=$(date +%s)
-	tlog "Kubernetes check"
+	tcase "Kubernetes check"
 
 	# Check connectivity
 	test -n "$__nvm" || __nvm=4
 	test -n "$__nrouters" || __nrouters=2
 	test -n "$__ntesters" || __ntesters=0
 
-	__timeout=10
 	check_vm $(seq 1 $__nvm) $(seq 201 $((200+__nrouters))) \
 		$(seq 221 $((220+__ntesters))) > /dev/null
 	tlog "VMs OK"
 
-	__timeout=10
-	local start=$(date +%s)
-	local now=$start
-	while ! rsh 1 kubectl get nodes 2> /dev/null | grep -qE 'Ready'; do
-		test $((now-start)) -ge $__timeout && tdie Timeout
-		sleep 1
-		now=$(date +%s)
-	done
+	tex "rsh 1 kubectl get nodes 2>&1 | ogrep -qE 'Ready'"
 	tlog "Nodes Ready"
 
-	__timeout=25
-	start=$(date +%s)
-	now=$start
-	while ! rsh 1 kubectl get pods 2> /dev/null | grep -qE '^coredns.*Running'; do
-		test $((now-start)) -ge $__timeout && tdie Timeout
-		sleep 1
-		now=$(date +%s)
-	done
+	pushv 30 15 2
+	tex "rsh 1 kubectl get pods 2>&1 | ogrep -qE '^coredns.*Running'"
+	popv
 	tlog "CoreDNS Running"
 
 	return 0
@@ -218,20 +204,6 @@ test_k8s_metallb() {
 	$XCLUSTER stop
 }
 
-tlog() {
-	echo "$(date +%T) $*" >&2
-}
-tcase() {
-	now=$(date +%s)
-	local msg="$(date +%T) ($((now-begin))): TEST CASE: $*"
-	echo $msg
-	echo $msg >&2
-}
-tdie() {
-	echo "$(date +%T) ($((now-begin))): FAILED: $*" >&2
-	rm -rf $tmp
-	exit 1
-}
 check_vm() {
 	local vms='1 2 3 4 201 202'
 	test -n "$1" && vms=$@
@@ -294,20 +266,17 @@ tcase_helm_install_metallb() {
 	which helm > /dev/null || tdie "Helm not found"
 	test -n "$HELM_HOST" || export HELM_HOST=localhost:44134
 	helm install --name metallb stable/metallb 2>&1 || tdie Helm
-	sleep 10
-	__timeout=20
-	local start=$(date +%s)
-	local now=$start
-	while ! kubectl get pods | grep -qE '^metallb-controller.*Running'; do
-		test $((now-start)) -ge $__timeout && tdie Timeout
-		sleep 1
-		now=$(date +%s)
-	done
+	sleep 2
+	pushv 30 15 2
+	tex "kubectl get pods | ogrep -qE '^metallb-controller.*Running'"
+	popv
 	kubectl apply -f \
 		$($XCLUSTER ovld metallb)/default/etc/kubernetes/metallb-config-helm.yaml
-	__timeout=10
 }
 
+
+. $($XCLUSTER ovld test)/default/usr/lib/xctest
+indent=''
 
 
 # Get the command
