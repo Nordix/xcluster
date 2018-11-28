@@ -67,6 +67,15 @@ cmd_docker_lsreg() {
 
 }
 
+##   docker_ls <image>
+##
+cmd_docker_ls() {
+	cmd_in_docker $1 || die "Can't find image [$1]"
+	local c=$(docker create $1) || die "FAILED; docker create"
+	docker export $c | tar t | sort
+	docker rm $c > /dev/null
+}
+
 #   get_manifest <rootfs>
 #
 cmd_get_manifest() {
