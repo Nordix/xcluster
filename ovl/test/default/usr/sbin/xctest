@@ -122,10 +122,13 @@ cmd_k8s_kube_router() {
 cmd_router_kube_router() {
 	tlog "On-router xcluster tests start on $(hostname); kube_router"
 	begin=$(date +%s)
-	__timeout=10
 
+	__timeout=60
+	__retries=10
 	test_external_mconnect
-
+	__retries=''
+	__timeout=10
+	
 	now=$(date +%s)
 	tlog "On-router xcluster tests end. Elapsed time $((now-begin)) sec"
 	return 0
@@ -237,26 +240,43 @@ local_mconnect() {
 external_mconnect() {
 	tcase "External mconnect $1"
 	mkdir -p $tmp
+	local t
 	if test "$__ipv6" = "yes"; then
 		mconnect -address [1000::2]:5001 -nconn 100 $1 \
-			2>&1 | tee $tmp/mconnect.log || tdie
+			2>&1 | tee $tmp/mconnect.log || return 1
 		cat $tmp/mconnect.log
+		t=$(grep -E '^mconnect-deployment-' $tmp/mconnect.log | wc -l)
+		test $t -eq 4 || return 1
 	else
 		mconnect -address 10.0.0.2:5001 -nconn 100 $1 \
-			2>&1 | tee $tmp/mconnect.log || tdie
+			2>&1 | tee $tmp/mconnect.log || return 1
 		cat $tmp/mconnect.log
+		t=$(grep -E '^mconnect-deployment-' $tmp/mconnect.log | wc -l)
+		test $t -eq 4 || return 1
 	fi
-	grep -q 'Failed connects; 0$' $tmp/mconnect.log || tdie
-	grep -q 'Failed reads; 0$' $tmp/mconnect.log || tdie
+	grep -q 'Failed connects; 0$' $tmp/mconnect.log || return 1
+	grep -q 'Failed reads; 0$' $tmp/mconnect.log || return 1
+	return 0
 }
 test_local_mconnect() {
 	local_mconnect
 }
 test_external_mconnect() {
-	external_mconnect
+	if test -n "$__retries"; then
+		local start=$(date +%s)
+		local now
+		while test $__retries -gt 0; do
+			now=$(date +%s)
+			test $((now-start)) -ge $__timeout && tdie Timeout
+			external_mconnect && return 0
+			__retries=$((__retries - 1))
+			sleep 5
+		done
+	fi
+	external_mconnect || tdie
 }
 test_local_mconnect_udp() {
-	local_mconnect -udp
+	local_mconnect -udp || tdie
 }
 test_external_mconnect_udp() {
 	external_mconnect -udp
