@@ -1,0 +1,158 @@
+#! /bin/sh
+##
+## Library functions for tests in "xcluster".
+##
+##  Perform selftest with;
+##    selftest=yes $($XCLUSTER ovld test)/default/usr/lib/xctest
+##
+## Functions;
+##
+
+__timeout=10
+__retries=10
+__interval=1
+begin=$(date +%s)
+
+
+##  tlog message...
+##    Logs to stderr with time stamp.
+##
+tlog() {
+	echo "  $(date +%T) $*" >&2
+}
+
+##  tcase slogan...
+##    Initiates a new test-case. The slogan is logged to stderr.
+##
+tcase() {
+	tcstart=$(date +%s)
+	local msg="$(date +%T) ($((tcstart-begin))): TEST CASE: $*"
+	echo "  $msg"
+	echo "  $msg" >&2
+}
+
+##  tdie [message...]
+##    Terminates the test with an error code.
+##
+tdie() {
+	now=$(date +%s)
+	echo "  $(date +%T) ($((now-begin))): FAILED: $*" >&2
+	rm -rf $tmp
+	exit 1
+}
+
+##  tex command...
+##    Ececute a function with retries and timeout. Ok (0) is returned
+##    if succesful. Relevant settings in seconds;
+##
+##    __timeout (10) - Max time since start of the test case
+##    __retries (10) - Max re-tries
+##    __interval (1) - Interval between re-tries
+##
+tex() {
+	eval $@ && return 0
+	test $__retries -gt 0 || return 1
+
+	# We shall do retries
+	local now
+	local retry=1
+	while test $retry -le $__retries; do
+		now=$(date +%s)
+		if test $((now+__interval-tcstart)) -ge $__timeout; then
+			tlog "Timeout ($__timeout)"
+			return 2
+		fi
+		sleep $__interval
+		echo "Retry ($retry) [$1]"
+		eval $@ && return 0
+		retry=$((retry+1))
+	done
+	return 1
+}
+
+##  push variable value
+##    Example; "push __timeout 20"
+push() {
+	eval stack$1="\$$1,\$stack$1"
+	eval $1=$2
+}
+##  pop variable
+##    Example; "pop __timeout"
+##
+pop() {
+	local s=$(eval echo \$stack$1)
+	eval $1=$(echo $s | cut -d, -f1)
+	eval stack$1=$(echo $s | cut -d, -f2-)
+}
+
+##  pushv __timeout __retries __interval
+##    Combo push. Example; "pushv 60 15 4"
+pushv() {
+	push __timeout $1
+	push __retries $2
+	push __interval $3
+}
+##  popv
+##    Pop values pushed with "pushv"
+##
+popv() {
+	pop __timeout
+	pop __retries
+	pop __interval
+}
+
+##  ogrep
+##    Grep and send raw output to stdout (for logging).
+##
+ogrep() {
+	mkdir -p $tmp
+	cat > $tmp/out
+	cat $tmp/out
+	grep "$@" $tmp/out
+}
+
+##  mynode
+##    Output the node number.
+##
+mynode() {
+	hostname | cut -d- -f2 | sed -re 's,^0+,,'
+}
+
+if test "$selftest" = "yes"; then
+	tmp=/tmp/xtest_selftest_$$
+
+	tcase "Push/Pop"
+	push __timeout 20
+	test $__timeout -eq 20 || tdie
+	push __timeout 30
+	test $__timeout -eq 30 || tdie
+	pop __timeout
+	test $__timeout -eq 20 || tdie
+	pop __timeout
+	test $__timeout -eq 10 || tdie
+
+	tcase "Pushv/Popv"
+	pushv 22 33 44
+	test $__timeout -eq 22 || tdie
+	test $__retries -eq 33 || tdie
+	test $__interval -eq 44 || tdie
+	popv
+	test $__timeout -eq 10 || tdie
+	test $__retries -eq 10 || tdie
+	test $__interval -eq 1 || tdie
+
+	tcase "Retry"
+	__retries=1
+	tex false && tdie
+	tcase "Timeout"
+	__retries=3
+	__timeout=3
+	tex false && tdie
+
+	tcase "ogrep"
+	echo 'Kalle Kula' | ogrep -i 'kalle kula' || tdie
+	rm -rf $tmp
+	tlog SUCCESS
+fi
+
+test "$1" = "help" && grep '^##' $0 | cut -c3-
