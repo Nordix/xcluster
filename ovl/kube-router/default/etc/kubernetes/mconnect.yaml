@@ -40,6 +40,6 @@ spec:
     spec:
       containers:
       - name: mconnect
-        image: nordixorg/mconnect:1.1
+        image: nordixorg/mconnect:v1.2
         ports:
         - containerPort: 5001

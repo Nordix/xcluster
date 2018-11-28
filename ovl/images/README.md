@@ -45,7 +45,7 @@ is created in the `$XCLUSTER_TMP` directory. The items may be;
 
 ```
 # ("images" alias defined in $h/Envsettings)
-images make coredns nordixorg/mconnect:1.1 ...  # Requires "sudo"
+images make coredns nordixorg/mconnect:v1.2 ...  # Requires "sudo"
 eval $($XCLUSTER env | grep XCLUSTER_TMP)
 ls $XCLUSTER_TMP/images.tar
 xc mkcdrom [overlays...] images

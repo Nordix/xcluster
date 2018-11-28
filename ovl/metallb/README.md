@@ -1,7 +1,8 @@
 Xcluster overlay - metallb
 ==========================
 
-For experiments with the [metallb](https://github.com/google/metallb).
+For experiments and tests with the
+[metallb](https://github.com/google/metallb).
 
 The `metallb` is not a load-balancer despite the `lb` suffix. It makes
 the service `type: LoadBalancer` work in a similar way as in public
@@ -20,8 +21,6 @@ Metallb has two major (independent) functions;
 
 Usage
 -----
-
-Assuming `xcluster` k8s image;
 
 ```
 configd=$($XCLUSTER ovld metallb)/default/etc/kubernetes
@@ -56,7 +55,7 @@ operation for instance in CI environment;
 ```
 curl -L  https://raw.githubusercontent.com/google/metallb/v0.7.3/manifests/metallb.yaml \
  > $($XCLUSTER ovld metallb)/default/etc/metallb.yaml
-images make coredns nordixorg/mconnect:1.1 \
+images make coredns nordixorg/mconnect:v1.2 \
  metallb/speaker:v0.7.3 metallb/controller:v0.7.3
 xc mkcdrom metallb gobgp images; xc start
 # On cluster;
@@ -75,7 +74,7 @@ For internal experiments a local pod can be used;
 Ipv4 pre-pulled setup;
 
 ```
-images make coredns metallb nordixorg/mconnect:1.1
+images make coredns metallb nordixorg/mconnect:v1.2
 xc mkcdrom metallb gobgp images; xc start
 # On cluster;
 kubectl apply -f /etc/kubernetes/metallb-config-internal.yaml
@@ -110,7 +109,7 @@ IPv6 setup;
 
 ```
 # Pre-pull
-images make coredns metallb nordixorg/mconnect:1.1
+images make coredns metallb nordixorg/mconnect:v1.2
 SETUP=ipv6 xc mkcdrom etcd coredns k8s-config metallb gobgp images; xc start
 # Private reg
 SETUP=ipv6 xc mkcdrom etcd coredns metallb gobgp private-reg k8s-config; xc start
