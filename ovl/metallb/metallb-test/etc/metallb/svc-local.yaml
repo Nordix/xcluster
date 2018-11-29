@@ -1,0 +1,33 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: mconnect-local
+  annotations:
+    metallb.universe.tf/allow-shared-ip: mconnect-local
+spec:
+  selector:
+    app: mconnect
+  ports:
+  - name: mconnect
+    port: 5001
+  - name: http
+    port: 8080
+  externalTrafficPolicy: Local
+  type: LoadBalancer
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mconnect-udp-local
+  annotations:
+    metallb.universe.tf/allow-shared-ip: mconnect-local
+spec:
+  selector:
+    app: mconnect
+  ports:
+  - name: udp
+    port: 5001
+    protocol: UDP
+  externalTrafficPolicy: Local
+  type: LoadBalancer
+

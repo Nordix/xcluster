@@ -169,6 +169,33 @@ start_mconnect() {
 	popv
 }
 
+##  check_mconnect_result <file.json>
+##    Check the result of an "mconnect". The number of connections must be 100.
+##
+check_mconnect_result() {
+	cat $1 | jq .
+	local v i=0
+	for v in $(cat $1 | jq -r '.hosts|flatten[]'); do
+		i=$((i + 1))
+		test $v -le 36 || return 1
+		test $v -ge 14 || return 1
+	done
+	test $i -eq 4
+}
+
+##  do_mconnect <address>
+##    Execute an mconnect.
+##
+do_mconnect() {
+	mkdir -p $tmp
+	local out=$tmp/out
+	if ! mconnect -address $1:5001 -nconn 100 -output json > $out; then
+		cat $out | jq .
+		return 1
+	fi
+	check_mconnect_result $out
+}
+
 
 ## On-host Functions
 ## -----------------

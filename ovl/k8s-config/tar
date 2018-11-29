@@ -28,7 +28,8 @@ for s in $(echo "$SETUP" | tr ',' ' '); do
 done
 test "$setup_copied" != "yes" -a -d $dir/default && cp -R $dir/default/* $tmp
 
-sed -ie "s,%localreg%,$regip," $tmp/etc/crio/crio.conf
+test -r $tmp/etc/crio/crio.conf && \
+	sed -ie "s,%localreg%,$regip," $tmp/etc/crio/crio.conf
 
 
 cd $tmp

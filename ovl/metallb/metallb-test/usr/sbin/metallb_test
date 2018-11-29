@@ -31,6 +31,11 @@ dbg() {
 	test -n "$__verbose" && echo "$prg: $*" >&2
 }
 
+##  tcase_nodes
+cmd_tcase_nodes() {
+	test_nodes
+}
+
 ##  tcase_config [config]
 cmd_tcase_config() {
 	local cfg=default
@@ -48,15 +53,17 @@ cmd_tcase_start() {
 	tcase "Start metallb"
 	kubectl apply -f /etc/metallb/metallb.yaml || tdie
 	sleep 2
-	pushv 30 15 2
-	tex "kubectl get pods | ogrep -E '^metallb-controller-.*Running'" || tdie
-	tex "kubectl get pods | ogrep -E '^metallb-speaker-.*Running'" || tdie
-	tex "npods metallb-speaker- 4" || tdie
+	pushv 60 20 3
+	local pod=metallb-controller-
+	tex "kubectl get pods 2>&1 | ogrep -E '^$pod.*Running'" || tdie
+	pod=metallb-speaker-
+	tex "kubectl get pods | ogrep -E '^$pod.*Running'" || tdie
+	tex "npods $pod 4" || tdie
 	popv
 	return 0
 }
 
-cmd_tcase_mconnect() {
+cmd_tcase_start_mconnect() {
 	start_mconnect /etc/metallb/mconnect.yaml || tdie
 	if test -n "$1"; then
 		kubectl apply -f /etc/metallb/$1.yaml || tdie
@@ -102,6 +109,20 @@ cmd_tcase_route() {
 	popv
 }
 
+cmd_tcase_mconnect() {
+	tcase "Mconnect to [$1]"
+	do_mconnect $1
+}
+
+cmd_tcase_tplocal() {
+	mkdir -p $tmp
+	local out=$tmp/out
+	wget -q -O - http://$1:8080/healthz > $out || tdie
+	cat $out
+	local adr=192.168.1.201
+	echo "$1" | grep -q : && adr=1000::1:c0a8:1c9
+	grep ",$adr" $out || tdie
+}
 
 
 . /etc/profile

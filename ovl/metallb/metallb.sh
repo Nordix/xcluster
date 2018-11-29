@@ -71,9 +71,9 @@ test_basic() {
 	SETUP=metallb-test $XCLUSTER mkcdrom private-reg test gobgp metallb
 	xcstart
 
-	otc 4 "config default" start "mconnect svc1" "lbip mconnect 10.0.0.2" \
-		"lbip mconnect-udp 10.0.0.2"
-	otc 201 "peers 192.168.1." "route 10.0.0.2"
+	otc 4 nodes "config default" start "start_mconnect svc1" \
+		"lbip mconnect 10.0.0.2" "lbip mconnect-udp 10.0.0.2"
+	otc 201 "peers 192.168.1." "route 10.0.0.2" "mconnect 10.0.0.2"
 
 	tcase "Stop xcluster"
 	$XCLUSTER stop
@@ -85,9 +85,39 @@ test_basic_ipv6() {
 		etcd k8s-config private-reg test gobgp metallb
 	xcstart
 
-	otc 4 "config default-ipv6" start "mconnect svc1-ipv6" \
+	otc 4 nodes "config default-ipv6" start "start_mconnect svc1-ipv6" \
 		"lbip mconnect 1000::2" "lbip mconnect-udp 1000::2"
-	otc 201 "peers 1000::1:c0a8:10" "route 1000::2"
+	otc 201 "peers 1000::1:c0a8:10" "route 1000::2" "mconnect [1000::2]"
+
+	tcase "Stop xcluster"
+	$XCLUSTER stop
+}
+
+test_local() {
+	tlog "--- externalTrafficPolicy: local ipv4"
+	SETUP=metallb-test,iptables $XCLUSTER mkcdrom \
+		k8s-config private-reg test gobgp metallb
+	xcstart
+
+	otc 4 nodes "config default" start "start_mconnect svc-local" \
+		"lbip mconnect-local 10.0.0.0" "lbip mconnect-udp-local 10.0.0.0"
+	otc 201 "peers 192.168.1." "route 10.0.0.0" "mconnect 10.0.0.0" \
+		"tplocal 10.0.0.0"
+
+	tcase "Stop xcluster"
+	$XCLUSTER stop
+}
+
+test_local_ipv6() {
+	tlog "--- externalTrafficPolicy: local ipv6"
+	SETUP=metallb-test,ipv6 $XCLUSTER mkcdrom \
+		etcd k8s-config private-reg test gobgp metallb
+	xcstart
+
+	otc 4 nodes "config default-ipv6" start "start_mconnect svc-local" \
+		"lbip mconnect-local 1000::" "lbip mconnect-udp-local 1000::"
+	otc 201 "peers 1000::1:c0a8:10" "route 1000::" "mconnect [1000::]" \
+		"tplocal [1000::]"
 
 	tcase "Stop xcluster"
 	$XCLUSTER stop
@@ -108,8 +138,6 @@ xcstart() {
 	sleep 2
 	tcase "VM connectivity"
 	tex check_vm || tdie
-	local xctest=$(dirname $XCLUSTER)/test/xctest.sh
-	$xctest k8s_wait || tdie
 }
 
 . $($XCLUSTER ovld test)/default/usr/lib/xctest
