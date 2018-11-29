@@ -32,7 +32,7 @@ dbg() {
 	test -n "$__verbose" && echo "$prg: $*" >&2
 }
 
-##   k8s_wait
+##   k8s_wait [--no-coredns]
 ##     Wait for Kubernetes. When CoreDNS is Running k8s is assumed to be ready.
 ##
 cmd_k8s_wait() {
@@ -50,6 +50,7 @@ cmd_k8s_wait() {
 	tex "rsh 1 kubectl get nodes 2>&1 | ogrep -qE 'Ready'"
 	tlog "Nodes Ready"
 
+	test "$__no_coredns" = "yes" && return 0
 	pushv 30 15 2
 	tex "rsh 1 kubectl get pods 2>&1 | ogrep -qE '^coredns.*Running'"
 	popv
@@ -191,7 +192,7 @@ test_k8s_metallb() {
 	tex check_vm || tdie
 
 	tcase "Wait for Kubernetes"
-	rsh 4 xctest wait_for_k8s || tdie
+	rsh 4 xctest wait_for_k8s --no-coredns || tdie
 
 	tcase_tiller
 	tcase_helm_install_metallb

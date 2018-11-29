@@ -5,7 +5,8 @@
 ##  Perform selftest with;
 ##    selftest=yes $($XCLUSTER ovld test)/default/usr/lib/xctest
 ##
-## Functions;
+## On-cluster Functions
+## --------------------
 ##
 
 __timeout=10
@@ -118,8 +119,63 @@ mynode() {
 	hostname | cut -d- -f2 | sed -re 's,^0+,,'
 }
 
+##  npods <pattern> <expected-replicas>
+##    Returns true if the expected number of pods are "Running".
+##    Example; tex "npods mconnect-deployment- 4" || tdie
+##
+npods() {
+	local n
+	n=$(kubectl get pods | grep -E "^$1.*Running" | wc -l)
+	test $n -eq $2
+}
+
+##  lsimages
+##    Output the images loaded in the system
+##
+lsimages() {
+	crictl --runtime-endpoint=unix:///var/run/crio/crio.sock images
+}
+
+##  test_coredns
+##    Wait for the coredns pod to become "Running".
+##
+test_coredns() {
+	tcase "Wait for the coredns pod"
+	pushv 60 30 2
+	tex "kubectl get pods 2>&1 | grep -E '^coredns.*Running'" || tdie
+	popv
+}
+
+##  test_nodes
+##    Wait for the k8s nodes to become available through the API
+##
+test_nodes() {
+	tcase "Wait for k8s nodes"
+	pushv 30 30 1
+	tex "kubectl get nodes 2>&1 | grep vm-001" || tdie
+	popv
+}
+
+##  start_mconnect <manifest>
+##    Starts "mconnect" and wait to 4 replicas become "Running".
+##
+start_mconnect() {
+	tcase "Start mconnect"
+	kubectl apply -f $1 || return 1
+	sleep 1
+	pushv 60 30 2
+	tex "kubectl get pods 2>&1 | grep -E '^mconnect.*Running'" || return 1
+	tex "npods mconnect 4" || return 1
+	popv
+}
+
+
+## On-host Functions
+## -----------------
+## NOTE: Called from host (not within the cluster).
+##
+
 ##  rsh <vm> command...
-##    NOTE: Called from host (not within the cluster).
 ##    Executes a command on a vm.
 ##
 rsh() {
