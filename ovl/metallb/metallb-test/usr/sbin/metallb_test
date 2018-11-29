@@ -1,0 +1,134 @@
+#! /bin/sh
+##
+## xctest --
+##
+##   Perform tests of the "xcluster" platform.
+##
+## Commands;
+##
+
+prg=$(basename $0)
+dir=$(dirname $0); dir=$(readlink -f $dir)
+tmp=/tmp/${prg}_$$
+
+die() {
+    echo "ERROR: $*" >&2
+    rm -rf $tmp
+    exit 1
+}
+help() {
+    grep '^##' $0 | cut -c3-
+    rm -rf $tmp
+    exit 0
+}
+test -n "$1" || help
+echo "$1" | grep -qi "^help\|-h" && help
+
+log() {
+	echo "$prg: $*" >&2
+}
+dbg() {
+	test -n "$__verbose" && echo "$prg: $*" >&2
+}
+
+##  tcase_config [config]
+cmd_tcase_config() {
+	local cfg=default
+	test -n "$1" && cfg=$1
+	tcase "Set config [$cfg]"
+	cfg=/etc/metallb/$cfg.conf
+	test -r $cfg || tdie
+	cp $cfg /tmp/config
+	kubectl create configmap config --from-file=/tmp/config || tdie
+	return 0
+}
+
+##  tcase_start
+cmd_tcase_start() {
+	tcase "Start metallb"
+	kubectl apply -f /etc/metallb/metallb.yaml || tdie
+	sleep 2
+	pushv 30 15 2
+	tex "kubectl get pods | ogrep -E '^metallb-controller-.*Running'" || tdie
+	tex "kubectl get pods | ogrep -E '^metallb-speaker-.*Running'" || tdie
+	tex "npods metallb-speaker- 4" || tdie
+	popv
+	return 0
+}
+
+cmd_tcase_mconnect() {
+	start_mconnect /etc/metallb/mconnect.yaml || tdie
+	if test -n "$1"; then
+		kubectl apply -f /etc/metallb/$1.yaml || tdie
+	fi
+	return 0
+}
+
+cmd_tcase_lbip() {
+	tcase "LoadBalancerIP: $1 $2"
+	tex "kubectl get svc $1 | ogrep $2"
+}
+
+check_peers() {
+	mkdir -p $tmp
+	local out=$tmp/out
+	gobgp neighbor > $out
+	cat $out
+	local i
+	for i in 1 2 3 4; do
+		grep -E "$1$i .*Establ" $out || return 1
+	done
+	return 0
+}
+cmd_tcase_peers() {
+	tcase "Check peers on router"
+	tex "check_peers $1"
+}
+
+check_route() {
+	mkdir -p $tmp
+	local out=$tmp/out
+	local opt
+	echo $1 | grep -q : && opt=-6
+	ip $opt route show $1 > $out
+	cat $out
+	local nhops=$(grep nexthop $out | wc -l)
+	test $nhops -eq 4
+}
+cmd_tcase_route() {
+	tcase "Check routes"
+	pushv 30 15 2
+	tex "check_route $1"
+	popv
+}
+
+
+
+. /etc/profile
+. /usr/lib/xctest
+
+# Get the command
+cmd=$1
+shift
+grep -q "^cmd_$cmd()" $0 $hook || die "Invalid command [$cmd]"
+
+while echo "$1" | grep -q '^--'; do
+    if echo $1 | grep -q =; then
+	o=$(echo "$1" | cut -d= -f1 | sed -e 's,-,_,g')
+	v=$(echo "$1" | cut -d= -f2-)
+	eval "$o=\"$v\""
+    else
+	o=$(echo "$1" | sed -e 's,-,_,g')
+	eval "$o=yes"
+    fi
+    shift
+done
+unset o v
+long_opts=`set | grep '^__' | cut -d= -f1`
+
+# Execute command
+trap "die Interrupted" INT TERM
+cmd_$cmd "$@"
+status=$?
+rm -rf $tmp
+exit $status

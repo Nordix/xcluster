@@ -1,0 +1,49 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: metallb-controller
+spec:
+  selector:
+    matchLabels:
+      app: metallb-controller
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: metallb-controller
+    spec:
+      hostNetwork: true
+      containers:
+      - name: metallb
+        image: library/metallb:0.7.3
+        securityContext:
+          privileged: true
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: metallb-speaker
+spec:
+  selector:
+    matchLabels:
+      app: metallb-speaker
+  template:
+    metadata:
+      labels:
+        app: metallb-speaker
+    spec:
+      hostNetwork: true
+      containers:
+      - name: metallb
+        image: library/metallb:0.7.3
+        command:
+          - /bin/speaker
+        securityContext:
+          privileged: true
+        env:
+          - name: METALLB_NODE_NAME
+            valueFrom:
+              fieldRef:
+                fieldPath: spec.nodeName
+          - name: METALLB_BGP_MP
+            value: "yes"

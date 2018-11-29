@@ -1,0 +1,30 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: mconnect
+  annotations:
+    metallb.universe.tf/allow-shared-ip: mconnect
+spec:
+  selector:
+    app: mconnect
+  ports:
+  - port: 5001
+  loadBalancerIP: 10.0.0.2
+  type: LoadBalancer
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mconnect-udp
+  annotations:
+    metallb.universe.tf/allow-shared-ip: mconnect
+spec:
+  selector:
+    app: mconnect
+  ports:
+  - name: udp
+    port: 5001
+    protocol: UDP
+  loadBalancerIP: 10.0.0.2
+  type: LoadBalancer
+

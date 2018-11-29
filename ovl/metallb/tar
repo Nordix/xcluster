@@ -19,7 +19,6 @@ mkdir -p $tmp
 
 manifest=$dir/image/manifest.json
 v=$(jq -r '.labels[] | select(.name=="version") | .value' $manifest)
-log "metallb version; $v"
 grep -q "metallb:$v" $dir/default/etc/kubernetes/metallb.yaml || \
 	die "Version mismatch"
 
