@@ -22,6 +22,8 @@ vm() {
 	ip -6 ro add default \
 		nexthop via 2000:1::201 \
 		nexthop via 2000:1::202
+	ip ro add 222.222.233.0/24 via 192.168.1.201
+	ip -6 ro add 6000::/112 via 2000:1::201
 
 	ip addr add 10.0.0.2/32 dev lo
 	ip -6 addr add 1000::2/128 dev lo
@@ -59,6 +61,14 @@ router() {
 
 	ip ro add 222.222.222.0/24 via 192.168.2.221
 	ip -6 ro add 5000::/112 via 2000:2::221
+
+	if test $i -eq 201; then
+		ip addr add 222.222.233.0/24 dev lo
+		ip -6 addr add 6000::/112 dev lo
+		ip -6 ro add local 6000::/112 dev lo
+		sysctl -w net.ipv4.ip_nonlocal_bind=1
+		sysctl -w net.ipv6.ip_nonlocal_bind=1
+	fi
 }
 
 tester() {
