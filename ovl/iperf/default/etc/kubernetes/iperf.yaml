@@ -1,0 +1,63 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: iperf2
+spec:
+  replicas: 4
+  selector:
+    matchLabels:
+      app: iperf2
+  template:
+    metadata:
+      labels:
+        app: iperf2
+    spec:
+      containers:
+      - name: coredns
+        image: library/iperf:0.1
+        command:
+          - "/bin/iperf2"
+          - "-s"
+          - "-p"
+          - "5002"
+          - "-V"
+        ports:
+        - containerPort: 5002
+          name: iperf2
+          protocol: TCP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: iperf2
+spec:
+  selector:
+    app: iperf2
+  ports:
+  - port: 5002
+  type: NodePort
+---
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: iperf3
+spec:
+  replicas: 4
+  selector:
+    matchLabels:
+      app: iperf3
+  template:
+    metadata:
+      labels:
+        app: iperf3
+    spec:
+      containers:
+      - name: coredns
+        image: library/iperf:0.1
+        command:
+          - "/bin/iperf3"
+          - "-s"
+        ports:
+        - containerPort: 5201
+          name: iperf3
+          protocol: TCP

@@ -1,0 +1,32 @@
+#! /bin/sh
+
+dir=$(dirname $0); dir=$(readlink -f $dir)
+tmp=/tmp/$USER/xcluster_$$
+die() {
+    echo "ERROR: $*" >&2
+    rm -rf $tmp
+    exit 1
+}
+log() {
+    echo "INFO: $*" >&2
+}
+
+test -n "$1" || die "No out-file"
+
+mkdir -p $tmp/bin
+
+prg=$XCLUSTER_WORKSPACE/iperf-2.0.12/src/iperf
+test -x $prg || die "Not executable [$prg]"
+cp $prg $tmp/bin/iperf2
+
+prg=$GOPATH/src/github.com/esnet/iperf/src/iperf3
+test -x $prg || die "Not executable [$prg]"
+cp $prg $tmp/bin/iperf3
+
+$XCLUSTER cplib --dest=$tmp $tmp/bin/*
+$XCLUSTER cploader --dest=$tmp $tmp
+
+cd $tmp
+tar cf "$1" *
+cd - > /dev/null
+rm -rf $tmp
