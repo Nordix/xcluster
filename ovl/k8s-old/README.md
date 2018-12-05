@@ -20,6 +20,18 @@ mconnect -address mconnect.default.svc.xcluster:5001 -nconn=400
 mconnect -address 10.0.0.2:5001 -nconn 400
 ```
 
+### v1.12
+
+```
+eval $($XCLUSTER env | grep XCLUSTER_HOME=)
+export __image=$XCLUSTER_HOME/hd-k8s-v1.12.img
+xc mkimage
+images make coredns nordixorg/mconnect:v1.2
+export KUBERNETESD=$ARCHIVE/kubernetes-1.12.0/server/bin
+xc ximage systemd etcd iptools kubernetes coredns mconnect images
+
+```
+
 ### Cri-o
 
 
