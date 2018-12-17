@@ -19,7 +19,8 @@ You can read more about deploying registries in the
 
 ```
 # Start (the '-p' option is not necessary)
-docker run -d --restart=always --name registry registry:2
+docker run -d --restart=always --name registry \
+  -e REGISTRY_STORAGE_DELETE_ENABLED=true registry:2
 # Get the address to the registry;
 docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' registry
 # Stop (if you want);
