@@ -114,14 +114,50 @@ cmd_tcase_mconnect() {
 	do_mconnect $1
 }
 
+cmd_tcase_lroute() {
+	tcase "Local route to [$1] on $(hostname)"
+	if echo $1 | grep -q : ; then
+		ip -6 ro add $1 via 1000::1:192.168.1.201
+	else
+		ip ro add $1 via 192.168.1.201
+	fi
+}
+
+cmd_tcase_multiaddr() {
+	tcase "Add multi address [$1]"
+	if echo $1 | grep -q : ; then
+		ip -6 addr add $1 dev lo
+		ip -6 ro add local $1 dev lo
+	else
+		ip addr add $1 dev lo
+	fi
+	sysctl -w net.ipv4.ip_nonlocal_bind=1
+	sysctl -w net.ipv6.ip_nonlocal_bind=1
+}
+
 cmd_tcase_tplocal() {
+	tcase "Traffic policy local"
 	mkdir -p $tmp
 	local out=$tmp/out
 	wget -q -O - http://$1:8080/healthz > $out || tdie
 	cat $out
-	local adr=192.168.1.201
-	echo "$1" | grep -q : && adr=1000::1:c0a8:1c9
-	grep ",$adr" $out || tdie
+	if echo "$1" | grep -q : ; then
+		grep ',\[1000::1:c0a8:1c9\]' $out || tdie
+	else
+		grep ",192.168.1.201" $out || tdie
+	fi
+}
+
+cmd_tcase_multi_mconnect() {
+	tcase "Multi-address mconnect from [$2] to $1"
+	mkdir -p $tmp
+	local out=$tmp/out
+	if ! mconnect -address $1:5001 -nconn 100 -output json -src $2 -seed 8 > $out; then
+		cat $out | jq .
+		return 1
+	fi
+	check_mconnect_result $out
+	
 }
 
 

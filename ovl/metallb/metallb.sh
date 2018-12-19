@@ -57,7 +57,7 @@ cmd_test() {
 			test_$t
 		done
 	else
-		for t in basic basic_ipv6; do
+		for t in basic basic_ipv6 local local_ipv6; do
 			test_$t
 		done
 	fi	
@@ -95,7 +95,7 @@ test_basic_ipv6() {
 
 test_local() {
 	tlog "--- externalTrafficPolicy: local ipv4"
-	SETUP=metallb-test,iptables $XCLUSTER mkcdrom \
+	SETUP=metallb-test $XCLUSTER mkcdrom \
 		k8s-config private-reg test gobgp metallb
 	xcstart
 
@@ -116,8 +116,15 @@ test_local_ipv6() {
 
 	otc 4 nodes "config default-ipv6" start "start_mconnect svc-local" \
 		"lbip mconnect-local 1000::" "lbip mconnect-udp-local 1000::"
-	otc 201 "peers 1000::1:c0a8:10" "route 1000::" "mconnect [1000::]" \
-		"tplocal [1000::]"
+	otc 201 "peers 1000::1:c0a8:10" "route 1000::" "tplocal [1000::]"
+
+	local adr6=8000::/96
+	otc 1 "lroute $adr6"
+	otc 2 "lroute $adr6"
+	otc 3 "lroute $adr6"
+	otc 4 "lroute $adr6"
+	otc 201 "multiaddr $adr6"
+	otc 201 "multi_mconnect [1000::] 8000:"
 
 	tcase "Stop xcluster"
 	$XCLUSTER stop
