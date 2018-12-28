@@ -35,6 +35,7 @@ done
 mkdir -p $tmp/usr/sbin $tmp/usr/lib
 cp -R $sysd/usr/sbin $tmp/usr
 cp -R $sysd/usr/lib $tmp/usr
+$XCLUSTER cplib --dest=$tmp $tmp/usr/sbin/ipvsadm
 
 # Install libraries
 #$XCLUSTER cplib --dest=$tmp $tmp/usr/sbin/*
@@ -43,7 +44,7 @@ mkdir -p $tmp/usr/lib/x86_64-linux-gnu/
 ln -s ../xtables $tmp/usr/lib/x86_64-linux-gnu/xtables
 
 # Enforce "nf_tables" mode;
-cp $tmp/usr/sbin/xtables-nft-multi $tmp/usr/sbin/xtables-legacy-multi
+#cp $tmp/usr/sbin/xtables-nft-multi $tmp/usr/sbin/xtables-legacy-multi
 
 # Clean-up work-around
 rm -rf $tmp/$sysd $tmp/home $tmp/usr/lib/pkgconfig
