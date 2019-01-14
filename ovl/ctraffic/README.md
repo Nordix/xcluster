@@ -37,10 +37,17 @@ skopeo delete --tls-verify=false docker://172.17.0.2:5000/nordixorg/ctraffic:$ol
 
 ## ECMP test
 
+Remove and re-add an ECMP target and investigate the impact on
+traffic.
+
 ```
+xc mkcdrom private-reg externalip ctraffic; xc starts
+# On cluster;
+kubectl apply -f /etc/kubernetes/ctraffic-extip.yaml
+kubectl get pods   # Check that the ctraffic are Running
 # On a router;
 ctraffic -timeout 1m -address 10.0.0.2:5003 -nconn 400 -rate 400 -monitor_interval 1s
-# On the same router;
+# On the same router but in another terminal;
 ip route change 10.0.0.0/24 \
   nexthop via 192.168.1.2 \
   nexthop via 192.168.1.3 \
