@@ -120,9 +120,9 @@ this;
   30  30  30  30    0
    0  40  40  40   30
   13   0  54  53   40
-  31  18   0  71   53
+  31  18   0  71   54
   54  42  24   0   71
-                  194 Total
+                  195 Total
 ```
 
 To test we start `ctraffic` and perform an upgrade. It is also
