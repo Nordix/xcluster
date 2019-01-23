@@ -18,6 +18,11 @@ spec:
   selector:
     matchLabels:
       app: ctraffic
+  strategy:
+    rollingUpdate:
+      maxSurge: 0%
+      maxUnavailable: 25%
+    type: RollingUpdate
   replicas: 4
   template:
     metadata:
