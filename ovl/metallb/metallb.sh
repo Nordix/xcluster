@@ -82,7 +82,7 @@ test_basic() {
 test_basic_ipv6() {
 	tlog "--- Basic tests with ipv6"
 	SETUP=metallb-test,ipv6 $XCLUSTER mkcdrom \
-		etcd k8s-config private-reg test gobgp metallb
+		etcd private-reg test gobgp metallb k8s-config
 	xcstart
 
 	otc 4 nodes "config default-ipv6" start "start_mconnect svc1-ipv6" \
@@ -111,7 +111,7 @@ test_local() {
 test_local_ipv6() {
 	tlog "--- externalTrafficPolicy: local ipv6"
 	SETUP=metallb-test,ipv6 $XCLUSTER mkcdrom \
-		etcd k8s-config private-reg test gobgp metallb
+		etcd private-reg test gobgp metallb k8s-config
 	xcstart
 
 	otc 4 nodes "config default-ipv6" start "start_mconnect svc-local" \
