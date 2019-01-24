@@ -4,4 +4,4 @@
 1000::1:192.168.1.3		vm-003 vm-003.localdomain
 1000::1:192.168.1.4		vm-004 vm-004.localdomain
 127.0.0.1               localhost.localdomain localhost
-fd00:2008::1            example.com
+

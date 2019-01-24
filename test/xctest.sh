@@ -147,7 +147,8 @@ test_k8s_ipv6() {
 	# Kubernetes tests with ipv6-only;
 	export __image=$XCLUSTER_HOME/hd-k8s.img
 	tcase "Start xcluster with k8s ipv6-only"
-	SETUP=ipv6 $XCLUSTER mkcdrom etcd k8s-config externalip test $__xovl
+	# Make sure "k8s-config" is last
+	SETUP=ipv6 $XCLUSTER mkcdrom etcd externalip test $__xovl k8s-config
 	$XCLUSTER $start
 	sleep 2
 
