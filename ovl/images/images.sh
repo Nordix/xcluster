@@ -108,9 +108,10 @@ cmd_get_rootfs() {
 	echo $d/$rootfs
 }
 
-##   mkimage [--manifest=manifest] [--force] <dir>
+##   mkimage [--manifest=manifest] [--force] [--upload] <dir>
 ##     Create an image in local docker from the <dir>. An executable
-##     "tar" script must exist in the directory.
+##     "tar" script must exist in the directory. '--upload' uploads
+##     to a *local* private docker registry.
 ##
 cmd_mkimage() {
 	test -n "$1" || die "No rootfs"
@@ -131,6 +132,11 @@ cmd_mkimage() {
 		log "Cached [$n:$v]"
 	else
 		$tar - | docker import -c "CMD $c" - $n:$v > /dev/null
+	fi
+	if test "$__upload" = "yes"; then
+		local regip=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' registry)
+		test -n "$regip" || die "No address to local docker registry"
+		skopeo copy --dest-tls-verify=false docker-daemon:$n:$v docker://$regip:5000/$n:$v
 	fi
 	echo "$n:$v"
 }
