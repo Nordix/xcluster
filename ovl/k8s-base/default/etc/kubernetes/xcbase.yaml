@@ -1,0 +1,17 @@
+apiVersion: apps/v1beta1
+kind: Deployment
+metadata:
+  name: xcbase-deployment
+spec:
+  selector:
+    matchLabels:
+      app: xcbase
+  replicas: 4
+  template:
+    metadata:
+      labels:
+        app: xcbase
+    spec:
+      containers:
+      - name: xcbase
+        image: library/xcbase:v1.0

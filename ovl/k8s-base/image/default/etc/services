@@ -1,0 +1,4 @@
+
+telnet		23/tcp			# Telnet
+domain		53/udp			# DNS (Java needs this entry)
+http		80/tcp			# HTTP

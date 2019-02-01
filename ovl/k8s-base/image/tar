@@ -1,0 +1,41 @@
+#! /bin/sh
+# NOTE: A common pattern is to specify "-" (stdout) as out-file,
+#  so there must be NO log printouts to stdout!
+
+dir=$(dirname $0); dir=$(readlink -f $dir)
+tmp=/tmp/$USER/xcluster_$$
+die() {
+	echo "ERROR: $*" >&2
+	rm -rf $tmp
+	exit 1
+}
+log() {
+	echo "INFO: $*" >&2
+}
+
+test -n "$1" || die "No out-file"
+
+eval $($XCLUSTER env)
+
+mkdir -p $tmp
+cp -R $dir/default/* $tmp
+$XCLUSTER cploader --dest=$tmp
+
+f=$XCLUSTER_WORKSPACE/$__bbver/busybox
+test -x $f || die "Not executable [$f]"
+$XCLUSTER install_prog --dest=$tmp $f
+
+# libnss_files.so is needed for /etc/services parsing
+mkdir -p $tmp/lib/x86_64-linux-gnu
+for n in libnss_files.so.2 libnss_dns.so.2 libresolv.so.2 libpthread.so.0; do
+    f=/lib/x86_64-linux-gnu/$n
+    test -r $f || die "Not readable [$f]"
+    cp -L $f $tmp/lib/x86_64-linux-gnu
+done
+
+ln -s busybox $tmp/bin/sh
+
+cd $tmp
+tar cf "$1" *
+cd - > /dev/null
+rm -rf $tmp

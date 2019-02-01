@@ -1,0 +1,7 @@
+#! /bin/sh
+/bin/busybox echo "Mserver starting..."
+/bin/busybox mkdir -p /tmp /var/log /sbin /usr/bin /usr/sbin \
+	/var/run /var/log/dumps /var/tmp
+/bin/busybox --install -s
+ldconfig
+exec /etc/init.d/rcS
