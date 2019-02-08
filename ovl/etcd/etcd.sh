@@ -26,7 +26,7 @@ test -n "$1" || help
 echo "$1" | grep -qi "^help\|-h" && help
 
 urlbase=https://github.com/coreos/etcd/releases/download
-etcd_ver=v3.2.11
+etcd_ver=v3.3.10
 
 ##   download
 ##
