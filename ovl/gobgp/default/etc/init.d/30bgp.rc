@@ -41,9 +41,19 @@ peer-groups:
   - config:
       peer-group-name: "k8s"
       peer-as: 65001
+    afi-safis:
+      - config:
+          afi-safi-name: "ipv6-unicast"
+      - config:
+          afi-safi-name: "ipv4-unicast"
   - config:
       peer-group-name: "testers"
       peer-as: 65003
+    afi-safis:
+      - config:
+          afi-safi-name: "ipv6-unicast"
+      - config:
+          afi-safi-name: "ipv4-unicast"
 
 dynamic-neighbors:
   - config:
