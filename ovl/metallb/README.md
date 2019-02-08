@@ -38,6 +38,19 @@ ip ro
 mconnect -address 10.0.0.2:5001 -nconn 400
 ```
 
+Static router an controller active only;
+```
+xc mkcdrom externalip private-reg; xc starts
+configd=$($XCLUSTER ovld metallb)/default/etc/kubernetes
+kubectl apply -f https://raw.githubusercontent.com/google/metallb/v0.7.3/manifests/metallb.yaml
+kubectl apply -f $configd/metallb-config.yaml
+kubectl apply -f $configd/mconnect.yaml
+
+# On vm-201;
+mconnect -address 10.0.0.2:5001 -nconn 400
+```
+
+
 Helm installstion (install helm and start `tiller` as described in the
 [kubernets ovelay](../kubernetes/README.md);
 
