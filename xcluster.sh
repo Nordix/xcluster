@@ -87,7 +87,7 @@ cmd_env() {
 	test -n "$ARCHIVE" || ARCHIVE=$HOME/Downloads
 	export ARCHIVE
 
-	test -n "$__kver" || __kver=linux-4.19.3
+	test -n "$__kver" || __kver=linux-4.20.7
 	test -n "$__kobj" || __kobj=$XCLUSTER_HOME/obj
 	test -n "$__kbin" || __kbin=$XCLUSTER_HOME/bzImage
 	test -n "$__kcfg" || __kcfg=$dir/config/$__kver
