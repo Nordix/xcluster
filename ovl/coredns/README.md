@@ -37,6 +37,11 @@ mv coredns $GOPATH/bin
 sudo setcap 'cap_net_bind_service=+ep' $GOPATH/bin/coredns
 ```
 
+### Make image
+
+```
+images mkimage --force --upload ./image
+```
 
 Local setup
 -----------

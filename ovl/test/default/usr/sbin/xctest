@@ -133,7 +133,7 @@ test_images() {
 	mkdir -p $tmp
 	lsimages > $tmp/images || tdie
 	local i
-	for i in pause coredns mconnect; do
+	for i in pause mconnect; do
 		grep $i $tmp/images || tdie "Image missing [$i]"
 	done
 }
@@ -164,7 +164,6 @@ cmd_tcase_check_loadbalancererip() {
 }
 
 local_mconnect() {
-	tcase "Local mconnect $1"
 	mkdir -p $tmp
 	mconnect -address mconnect$1.default.svc.xcluster:5001 -nconn 100 $1 \
 		2>&1 | tee $tmp/mconnect.log || return 1
@@ -174,7 +173,6 @@ local_mconnect() {
 	return 0
 }
 external_mconnect() {
-	tcase "External mconnect $1"
 	mkdir -p $tmp
 	local t
 	if test "$__ipv6" = "yes"; then
@@ -195,11 +193,13 @@ external_mconnect() {
 	return 0
 }
 test_local_mconnect() {
+	tcase "Local mconnect $1"
 	pushv 30 15 2
 	tex local_mconnect || tdie
 	popv
 }
 test_external_mconnect() {
+	tcase "External mconnect $1"
 	tex external_mconnect || tdie
 }
 test_local_mconnect_udp() {

@@ -1,14 +1,14 @@
 {
 	"acKind":"ImageManifest",
 	"acVersion":"0.8.11",
-	"name":"example.com/coredns",
+	"name":"library/coredns",
 	"labels":[
-		{"name":"version","value":"0.1"},
+		{"name":"version","value":"v0.2"},
 		{"name":"arch","value":"amd64"},
 		{"name":"os","value":"linux"}
 	],
 	"app" : {
-		"exec":["/bin/coredns", "-conf", "/etc/coredns/Corefile"],
+		"exec":["/init"],
 		"user":"0","group":"0"
 	}
 }

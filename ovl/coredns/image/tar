@@ -20,11 +20,16 @@ test -x $prg || die "Not executable [$prg]"
 mkdir -p $tmp/bin
 cp $prg $tmp/bin
 
+mkdir -p $tmp
+base=$($XCLUSTER ovld k8s-base)
+$base/image/tar - | tar -C $tmp -x
+
 which jq > /dev/null || die "Can't find [jq]"
 cp $(which jq) $tmp/bin
 
 $XCLUSTER cplib --dest=$tmp $tmp/bin/*
-$XCLUSTER cploader --dest=$tmp $tmp
+
+cp -r $dir/default/* $tmp
 
 cd $tmp
 tar cf "$1" *

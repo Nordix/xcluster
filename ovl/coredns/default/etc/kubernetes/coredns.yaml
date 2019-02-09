@@ -27,7 +27,7 @@ spec:
     spec:
       containers:
       - name: coredns
-        image: example.com/coredns:0.1
+        image: library/coredns:v0.2
         volumeMounts:
         - name: config-volume
           mountPath: /etc/coredns
