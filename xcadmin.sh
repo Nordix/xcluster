@@ -92,14 +92,15 @@ cmd_build_release() {
 	sed -ie "s,-j4,-j$(nproc)," $DISKIM
 
 	# Build the image overlay early to get the "sudo" over with
-	go get github.com/coredns/coredns
+	mkdir -p $GOPATH/src/github.com/coredns
+	cd $GOPATH/src/github.com/coredns
+	git clone https://github.com/coredns/coredns.git
 	cd $GOPATH/src/github.com/coredns/coredns
 	make || die "make coredns"
 	mkdir -p $GOPATH/bin
 	mv coredns $GOPATH/bin
-	docker rmi example.com/coredns:0.1
 	local images=$($XCLUSTER ovld images)/images.sh
-	$images make coredns docker.io/nordixorg/mconnect:0.2 || \
+	$images make coredns nordixorg/mconnect:v1.2 || \
 		die "images make"
 
 	# Create the base image
@@ -138,13 +139,15 @@ cmd_build_release() {
 	go get github.com/osrg/gobgp
 	cd $GOPATH/src/github.com/osrg/gobgp
 	# **NOTE** 'master* does NOT work!!!
-	git checkout v1.33
+	#git checkout v1.33
 	dep ensure
-	go install ./gobgp/... ./gobgpd/... || die gobgp
+	#go install ./gobgp/... ./gobgpd/... || die gobgp
+	go install ./cmd/...
 
 	# Cri-o
 	go get github.com/kubernetes-incubator/cri-tools/cmd/crictl
 	cd $GOPATH/src/github.com/kubernetes-incubator/cri-tools
+	git checkout v1.13.0   # Master doed NOT work!
 	make || die cri-o
 	go get -u github.com/kubernetes-incubator/cri-o
 	cd $GOPATH/src/github.com/kubernetes-incubator/cri-o
