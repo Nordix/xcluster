@@ -23,7 +23,7 @@ $XCLUSTER cploader --dest=$tmp
 
 f=$XCLUSTER_WORKSPACE/$__bbver/busybox
 test -x $f || die "Not executable [$f]"
-$XCLUSTER install_prog --dest=$tmp $f
+$XCLUSTER install_prog --dest=$tmp $f strace
 
 # libnss_files.so is needed for /etc/services parsing
 mkdir -p $tmp/lib/x86_64-linux-gnu
