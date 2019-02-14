@@ -1,2 +1,2 @@
 #! /bin/sh
-/bin/coredns -conf /etc/coredns/Corefile
+/bin/coredns -conf /etc/coredns/Corefile $ARGS
