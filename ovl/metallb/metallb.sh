@@ -124,7 +124,7 @@ test_local_ipv6() {
 	otc 3 "lroute $adr6"
 	otc 4 "lroute $adr6"
 	otc 201 "multiaddr $adr6"
-	otc 201 "multi_mconnect [1000::] 8000:"
+	otc 201 "multi_mconnect [1000::] $adr6"
 
 	tcase "Stop xcluster"
 	$XCLUSTER stop

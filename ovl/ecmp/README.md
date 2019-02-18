@@ -18,11 +18,11 @@ xc mkcdrom ecmp; xc start --ntesters=1
 mconnect -address [1000::2]:5001 -nconn 100
 mconnect -address 10.0.0.2:5001 -nconn 100
 ssh 1000::2
-mconnect -address 10.0.0.2:5001 -nconn 100 -src 222.222.222 -srcmax 254
-mconnect -address [1000::2]:5001 -nconn 100 -src 5000: -srcmax 65534
+mconnect -address 10.0.0.2:5001 -nconn 100 -srccidr 222.222.222.0/24
+mconnect -address [1000::2]:5001 -nconn 100 -srccidr 5000::/112
 # On vm-201;
-mconnect -address 10.0.0.2:5001 -nconn 100 -src 222.222.233 -srcmax 254
-mconnect -address [1000::2]:5001 -nconn 100 -src 6000: -srcmax 65534
+mconnect -address 10.0.0.2:5001 -nconn 100 -srccidr 222.222.233.0/24
+mconnect -address [1000::2]:5001 -nconn 100 -srccidr 6000::/112
 mconnect -address [1000::2]:5001 -nconn 100  # WILL NOT BE LOAD-BALANCED!
 ```
 

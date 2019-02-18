@@ -152,7 +152,7 @@ cmd_tcase_multi_mconnect() {
 	tcase "Multi-address mconnect from [$2] to $1"
 	mkdir -p $tmp
 	local out=$tmp/out
-	if ! mconnect -address $1:5001 -nconn 100 -output json -src $2 -seed 8 > $out; then
+	if ! mconnect -address $1:5001 -nconn 100 -output json -srccidr $2 -seed 8 > $out; then
 		cat $out | jq .
 		return 1
 	fi
