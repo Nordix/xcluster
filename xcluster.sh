@@ -96,6 +96,7 @@ cmd_env() {
 	test -n "$__image" || __image=$XCLUSTER_HOME/hd.img
 	test -n "$__cdrom" || __cdrom=$XCLUSTER_TMP/cdrom.iso
 	test -n "$__mem" || __mem=128
+	test -n "$__smp" || __smp=2
 	test -n "$__ipv4_base" || __ipv4_base=172.30
 	test -n "$__ipv6_prefix" || __ipv6_prefix=fd00:1723::
 	test -n "$__loader" || __loader=/lib64/ld-linux-x86-64.so.2
@@ -482,7 +483,7 @@ cmd_boot_vm() {
 	echo "Memory: $__mem"
 	rm -rf $tmp
 
-	local kvmboot="-drive file=$hd,if=virtio -smp 2 -k sv -clock unix"
+	local kvmboot="-drive file=$hd,if=virtio -smp $__smp -k sv -clock unix"
     test -r $__cdrom && kvmboot="$kvmboot -drive file=$__cdrom,if=virtio,media=cdrom"
 
 	test -n "$__mtu" || __mtu=1500
@@ -541,7 +542,7 @@ cmd_svm() {
 	test -r $sfile || die "Not readable [$sfile]"
 	local hname=$(printf "vm-%03d" $nodeid)
 	screen -S $(cat $sfile) -X screen -t $hname -L $nodeid \
-		$me boot_vm --nets=$__nets --mem=$__mem $nodeid
+		$me boot_vm --nets=$__nets --mem=$__mem --smp=$__smp $nodeid
 }
 cmd_xvm() {
 	cmd_env
@@ -560,7 +561,7 @@ cmd_xvm() {
 
 	test -n "$__bg" || __bg='#040'
 	nohup xterm -T "vm-$nodeid" -fg wheat -bg "$__bg" $xtermopt $geometry \
-		-e $me boot_vm --nets=$__nets --mem=$__mem $nodeid \
+		-e $me boot_vm --nets=$__nets --mem=$__mem --smp=$__smp $nodeid \
 		> /dev/null < /dev/null 2>&1 &
 }
 cmd_geometry() {
