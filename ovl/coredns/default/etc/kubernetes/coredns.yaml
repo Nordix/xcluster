@@ -38,6 +38,9 @@ spec:
         - containerPort: 53
           name: dns-tcp
           protocol: TCP
+        env:
+          - name: ARGS
+            value: "-test.v"
       dnsPolicy: Default
       volumes:
         - name: config-volume
