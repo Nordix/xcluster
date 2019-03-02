@@ -16,6 +16,13 @@
 #define HAVE_REALLOCARRAY 1
 #define HAVE_STRUCT_STATX 1
 #define HAVE_STRUCT_FIB_RULE_UID_RANGE 1
+#define HAVE_IFLA_VRF_TABLE 1
+#define HAVE_IFLA_BR_MAX_AGE 1
+#define HAVE_IFLA_INET6_ADDR_GEN_MODE 1
+#define HAVE_IFLA_IPVLAN_MODE 1
+#define HAVE_IFLA_GENEVE_TOS 1
+
+
 
 #define GPERF_LEN_TYPE size_t
 #define DYNAMIC_UID_MIN 61184
@@ -63,3 +70,5 @@
 
 // "man textdomain"
 #define GETTEXT_PACKAGE 0
+
+

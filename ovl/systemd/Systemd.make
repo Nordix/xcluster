@@ -17,6 +17,8 @@ SYSRUN = $(O)/sbin/systemd-run
 
 I := -I$(O) -I$(S)/systemd -I$(S)/basic -I$(S)/shared
 DIRS = $(O)/sbin
+GENTOOL := $(S)/basic/generate-gperfs.py
+#GENTOOL := $(S)/../tools/generate-gperfs.py
 
 # systemd
 CSRCall = $(wildcard $(S)/core/*.c)
@@ -127,28 +129,28 @@ $(SLIB): $(LOBJ) $(UOBJ) $(BLIB)
 # af-list
 $(O)/basic/af-list.o: $(O)/af-from-name.h $(O)/af-to-name.h
 $(O)/af-from-name.h: $(O)/af.txt
-	$(S)/basic/generate-gperfs.py af "" $< | \
+	$(GENTOOL) af "" $< | \
 	gperf -L ANSI-C -t --ignore-case -N lookup_af -H hash_af_name -p -C > $@
 $(O)/af-to-name.h: $(O)/af.txt
 	awk -f $(S)/basic/af-to-name.awk < $< > $@
 $(O)/af.txt:
-	$(S)/basic/generate-af-list.sh cpp > $@
+	$(S)/basic/generate-af-list.sh cpp /dev/null /dev/null > $@
 
 # arphrd-list
 $(O)/basic/arphrd-list.o: $(O)/arphrd-from-name.h $(O)/arphrd-to-name.h
 $(O)/arphrd-from-name.h: $(O)/arphrd.txt
-	$(S)/basic/generate-gperfs.py arphrd ARPHRD_ $< | \
+	$(GENTOOL) arphrd ARPHRD_ $< | \
 	gperf -L ANSI-C -t --ignore-case -N lookup_arphrd \
 	 -H hash_arphrd_name -p -C > $@
 $(O)/arphrd-to-name.h: $(O)/arphrd.txt
 	awk -f $(S)/basic/arphrd-to-name.awk < $< > $@
 $(O)/arphrd.txt:
-	$(S)/basic/generate-arphrd-list.sh cpp > $@
+	$(S)/basic/generate-arphrd-list.sh cpp /dev/null /dev/null > $@
 
 # cap-list
 $(O)/basic/cap-list.o: $(O)/cap-from-name.h $(O)/cap-to-name.h
 $(O)/cap-from-name.h: $(O)/cap.txt
-	$(S)/basic/generate-gperfs.py capability "" $< | \
+	$(GENTOOL) capability "" $< | \
 	gperf -L ANSI-C -t --ignore-case -N lookup_capability \
 	 -H hash_capability_name -p -C > $@
 $(O)/cap-to-name.h: $(O)/cap.txt
@@ -159,7 +161,7 @@ $(O)/cap.txt:
 # errno-list
 $(O)/basic/errno-list.o: $(O)/errno-from-name.h $(O)/errno-to-name.h
 $(O)/errno-from-name.h: $(O)/errno.txt
-	$(S)/basic/generate-gperfs.py errno "" $< | \
+	$(GENTOOL) errno "" $< | \
 	gperf -L ANSI-C -t --ignore-case -N lookup_errno \
 	 -H hash_errno_name -p -C > $@
 $(O)/errno-to-name.h: $(O)/errno.txt
@@ -170,7 +172,7 @@ $(O)/errno.txt:
 # socket-protocol-list
 $(O)/basic/socket-protocol-list.o: $(O)/socket-protocol-from-name.h $(O)/socket-protocol-to-name.h
 $(O)/socket-protocol-from-name.h: $(O)/socket-protocol.txt
-	$(S)/basic/generate-gperfs.py socket_protocol "IPPROTO_" $< | \
+	$(GENTOOL) socket_protocol "IPPROTO_" $< | \
 	gperf -L ANSI-C -t --ignore-case -N lookup_socket_protocol \
 	 -H hash_socket_protocol_name -p -C > $@
 $(O)/socket-protocol-to-name.h: $(O)/socket-protocol.txt
