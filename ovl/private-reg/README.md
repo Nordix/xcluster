@@ -58,6 +58,17 @@ xc mkcdrom [other overlays...] private-reg; xc start
 **Note**; A standard docker installation is assumed. Please
 investigate the `tar` script in this ovl directory if you get problems.
 
+### Support in the images script
+
+```
+# In your ovl with an ./image;
+images mkimage --force --upload ./image
+# List the images in your provate registry;
+images docker_lsreg
+# List files in an image;
+images docker_ls nordixorg/ctraffic:v0.2
+```
+
 
 ## Manage your private registry
 
