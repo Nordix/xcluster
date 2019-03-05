@@ -52,12 +52,19 @@ cmd_in_docker() {
 	skopeo inspect docker-daemon:$1 > /dev/null 2>&1
 }
 
-##   docker_lsreg
-##     List the contents of the local registry.
+##   docker_ls <image>
 ##
-cmd_docker_lsreg() {
-	local regip=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' registry)
-	test -n "$regip" || die "Can't get address of the local registry"
+cmd_docker_ls() {
+	cmd_in_docker $1 || die "Can't find image [$1]"
+	local c=$(docker create $1) || die "FAILED; docker create"
+	docker export $c | tar t | sort
+	docker rm $c > /dev/null
+}
+
+##   lreg_ls
+##     List the contents of the local registry.
+cmd_lreg_ls() {
+	local regip=$(cmd_get_regip) || return 1
 	local i
 	for i in $(curl -s -X GET http://$regip:5000/v2/_catalog | jq .repositories[] | tr -d '"'); do
 		echo "$i:"
@@ -66,14 +73,42 @@ cmd_docker_lsreg() {
 	done
 
 }
-
-##   docker_ls <image>
+cmd_docker_lsreg() {
+	cmd_lreg_ls
+}
+##   lreg_cache <external-image>
+##     Copy the image to the private registry.
+##     Example;
+##       images lreg_cache docker.io/library/alpine:3.8
+cmd_lreg_cache() {
+	test -n "$1" || die "No image"
+	local host=$(echo $1 | cut -d/ -f1)
+	nslookup $host > /dev/null 2>&1 || die "Unknown host [$host]"
+	local img=$(echo $1 | cut -d/ -f2-)
+	local regip=$(cmd_get_regip) || return 1
+	skopeo copy --dest-tls-verify=false docker://$1 docker://$regip:5000/$img
+}
+##   lreg_inspect <image:tag>
+##     Inspect an image in the private registry.
+cmd_lreg_inspect() {
+	test -n "$1" || die "No image"
+	local regip=$(cmd_get_regip) || return 1
+	skopeo inspect --tls-verify=false docker://$regip:5000/$1
+	return 0
+}
+##   lreg_rm <image:tag>
+##     Copy the image to the private registry.
+cmd_lreg_rm() {
+	test -n "$1" || die "No image"
+	local regip=$(cmd_get_regip) || return 1
+	skopeo delete --tls-verify=false docker://$regip:5000/$1
+	return 0
+}
 ##
-cmd_docker_ls() {
-	cmd_in_docker $1 || die "Can't find image [$1]"
-	local c=$(docker create $1) || die "FAILED; docker create"
-	docker export $c | tar t | sort
-	docker rm $c > /dev/null
+cmd_get_regip() {
+	local regip=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' registry)
+	test -n "$regip" || die "Can't get address of the local registry"
+	echo $regip
 }
 
 #   get_manifest <rootfs>

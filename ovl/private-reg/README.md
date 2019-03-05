@@ -58,19 +58,34 @@ xc mkcdrom [other overlays...] private-reg; xc start
 **Note**; A standard docker installation is assumed. Please
 investigate the `tar` script in this ovl directory if you get problems.
 
-### Support in the images script
+## Support in the images script
+
+There is support for building local images and for maintenance of your
+private registry in the `images` script;
 
 ```
 # In your ovl with an ./image;
 images mkimage --force --upload ./image
-# List the images in your provate registry;
-images docker_lsreg
 # List files in an image;
 images docker_ls nordixorg/ctraffic:v0.2
 ```
 
+From the `images` help printout;
+```
+   lreg_ls
+     List the contents of the local registry.
+   lreg_cache <external-image>
+     Copy the image to the private registry.
+     Example;
+       images lreg_cache docker.io/library/alpine:3.8
+   lreg_inspect <image:tag>
+     Inspect an image in the private registry.
+   lreg_rm <image:tag>
+     Copy the image to the private registry.
+```
 
-## Manage your private registry
+
+## Manage your private registry manually
 
 There are ways by using `docker` but IMO `skopeo` is simpler and more
 intuitive.
