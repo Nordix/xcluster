@@ -76,6 +76,103 @@ instructions.
 Note if you are using `xcluster` i main netns with user-space
 networking the local dns is perfectly fine.
 
+
+### DNS trouble shooting
+
+DNS problems are unfortunately quite common.
+
+#### In main netns
+
+First make sure the CoreDNS is running and serve requests on port
+10053;
+
+```
+netstat -lputan | grep :::10053
+tcp6       0      0 :::10053                :::*                    LISTEN      3457/coredns
+udp6       0      0 :::10053                :::*                                3457/coredns
+```
+
+The `coredns` is started by the `Envsettings.k8s` script. Make sure it
+is sourced and check the coredns start in the script.
+
+Now test that the local coredns can serve DNS requests;
+
+```
+dig -4 @127.0.0.1 -t A -p 10053 www.google.se
+dig -6 @::1 -t AAAA -p 10053 www.google.se
+```
+
+If this does not work check your local (normal) DNS setup.
+
+Now try DNS lookups from within `xcluster` directly to the server
+running on the host;
+
+```
+xc mkcdrom k8s-base; xc starts
+# On some vm;
+nslookup www.google.se 192.168.0.250:10053
+nslookup www.google.se [2000::250]:10053
+```
+
+Now try the k8s coredns;
+
+```
+# Verify that the coredns pod is running
+kubectl get pods
+nslookup www.google.se
+nslookup kubernetes.default.svc.xcluster
+```
+
+If the direct access works but not when the k8s coredns is used there
+is likely some problem with the `xcluster` setup.
+
+Finally you can verify that DNS lookups works from within a pod.
+
+```
+kubectl apply -f /etc/kubernetes/xcbase.yaml
+kubectl get pods
+kubectl exec -it xcbase-deployment-... sh
+# In the pod;
+nslookup www.google.se
+nslookup kubernetes.default.svc.xcluster
+```
+
+#### In netns
+
+First check that nslookup works in the own `netns`;
+
+```
+nslookup www.google.se
+```
+
+If this does not work first check `/etc/resolv.conf` for any localhost
+addresss as described above. If the `/etc/resolv.conf` contains ip
+addresses for nameservers (as it should) you should be able to `ping`
+those addresses. If that does not work you must check the NAT rule in
+the **main** netns;
+
+```
+> sudo iptables -t nat -L POSTROUTING -nv
+...
+  492 33386 MASQUERADE  all  --  *      *       172.30.0.0/22        0.0.0.0/0
+```
+
+There must be a NAT rule for the netns address. This should be setup
+by the `xc nsadd 1` command.
+
+When nslookup works in the netns continue with the same tests as in
+main netns as described above. The local CoreDNS should work, etc.
+
+There is also a NAT rule **inside** the netns that has to be in place;
+
+```
+> sudo iptables -t nat -L POSTROUTING -nv
+  178 10680 MASQUERADE  all  --  *      host1   192.168.0.0/24       0.0.0.0/0
+```
+
+This enables access to external addresses from within xcluster VMs via eth0.
+
+
 ## Customizing
 
 If the network topology is ok but you want to use something else than
