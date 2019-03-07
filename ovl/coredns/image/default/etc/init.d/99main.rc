@@ -1,2 +1,7 @@
 #! /bin/sh
+if test -n "$MY_NODE_IP"; then
+	cat > /etc/resolv.conf <<EOF
+nameserver $MY_NODE_IP
+EOF
+fi
 /bin/coredns -conf /etc/coredns/Corefile $ARGS
