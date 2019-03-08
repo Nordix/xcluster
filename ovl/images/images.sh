@@ -77,8 +77,8 @@ cmd_docker_lsreg() {
 	cmd_lreg_ls
 }
 ##   lreg_cache <external-image>
-##     Copy the image to the private registry.
-##     Example;
+##     Copy the image to the private registry. If this fails try "docker pull"
+##     and then "images lreg_upload ...". Example;
 ##       images lreg_cache docker.io/library/alpine:3.8
 cmd_lreg_cache() {
 	test -n "$1" || die "No image"
@@ -87,6 +87,16 @@ cmd_lreg_cache() {
 	local img=$(echo $1 | cut -d/ -f2-)
 	local regip=$(cmd_get_regip) || return 1
 	skopeo copy --dest-tls-verify=false docker://$1 docker://$regip:5000/$img
+}
+##   lreg_upload <docker_image>
+##     Upload an image from you local docker daemon to the privare registry.
+##     Note that "docker.io" and "library/" is suppressed in "docker images";
+##       lreg_upload library/alpine:3.8
+cmd_lreg_upload() {
+	test -n "$1" || die "No image"
+	local regip=$(cmd_get_regip) || return 1
+	skopeo copy --dest-tls-verify=false docker-daemon:$1 docker://$regip:5000/$1
+	return 0
 }
 ##   lreg_inspect <image:tag>
 ##     Inspect an image in the private registry.
