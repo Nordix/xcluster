@@ -1,0 +1,50 @@
+#! /bin/sh
+die() {
+	echo "$@"
+	exit 1
+}
+
+hostname | grep -Eq 'vm-[0-9]+$' || die "Invalid hostname [$(hostname)]"
+i=$(hostname | cut -d- -f2 | sed -re 's,^0+,,')
+
+
+vm() {
+	echo 1 > /proc/sys/net/ipv4/fib_multipath_hash_policy
+	echo 0 > /proc/sys/net/ipv6/conf/eth1/accept_dad
+	ip addr add 192.168.1.$i/24 dev eth1
+	ip -6 addr add 1000:1::192.168.1.$i/64 dev eth1
+	ip link set up dev eth1
+}
+
+router() {
+	echo 1 > /proc/sys/net/ipv4/ip_forward
+	echo 1 > /proc/sys/net/ipv4/fib_multipath_hash_policy
+	echo 1 > /proc/sys/net/ipv4/conf/all/forwarding
+	echo 1 > /proc/sys/net/ipv6/conf/all/forwarding
+
+	echo 0 > /proc/sys/net/ipv6/conf/eth1/accept_dad
+	ip addr add 192.168.1.$i/24 dev eth1
+	ip -6 addr add 1000:1::192.168.1.$i/64 dev eth1
+	ip link set up dev eth1
+
+	echo 0 > /proc/sys/net/ipv6/conf/eth2/accept_dad
+	ip addr add 192.168.2.$i/24 dev eth2
+	ip -6 addr add 1000:1::192.168.2.$i/64 dev eth2
+	ip link set up dev eth2
+}
+
+tester() {
+	echo 0 > /proc/sys/net/ipv6/conf/eth1/accept_dad
+	ip addr add 192.168.2.$i/24 dev eth1
+	ip -6 addr add 1000:1::192.168.2.$i/64 dev eth1
+	ip link set up dev eth1
+}
+
+case $(hostname) in
+	vm-0*)
+		vm;;
+	vm-20*)
+		router;;
+	vm-22*)
+		tester;;
+esac

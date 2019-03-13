@@ -1,0 +1,50 @@
+#! /bin/sh
+# NOTE: A common pattern is to specify "-" (stdout) as out-file,
+#  so there must be NO log printouts to stdout!
+
+dir=$(dirname $0); dir=$(readlink -f $dir)
+tmp=/tmp/$USER/xcluster_$$
+die() {
+	echo "ERROR: $*" >&2
+	rm -rf $tmp
+	exit 1
+}
+log() {
+	echo "INFO: $*" >&2
+}
+
+test -n "$1" || die "No out-file"
+
+frrd=$GOPATH/src/github.com/FRRouting/frr/sys
+mkdir -p $tmp/usr/local/sbin
+cp $frrd/usr/local/sbin/* $tmp/usr/local/sbin
+cp $frrd/usr/local/bin/* $tmp/usr/local/sbin
+$XCLUSTER cplib --dest=$tmp $tmp/usr/local/sbin/*
+rm -f $tmp/usr/local/sbin/*.sh $tmp/usr/local/sbin/*.py $tmp/usr/local/sbin/frr*
+mkdir -p $tmp/lib64
+libyangd=$GOPATH/src/github.com/CESNET/libyang/build/sys
+for f in $frrd/usr/local/lib/libfrr.so.0 $libyangd/usr/local/lib/libyang.so.0.16; do
+	cp -L $f $tmp/lib64
+done
+
+mkdir -p $tmp/usr/local/lib/libyang
+cp -R $libyangd/usr/local/lib/libyang/extensions $tmp/usr/local/lib/libyang
+cp -R $libyangd/usr/local/lib/libyang/user_types $tmp/usr/local/lib/libyang
+
+f=$(which envsubst)
+test -n "$f" -a -f "$f" || die "Not found [envsubst]"
+mkdir -p $tmp/bin
+cp $f $tmp/bin
+
+mkdir -p $tmp
+for s in $(echo "$SETUP" | tr ',' ' '); do
+	test -d $dir/$s || continue
+	cp -R $dir/$s/* $tmp
+	setup_copied=yes
+done
+test "$setup_copied" != "yes" && test -d $dir/default && cp -R $dir/default/* $tmp
+
+cd $tmp
+tar cf "$1" *
+cd - > /dev/null
+rm -rf $tmp

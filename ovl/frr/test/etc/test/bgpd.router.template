@@ -1,0 +1,13 @@
+hostname $HOST
+password zebra
+!enable password zebra
+!
+router bgp 65002
+ bgp router-id 192.168.1.$nodeid
+ neighbor 192.168.1.1 remote-as 65001
+ neighbor 192.168.1.2 remote-as 65001
+ neighbor 192.168.1.3 remote-as 65001
+ neighbor 192.168.1.4 remote-as 65001
+!
+log file /var/log/bgpd.log
+!
