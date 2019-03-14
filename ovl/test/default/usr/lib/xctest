@@ -55,16 +55,17 @@ tex() {
 	test $__retries -gt 0 || return 1
 
 	# We shall do retries
+	local tstart=$(date +%s)
 	local now
 	local retry=1
 	while test $retry -le $__retries; do
 		now=$(date +%s)
-		if test $((now+__interval-tcstart)) -ge $__timeout; then
+		if test $((now+__interval-tstart)) -ge $__timeout; then
 			tlog "Timeout ($__timeout)"
 			return 2
 		fi
 		sleep $__interval
-		echo "Retry ($retry) [$1]"
+		echo "Retry ($retry/$__retries) [$1]"
 		eval $@ && return 0
 		retry=$((retry+1))
 	done
@@ -152,7 +153,7 @@ test_coredns() {
 test_nodes() {
 	tcase "Wait for k8s nodes"
 	pushv 30 30 1
-	tex "kubectl get nodes 2>&1 | grep vm-001" || tdie
+	tex "kubectl get nodes 2>&1 | ogrep vm-001" || tdie
 	popv
 }
 
