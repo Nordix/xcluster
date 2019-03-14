@@ -31,7 +31,7 @@ More info;
  * [Disk-image and kernel](doc/image.md). How they are created and extended.
  * [Build from scratch](doc/build.md). If the binary release can't be used.
  * [Xcluster for CI](doc/ci.md). Headless operation.
- * [Pre-pulled images](ovl/images/README.md).
+ * [Local docker registry](ovl/private-reg/README.md).
  * [Test](test/README.md)
  * [Fedora](doc/fedora.md). Not maintained.
 
