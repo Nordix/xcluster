@@ -363,12 +363,35 @@ cmd_install_prog() {
 		cp $f $__dest/bin
 		files="$files $f"
 	done
-	$DISKIM cplib --dest=$__dest $files
+	cmd_cplib $files
 }
 
 cmd_cplib() {
-	$DISKIM cplib --dest=$__dest $@ || return 1
+	test -n "$__dest" || die 'No --dest'
+	test -d "$__dest" || die "Not a directory [$__dest]"
+	cmd_libs $@ | cpio -p --make-directories --dereference --quiet -u $__dest
 }
+cmd_libs() {
+	cmd_env
+	local f libs=$tmp/libs
+	mkdir -p $tmp
+	for f in $@; do
+		test -x $f || continue
+		ldd $f | grep '=> /' | sed -re 's,.*=> (/[^ ]+) .*,\1,' >> $libs
+	done
+
+	# We should exclude all libs already on the image
+	local cache=$XCLUSTER_HOME/libs_on_image
+	if ! test -r $cache; then
+		for l in $($dir/image/tar - | tar t | grep -E '.*/lib.*\.so\.'); do
+			echo "/$l" >> $cache
+		done
+	fi
+	for f in $(sort $libs | uniq); do
+		grep -q $f $cache || echo $f
+	done
+}
+
 cmd_cploader() {
 	test -n "$__dest" || die 'No --dest'
 	test -d "$__dest" || die "Not a directory [$__dest]"
