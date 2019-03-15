@@ -130,16 +130,6 @@ test_local_ipv6() {
 	$XCLUSTER stop
 }
 
-# On-line test-case
-otc() {
-	local tc vm
-	vm=$1
-	shift
-	for tc in "$@"; do
-		rsh $vm metallb_test tcase_$tc || tdie
-	done
-}
-
 xcstart() {
 	$XCLUSTER $start
 	sleep 2
