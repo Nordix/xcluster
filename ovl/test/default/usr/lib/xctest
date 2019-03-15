@@ -230,6 +230,19 @@ check_vm() {
 	return 0
 }
 
+##  otc <vm> <tcase...>
+##    Execute a test on a VM.
+##    Prerequisite; "otcprog" set to the command on the cluster.
+##
+otc() {
+	test -n "$otcprog" || otcprog=$(basename $dir)_test
+	local tc vm
+	vm=$1
+	shift
+	for tc in "$@"; do
+		rsh $vm $otcprog tcase_$tc || tdie
+	done
+}
 
 
 if test "$selftest" = "yes"; then
