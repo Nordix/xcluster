@@ -290,9 +290,14 @@ cmd_mkimage() {
 	test -x $XCLUSTER_WORKSPACE/iproute2-$__ipver/ip/ip || cmd_build_iproute2
 	$DISKIM mkimage --image=$__image --bootable=$__bootable \
 		--format=$__format --size=$__size $dir/image
+
 	# Update base-libs
 	rm -f $__base_libs
-	cmd_libs /bin/true > /dev/null
+	if ! test -r $__base_libs; then
+		for l in $($dir/image/tar - | tar t | grep -E '.*/lib.*\.so\.'); do
+			echo "/$l" >> $__base_libs
+		done
+	fi
 }
 
 cmd_cache() {
@@ -384,15 +389,13 @@ cmd_libs() {
 		ldd $f | grep '=> /' | sed -re 's,.*=> (/[^ ]+) .*,\1,' >> $libs
 	done
 
-	# We should exclude all libs already on the image
-	if ! test -r $__base_libs; then
-		for l in $($dir/image/tar - | tar t | grep -E '.*/lib.*\.so\.'); do
-			echo "/$l" >> $__base_libs
+	if test -r $__base_libs; then
+		for f in $(sort $libs | uniq); do
+			grep -q $f $__base_libs || echo $f
 		done
+	else
+		sort $libs | uniq
 	fi
-	for f in $(sort $libs | uniq); do
-		grep -q $f $__base_libs || echo $f
-	done
 }
 
 cmd_cploader() {
