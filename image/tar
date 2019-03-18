@@ -55,7 +55,9 @@ done
 INSTALL_MOD_PATH=$tmp make -C $__kobj modules_install 1>&2 > /dev/null \
 	|| die "Failed to install modules from [$__kobj]"
 
-$XCLUSTER install_prog --root=$tmp tcpdump netstat strace
+
+# NOTE; base-libs MUST be disabled to prevent infinite recursion!
+__base_libs=/dev/null $XCLUSTER install_prog --root=$tmp tcpdump netstat strace
 
 if test "$__bootable" = "yes"; then
 	test -r $__kbin || die "Not readable [$__kbin]"

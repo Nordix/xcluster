@@ -103,6 +103,7 @@ cmd_env() {
 	test -n "$__cached" || __cached=$XCLUSTER_HOME/cache
 	test -n "$__nets_vm" || __nets_vm=0,1
 	test -n "$__nets_router" || __nets_router=0,1,2
+	test -n "$__base_libs" || __base_libs=$XCLUSTER_HOME/base-libs.txt
 
 	__ipver=4.19.0
 	__dropbearver=2016.74
@@ -289,6 +290,9 @@ cmd_mkimage() {
 	test -x $XCLUSTER_WORKSPACE/iproute2-$__ipver/ip/ip || cmd_build_iproute2
 	$DISKIM mkimage --image=$__image --bootable=$__bootable \
 		--format=$__format --size=$__size $dir/image
+	# Update base-libs
+	rm -f $__base_libs
+	cmd_libs /bin/true > /dev/null
 }
 
 cmd_cache() {
@@ -381,14 +385,13 @@ cmd_libs() {
 	done
 
 	# We should exclude all libs already on the image
-	local cache=$XCLUSTER_HOME/libs_on_image
-	if ! test -r $cache; then
+	if ! test -r $__base_libs; then
 		for l in $($dir/image/tar - | tar t | grep -E '.*/lib.*\.so\.'); do
-			echo "/$l" >> $cache
+			echo "/$l" >> $__base_libs
 		done
 	fi
 	for f in $(sort $libs | uniq); do
-		grep -q $f $cache || echo $f
+		grep -q $f $__base_libs || echo $f
 	done
 }
 
