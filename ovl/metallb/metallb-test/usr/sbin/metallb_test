@@ -44,7 +44,7 @@ cmd_tcase_config() {
 	cfg=/etc/metallb/$cfg.conf
 	test -r $cfg || tdie
 	cp $cfg /tmp/config
-	kubectl create configmap config --from-file=/tmp/config || tdie
+	tex "kubectl create configmap config --from-file=/tmp/config 2>&1" || tdie
 	return 0
 }
 
