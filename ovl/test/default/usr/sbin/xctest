@@ -139,13 +139,6 @@ test_images() {
 }
 cmd_tcase_start_mconnect() {
 	start_mconnect /etc/kubernetes/mconnect.yaml || tdie
-	tcase "Start mconnect"
-	kubectl apply -f /etc/kubernetes/mconnect.yaml || tdie
-	sleep 1
-	pushv 60 30 2
-	tex "kubectl get pods 2>&1 | grep -E '^mconnect.*Running'"
-	tex "npods mconnect 4"
-	popv
 }
 
 cmd_tcase_check_metallb() {

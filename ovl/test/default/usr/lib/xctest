@@ -27,7 +27,12 @@ tlog() {
 ##
 tcase() {
 	tcstart=$(date +%s)
-	local msg="$(date +%T) ($((tcstart-begin))): TEST CASE: $*"
+	local msg
+	if test -n "$indent"; then
+		msg="$(date +%T) ($(hostname)): TEST CASE: $*"
+	else
+		msg="$(date +%T) ($((tcstart-begin))): TEST CASE: $*"
+	fi
 	echo "$indent$msg"
 	echo "$indent$msg" >&2
 }
@@ -60,9 +65,11 @@ tex() {
 	local retry=1
 	while test $retry -le $__retries; do
 		now=$(date +%s)
-		if test $((now+__interval-tstart)) -ge $__timeout; then
-			tlog "Timeout ($__timeout)"
-			return 2
+		if echo $__interval | grep -E '^[0-9]+$'; then
+			if test $((now+__interval-tstart)) -ge $__timeout; then
+				tlog "Timeout ($__timeout)"
+				return 2
+			fi
 		fi
 		sleep $__interval
 		echo "Retry ($retry/$__retries) [$1]"
@@ -162,7 +169,7 @@ test_nodes() {
 ##
 start_mconnect() {
 	tcase "Start mconnect"
-	kubectl apply -f $1 || return 1
+	tex "kubectl apply -f $1" || return 1
 	sleep 1
 	pushv 60 30 2
 	tex "kubectl get pods 2>&1 | grep -E '^mconnect.*Running'" || return 1
