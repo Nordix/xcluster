@@ -24,6 +24,7 @@
  * [multus](ovl/multus/README.md)
  * [podsec](ovl/podsec/README.md)
  * [private-reg](ovl/private-reg/README.md)
+ * [quagga](ovl/quagga/README.md)
  * [skopeo](ovl/skopeo/README.md)
  * [systemd](ovl/systemd/README.md)
  * [test](ovl/test/README.md)
