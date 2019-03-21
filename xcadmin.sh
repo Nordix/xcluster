@@ -223,7 +223,7 @@ cmd_release() {
 
 	H=$T/workspace/xcluster
 	mkdir -p $H
-	for n in bzImage cache hd.img hd-k8s.img; do
+	for n in bzImage cache hd.img hd-k8s.img base-libs.txt; do
 		cp -r $XCLUSTER_HOME/$n $H
 	done
 	chmod 444 $H/hd*
