@@ -16,6 +16,8 @@ eval $($XCLUSTER env | grep XCLUSTER_HOME)
 export __image=$XCLUSTER_HOME/hd.img
 # Verify that a local coredns is started on port 10053
 nslookup -port=10053 www.google.se localhost
+# Download k3s to directory (and do chmod a+x );
+xc env | grep ARCHIVE
 ```
 
 Start on a single node and expand;
