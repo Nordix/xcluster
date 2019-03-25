@@ -65,7 +65,7 @@ tex() {
 	local retry=1
 	while test $retry -le $__retries; do
 		now=$(date +%s)
-		if echo $__interval | grep -E '^[0-9]+$'; then
+		if echo $__interval | grep -qE '^[0-9]+$'; then
 			if test $((now+__interval-tstart)) -ge $__timeout; then
 				tlog "Timeout ($__timeout)"
 				return 2
