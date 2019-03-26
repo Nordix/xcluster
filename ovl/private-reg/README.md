@@ -130,16 +130,39 @@ docker container rm -v registry
 docker run -d --restart=always -p 80:5000 --name registry registry:2
 ```
 
-Then add the domain name (DN) for the host in the `/etc/hosts`
-file. The simplest way is to edit the `tar` script in this ovl
-dir. The `example.com` is already added.
+Then specify the domain names to spoof in a file and set `__dns_spoof`
+to point to the file, and start `xcluster`;
+
+```
+export __dns_spoof=/tmp/my-spoofs
+cat > $__dns_spoof <<EOF
+docker.io
+registry-1.docker.io
+k8s.gcr.io
+EOF
+xc mkcdrom (other ovls...) private-reg; xc start
+```
+
+The names will be appended to `/etc/hosts`. You can check the file
+without starting the cluster with;
+
+```
+cdo private-reg
+./tar - | tar -O -x etc/hosts
+```
 
 Load your private registry with `skopeo` as described above and test
-on cluster with;
+on cluster. While testing make sure that no DNS lookups are made from
+withing the cluster by checking the local `coredns` log on your host;
 
 ```
-crictl --runtime-endpoint=unix:///var/run/crio/crio.sock pull example.com/metallb:0.7.3
+tail -f /tmp/$USER/coredns.log
+export __dns_spoof=/tmp/my-spoofs
+xc mkcdrom private-reg; xc start
+# On cluster;
+crictl --runtime-endpoint=unix:///var/run/crio/crio.sock pull docker.io/library/alpine:3.8
 ```
+
 
 
 ## Cri-o configuration

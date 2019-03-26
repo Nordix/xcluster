@@ -31,6 +31,13 @@ test "$setup_copied" != "yes" && test -d $dir/default && cp -R $dir/default/* $t
 
 sed -i -e "s,%localreg%,$regip," $tmp/etc/crio/crio.conf
 echo "$regip example.com" >> $tmp/etc/hosts
+if test -n "$__dns_spoof"; then
+	test -r "$__dns_spoof" || die "Not readable [$__dns_spoof]"
+	dip=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.Gateway}}{{end}}' registry)
+	for n in $(cat $__dns_spoof); do
+		echo "$dip $n" >> $tmp/etc/hosts
+	done
+fi
 
 cd $tmp
 tar cf "$1" *
