@@ -75,9 +75,14 @@ From the `images` help printout;
    lreg_ls
      List the contents of the local registry.
    lreg_cache <external-image>
-     Copy the image to the private registry.
-     Example;
+     Copy the image to the private registry. If this fails try "docker pull"
+     and then "images lreg_upload ...". Example;
        images lreg_cache docker.io/library/alpine:3.8
+   lreg_upload <docker_image>
+     Upload an image from you local docker daemon to the privare registry.
+     Note that "docker.io" and "library/" is suppressed in "docker images";
+       lreg_upload library/alpine:3.8
+       lreg_upload --strip-host docker.io/library/alpine:3.8
    lreg_inspect <image:tag>
      Inspect an image in the private registry.
    lreg_rm <image:tag>
