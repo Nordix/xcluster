@@ -24,15 +24,15 @@ done
 test "$setup_copied" != "yes" && test -d $dir/default && cp -R $dir/default/* $tmp
 
 find_util() {
-	if test -x "$ARCHIVE/$1"; then
-		echo "$ARCHIVE/$1"
-	elif test -x "$GOPATH/bin/$1"; then
-		echo "$GOPATH/bin/$1"
-	elif test -x "$(dirname $XCLUSTER)/bin/$1"; then
-		echo "$(dirname $XCLUSTER)/bin/$1"
-	else
-		which "$1"
-	fi
+	local d
+	for d in "$GOPATH/src/github.com/rancher/k3s/dist/artifacts" \
+		"$ARCHIVE" "$GOPATH/bin" "$(dirname $XCLUSTER)/bin/$1"; do
+		if test -x "$d/$1"; then
+			echo "$d/$1"
+			return 0
+		fi
+	done
+	which "$1"
 }
 
 eval $($XCLUSTER env | grep ARCHIVE)

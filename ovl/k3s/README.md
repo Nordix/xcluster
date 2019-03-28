@@ -61,3 +61,38 @@ mconnect -address 192.168.1.1:5001 -nconn 100
 mconnect -address 192.168.1.1:5001 -nconn 100
 ```
 
+## Default setup
+
+This setup uses a [private registry](../private-reg) and the default
+routes has two targets. This means that until this is fixed in a
+official release you must apply PRs
+[#248](https://github.com/rancher/k3s/pull/248) and
+[#250](https://github.com/rancher/k3s/pull/250) and re-build `k3s`
+locally.
+
+Prepare as for the manual setup (above) and make sure the needed
+images are in the private registry.
+
+```
+. ./Envsettings.k8s
+eval $($XCLUSTER env | grep XCLUSTER_HOME)
+export __image=$XCLUSTER_HOME/hd.img
+images lreg_cache k8s.gcr.io/pause:3.1
+images lreg_cache docker.io/coredns/coredns:1.3.0
+images lreg_cache docker.io/nordixorg/mconnect:v1.2
+```
+
+Start;
+```
+xc mkcdrom xnet iptools k3s; xc starts
+# Scale out to 8 workers if you like;
+xc scaleout $(seq 5 9)
+```
+
+
+
+## Local Docker registry
+
+Containerd let you [specify
+mirrors](https://github.com/containerd/cri/blob/master/docs/registry.md#configure-registry-endpoint)
+which may be used for re-direct to a local (unsecure) registry.
