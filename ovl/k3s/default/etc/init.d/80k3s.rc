@@ -28,27 +28,22 @@ mount -t cgroup cgroup /sys/fs/cgroup
 #ip -6 ro replace default via 1000::1:192.168.1.201
 
 export K3S_CLUSTER_SECRET=SECRET
-
-echo "export KUBECONFIG=/etc/kubeconfig" >> /etc/profile
 echo "alias kubectl='k3s kubectl'" >> /etc/profile
 
 if test $i -eq 1; then
+	echo "export KUBECONFIG=/etc/kubernetes/kubeconfig" >> /etc/profile
 	# Start the server only on vm-001
-	(exec k3s server --disable-agent --write-kubeconfig /etc/kubeconfig \
-		--no-deploy servicelb --no-deploy traefik \
+	(exec k3s server --flannel-iface eth1 --cluster-dns=10.43.0.10 \
+		--no-deploy servicelb --no-deploy traefik --disable-agent \
+		--write-kubeconfig /etc/kubernetes/kubeconfig --tls-san 192.168.0.1 \
 		> /var/log/k3s-server.log 2>&1) &
 	exit 0
 fi
+
+echo "export KUBECONFIG=/var/lib/rancher/k3s/agent/kubeconfig.yaml" >> /etc/profile
 
 # Start agent only on all nodes except vm-001
 (exec k3s agent --node-ip=192.168.1.$i --server https://192.168.1.1:6443 \
 	--flannel-iface eth1 --containerd-config-template /etc/containerd.conf \
 	> /var/log/k3s-agent.log 2>&1) &
 
-# Get /etc/kubeconfig from the server
-ssh="dbclient -y -y"
-while ! $ssh vm-001 test -r /etc/kubeconfig 2> /dev/null; do
-	sleep 1
-done
-$ssh vm-001 cat /etc/kubeconfig 2> /dev/null \
-	| sed -e 's,localhost,vm-001,' > /etc/kubeconfig

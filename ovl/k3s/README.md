@@ -89,6 +89,33 @@ xc mkcdrom xnet iptools k3s; xc starts
 xc scaleout $(seq 5 9)
 ```
 
+### Access from the host
+
+This differs when you are executing in main netns with user-space
+networking and when you are executing in an own netn with bridged
+networking. User-space access to the vm's uses port forwarding, so you
+access ports on `localhost` which will be forwarded (by qemu) to the
+vm network on `eth0`.
+
+User-space networking;
+```
+sshopt="-o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no"
+scp $sshopt -P 12301 root@localhost:/etc/kubernetes/kubeconfig /tmp
+# Do NOT alter the file! The localhost:6443 address is fine.
+KUBECONFIG=/tmp/kubeconfig kubectl get nodes
+```
+
+Bridged networking;
+```
+sshopt="-o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no"
+scp $sshopt root@192.168.0.1:/etc/kubernetes/kubeconfig /tmp
+# Alter the address;
+sed -ie 's,localhost,192.168.0.1,' /tmp/kubeconfig
+KUBECONFIG=/tmp/kubeconfig kubectl get nodes
+```
+
+## Helm and Tiller
+
 
 
 ## Local Docker registry
