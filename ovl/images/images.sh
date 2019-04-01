@@ -66,7 +66,7 @@ cmd_docker_ls() {
 cmd_lreg_ls() {
 	local regip=$(cmd_get_regip) || return 1
 	local i
-	for i in $(curl -s -X GET http://$regip:5000/v2/_catalog | jq .repositories[] | tr -d '"'); do
+	for i in $(curl -s -X GET http://$regip:5000/v2/_catalog | jq -r .repositories[]); do
 		echo "$i:"
 		echo -n "  "
 		curl -s -X GET http://$regip:5000/v2/$i/tags/list | jq -c .tags
