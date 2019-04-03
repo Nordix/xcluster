@@ -16,7 +16,6 @@ mkdir -p /var/lib/kubelet
 
 ip link add name cbr0 type bridge
 ip link set dev cbr0 up
-sed -i -e "s,\.x\.,\.$i\.," /etc/cni/net.d/cni.conf
 
 # Enable to trace cni communication
 if false; then
