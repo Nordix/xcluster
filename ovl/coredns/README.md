@@ -77,3 +77,8 @@ From a VM use;
 ```
 nslookup www.google.se [2000::250]:10053
 ```
+
+## Connection tracking
+
+Connection tracking should be turned off for UDP DNS queries, See this
+[blog-post](https://jeanbruenn.info/2017/04/30/conntrack-and-udp-dns-with-iptables/).
