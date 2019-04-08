@@ -88,7 +88,7 @@ cmd_lreg_cache() {
 	local regip=$(cmd_get_regip) || return 1
 	skopeo copy --dest-tls-verify=false docker://$1 docker://$regip:5000/$img
 }
-##   lreg_upload <docker_image>
+##   lreg_upload [--strip-host] <docker_image>
 ##     Upload an image from you local docker daemon to the privare registry.
 ##     Note that "docker.io" and "library/" is suppressed in "docker images";
 ##       lreg_upload library/alpine:3.8
@@ -156,7 +156,7 @@ cmd_get_rootfs() {
 	echo $d/$rootfs
 }
 
-##   mkimage [--manifest=manifest] [--force] [--upload] <dir>
+##   mkimage [--manifest=manifest] [--force] [--upload] [--strip-host] <dir>
 ##     Create an image in local docker from the <dir>. An executable
 ##     "tar" script must exist in the directory. '--upload' uploads
 ##     to a *local* private docker registry.
@@ -182,9 +182,7 @@ cmd_mkimage() {
 		$tar - | docker import -c "CMD $c" - $n:$v > /dev/null
 	fi
 	if test "$__upload" = "yes"; then
-		local regip=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' registry)
-		test -n "$regip" || die "No address to local docker registry"
-		skopeo copy --dest-tls-verify=false docker-daemon:$n:$v docker://$regip:5000/$n:$v
+		cmd_lreg_upload $n:$v || die "Upload failed"
 	fi
 	echo "$n:$v"
 }
