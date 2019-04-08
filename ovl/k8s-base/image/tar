@@ -24,8 +24,13 @@ $XCLUSTER cploader --dest=$tmp
 f=$XCLUSTER_WORKSPACE/$__bbver/busybox
 test -x $f || die "Not executable [$f]"
 
+# Include the real ip program
+eval $($XCLUSTER env | grep __ipver=)
+ipx=$XCLUSTER_WORKSPACE/iproute2-$__ipver/ip/ip
+test -x $ipx || die "Not executable [$ipx]"
+
 # This will install all libs. Note that we don't want to exclude the base-libs!
-__base_libs=/dev/null $XCLUSTER install_prog --dest=$tmp $f strace
+__base_libs=/dev/null $XCLUSTER install_prog --dest=$tmp $f strace $ipx	
 
 # libnss_files.so is needed for /etc/services parsing
 mkdir -p $tmp/lib/x86_64-linux-gnu
@@ -34,6 +39,7 @@ for n in libnss_files.so.2 libnss_dns.so.2 libresolv.so.2 libpthread.so.0; do
     test -r $f || die "Not readable [$f]"
     cp -L $f $tmp/lib/x86_64-linux-gnu
 done
+
 
 ln -s busybox $tmp/bin/sh
 
