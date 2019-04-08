@@ -278,8 +278,9 @@ cmd_dropbear_build() {
 ##   cache [--clear] [--list] [ovl|tar...]
 ##   ximage [--image=file] [--script=file] [ovl|tar...]
 ##   mkcdrom [--label=label] [--script=file] [--cidata=dir] [ovl|tar...]
-##   install_prog --dest=dir [prog...]
-##   cplib --dest=dir
+##   install_prog [--base-libs=file] --dest=dir [prog...]
+##   cplib [--base-libs=file] --dest=dir
+##   libs [--base-libs=file]
 ##   cploader --dest=dir
 ##   ovld ovl
 ##
