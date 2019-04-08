@@ -144,6 +144,14 @@ Start;
 xc mkcdrom xnet iptools k3s; xc starts
 # Scale out to 8 workers if you like;
 xc scaleout $(seq 5 9)
+# On cluster;
+kubectl get nodes
+kubectl get pods --all-namespaces
+kubectl apply -f /etc/kubernetes/alpine.yaml
+kubectl exec -it alpine-deployment-...
+# In the pod;
+wget -O /dev/null http://www.google.se
+nslookup kubernetes.default.svc.cluster.local
 ```
 
 ### Access from the host
@@ -191,11 +199,22 @@ addresses. The CRI-plugin can (and should) still operate with ipv4
 since images are downloaded with ipv4. This also removes the need for
 a NAT64/DNS64 setup in the base-case.
 
+To be able to set custom flags PR
+[#309](https://github.com/rancher/k3s/pull/309) must be applied.
 
 ```
-SETUP=ipv6 xc mkcdrom xnet iptools k3s; xc starts
-
+# Only the server to start with;
+SETUP=ipv6 xc mkcdrom xnet iptools k3s externalip; xc starts
+# On cluster;
+kubectl apply -f /etc/kubernetes/alpine.yaml
+kubectl get pods -o wide
+kubectl apply -f /etc/kubernetes/mconnect.yaml
+kubectl get svc
+# On a router;
+mconnect -address [1000::2]:5001 -nconn 100
 ```
+
+### CNI plugin
 
 Flannel does not support ipv6 so `bridge` CNI-plugin is used with
 routes setup in a script. Ipam `node-local` is used which is just a
