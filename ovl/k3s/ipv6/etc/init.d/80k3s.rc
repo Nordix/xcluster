@@ -17,15 +17,11 @@ fi
 
 # Generate a /etc/hosts
 cat > /etc/hosts <<EOF
-127.0.0.1               localhost.localdomain localhost
 ::1                     localhost.localdomain localhost
+127.0.0.1               localhost.localdomain localhost
 EOF
 for x in $(seq 1 24); do
-	if test $x -eq $i; then
-		printf "127.0.1.1 vm-%03d\\n" $x >> /etc/hosts
-	else
-		printf "192.168.1.$x vm-%03d\\n" $x >> /etc/hosts
-	fi
+	printf "1000::1:192.168.1.$x vm-%03d\\n" $x >> /etc/hosts
 done
 
 # Work around for bad install of dropbear
@@ -43,9 +39,11 @@ echo "alias kubectl='k3s kubectl'" >> /etc/profile
 if test $i -eq 1; then
 	echo "export KUBECONFIG=/etc/kubernetes/kubeconfig" >> /etc/profile
 	# Start the server only on vm-001
-	(exec k3s server --flannel-iface eth1 --cluster-dns=10.43.0.10 \
+	(exec k3s server --no-flannel --no-deploy coredns \
 		--no-deploy servicelb --no-deploy traefik --disable-agent \
 		--write-kubeconfig /etc/kubernetes/kubeconfig --tls-san 192.168.0.1 \
+		--cluster-cidr 1000::2:11.0.0.0/112 --service-cidr fd00:4000::/112 \
+		--node-ip 1000::1:192.168.1.$i \
 		> /var/log/k3s-server.log 2>&1) &
 	exit 0
 fi
@@ -53,7 +51,7 @@ fi
 echo "export KUBECONFIG=/var/lib/rancher/k3s/agent/kubeconfig.yaml" >> /etc/profile
 
 # Start agent only on all nodes except vm-001
-(exec k3s agent --node-ip=192.168.1.$i --server https://192.168.1.1:6443 \
-	--flannel-iface eth1 --containerd-config-template /etc/containerd.conf \
-	> /var/log/k3s-agent.log 2>&1) &
+(exec k3s agent --server https://192.168.1.1:6443 \
+	--no-flannel --containerd-config-template /etc/containerd.conf \
+	--node-ip 1000::1:192.168.1.$i > /var/log/k3s-agent.log 2>&1) &
 

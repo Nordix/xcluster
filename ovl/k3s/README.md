@@ -61,6 +61,63 @@ mconnect -address 192.168.1.1:5001 -nconn 100
 mconnect -address 192.168.1.1:5001 -nconn 100
 ```
 
+### Help printouts
+
+Server;
+```
+NAME:
+   k3s server - Run management server
+
+USAGE:
+   k3s server [OPTIONS]
+
+OPTIONS:
+   --https-listen-port value           HTTPS listen port (default: 6443)
+   --http-listen-port value            HTTP listen port (for /healthz, HTTPS redirect, and port for TLS terminating LB) (default: 0)
+   --data-dir value, -d value          Folder to hold state default /var/lib/rancher/k3s or ${HOME}/.rancher/k3s if not root
+   --disable-agent                     Do not run a local agent and register a local kubelet
+   --log value, -l value               Log to file
+   --cluster-cidr value                Network CIDR to use for pod IPs (default: "10.42.0.0/16")
+   --cluster-secret value              Shared secret used to bootstrap a cluster [$K3S_CLUSTER_SECRET]
+   --service-cidr value                Network CIDR to use for services IPs (default: "10.43.0.0/16")
+   --cluster-dns value                 Cluster IP for coredns service. Should be in your service-cidr range
+   --no-deploy value                   Do not deploy packaged components (valid items: coredns, servicelb, traefik)
+   --write-kubeconfig value, -o value  Write kubeconfig for admin client to this file [$K3S_KUBECONFIG_OUTPUT]
+   --write-kubeconfig-mode value       Write kubeconfig with this mode [$K3S_KUBECONFIG_MODE]
+   --tls-san value                     Add additional hostname or IP as a Subject Alternative Name in the TLS cert
+   --node-ip value, -i value           (agent) IP address to advertise for node
+   --node-name value                   (agent) Node name [$K3S_NODE_NAME]
+   --docker                            (agent) Use docker instead of containerd
+   --no-flannel                        (agent) Disable embedded flannel
+   --flannel-iface value               (agent) Override default flannel interface
+   --container-runtime-endpoint value  (agent) Disable embedded containerd and use alternative CRI implementation
+```
+
+Agent;
+```
+NAME:
+   k3s agent - Run node agent
+
+USAGE:
+   k3s agent [OPTIONS]
+
+OPTIONS:
+   --token value, -t value             Token to use for authentication [$K3S_TOKEN]
+   --token-file value                  Token file to use for authentication [$K3S_TOKEN_FILE]
+   --server value, -s value            Server to connect to [$K3S_URL]
+   --data-dir value, -d value          Folder to hold state (default: "/var/lib/rancher/k3s")
+   --containerd-config-template value  Use Custom Containerd config file
+   --cluster-secret value              Shared secret used to bootstrap a cluster [$K3S_CLUSTER_SECRET]
+   --docker                            (agent) Use docker instead of containerd
+   --no-flannel                        (agent) Disable embedded flannel
+   --flannel-iface value               (agent) Override default flannel interface
+   --node-name value                   (agent) Node name [$K3S_NODE_NAME]
+   --node-ip value, -i value           (agent) IP address to advertise for node
+   --container-runtime-endpoint value  (agent) Disable embedded containerd and use alternative CRI implementation
+```
+
+
+
 ## Default setup
 
 This setup uses a [private registry](../private-reg) and the default
@@ -114,12 +171,37 @@ sed -ie 's,localhost,192.168.0.1,' /tmp/kubeconfig
 KUBECONFIG=/tmp/kubeconfig kubectl get nodes
 ```
 
-## Helm and Tiller
-
-
 
 ## Local Docker registry
 
 Containerd let you [specify
 mirrors](https://github.com/containerd/cri/blob/master/docs/registry.md#configure-registry-endpoint)
 which may be used for re-direct to a local (unsecure) registry.
+
+
+## Ipv6
+
+**THIS IS A WORK IN PROGRESS!**
+
+See issue [#284](https://github.com/rancher/k3s/issues/284)
+
+This is an attempt to start a ipv6-only cluster with `k3s`. To start
+k8s in ipv6-only mode all address parameters must be ipv6
+addresses. The CRI-plugin can (and should) still operate with ipv4
+since images are downloaded with ipv4. This also removes the need for
+a NAT64/DNS64 setup in the base-case.
+
+
+```
+SETUP=ipv6 xc mkcdrom xnet iptools k3s; xc starts
+
+```
+
+Flannel does not support ipv6 so `bridge` CNI-plugin is used with
+routes setup in a script. Ipam `node-local` is used which is just a
+pipe to `host-local`. Test the ipam;
+
+```
+CNI_COMMAND=ADD CNI_CONTAINERID=example CNI_NETNS=/dev/null CNI_IFNAME=dummy0 \
+  CNI_PATH=. /opt/cni/bin/node-local < /etc/cni/net.d/cni.conf
+```

@@ -44,6 +44,16 @@ for f in k3s coredns mconnect; do
 done
 $XCLUSTER install_prog --dest=$tmp jq
 
+# Flannel does not support ipv6 so install bridge CNI-plugin;
+if echo "$SETUP" | grep -q ipv6; then
+	d=$GOPATH/src/github.com/containernetworking/plugins/bin
+	mkdir -p $tmp/opt/cni/bin
+	for n in bridge host-local loopback; do
+		test -x $d/$n || die "Not executable [$d/$n]"
+		cp $d/$n $tmp/opt/cni/bin
+	done
+fi
+
 # Certificates are required for image pull
 mkdir -p $tmp/etc/ssl/certs
 cp /etc/ssl/certs/ca-certificates.crt $tmp/etc/ssl/certs/
