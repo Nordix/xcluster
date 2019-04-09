@@ -141,7 +141,7 @@ images lreg_cache docker.io/nordixorg/mconnect:v1.2
 
 Start;
 ```
-xc mkcdrom xnet iptools k3s; xc starts
+xc mkcdrom xnet iptools k3s externalip; xc starts
 # Scale out to 8 workers if you like;
 xc scaleout $(seq 5 9)
 # On cluster;
