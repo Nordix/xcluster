@@ -214,6 +214,10 @@ kubectl get svc
 mconnect -address [1000::2]:5001 -nconn 100
 ```
 
+For ipv6 the internal certificate becomes a problem 
+[note](https://github.com/rancher/k3s/issues/27#issuecomment-462525403).
+
+
 ### CNI plugin
 
 Flannel does not support ipv6 so `bridge` CNI-plugin is used with

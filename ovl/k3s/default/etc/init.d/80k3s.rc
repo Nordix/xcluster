@@ -15,24 +15,6 @@ if test -x /bin/kube-proxy; then
 	return 1
 fi
 
-# Generate a /etc/hosts
-cat > /etc/hosts <<EOF
-127.0.0.1               localhost.localdomain localhost
-::1                     localhost.localdomain localhost
-EOF
-for x in $(seq 1 24); do
-	if test $x -eq $i; then
-		printf "127.0.1.1 vm-%03d\\n" $x >> /etc/hosts
-	else
-		printf "192.168.1.$x vm-%03d\\n" $x >> /etc/hosts
-	fi
-done
-
-# Work around for bad install of dropbear
-test -r /usr/bin/dbclient || ln /bin/dbclient /usr/bin/dbclient
-
-mount -t cgroup cgroup /sys/fs/cgroup
-
 # This is required for; https://github.com/rancher/k3s/issues/259
 #ip ro replace default via 192.168.1.201
 #ip -6 ro replace default via 1000::1:192.168.1.201
@@ -54,6 +36,6 @@ echo "export KUBECONFIG=/var/lib/rancher/k3s/agent/kubeconfig.yaml" >> /etc/prof
 
 # Start agent only on all nodes except vm-001
 (exec k3s agent --node-ip=192.168.1.$i --server https://192.168.1.1:6443 \
-	--flannel-iface eth1 --containerd-config-template /etc/containerd.conf \
-	> /var/log/k3s-agent.log 2>&1) &
+	--containerd-config-template /etc/containerd.conf \
+	--flannel-iface eth1 > /var/log/k3s-agent.log 2>&1) &
 
