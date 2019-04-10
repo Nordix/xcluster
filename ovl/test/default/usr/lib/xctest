@@ -14,6 +14,7 @@ __retries=10
 __interval=1
 begin=$(date +%s)
 indent="  "
+kubectl=kubectl
 
 ##  tlog message...
 ##    Logs to stderr with time stamp.
@@ -133,7 +134,8 @@ mynode() {
 ##
 npods() {
 	local n
-	n=$(kubectl get pods | grep -E "^$1.*Running" | wc -l)
+	$kubectl get pods 2>&1 | ogrep 'No resources' && return 1
+	n=$($kubectl get pods | grep -E "^$1.*Running" | wc -l)
 	test $n -eq $2
 }
 
@@ -150,7 +152,7 @@ lsimages() {
 test_coredns() {
 	tcase "Wait for the coredns pod"
 	pushv 60 30 2
-	tex "kubectl get pods 2>&1 | grep -E '^coredns.*Running'" || tdie
+	tex "$kubectl get pods 2>&1 | grep -E '^coredns.*Running'" || tdie
 	popv
 }
 
@@ -160,7 +162,7 @@ test_coredns() {
 test_nodes() {
 	tcase "Wait for k8s nodes"
 	pushv 30 30 1
-	tex "kubectl get nodes 2>&1 | ogrep vm-001" || tdie
+	tex "$kubectl get nodes 2>&1 | ogrep vm-001" || tdie
 	popv
 }
 
@@ -169,10 +171,10 @@ test_nodes() {
 ##
 start_mconnect() {
 	tcase "Start mconnect"
-	tex "kubectl apply -f $1" || return 1
+	tex "$kubectl apply -f $1" || return 1
 	sleep 1
 	pushv 60 30 2
-	tex "kubectl get pods 2>&1 | grep -E '^mconnect.*Running'" || return 1
+	tex "$kubectl get pods 2>&1 | grep -E '^mconnect.*Running'" || return 1
 	tex "npods mconnect 4" || return 1
 	popv
 }
