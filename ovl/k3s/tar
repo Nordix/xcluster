@@ -22,6 +22,7 @@ for s in $(echo "$SETUP" | tr ',' ' '); do
 	setup_copied=yes
 done
 test "$setup_copied" != "yes" && test -d $dir/default && cp -R $dir/default/* $tmp
+test -n "$K3S_TEST" && cp -R $dir/$K3S_TEST/* $tmp
 
 find_util() {
 	local d

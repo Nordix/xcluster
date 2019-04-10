@@ -45,6 +45,7 @@ cmd_test() {
 	test -n "$XCLUSTER" || die 'Not set [$XCLUSTER]'
 	test -x "$XCLUSTER" || die "Not executable [$XCLUSTER]"
 	eval $($XCLUSTER env)
+	export __image=$XCLUSTER_HOME/hd.img
 
 	start=starts
 	test "$__xterm" = "yes" && start=start
@@ -67,9 +68,46 @@ cmd_test() {
 }
 
 test_basic() {
-	tlog "--- Basic tests"
-	SETUP=default,k3s-test $XCLUSTER mkcdrom xnet iptools k3s test
-	$XCLUSTER $start; sleep 2; tex check_vm
+	tcase "Build system"
+	K3S_TEST=test $XCLUSTER mkcdrom test xnet iptools k3s externalip mserver
+
+	tcase "Start system"
+	$XCLUSTER $start
+	sleep 2
+	tex check_vm || tdie
+
+	otc 1 check_k3s_server
+	otc 2 check_k3s_agent
+	otc 3 check_k3s_agent
+	otc 4 check_k3s_agent
+
+	otc 2 "check_coredns 10.43.0.10 10.43.0.1"
+
+	otc 1 start_mserver
+
+	test "$__no_stop" = "yes" && return 0
+	tcase "Stop xcluster"
+	$XCLUSTER stop
+}
+
+test_ipv6() {
+	tcase "Build system for ipv6"
+	K3S_TEST=test SETUP=ipv6 \
+		$XCLUSTER mkcdrom test xnet iptools k3s externalip mserver
+
+	tcase "Start system"
+	$XCLUSTER $start
+	sleep 2
+	tex check_vm || tdie
+
+	otc 1 check_k3s_server
+	otc 2 check_k3s_agent
+	otc 3 check_k3s_agent
+	otc 4 check_k3s_agent
+
+	otc 2 "check_coredns fd00:4000::10 fd00:4000::1"
+
+	otc 1 start_mserver
 
 	test "$__no_stop" = "yes" && return 0
 	tcase "Stop xcluster"
