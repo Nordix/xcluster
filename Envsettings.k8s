@@ -16,11 +16,15 @@ if ! netstat -lutan | grep -q :::10053; then
 	cdns=$GOPATH/bin/coredns
 	test -x $cdns || cdns=$(dirname $XCLUSTER)/bin/coredns
 	if test -x $cdns; then
-		echo "Starting a local coredns on port 10053"
-		$cdns -conf $($XCLUSTER ovld coredns)/Corefile.k8s \
-			> /tmp/$USER/coredns.log 2>&1 &
+		mynetns=$(ip netns id $$)
+		cdnslog=/tmp/$USER/coredns.log
+		mynetns=$(ip netns id $$)
+		test -n "$mynetns" && cdnslog=/tmp/$USER/coredns-$mynetns.log
+		mkdir -p /tmp/$USER
+		echo "Starting a local coredns on port 10053. Log in $cdnslog"
+		$cdns -conf $($XCLUSTER ovld coredns)/Corefile.k8s > $cdnslog 2>&1 &
 	else
 		echo "WARNING: CoreDNS not found. DNS from within the cluster will not work!"
 	fi
-	unset cdns
+	unset cdns mynetns cdnslog
 fi
