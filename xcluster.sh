@@ -81,7 +81,14 @@ cmd_env() {
 	test -n "$XCLUSTER_WORKSPACE" || die 'Not set [$XCLUSTER_WORKSPACE]'
 	test -n "$XCLUSTER" || export XCLUSTER=$me
 	test -n "$XCLUSTER_HOME" || XCLUSTER_HOME=$XCLUSTER_WORKSPACE/xcluster
-	test -n "$XCLUSTER_TMP" || XCLUSTER_TMP="/tmp/$USER/xcluster/tmp"
+	if test -z "$XCLUSTER_TMP"; then
+		local mynetns=$(ip netns id $$)
+		if test -n "$mynetns"; then
+			XCLUSTER_TMP="/tmp/$USER/xcluster/$mynetns/tmp"
+		else
+			XCLUSTER_TMP="/tmp/$USER/xcluster/tmp"
+		fi
+	fi
 	test -n "$XCLUSTER_MONITOR_BASE" || XCLUSTER_MONITOR_BASE=4000
 	test -n "$XCLUSTER_OVLPATH" || XCLUSTER_OVLPATH=$dir/ovl
 	test -n "$ARCHIVE" || ARCHIVE=$HOME/Downloads
@@ -410,6 +417,11 @@ cmd_cploader() {
 
 cmd_mkcdrom() {
 	cmd_env
+
+	if test -z "$1"; then
+		rm -f $__cdrom
+		return 0
+	fi
 
 	__dest=$tmp/cdrom
 	mkdir -p $__dest
