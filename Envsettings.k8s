@@ -9,13 +9,18 @@ __kvm_opt+=" -object rng-random,filename=/dev/urandom,id=rng0"
 __kvm_opt+=" -device virtio-rng-pci,rng=rng0,max-bytes=1024,period=80000"
 export __kvm_opt
 export __mem=768
-export __image=$XCLUSTER_WORKSPACE/xcluster/hd-k8s.img
+test -n "$__image" || export __image=$XCLUSTER_WORKSPACE/xcluster/hd-k8s.img
 alias images="$($XCLUSTER ovld images)/images.sh"
 
 if ! netstat -lutan | grep -q :::10053; then
 	cdns=$GOPATH/bin/coredns
 	test -x $cdns || cdns=$(dirname $XCLUSTER)/bin/coredns
-	test -x $n && $cdns -conf $($XCLUSTER ovld coredns)/Corefile.k8s \
-		> /tmp/$USER/coredns.log 2>&1 &
+	if test -x $cdns; then
+		echo "Starting a local coredns on port 10053"
+		$cdns -conf $($XCLUSTER ovld coredns)/Corefile.k8s \
+			> /tmp/$USER/coredns.log 2>&1 &
+	else
+		echo "WARNING: CoreDNS not found. DNS from within the cluster will not work!"
+	fi
 	unset cdns
 fi
