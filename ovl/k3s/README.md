@@ -2,6 +2,112 @@
 
 Use [k3s](https://github.com/rancher/k3s) in `xcluster`.
 
+
+## Usage
+
+First make sure `xcluster` works. Follow the Quick-start
+[instructions](../../README.md#quick-start).
+
+Download and unpack the k3s image;
+```
+curl -L http://artifactory.nordix.org/artifactory/cloud-native/xcluster/images/hd-k3s.img.xz \
+ | xz -dc > /tmp/hd-k3s.img
+```
+This image contains everything necessary to start a `k3s` cluster
+offline.
+
+Start `xcluster` with the downloaded image;
+```
+export __image=/tmp/hd-k3s.img
+xc mkcdrom; xc start
+# Open a terminal on a vm;
+vm 4
+# On cluster;
+kubectl get nodes
+kubectl get pods --all-namespaces
+# When coredns is Running, test it;
+nslookup kubernetes.default.svc.cluster.local 10.43.0.10
+nslookup www.google.se 10.43.0.10
+```
+
+When this is working you should be able to apply manifests from within
+the cluster.
+
+
+### Kubectl access from the host
+
+This differs when you are executing in main netns with user-space
+networking and when you are executing in an own
+[netns](../../doc/netns.md) with bridged networking. User-space access
+to the vm's uses port forwarding, so you access ports on `localhost`
+which will be forwarded (by qemu) to the vm network on `eth0`.
+
+User-space networking;
+```
+sshopt="-o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no"
+scp $sshopt -P 12301 root@localhost:/etc/kubernetes/kubeconfig /tmp
+# Do NOT alter the file! The localhost:6443 address is fine.
+KUBECONFIG=/tmp/kubeconfig kubectl get nodes
+```
+
+Bridged networking in a [netns](../../doc/netns.md);
+```
+sshopt="-o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no"
+scp $sshopt root@192.168.0.1:/etc/kubernetes/kubeconfig /tmp
+# Alter the address;
+sed -ie 's,localhost,192.168.0.1,' /tmp/kubeconfig
+KUBECONFIG=/tmp/kubeconfig kubectl get nodes
+```
+
+### User-space networking v.s. netns with bridged networking
+
+**NOTE:** The user-space networking in `xcluster` (or "quemu") is
+**not** sufficient for large networks or heavy load! You shall use
+`xcluster` in a [netns](../../doc/netns.md) with bridged networking if
+you test a large cluster of if you have a network intensive
+application or load big images.
+
+That said, the user-space *is* sufficient for most function testing
+and it is very convenient and you don't need "sudo".
+
+
+
+### Large clusters
+
+* Testing large clusters should be done in [netns](../../doc/netns.md)
+  with bridged networking.
+
+* `Xcluster` has a built-in limit of 200 VMs, vm-001 - vm-200.
+
+* Use "xc starts" to avoid the terminal windows.
+
+* Host-names in "/etc/hosts" including `vm-032` are generated. I you
+  need more you must alter the "default/etc/init.d/20prep.rc" file.
+
+* A local private registry is *strongly* recommended.
+
+
+For clusters of moderate size just use the `--nvm` parameter;
+```
+xc mkcdrom; xc starts --nvm=16
+```
+
+For very large clusters the resource usage (e.g. network and cpu) on
+startup may cause problems if all VMs are started at once. Then you
+can start a smaller cluster and scale-out in chunks. This also
+allows you to control the memory ammount for each VM;
+```
+xc mkcdrom; xc starts --mem=512 --nvm=1
+xc scaleout --mem=256 $(seq 2 10)
+xc scaleout --mem=256 $(seq 11 20)
+xc scaleout --mem=256 $(seq 21 30)
+...
+```
+
+For the record; Around 30 VMs is the reasonable limit on my 16GB
+i7-8550U laptop. Cpu ~30-70% and ~80% memory used.
+
+
 ## Manual setup
 
 This is what is described in the
@@ -16,7 +122,7 @@ eval $($XCLUSTER env | grep XCLUSTER_HOME)
 export __image=$XCLUSTER_HOME/hd.img
 # Verify that a local coredns is started on port 10053
 nslookup -port=10053 www.google.se localhost
-# Download k3s to directory (and do chmod a+x );
+# Download k3s to the ARCHIVE directory (and do chmod a+x );
 xc env | grep ARCHIVE
 ```
 
@@ -40,15 +146,6 @@ k3s agent --node-ip=192.168.1.2 --server https://192.168.1.1:6443 \
 #xc scaleout 3 4 ...etc
 ```
 
-The ClusterIP of the CoreDNS started by k3s should be configured as nameserver;
-```
-k3s kubectl get svc -n kube-system kube-dns
-a=$(k3s kubectl get svc -n kube-system kube-dns -o json | jq -r .spec.clusterIP)
-echo "nameserver $a" > /etc/resolv.conf
-# Test it;
-nslookup kubernetes.default.svc.cluster.local
-```
-
 Deploy [mconnect](https://github.com/Nordix/mconnect) as a test-pod;
 ```
 # On vm-001;
@@ -60,62 +157,6 @@ mconnect -address 192.168.1.1:5001 -nconn 100
 # On the router (vm-201);
 mconnect -address 192.168.1.1:5001 -nconn 100
 ```
-
-### Help printouts
-
-Server;
-```
-NAME:
-   k3s server - Run management server
-
-USAGE:
-   k3s server [OPTIONS]
-
-OPTIONS:
-   --https-listen-port value           HTTPS listen port (default: 6443)
-   --http-listen-port value            HTTP listen port (for /healthz, HTTPS redirect, and port for TLS terminating LB) (default: 0)
-   --data-dir value, -d value          Folder to hold state default /var/lib/rancher/k3s or ${HOME}/.rancher/k3s if not root
-   --disable-agent                     Do not run a local agent and register a local kubelet
-   --log value, -l value               Log to file
-   --cluster-cidr value                Network CIDR to use for pod IPs (default: "10.42.0.0/16")
-   --cluster-secret value              Shared secret used to bootstrap a cluster [$K3S_CLUSTER_SECRET]
-   --service-cidr value                Network CIDR to use for services IPs (default: "10.43.0.0/16")
-   --cluster-dns value                 Cluster IP for coredns service. Should be in your service-cidr range
-   --no-deploy value                   Do not deploy packaged components (valid items: coredns, servicelb, traefik)
-   --write-kubeconfig value, -o value  Write kubeconfig for admin client to this file [$K3S_KUBECONFIG_OUTPUT]
-   --write-kubeconfig-mode value       Write kubeconfig with this mode [$K3S_KUBECONFIG_MODE]
-   --tls-san value                     Add additional hostname or IP as a Subject Alternative Name in the TLS cert
-   --node-ip value, -i value           (agent) IP address to advertise for node
-   --node-name value                   (agent) Node name [$K3S_NODE_NAME]
-   --docker                            (agent) Use docker instead of containerd
-   --no-flannel                        (agent) Disable embedded flannel
-   --flannel-iface value               (agent) Override default flannel interface
-   --container-runtime-endpoint value  (agent) Disable embedded containerd and use alternative CRI implementation
-```
-
-Agent;
-```
-NAME:
-   k3s agent - Run node agent
-
-USAGE:
-   k3s agent [OPTIONS]
-
-OPTIONS:
-   --token value, -t value             Token to use for authentication [$K3S_TOKEN]
-   --token-file value                  Token file to use for authentication [$K3S_TOKEN_FILE]
-   --server value, -s value            Server to connect to [$K3S_URL]
-   --data-dir value, -d value          Folder to hold state (default: "/var/lib/rancher/k3s")
-   --containerd-config-template value  Use Custom Containerd config file
-   --cluster-secret value              Shared secret used to bootstrap a cluster [$K3S_CLUSTER_SECRET]
-   --docker                            (agent) Use docker instead of containerd
-   --no-flannel                        (agent) Disable embedded flannel
-   --flannel-iface value               (agent) Override default flannel interface
-   --node-name value                   (agent) Node name [$K3S_NODE_NAME]
-   --node-ip value, -i value           (agent) IP address to advertise for node
-   --container-runtime-endpoint value  (agent) Disable embedded containerd and use alternative CRI implementation
-```
-
 
 
 ## Default setup
@@ -154,31 +195,6 @@ wget -O /dev/null http://www.google.se
 nslookup kubernetes.default.svc.cluster.local
 ```
 
-### Access from the host
-
-This differs when you are executing in main netns with user-space
-networking and when you are executing in an own netn with bridged
-networking. User-space access to the vm's uses port forwarding, so you
-access ports on `localhost` which will be forwarded (by qemu) to the
-vm network on `eth0`.
-
-User-space networking;
-```
-sshopt="-o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no"
-scp $sshopt -P 12301 root@localhost:/etc/kubernetes/kubeconfig /tmp
-# Do NOT alter the file! The localhost:6443 address is fine.
-KUBECONFIG=/tmp/kubeconfig kubectl get nodes
-```
-
-Bridged networking;
-```
-sshopt="-o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no"
-scp $sshopt root@192.168.0.1:/etc/kubernetes/kubeconfig /tmp
-# Alter the address;
-sed -ie 's,localhost,192.168.0.1,' /tmp/kubeconfig
-KUBECONFIG=/tmp/kubeconfig kubectl get nodes
-```
-
 
 ## Local Docker registry
 
@@ -212,6 +228,9 @@ kubectl apply -f /etc/kubernetes/mconnect.yaml
 kubectl get svc
 # On a router;
 mconnect -address [1000::2]:5001 -nconn 100
+# Or;
+./k3s.sh test --no-stop ipv6 > /dev/null
+# Will build, start and test the system and leave it for your use.
 ```
 
 For ipv6 the internal certificate becomes a problem 

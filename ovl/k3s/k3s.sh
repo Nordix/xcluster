@@ -32,6 +32,34 @@ dbg() {
 	test -n "$__verbose" && echo "$prg: $*" >&2
 }
 
+##   mkpreload [--tar=file] [images...]
+##     Create a tar-file with images to be pre-loaded (air-gap).
+##
+cmd_mkpreload() {
+	eval $($XCLUSTER env)
+	test -n "$__tar" || __tar=$XCLUSTER_TMP/k3s-preload.tar
+	docker save -o $__tar \
+		k8s.gcr.io/pause:3.1 docker.io/coredns/coredns:1.3.0 \
+		docker.io/library/alpine:3.8 $@
+	echo "Created; $__tar"
+}
+
+##   mkhd [--k3s-image=file]
+##     Create an xcluster image with k3s.
+##
+cmd_mkhd() {
+	test -n "$__k3s_image" || __k3s_image=/tmp/tmp/hd-k3s.img
+	export __image=$__k3s_image
+	rm -f $__image
+	cmd_mkpreload || die
+	export __tar
+	export __private_reg=no
+	$XCLUSTER mkimage || die
+	$XCLUSTER ximage xnet iptools k3s externalip || die
+	echo "Use; xc start --image=$__image"
+}
+
+
 ##   test --list
 ##   test [--xterm] [test...] > logfile
 ##     Test k3s
@@ -58,7 +86,7 @@ cmd_test() {
 			test_$t
 		done
 	else
-		for t in basic; do
+		for t in basic ipv6; do
 			test_$t
 		done
 	fi	

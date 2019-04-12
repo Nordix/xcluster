@@ -14,7 +14,7 @@ cat > /etc/hosts <<EOF
 127.0.0.1               localhost.localdomain localhost
 ::1                     localhost.localdomain localhost
 EOF
-for x in $(seq 1 24); do
+for x in $(seq 1 32); do
 	if test $x -eq $i; then
 		printf "127.0.1.1 vm-%03d\\n" $x >> /etc/hosts
 	else
@@ -31,3 +31,6 @@ for d in cpuset memory; do
 	mount -t cgroup cgroup /sys/fs/cgroup/$d
 done
 
+for f in $(find /var/lib/rancher/k3s/agent/images -name '*.gz'); do
+	gunzip $f
+done
