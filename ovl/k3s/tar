@@ -60,10 +60,6 @@ if test -n "$__tar" -a -r "$__tar"; then
 	cp $__tar $tmp/var/lib/rancher/k3s/agent/images
 fi
 
-test "$__private_reg" = "yes" || \
-	sed -ie '/containerd-config-template/d' $tmp/etc/init.d/80k3s.rc
-
-
 # Certificates are required for image pull
 mkdir -p $tmp/etc/ssl/certs
 cp /etc/ssl/certs/ca-certificates.crt $tmp/etc/ssl/certs/

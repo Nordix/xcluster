@@ -97,7 +97,8 @@ cmd_test() {
 
 test_basic() {
 	tcase "Build system"
-	K3S_TEST=test $XCLUSTER mkcdrom test xnet iptools k3s externalip mserver
+	K3S_TEST=test $XCLUSTER mkcdrom \
+		test xnet iptools k3s k3s-private-reg externalip mserver
 
 	tcase "Start system"
 	$XCLUSTER $start
@@ -120,8 +121,8 @@ test_basic() {
 
 test_ipv6() {
 	tcase "Build system for ipv6"
-	K3S_TEST=test SETUP=ipv6 \
-		$XCLUSTER mkcdrom test xnet iptools k3s externalip mserver
+	K3S_TEST=test SETUP=ipv6 $XCLUSTER mkcdrom \
+		test xnet iptools k3s k3s-private-reg externalip mserver
 
 	tcase "Start system"
 	$XCLUSTER $start

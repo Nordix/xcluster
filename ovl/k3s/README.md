@@ -34,6 +34,12 @@ When this is working you should be able to apply manifests from within
 the cluster.
 
 
+### Private docker registry
+
+A local [private docker registry](../k3s-private-reg/README.md) allows
+faster and more predictable image loads and offline work.
+
+
 ### Kubectl access from the host
 
 This differs when you are executing in main netns with user-space
@@ -161,12 +167,7 @@ mconnect -address 192.168.1.1:5001 -nconn 100
 
 ## Default setup
 
-This setup uses a [private registry](../private-reg) and the default
-routes has two targets. This means that until this is fixed in a
-official release you must apply PRs
-[#248](https://github.com/rancher/k3s/pull/248) and
-[#250](https://github.com/rancher/k3s/pull/250) and re-build `k3s`
-locally.
+Use a local [private registry](../k3s-private-reg/README.md).
 
 Prepare as for the manual setup (above) and make sure the needed
 images are in the private registry.
@@ -182,7 +183,7 @@ images lreg_cache docker.io/nordixorg/mconnect:v1.2
 
 Start;
 ```
-xc mkcdrom xnet iptools k3s externalip; xc starts
+xc mkcdrom xnet iptools k3s k3s-private-reg externalip; xc starts
 # Scale out to 8 workers if you like;
 xc scaleout $(seq 5 9)
 # On cluster;
@@ -194,14 +195,6 @@ kubectl exec -it alpine-deployment-...
 wget -O /dev/null http://www.google.se
 nslookup kubernetes.default.svc.cluster.local
 ```
-
-
-## Local Docker registry
-
-Containerd let you [specify
-mirrors](https://github.com/containerd/cri/blob/master/docs/registry.md#configure-registry-endpoint)
-which may be used for re-direct to a local (unsecure) registry.
-
 
 ## Ipv6
 
