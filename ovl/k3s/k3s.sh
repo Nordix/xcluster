@@ -53,7 +53,6 @@ cmd_mkhd() {
 	rm -f $__image
 	cmd_mkpreload || die
 	export __tar
-	export __private_reg=no
 	$XCLUSTER mkimage || die
 	$XCLUSTER ximage xnet iptools k3s externalip || die
 	echo "Use; xc start --image=$__image"
@@ -96,9 +95,16 @@ cmd_test() {
 }
 
 test_basic() {
-	tcase "Build system"
-	K3S_TEST=test $XCLUSTER mkcdrom \
-		test xnet iptools k3s k3s-private-reg externalip mserver
+	if test -n "$__k3s_image" -a -r "$__k3s_image"; then
+		# We have a pre-built image. Install only test programs
+		tcase "Build system with pre-installed image"
+		export __image=$__k3s_image
+		K3S_TEST=only $XCLUSTER mkcdrom test k3s k3s-private-reg mserver k3s
+	else
+		tcase "Build system"
+		K3S_TEST=yes $XCLUSTER mkcdrom \
+			test xnet iptools k3s k3s-private-reg externalip mserver
+	fi
 
 	tcase "Start system"
 	$XCLUSTER $start

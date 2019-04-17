@@ -24,16 +24,10 @@ test -n "$regip" || die 'Address empty'
 docker inspect registry | jq '.[]|.NetworkSettings.Ports' | grep -q '5000/tcp' ||\
 	die "Non standard port (!=5000) used for the local registry"
 regip="$regip:5000"
-log "Address [$regip]"
+#log "Address [$regip]"
 
 mkdir -p $tmp
-for s in $(echo "$SETUP" | tr ',' ' '); do
-	test -d $dir/$s || continue
-	cp -R $dir/$s/* $tmp
-	setup_copied=yes
-done
-test "$setup_copied" != "yes" && test -d $dir/default && cp -R $dir/default/* $tmp
-
+cp -R $dir/default/* $tmp
 sed -i -e "s,%localreg%,$regip," $tmp/etc/containerd.conf
 
 cd $tmp

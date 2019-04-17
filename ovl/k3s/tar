@@ -16,13 +16,25 @@ log() {
 test -n "$1" || die "No out-file"
 
 mkdir -p $tmp
+if test -n "$K3S_TEST"; then
+	cp -R $dir/test/* $tmp
+	if test "$K3S_TEST" = "only"; then
+		# This is an ugly hack to test pre-built k3s images
+		log "K3s; installing test only"
+		cd $tmp
+		tar cf "$1" *
+		cd - > /dev/null
+		rm -rf $tmp
+		exit 0
+	fi
+fi
+
 for s in $(echo "$SETUP" | tr ',' ' '); do
 	test -d $dir/$s || continue
 	cp -R $dir/$s/* $tmp
 	setup_copied=yes
 done
 test "$setup_copied" != "yes" && test -d $dir/default && cp -R $dir/default/* $tmp
-test -n "$K3S_TEST" && cp -R $dir/$K3S_TEST/* $tmp
 
 find_util() {
 	local d

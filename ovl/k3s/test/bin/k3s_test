@@ -72,7 +72,7 @@ cmd_tcase_start_mserver() {
 	tcase "Start mserver"
 	kubectl="k3s kubectl"
 	$kubectl apply -f /etc/kubernetes/mserver.yaml || tdie
-	pushv 30 15 2
+	pushv 60 30 2
 	tex "npods mserver-deployment- 4" || tdie
 	popv
 }
