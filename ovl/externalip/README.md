@@ -17,7 +17,7 @@ mconnect -address 10.0.0.2:5001 -nconn 400
 For ipv6;
 
 ```
-SETUP=ipv6 xc mkcdrom externalip; xc start
+SETUP=ipv6 xc mkcdrom etcd k8s-config externalip; xc start
 # On cluster;
 kubectl apply -f /etc/kubernetes/mconnect.yaml
 # Outside cluster;
@@ -27,6 +27,8 @@ mconnect -address [1000::2]:5001 -nconn 400
 
 The ipv6/ecmp/ssh bug
 ---------------------
+
+**OBSOLETE; KEPT FOR HISTORICAL REASONS**
 
 This bug it fixed in kernel 4.18, but may be present in earlier
 kernels.
