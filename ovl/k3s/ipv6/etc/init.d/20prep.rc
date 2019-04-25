@@ -9,10 +9,14 @@ i=$(hostname | cut -d- -f2 | sed -re 's,^0+,,')
 
 test $i -le 200 || exit 0
 
+# Imprtant!
+echo 1 > /proc/sys/net/ipv6/conf/all/forwarding
+
 # Generate a /etc/hosts
 cat > /etc/hosts <<EOF
-::1                     localhost.localdomain localhost
-127.0.0.1               localhost.localdomain localhost
+127.0.0.1 localhost
+::1       ip6-localhost ip6-loopback
+
 EOF
 for x in $(seq 1 24); do
 	if test $x -eq $i; then

@@ -183,7 +183,7 @@ images lreg_cache docker.io/nordixorg/mconnect:v1.2
 
 Start;
 ```
-xc mkcdrom xnet iptools k3s k3s-private-reg externalip; xc starts
+xc mkcdrom xnet iptools k3s k3s-private-reg externalip mserver; xc starts
 # Scale out to 8 workers if you like;
 xc scaleout $(seq 5 9)
 # On cluster;
@@ -212,8 +212,9 @@ To be able to set custom flags PR
 [#309](https://github.com/rancher/k3s/pull/309) must be applied.
 
 ```
-# Only the server to start with;
-SETUP=ipv6 xc mkcdrom xnet iptools k3s externalip; xc starts
+eval $($XCLUSTER env | grep XCLUSTER_HOME)
+export __image=$XCLUSTER_HOME/hd.img
+SETUP=ipv6 xc mkcdrom xnet iptools k3s k3s-private-reg externalip mserver; xc starts
 # On cluster;
 kubectl apply -f /etc/kubernetes/alpine.yaml
 kubectl get pods -o wide

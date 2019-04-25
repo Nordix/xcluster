@@ -11,8 +11,9 @@ test $i -le 200 || exit 0
 
 # Generate a /etc/hosts
 cat > /etc/hosts <<EOF
-127.0.0.1               localhost.localdomain localhost
-::1                     localhost.localdomain localhost
+127.0.0.1 localhost
+::1       ip6-localhost ip6-loopback
+
 EOF
 for x in $(seq 1 32); do
 	if test $x -eq $i; then
