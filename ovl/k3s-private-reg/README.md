@@ -14,10 +14,8 @@ mirrors](https://github.com/containerd/cri/blob/master/docs/registry.md#configur
 which may be used for re-direct to a local (unsecure) registry.
 
 At the moment of writing the PR for configuring `containerd`
-[#248](https://github.com/rancher/k3s/pull/248) is not merged, so you
-must apply it and build locally. This will add the
-`--containerd-config-template` option.
-
+[#381](https://github.com/rancher/k3s/pull/381) is not merged, so you
+must apply it and build locally.
 
 
 ## Setup the private registry

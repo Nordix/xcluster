@@ -1,3 +1,0 @@
-# Append the configd option to K3S_AGENT_OPTS
-K3S_AGENT_OPTS="$K3S_AGENT_OPTS --containerd-config-template=/etc/containerd.conf"
-
