@@ -10,6 +10,15 @@ __kvm_opt+=" -device virtio-rng-pci,rng=rng0,max-bytes=1024,period=80000"
 export __kvm_opt
 export __mem=768
 test -n "$__image" || export __image=$XCLUSTER_WORKSPACE/xcluster/hd-k8s.img
+test -r "$__image" || cat <<EOF
+
+The image is not readable [$__image] 
+
+Please follow the instructions at;
+https://github.com/Nordix/xcluster#xcluster-with-kubernetes
+
+EOF
+
 alias images="$($XCLUSTER ovld images)/images.sh"
 
 if ! netstat -lutan | grep -q :::10053; then

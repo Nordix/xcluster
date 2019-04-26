@@ -26,7 +26,7 @@ quota-backend-bytes: 0
 listen-peer-urls: http://192.168.1.x:2380
 
 # List of comma separated URLs to listen on for client traffic.
-listen-client-urls: http://localhost:2379
+listen-client-urls: http://[::1]:2379
 
 # Maximum number of snapshot files to retain (0 is unlimited).
 max-snapshots: 5

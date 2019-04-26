@@ -196,9 +196,17 @@ xc stop
 
 ### Xcluster with Kubernetes
 
+From release v2.0 the kubernetes image `hd-k8s.img` is not included in
+the `xcluster` releases and must be downloaded. Please see the
+[wiki](https://github.com/Nordix/xcluster/wiki/Kubernetes-Images).
+
 ```
 cd $HOME/xcluster
 . ./Envsettings.k8s
+# If you see "The image is not readable...", download the image.
+# (this have to be done only once, or when you want to upgrade it)
+curl -L http://artifactory.nordix.org/artifactory/cloud-native/xcluster/images/hd-k8s.img.xz | xz -d > $__image
+# Build and start
 xc mkcdrom externalip; xc start
 ```
 
