@@ -84,11 +84,8 @@ kubectl apply -f /etc/kubernetes/mconnect.yaml
 
 For internal experiments a local pod can be used;
 
-Ipv4 pre-pulled setup;
-
 ```
-images make coredns metallb nordixorg/mconnect:v1.2
-xc mkcdrom metallb gobgp images; xc start
+xc mkcdrom metallb gobgp private-reg; xc starts
 # On cluster;
 kubectl apply -f /etc/kubernetes/metallb-config-internal.yaml
 kubectl apply -f /etc/kubernetes/metallb.yaml
