@@ -140,6 +140,7 @@ test_k8s() {
 	rsh 4 xctest k8s || tdie	
 	rsh 201 xctest router_k8s || tdie
 
+	test "$__no_stop" = "yes" && return 0
 	tcase "Stop xcluster"
 	$XCLUSTER stop
 }
@@ -159,6 +160,7 @@ test_k8s_ipv6() {
 	rsh 4 xctest k8s --ipv6 || tdie
 	rsh 201 xctest router_k8s --ipv6 || tdie
 
+	test "$__no_stop" = "yes" && return 0
 	tcase "Stop xcluster"
 	$XCLUSTER stop
 }
@@ -177,6 +179,7 @@ test_k8s_kube_router() {
 	rsh 4 xctest k8s_kube_router || tdie	
 	rsh 201 xctest router_kube_router || tdie
 
+	test "$__no_stop" = "yes" && return 0
 	tcase "Stop xcluster"
 	$XCLUSTER stop
 }
@@ -202,6 +205,7 @@ test_k8s_metallb() {
 	rsh 4 xctest tcase_check_loadbalancererip --timeout=90 || tdie
 	rsh 201 xctest router_k8s || tdie
 
+	test "$__no_stop" = "yes" && return 0
 	tcase "Stop xcluster"
 	$XCLUSTER stop
 }
