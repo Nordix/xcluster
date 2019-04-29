@@ -43,6 +43,16 @@ sudo setcap 'cap_net_bind_service=+ep' $GOPATH/bin/coredns
 images mkimage --force --upload ./image
 ```
 
+Test it;
+```
+eval $($XCLUSTER env | grep XCLUSTER_HOME)
+export __image=$XCLUSTER_HOME/hd.img
+xc mkcdrom xnet etcd iptools kubernetes coredns private-reg; xc start
+# Ipv6;
+SETUP=ipv6 xc mkcdrom xnet etcd iptools kubernetes coredns private-reg k8s-config
+```
+
+
 Local setup
 -----------
 

@@ -6,8 +6,8 @@ data:
   Corefile: |
     .:53 {
         kubernetes xcluster
-        proxy . 192.168.0.250:10053
-        cache 300
+        proxy . /etc/resolv.conf
+        cache 500
         log stdout
     }
 ---
@@ -41,6 +41,10 @@ spec:
         env:
           - name: ARGS
             value: "-test.v"
+          - name: MY_NODE_IP
+            valueFrom:
+              fieldRef:
+                fieldPath: status.hostIP
       dnsPolicy: Default
       volumes:
         - name: config-volume

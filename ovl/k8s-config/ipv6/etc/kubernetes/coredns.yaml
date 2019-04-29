@@ -7,7 +7,7 @@ data:
     .:53 {
         log stdout
         kubernetes xcluster
-        proxy . [2000::250]:10053
+        proxy . /etc/resolv.conf
         cache 500
         log
     }
@@ -39,6 +39,13 @@ spec:
         - containerPort: 53
           name: dns-tcp
           protocol: TCP
+        env:
+          - name: ARGS
+            value: "-test.v"
+          - name: MY_NODE_IP
+            valueFrom:
+              fieldRef:
+                fieldPath: status.hostIP
       dnsPolicy: Default
       volumes:
         - name: config-volume
