@@ -127,7 +127,6 @@ test_basic() {
 }
 test_k8s() {
 	# Kubernetes tests;
-	export __image=$XCLUSTER_HOME/hd-k8s.img
 	tcase "Start xcluster"
 	$XCLUSTER mkcdrom externalip test $__xovl
 	$XCLUSTER $start
@@ -146,7 +145,6 @@ test_k8s() {
 }
 test_k8s_ipv6() {
 	# Kubernetes tests with ipv6-only;
-	export __image=$XCLUSTER_HOME/hd-k8s.img
 	tcase "Start xcluster with k8s ipv6-only"
 	# Make sure "k8s-config" is last
 	SETUP=ipv6 $XCLUSTER mkcdrom etcd externalip test $__xovl k8s-config
@@ -166,7 +164,6 @@ test_k8s_ipv6() {
 }
 test_k8s_kube_router() {
 	# Kubernetes tests with kube-router;
-	export __image=$XCLUSTER_HOME/hd-k8s.img
 	tcase "Start xcluster with kube-router"
 	$XCLUSTER mkcdrom gobgp kube-router test $__xovl
 	$XCLUSTER $start
@@ -186,7 +183,6 @@ test_k8s_kube_router() {
 
 test_k8s_metallb() {
 	# Kubernetes tests with kube-router;
-	export __image=$XCLUSTER_HOME/hd-k8s.img
 	tcase "Start xcluster for test with metallb"
 	$XCLUSTER mkcdrom gobgp metallb test $__xovl
 	$XCLUSTER $start
