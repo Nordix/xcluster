@@ -13,7 +13,7 @@ Usage
 ```
 xc mkcdrom systemd etcd other-overlays...
 # Or;
-SETUP=etcd-start xc mkcdrom etcd [other-overlays...]
+xc mkcdrom xnet etcd [other-overlays...]
 # On a vm;
 etcdctl member list
 etcdctl put Hello World

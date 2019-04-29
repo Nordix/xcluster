@@ -12,14 +12,14 @@ test -n "$1" || die "No out-file"
 
 rm -rf $tmp
 mkdir -p $tmp/bin
-#cp -R $dir/default/* $tmp
+
 for s in $(echo "$SETUP" | tr ',' ' '); do
 	test -d $dir/$s || continue
 	cp -R $dir/$s/* $tmp
 	user_setup=yes
 done
 
-test "$user_setup" = "yes" || cp -R $dir/systemd-start/* $tmp
+test "$user_setup" = "yes" || cp -R $dir/default/* $tmp
 
 $dir/etcd.sh download
 $dir/etcd.sh etcd $tmp/bin

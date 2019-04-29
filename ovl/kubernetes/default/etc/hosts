@@ -1,5 +1,5 @@
 127.0.0.1		localhost.localdomain localhost
-::1			localhost.localdomain localhost
+::1			ip6-localhost
 192.168.1.1		vm-001 vm-001.localdomain
 192.168.1.2		vm-002 vm-002.localdomain
 192.168.1.3		vm-003 vm-003.localdomain

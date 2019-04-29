@@ -359,6 +359,8 @@ cmd_ximage() {
 		ovls="$ovls $d"
 	done
 	rm -f "$__cdrom"
+
+	cmd_stop
 	$DISKIM ximage --image=$__image --script=$__script $ovls
 }
 
