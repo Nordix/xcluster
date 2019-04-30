@@ -25,13 +25,12 @@ EOF
 
 alias images="$($XCLUSTER ovld images)/images.sh"
 
+mynetns=$(ip netns id $$)
 if ! netstat -lutan | grep -q :::10053; then
 	cdns=$GOPATH/bin/coredns
 	test -x $cdns || cdns=$(dirname $XCLUSTER)/bin/coredns
 	if test -x $cdns; then
-		mynetns=$(ip netns id $$)
 		cdnslog=/tmp/$USER/coredns.log
-		mynetns=$(ip netns id $$)
 		test -n "$mynetns" && cdnslog=/tmp/$USER/coredns-$mynetns.log
 		mkdir -p /tmp/$USER
 		echo "Starting a local coredns on port 10053. Log in $cdnslog"
@@ -39,5 +38,14 @@ if ! netstat -lutan | grep -q :::10053; then
 	else
 		echo "WARNING: CoreDNS not found. DNS from within the cluster will not work!"
 	fi
-	unset cdns mynetns cdnslog
+	unset cdns cdnslog
 fi
+
+if test -z "$KUBECONFIG"; then
+	if test -n "$mynetns"; then
+		export KUBECONFIG=$(readlink -f .)/config/kubeconfig.netns
+	else
+		export KUBECONFIG=$(readlink -f .)/config/kubeconfig.user-space
+	fi
+fi
+unset mynetns
