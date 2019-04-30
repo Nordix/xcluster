@@ -11,6 +11,7 @@
  * [images](ovl/images/README.md)
  * [iperf](ovl/iperf/README.md)
  * [iptools](ovl/iptools/README.md)
+ * [k3s-private-reg](ovl/k3s-private-reg/README.md)
  * [k3s](ovl/k3s/README.md)
  * [k8s-base](ovl/k8s-base/README.md)
  * [k8s-config](ovl/k8s-config/README.md)

@@ -60,9 +60,6 @@ cmd_build_release() {
 	local begin now
 	begin=$(date +%s)
 
-	test -n "$KUBERNETESD" || export KUBERNETESD=$ARCHIVE/kubernetes/server/bin
-	test -x $KUBERNETESD/kubelet || die "No k8s in [$KUBERNETESD]"
-
 	test -n "$1" || die "No workdir"
 	test -e "$1" && die "Already exist [$1]"
 	mkdir -p "$1" ||  die "Could not create [$1]"
@@ -73,8 +70,8 @@ cmd_build_release() {
 	# Clone
 	#local url=https://github.com/Nordix/xcluster.git
 	local url=file:///$HOME/go/src/github.com/Nordix/xcluster
-	git clone $url || die "Failed to clone xcluster"
-
+	git clone --depth 1 $url || die "Failed to clone xcluster"
+	
 	# Setup env
 	export XCLUSTER_WORKSPACE=$workdir/workspace
 	mkdir -p $XCLUSTER_WORKSPACE
@@ -99,9 +96,6 @@ cmd_build_release() {
 	make || die "make coredns"
 	mkdir -p $GOPATH/bin
 	mv coredns $GOPATH/bin
-	local images=$($XCLUSTER ovld images)/images.sh
-	$images make coredns nordixorg/mconnect:v1.2 || \
-		die "images make"
 
 	# Create the base image
 	$XCLUSTER kernel_build || die "kernel_build"
@@ -112,16 +106,6 @@ cmd_build_release() {
 
 	# Overlays;
 
-	# Overlay systemd
-	cd $($XCLUSTER ovld systemd)
-	./systemd.sh download
-	./systemd.sh unpack
-	cd $XCLUSTER_WORKSPACE/util-linux-2.31
-	./configure; make -j$(nproc) || die util-linux-2.31
-	cd -
-	./systemd.sh make clean
-	./systemd.sh make -j$(nproc) || die systemd
-
 	# Iptools
 	cd $($XCLUSTER ovld iptools)
 	./iptools.sh download
@@ -131,51 +115,7 @@ cmd_build_release() {
 	cd $($XCLUSTER ovld etcd)
 	./etcd.sh download
 
-	# Gobgp
-	cd $($XCLUSTER ovld gobgp)
-	./gobgp.sh zdownload
-	./gobgp.sh zbuild || die Zebra
-	go get github.com/golang/dep/cmd/dep
-	go get github.com/osrg/gobgp
-	cd $GOPATH/src/github.com/osrg/gobgp
-	# **NOTE** 'master* does NOT work!!!
-	#git checkout v1.33
-	dep ensure
-	#go install ./gobgp/... ./gobgpd/... || die gobgp
-	go install ./cmd/...
-
-	# Cri-o
-	go get github.com/kubernetes-incubator/cri-tools/cmd/crictl
-	cd $GOPATH/src/github.com/kubernetes-incubator/cri-tools
-	git checkout v1.13.0   # Master doed NOT work!
-	make || die cri-o
-	go get -u github.com/kubernetes-incubator/cri-o
-	cd $GOPATH/src/github.com/kubernetes-incubator/cri-o
-	make install.tools || die cri-o
-	make || die cri-o
-	strip bin/*
-
-	# Plugins
-	go get github.com/containernetworking/plugins/
-	cd $GOPATH/src/github.com/containernetworking/plugins
-	./build.sh || die Plugins
-	strip bin/*
-
-	# Kubernetes
-	strip $KUBERNETESD/*
-	cd $($XCLUSTER ovld kubernetes)
-	./kubernetes.sh runc_download
-
-	# Kube-router
-	$me build_kube_router
-
 	cmd_cache_refresh
-
-	# Create the k8s image
-	cd $workdir/xcluster
-	. ./Envsettings.k8s
-	$XCLUSTER mkimage
-	$XCLUSTER ximage systemd etcd iptools kubernetes coredns mconnect images
 
 	now=$(date +%s)
 	echo "Elapsed time; $((now-begin)) sec"
@@ -190,19 +130,9 @@ cmd_build_kube_router() {
 }
 cmd_cache_refresh() {
 	$XCLUSTER cache --clear
-	$XCLUSTER cache systemd
-	SETUP=ipv6 $XCLUSTER cache systemd
 	$XCLUSTER cache iptools
 	SETUP=ipv6 $XCLUSTER cache iptools
-	$XCLUSTER cache etcd
 	SETUP=ipv6 $XCLUSTER cache etcd
-	$XCLUSTER cache gobgp
-	SETUP=ipv6 $XCLUSTER cache gobgp
-	$XCLUSTER cache skopeo
-	SETUP=ipv6 $XCLUSTER cache skopeo
-	$XCLUSTER cache kube-router
-	$XCLUSTER cache wireguard
-	SETUP=test $XCLUSTER cache wireguard
 }
 
 ##   release --version=ver
@@ -223,10 +153,17 @@ cmd_release() {
 
 	H=$T/workspace/xcluster
 	mkdir -p $H
-	for n in bzImage cache hd.img hd-k8s.img base-libs.txt; do
+	for n in bzImage cache hd.img base-libs.txt; do
 		cp -r $XCLUSTER_HOME/$n $H
 	done
 	chmod 444 $H/hd*
+	cat > $H/dns-spoof.txt <<EOF
+docker.io
+registry-1.docker.io
+k8s.gcr.io
+gcr.io
+registry.nordix.org
+EOF
 
 	H=$T/workspace/dropbear-$__dropbearver
 	mkdir -p $H

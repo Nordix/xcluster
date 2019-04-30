@@ -76,25 +76,6 @@ Clear the cache;
 xc cache --clear
 ```
 
-### Systemd
-
-This is by far the worst overlay to build. Read more in the overlay
-[readme](../ovl/systemd/README.md).
-
-```
-cd $($XCLUSTER ovld systemd)
-./systemd.sh download
-./systemd.sh unpack
-cd $XCLUSTER_WORKSPACE/util-linux-2.31
-./configure; make -j$(nproc)
-cd -
-./systemd.sh make clean
-./systemd.sh make -j$(nproc)
-# Cache it an never look back;
-xc cache systemd
-SETUP=ipv6 xc cache systemd
-```
-
 ### Iptools
 
 Tools such as `iptables` or `ipset` must be built to a specific kernel
@@ -249,7 +230,7 @@ chmod a+x $GOPATH/bin/mconnect
 eval $($XCLUSTER env | grep XCLUSTER_HOME)
 export __image=$XCLUSTER_HOME/hd-k8s.img
 xc mkimage
-xc ximage systemd etcd iptools kubernetes coredns mconnect images
+xc ximage etcd iptools kubernetes coredns mconnect images
 ```
 
 Test it as described in the [Quick-start](../README.md#quick-start).
@@ -263,15 +244,11 @@ Make sure the ovl cache looks like this;
 ```
 > xc cache --list
 Cache dir [.../workspace/xcluster/cache];
-ipv6/gobgp.tar.xz
 ipv6/iptools.tar.xz
-ipv6/systemd.tar.xz
 ipv6/etcd.tar.xz
 ipv6/skopeo.tar.xz
-default/kube-router.tar.xz
 default/gobgp.tar.xz
 default/iptools.tar.xz
-default/systemd.tar.xz
 default/etcd.tar.xz
 default/skopeo.tar.xz
 ```
