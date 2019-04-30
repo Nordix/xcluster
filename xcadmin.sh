@@ -95,27 +95,25 @@ cmd_build_release() {
 	$XCLUSTER dropbear_build || die dropbear_build
 	$XCLUSTER mkimage
 
-	# Overlays;
-
-	# Iptools
-	cd $($XCLUSTER ovld iptools)
-	./iptools.sh download
-	./iptools.sh build
-
-	# Etcd
-	cd $($XCLUSTER ovld etcd)
-	./etcd.sh download
-
 	cmd_cache_refresh
 
 	now=$(date +%s)
 	echo "Elapsed time; $((now-begin)) sec"
 }
 cmd_cache_refresh() {
+	if test -z "$__cache_workspace"; then
+		log "WARNING: Build ovl cache SKIPPED!"
+		return 0
+	fi
 	$XCLUSTER cache --clear
-	$XCLUSTER cache iptools
-	SETUP=ipv6 $XCLUSTER cache iptools
-	SETUP=ipv6 $XCLUSTER cache etcd
+	export __cached=$XCLUSTER_WORKSPACE/xcluster/cache
+	export XCLUSTER_WORKSPACE=$__cache_workspace
+	local o
+	for o in iptools etcd gobgp; do
+		log "Caching ovl [$o]"
+		$XCLUSTER cache $o
+		SETUP=ipv6 $XCLUSTER cache $o
+	done
 }
 
 ##   release --version=ver
@@ -165,7 +163,7 @@ EOF
 	cp $f $H
 
 	mkdir -p $T/bin
-	for f in mconnect coredns gobgp gobgpd; do
+	for f in mconnect coredns kubectl helm tiller; do
 		test -x $GOPATH/bin/$f || die "Not executable [$GOPATH/bin/$f]"
 		cp $GOPATH/bin/$f $T/bin
 	done
