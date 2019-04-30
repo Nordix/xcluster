@@ -204,7 +204,7 @@ the `xcluster` releases and must be downloaded. Please see the
 cd $HOME/xcluster
 . ./Envsettings.k8s
 # If you see "The image is not readable...", download the image.
-# (this have to be done only once, or when you want to upgrade it)
+# (this have to be done only once, or when you want to switch or upgrade the image)
 curl -L http://artifactory.nordix.org/artifactory/cloud-native/xcluster/images/hd-k8s.img.xz | xz -d > $__image
 # Build and start
 xc mkcdrom externalip; xc start
