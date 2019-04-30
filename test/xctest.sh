@@ -90,7 +90,7 @@ cmd_test() {
 			test_$t
 		done
 	else
-		for t in k8s k8s_ipv6 k8s_metallb; do
+		for t in k8s k8s_ipv6; do
 			test_$t
 		done
 	fi	
@@ -182,9 +182,14 @@ test_k8s_kube_router() {
 }
 
 test_k8s_metallb() {
+	tcase "Check env"
+	local x
+	for x in kubectl helm tiller; do
+		which $x > /dev/null || tdie "Not found [$x]"
+	done
 	# Kubernetes tests with kube-router;
 	tcase "Start xcluster for test with metallb"
-	$XCLUSTER mkcdrom gobgp metallb test $__xovl
+	$XCLUSTER mkcdrom gobgp metallb test $__xovl || tdie
 	$XCLUSTER $start
 	sleep 2
 
