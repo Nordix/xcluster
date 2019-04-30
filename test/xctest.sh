@@ -90,7 +90,7 @@ cmd_test() {
 			test_$t
 		done
 	else
-		for t in basic k8s k8s_ipv6 k8s_kube_router k8s_metallb; do
+		for t in k8s k8s_ipv6 k8s_metallb; do
 			test_$t
 		done
 	fi	

@@ -27,9 +27,21 @@ for s in $(echo "$SETUP" | tr ',' ' '); do
 done
 test "$setup_copied" != "yes" && cp -R $dir/default/* $tmp
 
-for n in $GOPATH/bin/gobgp $GOPATH/bin/gobgpd; do
-	test -x $n || die "Not executable [$n]"
-	cp $n $tmp/sbin
+getx() {
+	if test -x $GOPATH/bin/$1; then
+		echo $GOPATH/bin/$1
+		return 0
+	fi
+	local xcdir=$(dirname $XCLUSTER)
+	if test -x $xcdir/$1; then
+		echo $xcdir/$1
+		return 0
+	fi
+	die "Can't find executable [$1]"
+}
+for n in gobgp gobgpd; do
+	f=$(getx $n) || exit 1
+	cp $f $tmp/sbin
 done
 
 # Copy "zebra"

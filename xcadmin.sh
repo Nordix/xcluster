@@ -88,15 +88,6 @@ cmd_build_release() {
 		die "Failed to unpack diskim-$__diskimver"
 	sed -ie "s,-j4,-j$(nproc)," $DISKIM
 
-	# Build the image overlay early to get the "sudo" over with
-	mkdir -p $GOPATH/src/github.com/coredns
-	cd $GOPATH/src/github.com/coredns
-	git clone https://github.com/coredns/coredns.git
-	cd $GOPATH/src/github.com/coredns/coredns
-	make || die "make coredns"
-	mkdir -p $GOPATH/bin
-	mv coredns $GOPATH/bin
-
 	# Create the base image
 	$XCLUSTER kernel_build || die "kernel_build"
 	$XCLUSTER busybox_build || die "busybox_build"
@@ -119,14 +110,6 @@ cmd_build_release() {
 
 	now=$(date +%s)
 	echo "Elapsed time; $((now-begin)) sec"
-}
-cmd_build_kube_router() {
-	export GOROOT=$HOME/bin/go-1.10.4
-	export PATH=$GOROOT/bin:$PATH
-	go get -u github.com/cloudnativelabs/kube-router
-	go get github.com/matryer/moq
-	cd $GOPATH/src/github.com/cloudnativelabs/kube-router
-	make clean; make || die Kube-router
 }
 cmd_cache_refresh() {
 	$XCLUSTER cache --clear
@@ -182,9 +165,11 @@ EOF
 	cp $f $H
 
 	mkdir -p $T/bin
-	for f in mconnect coredns; do
+	for f in mconnect coredns gobgp gobgpd; do
+		test -x $GOPATH/bin/$f || die "Not executable [$GOPATH/bin/$f]"
 		cp $GOPATH/bin/$f $T/bin
 	done
+
 	cd $tmp
 	ar=/tmp/xcluster-$__version.tar
 	tar --group=0 --owner=0 -cf $ar xcluster
