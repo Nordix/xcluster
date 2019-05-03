@@ -19,6 +19,7 @@ for d in cpuset memory; do
 	mkdir /sys/fs/cgroup/$d
 	mount -t cgroup cgroup /sys/fs/cgroup/$d
 done
+mount --make-rshared /
 
 echo "export KUBECONFIG=/etc/kubernetes/kubeconfig" >> /etc/profile
 mkdir -p /var/lib/kubelet

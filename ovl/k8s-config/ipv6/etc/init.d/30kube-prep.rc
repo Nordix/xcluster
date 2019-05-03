@@ -19,6 +19,7 @@ for d in cpuset memory; do
 	mkdir /sys/fs/cgroup/$d
 	mount -t cgroup cgroup /sys/fs/cgroup/$d
 done
+mount --make-rshared /
 
 echo 'alias images="crictl --runtime-endpoint=unix:///var/run/crio/crio.sock images"' >> /etc/profile
 
