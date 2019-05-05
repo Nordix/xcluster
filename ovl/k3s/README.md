@@ -152,6 +152,16 @@ k3s agent --node-ip=192.168.1.2 --server https://192.168.1.1:6443 \
 #xc scaleout 3 4 ...etc
 ```
 
+With docker;
+```
+SETUP=manual xc mkcdrom xnet iptools k3s docker; xc start --nrouters=1 --nvm=2
+# On vm-001;
+export PATH=/docker:$PATH
+dockerd &
+k3s server --no-deploy traefik -docker &
+```
+
+
 Deploy [mconnect](https://github.com/Nordix/mconnect) as a test-pod;
 ```
 # On vm-001;

@@ -33,6 +33,12 @@ start_agent() {
 		$K3S_AGENT_OPTS > /var/log/k3s-agent.log 2>&1) &
 }
 
+# Start docker if present
+if test -x /docker/dockerd -a $i -gt 1; then
+	export PATH=/docker:$PATH
+	dockerd --registry-mirror=http://172.17.0.1 --insecure-registry 172.17.0.1 > /var/log/dockerd.log 2>&1 &
+fi
+
 # Allow overlays to alter the startup. Normally only K3S_AGENT_OPTS
 # needs to be set, but the start functions can be re-defined for a
 # "full-custom" start up.
@@ -49,4 +55,5 @@ if test $i -eq 1; then
 fi
 
 # Start agent only on all nodes except vm-001
+test -x /docker/dockerd && K3S_AGENT_OPTS+=" -docker"
 start_agent
