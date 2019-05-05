@@ -9,12 +9,7 @@ i=$(hostname | cut -d- -f2 | sed -re 's,^0+,,')
 
 test $i -le 200 || exit 0
 
-# Generate a /etc/hosts
-cat > /etc/hosts <<EOF
-127.0.0.1 localhost
-::1       ip6-localhost ip6-loopback
-
-EOF
+# Add vm 1-32 to /etc/hosts
 for x in $(seq 1 32); do
 	if test $x -eq $i; then
 		printf "127.0.1.1 vm-%03d\\n" $x >> /etc/hosts
