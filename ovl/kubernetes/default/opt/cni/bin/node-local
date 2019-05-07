@@ -17,5 +17,15 @@ test -n "$HOST_LOCAL" || HOST_LOCAL=/opt/cni/bin/host-local
 # Get the node number
 i=$(echo $HOSTNAME | cut -d- -f2 | sed -re 's,^0+,,')
 
+if test -r /tmp/podCIDR; then
+	range=$(cat /tmp/podCIDR)
+else
+	range=$(kubectl get node $HOSTNAME -o json | jq -r .spec.podCIDR)
+	logger "podCIDR: [$range]"
+	test -n "$range" && echo $range > /tmp/podCIDR
+fi
+gw=$(echo $range | sed -e 's,0/24,1,')
+echo $range | grep -q : && gw=$(echo $range | sed -e 's,0/120,1,')
+
 # Emit the config with ranges added;
-jq ".ipam = {type: \"host-local\", ranges: [[{subnet: \"11.0.$i.0/24\", gateway: \"11.0.$i.1\"}]]}" | $HOST_LOCAL
+jq ".ipam = {type: \"host-local\", ranges: [[{subnet: \"$range\", gateway: \"$gw\"}]]}" | $HOST_LOCAL

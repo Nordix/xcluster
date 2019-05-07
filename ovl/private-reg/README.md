@@ -26,6 +26,18 @@ docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' reg
 # Stop (if you want);
 docker container stop registry
 docker container rm -v registry
+
+# Secure registry;
+certd=$XCLUSTER_WORKSPACE/cert
+openssl genrsa -out $certd/docker.key 2048
+openssl req -new -x509 -sha256 -key $certd/docker.key -out $certd/dockercrt -days 3650
+
+sudo docker run -d -p 80:5000 --restart=always --name registry \
+  -v $certd:/certs \
+  -e REGISTRY_HTTP_TLS_CERTIFICATE=/certs/docker.crt \
+  -e REGISTRY_HTTP_TLS_KEY=/certs/docker.key \
+  -e REGISTRY_STORAGE_DELETE_ENABLED=true \
+  registry:2
 ```
 
 ### Ipv6

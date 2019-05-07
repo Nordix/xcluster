@@ -40,8 +40,3 @@ if false; then
 	done
 fi
 
-for x in $(seq 1 8); do
-	test $x = $i && continue
-	ip -6 ro add 1000::2:11.0.$x.0/120 via 1000::1:192.168.1.$x
-done
-
