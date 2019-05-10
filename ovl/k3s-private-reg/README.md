@@ -7,17 +7,6 @@ local registry.
 
 
 
-### Necessary PR
-
-Containerd let you [specify
-mirrors](https://github.com/containerd/cri/blob/master/docs/registry.md#configure-registry-endpoint)
-which may be used for re-direct to a local (unsecure) registry.
-
-At the moment of writing the PR for configuring `containerd`
-[#381](https://github.com/rancher/k3s/pull/381) is not merged, so you
-must apply it and build locally.
-
-
 ## Setup the private registry
 
 See ovl [private-reg](../private-reg/README.md). Ipv6 is not needed
@@ -34,16 +23,44 @@ images lreg_cache docker.io/coredns/coredns:1.3.0
 ## Usage
 
 ```
+eval $($XCLUSTER env | grep XCLUSTER_HOME)
+export __image=$XCLUSTER_HOME/hd-k3s.img
 xc mkcdrom k3s-private-reg ...(other ovls); xc starts
 
 ```
+
+### DNS spoof
+
+If the `$__dns_spoof` variable points to a file with FQDN's those will
+be set to the local registry in `/etc/hosts`
+
+```
+cat $__dns_spoof
+docker.io
+registry-1.docker.io
+k8s.gcr.io
+gcr.io
+registry.nordix.org
+# On cluster;
+head /etc/hosts
+127.0.0.1 localhost
+::1       ip6-localhost ip6-loopback
+172.17.0.1 docker.io
+172.17.0.1 registry-1.docker.io
+172.17.0.1 k8s.gcr.io
+172.17.0.1 gcr.io
+172.17.0.1 registry.nordix.org
+192.168.1.1 vm-001
+192.168.1.2 vm-002
+```
+
 
 ### Alter the sites that shall be cached
 
 Add (or remove) sites in file;
 
 ```
-./default/etc/containerd.conf
+./default/var/lib/rancher/k3s/agent/etc/containerd/config.toml.tmpl
 ```
 
 ### Tip
@@ -66,3 +83,4 @@ on port 10053. A message about this is printed the first time the
 ```
 tail -f /tmp/$USER/coredns.log
 ```
+
