@@ -53,12 +53,47 @@ cmd_in_docker() {
 }
 
 ##   docker_ls <image>
+##     List files in a docker image
+##   docker_ls_layers <image>
+##     List files in a docker image per layer
+##   docker_save_layers <image> <layers...> | tar t
+##     Saves files from layers to tar on stdout
 ##
 cmd_docker_ls() {
 	cmd_in_docker $1 || die "Can't find image [$1]"
 	local c=$(docker create $1) || die "FAILED; docker create"
 	docker export $c | tar t | sort
 	docker rm $c > /dev/null
+}
+
+cmd_docker_ls_layers() {
+	test -n "$1" || die "No image"
+	mkdir -p $tmp
+	docker inspect "$1" > $tmp/out || die "Failed; docker inspect"
+	docker save $1 > $tmp/img.tar || die "Failed; docker save"
+
+	local l
+	for l in $(tar tf $tmp/img.tar | grep layer.tar); do
+		echo "=== Layer; $l"
+		tar -xOf $tmp/img.tar $l | tar t
+	done
+}
+
+cmd_docker_save_layers() {
+	test -n "$1" || die "No image"
+	test -n "$2" || die "No layer"
+	mkdir -p $tmp/files
+	docker inspect "$1" > $tmp/out || die "Failed; docker inspect"
+	docker save $1 > $tmp/img.tar || die "Failed; docker save"
+	shift
+	cd $tmp/files
+	local l
+	for l in $@; do
+		tar -xOf $tmp/img.tar $l | tar x
+	done
+	tar c .
+	cd
+	rm -rf $tmp
 }
 
 ##   lreg_ls
