@@ -23,6 +23,11 @@ for s in $(echo "$SETUP" | tr ',' ' '); do
 done
 test "$setup_copied" != "yes" && test -d $dir/default && cp -R $dir/default/* $tmp
 
+n=$GOPATH/bin/coredns
+test -x $n || die "Not executable [$n]"
+mkdir -p $tmp/bin
+cp $n $tmp/bin
+
 cd $tmp
 tar cf "$1" *
 cd - > /dev/null
