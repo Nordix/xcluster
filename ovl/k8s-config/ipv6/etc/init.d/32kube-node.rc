@@ -31,7 +31,7 @@ kubelet --container-runtime=remote --address=:: --node-ip=1000::1:192.168.1.$i \
 	--container-runtime-endpoint=unix:///var/run/crio/crio.sock \
 	--image-service-endpoint=unix:///var/run/crio/crio.sock \
 	--register-node=true --kubeconfig $KUBECONFIG \
-	--network-plugin=cni --allow-privileged \
+	--network-plugin=cni \
 	--runtime-cgroups=/systemd/system.slice \
 	--kubelet-cgroups=/systemd/system.slice > /var/log/kubelet.log 2>&1 &
 
