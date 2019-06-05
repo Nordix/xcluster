@@ -1,0 +1,10 @@
+127.0.0.1		localhost
+::1				ip6-localhost ip6-loopback
+192.168.1.1		vm-001 vm-001.localdomain
+192.168.1.2		vm-002 vm-002.localdomain
+192.168.1.3		vm-003 vm-003.localdomain
+192.168.1.4		vm-004 vm-004.localdomain
+192.168.1.5		vm-005 vm-005.localdomain
+192.168.1.6		vm-006 vm-006.localdomain
+192.168.1.7		vm-007 vm-007.localdomain
+192.168.1.8		vm-008 vm-008.localdomain
