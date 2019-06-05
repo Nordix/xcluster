@@ -39,5 +39,5 @@ Note the used images are pre-pulled, no internet access is needed.
 ```
 
 The `crio` binary is assumed to be in
-`$GOPATH/src/github.com/cri-o/cri-o/bin`, if not lease edit the
-`./tar` script.
+`$GOPATH/src/github.com/cri-o/cri-o/bin`, if it is some place else,
+please edit the `./tar` script.
