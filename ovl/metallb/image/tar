@@ -27,7 +27,7 @@ for s in $(echo "$SETUP" | tr ',' ' '); do
 done
 test "$setup_copied" != "yes" -a -d $dir/default && cp -R $dir/default/* $tmp
 
-$XCLUSTER cplib --dest=$tmp $tmp/bin/*
+$XCLUSTER cplib --base-libs=/dev/null --dest=$tmp $tmp/bin/*
 $XCLUSTER cploader --dest=$tmp
 
 cd $tmp

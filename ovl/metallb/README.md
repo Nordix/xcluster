@@ -2,7 +2,7 @@ Xcluster overlay - metallb
 ==========================
 
 For experiments and tests with the
-[metallb](https://github.com/google/metallb).
+[metallb](https://github.com/danderson/metallb).
 
 The `metallb` is not a load-balancer despite the `lb` suffix. It makes
 the service `type: LoadBalancer` work in a similar way as in public
@@ -82,8 +82,21 @@ kubectl apply -f /etc/kubernetes/mconnect.yaml
 
 ## Home-built pod
 
-For internal experiments a local pod can be used;
+For internal experiments a local pod can be used Read the instructions
+[contributing](https://metallb.universe.tf/community/#contributing).
 
+Build;
+```
+go get -u go.universe.tf/metallb
+cd $GOPATH/src/go.universe.tf/metallb
+git checkout v0.7.3
+go install go.universe.tf/metallb/speaker
+go install go.universe.tf/metallb/controller
+strip $GOPATH/bin/controller $GOPATH/bin/speaker
+images mkimage --force --upload ./image
+```
+
+Ipv4;
 ```
 xc mkcdrom metallb gobgp private-reg; xc starts
 # On cluster;
@@ -102,21 +115,7 @@ ip ro
 mconnect -address 10.0.0.2:5001 -nconn 400
 ```
 
-Ipv4 private-reg setup;
-
-```
-cdo metallb
-images mkimage --force ./image
-img=library/metallb:0.7.3
-skopeo copy --dest-tls-verify=false docker-daemon:$img docker://172.17.0.2:5000/$img
-xc mkcdrom metallb gobgp private-reg; xc start
-# On cluster
-crictl --runtime-endpoint=unix:///var/run/crio/crio.sock pull library/metallb:0.7.3
-```
-
-
-IPv6 setup;
-
+IPv6;
 ```
 # Pre-pull
 images make coredns metallb nordixorg/mconnect:v1.2
@@ -131,17 +130,6 @@ mconnect -address [1000::]:5001 -nconn 400
 Build
 -----
 
-Read the instructions on the
-[contributing](https://metallb.universe.tf/community/#contributing) page.
-
-```
-go get -u go.universe.tf/metallb
-cd $GOPATH/src/go.universe.tf/metallb
-git checkout v0.7.3
-go install go.universe.tf/metallb/speaker
-go install go.universe.tf/metallb/controller
-strip $GOPATH/bin/controller $GOPATH/bin/speaker
-```
 
 IP address sharing
 ------------------
