@@ -94,11 +94,11 @@ cmd_env() {
 	test -n "$ARCHIVE" || ARCHIVE=$HOME/Downloads
 	export ARCHIVE
 
-	test -n "$__kver" || __kver=linux-5.0
+	test -n "$__kver" || __kver=linux-5.1.7
 	test -n "$__kobj" || __kobj=$XCLUSTER_HOME/obj
 	test -n "$__kbin" || __kbin=$XCLUSTER_HOME/bzImage
 	test -n "$__kcfg" || __kcfg=$dir/config/$__kver
-	test -n "$__bbver" || __bbver=busybox-1.28.1
+	test -n "$__bbver" || __bbver=busybox-1.30.1
 	test -n "$__kvm" || __kvm=kvm
 	test -n "$__image" || __image=$XCLUSTER_HOME/hd.img
 	test -n "$__cdrom" || __cdrom=$XCLUSTER_TMP/cdrom.iso
@@ -239,7 +239,7 @@ cmd_kernel_build() {
 cmd_busybox_build() {
 	cmd_env
 	export DISKIM_WORKSPACE=$XCLUSTER_WORKSPACE
-	$DISKIM busybox_build --bbcfg=$dir/config/$__bbver \
+	$DISKIM busybox_build --bbver=$__bbver --bbcfg=$dir/config/$__bbver \
 		--menuconfig=$__menuconfig \
 		|| die "BusyBox build failed [$__bbver]"
 }
