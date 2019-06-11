@@ -58,12 +58,18 @@ cmd_in_docker() {
 ##     List files in a docker image per layer
 ##   docker_save_layers <image> <layers...> | tar t
 ##     Saves files from layers to tar on stdout
+##   docker_export <image>
+##     Same as "docker export" byt for an image
 ##
 cmd_docker_ls() {
+	cmd_docker_export $1 | tar t | sort
+}
+
+cmd_docker_export() {
 	cmd_in_docker $1 || die "Can't find image [$1]"
-	local c=$(docker create $1) || die "FAILED; docker create"
-	docker export $c | tar t | sort
-	docker rm $c > /dev/null
+	local c=$(docker create $1 sh) || die "FAILED; docker create"
+	docker export $c
+	docker rm $c > /dev/null 2>&1
 }
 
 cmd_docker_ls_layers() {
