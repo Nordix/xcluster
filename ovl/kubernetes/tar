@@ -61,7 +61,7 @@ f=$ARCHIVE/runc.amd64
 test -x $f || die "Not executable [$f]"
 mkdir -p $tmp/bin
 cp $f $tmp/bin/runc
-d=$GOPATH/src/github.com/kubernetes-incubator/cri-o/bin
+d=$GOPATH/src/github.com/cri-o/cri-o/bin
 for f in conmon crio crio-config pause; do
 	test -x $d/$f || die "Not executable [$d/$f]"
 	cp $d/$f $tmp/bin

@@ -197,6 +197,24 @@ Download with;
 ./kubernetes.sh runc_download
 ```
 
+
+```
+go get github.com/cri-o/cri-o
+cd $GOPATH/src/github.com/cri-o/cri-o
+make
+git status -u --ignored
+
+```
+
+
+
+
+
+
+
+
+
+
 <a name="downloaded"/>
 
 ### Use a downloaded version

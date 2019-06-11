@@ -2,6 +2,18 @@
 
 A small ovl for `cri-o` testing.
 
+## Build cri-o
+
+```
+cd $GOPATH/src/github.com/cri-o/cri-o
+git reset --hard HEAD
+git pull
+git clean -dxf
+curl -L https://github.com/cri-o/cri-o/pull/2447.patch | patch -p1
+make
+```
+
+
 ## Usage
 
 ```
@@ -12,6 +24,7 @@ xc mkcdrom crio-test; xc starts
 vm 2   # Open a xterm on vm-002
 # Re-build - re-start
 cd $GOPATH/src/github.com/cri-o/cri-o
+git clean -dxf
 make
 xc mkcdrom crio-test; xc starts
 ```
