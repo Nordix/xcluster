@@ -146,13 +146,21 @@ lsimages() {
 	crictl --runtime-endpoint=unix:///var/run/crio/crio.sock images
 }
 
+test_namespaces() {
+	tcase "Check namespaces (and API-server availability)"
+	pushv 60 30 2
+	tex "$kubectl get namespace default 2>&1 | ogrep -E '^default *Active'" || tdie	
+	tex "$kubectl get namespace kube-system 2>&1 | ogrep -E '^kube-system *Active'" || tdie	
+	popv
+}
+
 ##  test_coredns
 ##    Wait for the coredns pod to become "Running".
 ##
 test_coredns() {
 	tcase "Wait for the coredns pod"
 	pushv 60 30 2
-	tex "$kubectl get pods 2>&1 | grep -E '^coredns.*Running'" || tdie
+	tex "$kubectl get pods 2>&1 | ogrep -E '^coredns.*Running'" || tdie
 	popv
 }
 
@@ -164,6 +172,26 @@ test_nodes() {
 	pushv 30 30 1
 	tex "$kubectl get nodes 2>&1 | ogrep vm-001" || tdie
 	popv
+}
+
+##  get_pod <name>
+##    Print the pod-id (used for instance for "kubectl exec"). Print "null"
+##    if the pod can't be found.
+##
+get_pod() {
+	test -n "$__podi" || __podi=0
+	$kubectl -o json get pods -l "app=$1" | jq -r .items[$__podi].metadata.name
+}
+
+##  kubectl_exec <pod> <kubectl-exec options...>
+##    Execute a command in a pod (container).
+##
+kubectl_exec() {
+	local podid=$(get_pod $1)
+	test "$podid" = "null" && tdie "Pod not found [$1]"
+	shift
+	echo "[$kubectl exec $podid $@]"
+	$kubectl exec $podid $@
 }
 
 ##  start_mconnect <manifest>
