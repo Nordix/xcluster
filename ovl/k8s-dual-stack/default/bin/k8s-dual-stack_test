@@ -1,0 +1,102 @@
+#! /bin/sh
+##
+## k8s-dual-stack_test --
+##
+##   Test script for k8s-dual-stack executed in xcluster.
+##
+## Commands;
+##
+
+prg=$(basename $0)
+dir=$(dirname $0); dir=$(readlink -f $dir)
+me=$dir/$prg
+tmp=/tmp/${prg}_$$
+
+die() {
+	echo "ERROR: $*" >&2
+	rm -rf $tmp
+	exit 1
+}
+help() {
+	grep '^##' $0 | cut -c3-
+	rm -rf $tmp
+	exit 0
+}
+test -n "$1" || help
+echo "$1" | grep -qi "^help\|-h" && help
+
+log() {
+	echo "$prg: $*" >&2
+}
+dbg() {
+	test -n "$__verbose" && echo "$prg: $*" >&2
+}
+cmd_tcase_check_namespaces() {
+	test_namespaces
+}
+cmd_tcase_check_nodes() {
+	test_nodes
+}
+
+cmd_tcase_check_coredns() {
+	test_coredns
+}
+
+cmd_tcase_start_alpine() {
+	tcase "Starting alpine"
+	$kubectl apply -f /etc/kubernetes/alpine.yaml || tdie
+}
+
+cmd_tcase_check_alpine() {
+	tcase "Check alpine"
+	pushv 60 30 2
+	tex "npods alpine-deployment- 4" || tdie
+	popv
+}
+
+cmd_tcase_check_podcidrs() {
+	tcase "Check the podCIDRs item in a node object"
+	$kubectl get node $(hostname) -o json | jq -r .spec.podCIDRs | \
+		ogrep '11\.0.*/24' || tdie
+	$kubectl get node $(hostname) -o json | jq -r .spec.podCIDRs | \
+		ogrep '1100:.*/24' || tdie
+}
+
+cmd_tcase_check_podips() {
+	tcase "Check the podIPs item in a pod object"
+	local pod=$(get_pod alpine)
+	$kubectl get pod $pod -o json | jq .status.podIPs | ogrep '11\.0\.' || tdie
+	$kubectl get pod $pod -o json | jq .status.podIPs | ogrep '1100:' || tdie
+}
+
+
+. /etc/profile
+. /usr/lib/xctest
+indent='  '
+
+
+# Get the command
+cmd=$1
+shift
+grep -q "^cmd_$cmd()" $0 || die "Invalid command [$cmd]"
+
+while echo "$1" | grep -q '^--'; do
+	if echo $1 | grep -q =; then
+		o=$(echo "$1" | cut -d= -f1 | sed -e 's,-,_,g')
+		v=$(echo "$1" | cut -d= -f2-)
+		eval "$o=\"$v\""
+	else
+		o=$(echo "$1" | sed -e 's,-,_,g')
+		eval "$o=yes"
+	fi
+	shift
+done
+unset o v
+long_opts=`set | grep '^__' | cut -d= -f1`
+
+# Execute command
+trap "die Interrupted" INT TERM
+cmd_$cmd "$@"
+status=$?
+rm -rf $tmp
+exit $status
