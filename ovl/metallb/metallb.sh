@@ -114,10 +114,21 @@ test_local_ipv6() {
 		etcd private-reg test gobgp metallb k8s-config
 	xcstart
 
-	otc 4 nodes "config default-ipv6" start "start_mconnect svc-local" \
-		"lbip mconnect-local 1000::" "lbip mconnect-udp-local 1000::"
-	otc 201 "peers 1000::1:c0a8:10" "route 1000::" "tplocal [1000::]"
+	otc 4 nodes
+	otc 4 "config default-ipv6"
+	otc 4 start
+	otc 4 "start_mconnect svc-local"
+	otc 4 "lbip mconnect-local 1000::"
+	otc 4 "lbip mconnect-udp-local 1000::"
+	otc 201 "peers 1000::1:c0a8:10"
+	
+	# If the ipv6 patch for metallb is not applied we must set the
+	# routes manually
+	otc 201 configure_routes
 
+	otc 201 "route 1000::"
+	otc 201 "tplocal [1000::]"
+	
 	local adr6=8000::/96
 	otc 1 "lroute $adr6"
 	otc 2 "lroute $adr6"
