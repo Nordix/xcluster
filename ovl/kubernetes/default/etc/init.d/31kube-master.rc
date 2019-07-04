@@ -38,14 +38,14 @@ controller() {
 		--allocate-node-cidrs=true --cluster-cidr=11.0.0.0/16 \
 		--controllers="*,serviceaccount,serviceaccount-token" \
 		--service-account-private-key-file=/srv/kubernetes/server.key \
-		--root-ca-file=/srv/kubernetes/server.crt \
+		--root-ca-file=/srv/kubernetes/server.crt --leader-elect=false \
 		>> $log 2>&1
 }
 
 scheduler() {
 	local log=/var/log/kube-scheduler.log
 	logger -s -t K8s "STARTED: kube-scheduler at $(date)" >> log 2>&1
-	kube-scheduler --kubeconfig $KUBECONFIG \
+	kube-scheduler --kubeconfig $KUBECONFIG --leader-elect=false \
 		>> $log 2>&1
 }
 
