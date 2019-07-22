@@ -85,9 +85,14 @@ test_basic_ipv6() {
 		etcd private-reg test gobgp metallb k8s-config
 	xcstart
 
-	otc 4 nodes "config default-ipv6" start "start_mconnect svc1-ipv6" \
-		"lbip mconnect 1000::2" "lbip mconnect-udp 1000::2"
-	otc 201 "peers 1000::1:c0a8:10" "route 1000::2" "mconnect [1000::2]"
+	otc 4 nodes "config default-ipv6"
+	otc 4 start "start_mconnect svc1-ipv6"
+	otc 4 "lbip mconnect 1000::2"
+	otc 4 "lbip mconnect-udp 1000::2"
+	otc 201 configure_routes
+	otc 201 "peers 1000::1:c0a8:10"
+	otc 201 "route 1000::2"
+	otc 201 "mconnect [1000::2]"
 
 	tcase "Stop xcluster"
 	$XCLUSTER stop
