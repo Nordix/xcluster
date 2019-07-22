@@ -85,16 +85,54 @@ kubectl apply -f /etc/kubernetes/mconnect.yaml
 For internal experiments a local pod can be used Read the instructions
 [contributing](https://metallb.universe.tf/community/#contributing).
 
+Clone;
+```
+mkdir -p $GOPATH/src/github.com/danderson
+cd $GOPATH/src/github.com/danderson
+git clone git@github.com:Nordix/metallb.git
+cd metallb
+git remote add upstream git@github.com:danderson/metallb.git
+git remote set-url --push upstream no_push
+git remote -v
+```
+
+Sync;
+```
+git checkout master
+# Or;
+git checkout nordix-dev
+git fetch upstream
+git rebase upstream/master
+git push
+```
+
 Build;
 ```
-go get -u go.universe.tf/metallb
-cd $GOPATH/src/go.universe.tf/metallb
-git checkout v0.7.3
-go install go.universe.tf/metallb/speaker
-go install go.universe.tf/metallb/controller
+cd $GOPATH/src/github.com/danderson/metallb
+go install github.com/danderson/metallb/speaker
+go install github.com/danderson/metallb/controller
 strip $GOPATH/bin/controller $GOPATH/bin/speaker
 images mkimage --force --upload ./image
 ```
+
+Update on new branch;
+```
+git checkout v0.7.4-nordix
+git push --set-upstream origin v0.7.4-nordix
+git tag v0.7.4-nordix-alpha2
+git push origin v0.7.4-nordix-alpha2
+```
+
+Build on an old release;
+```
+mkdir -p $GOPATH/src/go.universe.tf
+cd $GOPATH/src/go.universe.tf
+git clone git@github.com:Nordix/metallb.git
+cd metallb
+git checkout v0.7.4-nordix-alpha2
+go install ./controller/...
+```
+
 
 Ipv4;
 ```
@@ -125,10 +163,6 @@ SETUP=ipv6 xc mkcdrom etcd coredns metallb gobgp private-reg k8s-config; xc star
 # Outside cluster;
 mconnect -address [1000::]:5001 -nconn 400
 ```
-
-
-Build
------
 
 
 IP address sharing
