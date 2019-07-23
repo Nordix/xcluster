@@ -396,7 +396,8 @@ cmd_libs() {
 	mkdir -p $tmp
 	for f in $@; do
 		test -x $f || continue
-		ldd $f | grep '=> /' | sed -re 's,.*=> (/[^ ]+) .*,\1,' >> $libs
+		ldd $f | grep '=> /' | sed -re 's,.*=> (/[^ ]+) .*,\1,' | \
+			grep -v "$XCLUSTER_WORKSPACE" >> $libs
 	done
 
 	if test -r $__base_libs; then
