@@ -41,12 +41,13 @@ git fetch upstream
 git rebase upstream/master
 git push
 # Apply the patch on a new branch
-b=$USER-pr-73977
+b=dual-stack
 git checkout -b $b
-curl -L https://github.com/kubernetes/kubernetes/pull/73977.patch | patch -p1
+curl -L https://github.com/kubernetes/kubernetes/pull/79386.patch | patch -p1
+curl -L https://github.com/kubernetes/kubernetes/pull/79576.patch | patch -p1
 find . -name '*.rej'  # If any, see below
 rm $(find . -name '*.orig')
-git commit -m "Applied pr-73977" -a
+git commit -m "Applied $b" -a
 # Build
 for n in kube-controller-manager kube-scheduler kube-apiserver \
   kube-proxy kubectl kubelet; do
@@ -75,6 +76,21 @@ xc mkcdrom; xc starts
 kubectl version    # Check the git commit
 ./test/xctest.sh test --xovl=private-reg \
   k8s k8s_ipv6 k8s_metallb k8s_kube_router > $XCLUSTER_TMP/xtest.log
+```
+
+### Build from a development branch
+
+```
+# Save the original and clone the development branch
+cd $GOPATH/src/k8s.io
+mv kubernetes kubernetes-orig
+git clone --depth 1 -b dualstack-phase2-kubeproxy git@github.com:vllry/kubernetes.git kubernetes-vllry
+git clone --depth 1 -b phase2-dualstack git@github.com:khenidak/kubernetes.git kubernetes-khenidak
+for n in kube-controller-manager kube-scheduler kube-apiserver \
+  kube-proxy kubectl kubelet; do
+    make WHAT=cmd/$n
+done
+strip _output/bin/*
 ```
 
 
