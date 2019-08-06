@@ -25,8 +25,7 @@ apiserver() {
 		--authorization-mode=AlwaysAllow \
 		--feature-gates IPv6DualStack=true \
 		--etcd-servers=http://localhost:2379 --anonymous-auth=false \
-		--service-cluster-ip-range=12.0.0.0/16 \
-		--secondary-service-cluster-ip-range=fd00:4000::/112 \
+		--service-cluster-ip-range=12.0.0.0/16,fd00:4000::/112 \
 		--enable-admission-plugins=ServiceAccount,AlwaysAdmit \
 		--client-ca-file=/srv/kubernetes/ca.crt \
 		--tls-private-key-file=/srv/kubernetes/server.key \
@@ -42,14 +41,14 @@ controller() {
 		--controllers="*,serviceaccount,serviceaccount-token" \
 		--feature-gates IPv6DualStack=true \
 		--service-account-private-key-file=/srv/kubernetes/server.key \
-		--root-ca-file=/srv/kubernetes/server.crt \
+		--root-ca-file=/srv/kubernetes/server.crt --leader-elect=false \
 		>> $log 2>&1
 }
 
 scheduler() {
 	local log=/var/log/kube-scheduler.log
 	logger -s -t K8s "STARTED: kube-scheduler at $(date)" >> log 2>&1
-	kube-scheduler --kubeconfig $KUBECONFIG \
+	kube-scheduler --kubeconfig $KUBECONFIG --leader-elect=false \
 		--feature-gates IPv6DualStack=true \
 		>> $log 2>&1
 }

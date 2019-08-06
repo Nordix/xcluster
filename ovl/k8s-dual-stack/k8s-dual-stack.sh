@@ -81,7 +81,7 @@ test_basic4() {
 	tlog "Dual-stack on an ipv4-only cluster"
 
 	tcase "Build cluster"
-	$XCLUSTER mkcdrom private-reg k8s-dual-stack test || tdie
+	$XCLUSTER mkcdrom private-reg k8s-dual-stack kube-proxy test || tdie
 	xcstart
 
 	otc 1 check_namespaces
@@ -92,6 +92,11 @@ test_basic4() {
 	otc 2 check_alpine
 	otc 3 check_podips
 
+	otc 3 start_mconnect
+	otc 3 create_ipv6_svc
+	otc 3 ipv4_traffic
+	otc 3 ipv6_traffic
+	
 	test "$__no_stop" = "yes" && return 0
 	tcase "Stop xcluster"
     $XCLUSTER stop

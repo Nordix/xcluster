@@ -69,6 +69,29 @@ cmd_tcase_check_podips() {
 	$kubectl get pod $pod -o json | jq .status.podIPs | ogrep '1100:' || tdie
 }
 
+cmd_tcase_start_mconnect() {
+	start_mconnect /etc/kubernetes/mconnect.yaml || tdie
+}
+
+cmd_tcase_create_ipv6_svc() {
+	tcase "Create a ipv6 service"
+	$kubectl apply -f /etc/kubernetes/mconnect-svc-ipv6.yaml || tdie
+}
+
+cmd_tcase_ipv4_traffic() {
+	local adr=$($kubectl get svc -o json mconnect | jq -r .spec.clusterIP)
+	tcase "Test ipv4 traffic to [$adr]"
+	test -n "$adr" || tdie "Address empty"
+	do_mconnect $adr || tdie
+}
+
+cmd_tcase_ipv6_traffic() {
+	local adr=$($kubectl get svc -o json mconnect-ipv6 | jq -r .spec.clusterIP)
+	tcase "Test ipv6 traffic to [$adr]"
+	test -n "$adr" || tdie "Address empty"
+	do_mconnect "[$adr]" || tdie
+}
+
 
 . /etc/profile
 . /usr/lib/xctest

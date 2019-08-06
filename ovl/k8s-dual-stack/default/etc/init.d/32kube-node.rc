@@ -24,7 +24,7 @@ kubelet --container-runtime=remote --node-ip=192.168.1.$i \
 	--register-node=true --kubeconfig $KUBECONFIG \
 	--network-plugin=cni > /var/log/kubelet.log 2>&1 &
 
-kube-proxy --config /etc/kubernetes/kube-proxy.config \
+kube-proxy --config /etc/kubernetes/kube-proxy.config --v 7 \
 	> /var/log/kube-proxy.log 2>&1 &
 
 # NOTE: For --proxy-mode=iptables you *must* uncomment this line!

@@ -30,6 +30,14 @@ kubectl get pod $p -o json | jq .status.podIPs
 kubectl exec $p ifconfig
 ```
 
+Start with proxy-mode=script;
+```
+rm $GOPATH/src/k8s.io/kubernetes
+ln -s kubernetes-orig $GOPATH/src/k8s.io/kubernetes
+xc mkcdrom k8s-dual-stack script-mode; xc starts
+```
+
+
 ## Build
 
 Apply PR and build;
@@ -91,6 +99,37 @@ for n in kube-controller-manager kube-scheduler kube-apiserver \
     make WHAT=cmd/$n
 done
 strip _output/bin/*
+```
+
+### Update and re-run
+
+```
+cd $GOPATH/src/k8s.io/kubernetes
+make WHAT=cmd/kube-proxy
+#
+xc mkcdrom k8s-dual-stack kube-proxy; xc starts
+```
+
+Test;
+```
+kubectl apply -f /etc/kubernetes/mconnect.yaml
+kubectl apply -f /etc/kubernetes/mconnect-svc-ipv6.yaml
+grep syncProxyRules /var/log/kube-proxy.log
+kubectl get svc
+ip -4 addr show dev kube-ipvs0
+ip -6 addr show dev kube-ipvs0
+node-util update_routes --dry-run --log-file=/dev/tty
+kubectl -o json get nodes | jq '.items[].spec.podCIDRs'
+mconnect -address <<address-here>>:5001 -nconn 100
+```
+
+#### The BoundedFrequencyRunner
+
+```
+gdoc k8s.io/kubernetes/pkg/util/async
+grep minSyncPeriod /var/log/kube-proxy.log
+grep "Loop running" /var/log/kube-proxy.log
+grep SyncLoop /var/log/kube-proxy.log
 ```
 
 
