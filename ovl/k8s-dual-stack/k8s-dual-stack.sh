@@ -81,7 +81,7 @@ test_basic4() {
 	tlog "Dual-stack on an ipv4-only cluster"
 
 	tcase "Build cluster"
-	$XCLUSTER mkcdrom private-reg k8s-dual-stack kube-proxy test || tdie
+	$XCLUSTER mkcdrom private-reg k8s-dual-stack test || tdie
 	xcstart
 
 	otc 1 check_namespaces
