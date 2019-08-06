@@ -92,6 +92,24 @@ cmd_tcase_ipv6_traffic() {
 	do_mconnect "[$adr]" || tdie
 }
 
+cmd_tcase_ipv4_traffic_dn() {
+	local adr="mconnect.default.svc.xcluster"
+	tcase "Test ipv4 traffic to [$adr]"
+	do_mconnect $adr || tdie
+}
+
+cmd_tcase_ipv6_traffic_dn() {
+	local adr="mconnect-ipv6.default.svc.xcluster"
+	tcase "Test ipv6 traffic to [$adr]"
+	do_mconnect $adr || tdie
+}
+
+cmd_tcase_external_ipv6_traffic() {
+	local adr="1000::5"
+	tcase "Test external ipv6 traffic to [$adr]"
+	ip -6 ro add 1000::/112 via 1000::1:c0a8:103 || tdie
+	do_mconnect "[$adr]" || tdie
+}
 
 . /etc/profile
 . /usr/lib/xctest

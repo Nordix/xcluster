@@ -9,6 +9,7 @@ Use xcluster v2.1 and the default image.
 ```
 xc mkcdrom k8s-dual-stack; xc starts
 # On cluster;
+kubectl get nodes
 kubectl get node vm-002 -o json | jq .spec
 kubectl apply -f /etc/kubernetes/alpine.yaml
 kubectl get pods
@@ -20,10 +21,15 @@ kubectl exec $p ifconfig
 kubectl apply -f /etc/kubernetes/mconnect.yaml
 kubectl apply -f /etc/kubernetes/mconnect-svc-ipv6.yaml
 kubectl get svc
-# Test traffic to ipv4 and ipv6 ClisterIP's
+# Test traffic to ipv4 and ipv6 ClusterIP's
 mconnect -address mconnect.default.svc.xcluster:5001 -nconn 100
 mconnect -address mconnect-ipv6.default.svc.xcluster:5001 -nconn 100
 nslookup mconnect-ipv6.default.svc.xcluster
+# External access;
+vm 201   # New terminal on a router
+# On the router;
+ip -6 ro add 1000::/112 via 1000::1:c0a8:103
+mconnect -address [1000::5]:5001 -nconn 100
 ```
 
 

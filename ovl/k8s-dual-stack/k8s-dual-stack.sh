@@ -96,7 +96,11 @@ test_basic4() {
 	otc 3 create_ipv6_svc
 	otc 3 ipv4_traffic
 	otc 3 ipv6_traffic
-	
+	otc 3 ipv4_traffic_dn
+	otc 3 ipv6_traffic_dn
+
+	otc 201 external_ipv6_traffic
+
 	test "$__no_stop" = "yes" && return 0
 	tcase "Stop xcluster"
     $XCLUSTER stop
