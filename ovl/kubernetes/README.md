@@ -165,26 +165,26 @@ go get github.com/google/gofuzz
 
 ### Cri-o
 
-Cri-o is hosted on
-[github](https://github.com/kubernetes-incubator/cri-o). The
-"releases" have no binaries so you must build them yourself
-([issue](https://github.com/kubernetes-incubator/cri-o/issues/1141)).
 
 There is a good
-[tutorial](https://github.com/kubernetes-incubator/cri-o/blob/master/tutorial.md). Here
+[tutorial](https://github.com/cri-o/cri-o/blob/master/tutorial.md)
 is a short version;
 
 ```
-go get github.com/kubernetes-incubator/cri-tools/cmd/crictl
-cd $GOPATH/src/github.com/kubernetes-incubator/cri-tools
-make
-go get -u github.com/kubernetes-incubator/cri-o
-cd $GOPATH/src/github.com/kubernetes-incubator/cri-o
-git checkout release-1.12
+mkdir -p $GOPATH/src/github.com/cri-o
+cd $GOPATH/src/github.com/cri-o
+git clone 
+# Build
+cd $GOPATH/src/github.com/cri-o/cri-o
+#git clean -dxf
+git checkout master
+#git checkout -t origin/release-1.15
+git pull
 make install.tools
-make
+make BUILDTAGS=""
 git status --ignored
 strip bin/*
+$GOPATH/src/github.com/cri-o/cri-o/bin
 ```
 
 [Runc](https://github.com/opencontainers/runc) is the container
