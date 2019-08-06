@@ -4,37 +4,26 @@ Ovl for the up-coming support for dual-stack in Kubernetes.
 
 ## Usage
 
-For testing just use the up-loaded image;
-```
-curl -L https://artifactory.nordix.org/artifactory/cloud-native/xcluster/images/hd-k8s-pr73977.img.xz | xz -d > $__image
-xc mkcdrom; xc starts
-vm 1
-# On cluster;
-kubectl get node vm-002 -o json | jq .spec
-kubectl apply -f /etc/kubernetes/alpine.yaml
-kubectl get pods
-p=alpine-deployment-568f6756d7-....
-kubectl get pod $p -o json | jq .status.podIPs
-kubectl exec $p ifconfig
-```
+Use xcluster v2.1 and the default image.
 
-Local Start;
 ```
 xc mkcdrom k8s-dual-stack; xc starts
 # On cluster;
 kubectl get node vm-002 -o json | jq .spec
 kubectl apply -f /etc/kubernetes/alpine.yaml
 kubectl get pods
-p=alpine-deployment-568f6756d7-....
+# Check dual addresses on pods
+p=$(kubectl -o json get pods -l 'app=alpine' | jq -r .items[0].metadata.name)
 kubectl get pod $p -o json | jq .status.podIPs
 kubectl exec $p ifconfig
-```
-
-Start with proxy-mode=script;
-```
-rm $GOPATH/src/k8s.io/kubernetes
-ln -s kubernetes-orig $GOPATH/src/k8s.io/kubernetes
-xc mkcdrom k8s-dual-stack script-mode; xc starts
+# Create services
+kubectl apply -f /etc/kubernetes/mconnect.yaml
+kubectl apply -f /etc/kubernetes/mconnect-svc-ipv6.yaml
+kubectl get svc
+# Test traffic to ipv4 and ipv6 ClisterIP's
+mconnect -address mconnect.default.svc.xcluster:5001 -nconn 100
+mconnect -address mconnect-ipv6.default.svc.xcluster:5001 -nconn 100
+nslookup mconnect-ipv6.default.svc.xcluster
 ```
 
 
@@ -76,16 +65,6 @@ patch -p0 < $f.rej
 rm $(find . -name '*.rej')
 ```
 
-Rebuild image and regression-test;
-```
-cp $XCLUSTER_WORKSPACE/xcluster/hd.img $__image
-xc ximage xnet etcd iptools kubernetes mconnect images coredns private-reg
-xc mkcdrom; xc starts
-kubectl version    # Check the git commit
-./test/xctest.sh test --xovl=private-reg \
-  k8s k8s_ipv6 k8s_metallb k8s_kube_router > $XCLUSTER_TMP/xtest.log
-```
-
 ### Build from a development branch
 
 ```
@@ -114,7 +93,6 @@ Test;
 ```
 kubectl apply -f /etc/kubernetes/mconnect.yaml
 kubectl apply -f /etc/kubernetes/mconnect-svc-ipv6.yaml
-grep syncProxyRules /var/log/kube-proxy.log
 kubectl get svc
 ip -4 addr show dev kube-ipvs0
 ip -6 addr show dev kube-ipvs0
