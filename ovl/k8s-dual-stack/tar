@@ -30,6 +30,9 @@ test -x $f || die "Not executable [$f]"
 mkdir -p $tmp/opt/cni/bin
 cp $f $tmp/opt/cni/bin
 
+f=$GOPATH/bin/assign-lb-ip
+test -x $f && cp $f $tmp/bin
+
 cd $tmp
 tar cf "$1" *
 cd - > /dev/null

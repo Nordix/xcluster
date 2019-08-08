@@ -39,7 +39,7 @@ cmd_env() {
 
 	if test "$cmd" = "env"; then
 		set | grep -E '^(__.*)='
-		retrun 0
+		return 0
 	fi
 
 	test -n "$XCLUSTER" || die 'Not set [$XCLUSTER]'
@@ -101,6 +101,9 @@ test_basic4() {
 
 	otc 201 external_ipv6_traffic
 
+	otc 3 ipv6_svc_lb
+	otc 201 external_ipv6_traffic_lb
+	
 	test "$__no_stop" = "yes" && return 0
 	tcase "Stop xcluster"
     $XCLUSTER stop

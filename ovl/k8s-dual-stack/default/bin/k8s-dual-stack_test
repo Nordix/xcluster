@@ -107,7 +107,22 @@ cmd_tcase_ipv6_traffic_dn() {
 cmd_tcase_external_ipv6_traffic() {
 	local adr="1000::5"
 	tcase "Test external ipv6 traffic to [$adr]"
-	ip -6 ro add 1000::/112 via 1000::1:c0a8:103 || tdie
+	ip -6 ro replace 1000::/112 via 1000::1:c0a8:103 || tdie
+	do_mconnect "[$adr]" || tdie
+}
+
+cmd_tcase_ipv6_svc_lb() {
+	local adr="1000::8"
+	tcase "Create a service type: LoadBalancer"
+	$kubectl apply -f /etc/kubernetes/mconnect-svc-ipv6-lb.yaml || tdie
+	assign-lb-ip -svc mconnect-ipv6-lb || tdie
+	tex "ipvsadm -L -n | grep $adr" || tdie
+}
+
+cmd_tcase_external_ipv6_traffic_lb() {
+	local adr="1000::8"
+	tcase "Test external ipv6 traffic to LB-ip [$adr]"
+	ip -6 ro replace 1000::/112 via 1000::1:c0a8:103 || tdie
 	do_mconnect "[$adr]" || tdie
 }
 

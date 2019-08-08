@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: mconnect-ipv6-lb
+spec:
+  serviceIPFamily: IPv6Service
+  selector:
+    app: mconnect
+  ports:
+  - port: 5001
+  type: LoadBalancer
+  loadBalancerIP: 1000::8
