@@ -20,7 +20,7 @@ kube-apiserver --token-auth-file=/srv/kubernetes/known_tokens.csv \
 	--allow-privileged=true \
 	--insecure-bind-address=$MASTER_IP --advertise-address=$MASTER_IP \
 	--authorization-mode=AlwaysAllow \
-	--etcd-servers=http://[::1]:2379 --anonymous-auth=false \
+	--etcd-servers=http://127.0.0.1:2379 --anonymous-auth=false \
 	--service-cluster-ip-range=fd00:4000::/112 \
 	--enable-admission-plugins=ServiceAccount,AlwaysAdmit \
 	--client-ca-file=/srv/kubernetes/ca.crt \
