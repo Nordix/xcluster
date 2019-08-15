@@ -109,9 +109,8 @@ git push
 Build;
 ```
 cd $GOPATH/src/github.com/danderson/metallb
-go install github.com/danderson/metallb/speaker
-go install github.com/danderson/metallb/controller
-strip $GOPATH/bin/controller $GOPATH/bin/speaker
+GO111MODULE=on go install ./controller
+GO111MODULE=on go install ./speaker
 images mkimage --force --upload ./image
 ```
 
@@ -157,9 +156,9 @@ IPv6;
 ```
 # Pre-pull
 images make coredns metallb nordixorg/mconnect:v1.2
-SETUP=ipv6 xc mkcdrom etcd coredns k8s-config metallb gobgp images; xc start
+SETUP=ipv6 xc mkcdrom k8s-config metallb gobgp images; xc start
 # Private reg
-SETUP=ipv6 xc mkcdrom etcd coredns metallb gobgp private-reg k8s-config; xc start
+SETUP=ipv6 xc mkcdrom metallb gobgp private-reg k8s-config; xc start
 # Outside cluster;
 mconnect -address [1000::]:5001 -nconn 400
 ```

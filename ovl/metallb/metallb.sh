@@ -109,6 +109,7 @@ test_local() {
 	otc 201 "peers 192.168.1." "route 10.0.0.0" "mconnect 10.0.0.0" \
 		"tplocal 10.0.0.0"
 
+	test "$__no_stop" = "yes" && return 0
 	tcase "Stop xcluster"
 	$XCLUSTER stop
 }
@@ -142,6 +143,7 @@ test_local_ipv6() {
 	otc 201 "multiaddr $adr6"
 	otc 201 "multi_mconnect [1000::] $adr6"
 
+	test "$__no_stop" = "yes" && return 0
 	tcase "Stop xcluster"
 	$XCLUSTER stop
 }

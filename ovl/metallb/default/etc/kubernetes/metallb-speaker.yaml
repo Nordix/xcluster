@@ -14,7 +14,7 @@ spec:
       hostNetwork: true
       containers:
       - name: metallb
-        image: library/metallb:0.7.3
+        image: library/metallb:0.8.1
         command:
           - /bin/speaker
         securityContext:
