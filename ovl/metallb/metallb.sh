@@ -148,6 +148,25 @@ test_local_ipv6() {
 	$XCLUSTER stop
 }
 
+test_ipv4_dual_stack() {
+	tlog "--- Dual-stack in an ipv4 cluster"
+	SETUP=default,metallb-test $XCLUSTER mkcdrom \
+		k8s-dual-stack private-reg test metallb
+	xcstart
+
+	otc 1 check_namespaces
+	otc 1 nodes
+	otc 2 check_coredns
+
+	otc 2 start_dual_stack
+	otc 2 start_mconnect_dual_stack
+	otc 2 check_svc_dual_stack
+
+	test "$__no_stop" = "yes" && return 0
+	tcase "Stop xcluster"
+	$XCLUSTER stop
+}
+
 xcstart() {
 	$XCLUSTER $start
 	sleep 2

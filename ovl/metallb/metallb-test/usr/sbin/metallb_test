@@ -35,6 +35,34 @@ dbg() {
 cmd_tcase_nodes() {
 	test_nodes
 }
+cmd_tcase_check_namespaces() {
+	test_namespaces
+}
+cmd_tcase_check_coredns() {
+	test_coredns
+}
+
+cmd_tcase_start_dual_stack() {
+	tcase "Start metallb controller with dual-stack config"
+	$kubectl apply -f /etc/kubernetes/metallb-config-dual-stack.yaml || tdie
+	$kubectl apply -f /etc/kubernetes/metallb.yaml || tdie
+	tex "npods metallb- 1" || tdie
+}
+
+cmd_tcase_start_mconnect_dual_stack() {
+	tcase "Start mconnect with dual-stack config"
+	$kubectl apply -f /etc/kubernetes/mconnect-dual-stack.yaml || tdie
+	tex "npods mconnect-deployment- 4" || tdie
+}
+
+cmd_tcase_check_svc_dual_stack() {
+	tcase "Check dual-stack services"
+	local pat='.status.loadBalancer.ingress[0].ip'
+	local ip=$($kubectl get svc mconnect-ipv4 -o json | jq -r $pat)
+	test "$ip" = "10.0.0.0" || tdie "Unexpected ipv4 [$ip]"
+	ip=$($kubectl get svc mconnect-ipv6 -o json | jq -r $pat)
+	test "$ip" = "1000::" || tdie "Unexpected ipv6 [$ip]"
+}
 
 ##  tcase_config [config]
 cmd_tcase_config() {

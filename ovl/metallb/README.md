@@ -132,6 +132,20 @@ git checkout v0.7.4-nordix-alpha2
 go install ./controller/...
 ```
 
+Dual-stack;
+```
+# Rebuild
+GO111MODULE=on go install ./controller
+images mkimage --force --upload ./image
+# 
+xc mkcdrom metallb k8s-dual-stack kube-proxy private-reg; xc starts
+kubectl get nodes
+kubectl apply -f /etc/kubernetes/metallb-config-dual-stack.yaml
+kubectl apply -f /etc/kubernetes/metallb.yaml
+kubectl get pods
+kubectl apply -f /etc/kubernetes/mconnect-dual-stack.yaml
+kubectl get svc
+```
 
 Ipv4;
 ```
