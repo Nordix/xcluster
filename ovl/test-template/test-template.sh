@@ -103,6 +103,7 @@ test_basic6() {
 	otc 1 check_namespaces
 	otc 1 check_nodes
 	otc 2 check_coredns
+	otc 3 start_mconnect
 
 	test "$__no_stop" = "yes" && return 0
 	tcase "Stop xcluster"

@@ -41,6 +41,9 @@ cmd_tcase_check_nodes() {
 cmd_tcase_check_coredns() {
 	test_coredns
 }
+cmd_tcase_start_mconnect() {
+	start_mconnect /etc/kubernetes/mconnect.yaml || tdie
+}
 
 . /etc/profile
 . /usr/lib/xctest
