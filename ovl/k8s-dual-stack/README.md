@@ -79,10 +79,7 @@ cd $GOPATH/src/k8s.io
 mv kubernetes kubernetes-orig
 git clone --depth 1 -b dualstack-phase2-kubeproxy git@github.com:vllry/kubernetes.git kubernetes-vllry
 git clone --depth 1 -b phase2-dualstack git@github.com:khenidak/kubernetes.git kubernetes-khenidak
-for n in kube-controller-manager kube-scheduler kube-apiserver \
-  kube-proxy kubectl kubelet; do
-    make WHAT=cmd/$n
-done
+make WHAT=cmd/hyperkube
 strip _output/bin/*
 ```
 

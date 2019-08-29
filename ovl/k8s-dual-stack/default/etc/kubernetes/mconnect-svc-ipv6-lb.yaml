@@ -3,7 +3,7 @@ kind: Service
 metadata:
   name: mconnect-ipv6-lb
 spec:
-  serviceIPFamily: IPv6Service
+  ipFamily: IPv6
   selector:
     app: mconnect
   ports:
