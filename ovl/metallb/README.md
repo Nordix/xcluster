@@ -50,6 +50,22 @@ kubectl apply -f $configd/mconnect.yaml
 mconnect -address 10.0.0.2:5001 -nconn 400
 ```
 
+Local image with L2 and dual-stack;
+```
+xc mkcdrom metallb k8s-dual-stack private-reg; xc starts
+# On cluster;
+kubectl apply -f /etc/kubernetes/metallb-config-dual-stack.yaml
+kubectl apply -f /etc/kubernetes/metallb.yaml
+kubectl apply -f /etc/kubernetes/mconnect-dual-stack.yaml
+kubectl get svc
+kubectl apply -f /etc/kubernetes/metallb-speaker.yaml
+# On a router;
+ip ro add 10.0.0.0/28 dev eth1
+ip -6 ro add 1000::/124 dev eth1
+mconnect -address 10.0.0.0:5001 -nconn 100
+mconnect -address [1000::]:5001 -nconn 100
+```
+
 
 Helm installstion (install helm and start `tiller` as described in the
 [kubernets ovelay](../kubernetes/README.md);
