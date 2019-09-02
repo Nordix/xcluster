@@ -145,7 +145,10 @@ cd $GOPATH/src/go.universe.tf
 git clone git@github.com:Nordix/metallb.git
 cd metallb
 git checkout v0.7.4-nordix-alpha2
-go install ./controller/...
+go install -ldflags "-extldflags '-static' \
+  -X go.universe.tf/metallb/internal/version.version=$(date +%F:%T)" \
+  ./controller/...
+images mkimage --manifest=./image/manifest-old.json --force --upload ./image
 ```
 
 Dual-stack;

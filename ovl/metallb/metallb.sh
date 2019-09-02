@@ -57,7 +57,7 @@ cmd_test() {
 			test_$t
 		done
 	else
-		for t in basic basic_ipv6 local local_ipv6; do
+		for t in basic basic_ipv6 local local_ipv6 ipv4_dual_stack; do
 			test_$t
 		done
 	fi	
@@ -162,10 +162,64 @@ test_ipv4_dual_stack() {
 	otc 2 start_mconnect_dual_stack
 	otc 2 check_svc_dual_stack
 
+	otc 201 configure_l2_routing
+	otc 201 ping_vips
+	otc 201 check_connectivity
+	otc 201 external_ipv4
+	otc 201 external_ipv6
+
 	test "$__no_stop" = "yes" && return 0
 	tcase "Stop xcluster"
 	$XCLUSTER stop
 }
+
+test_controller_ready_time_ipv4() {
+	test -n "$__controller_version" || __controller_version=v0.7.4-nordix-alpha2
+	tlog "--- Test readiness time of the controller in an IPv4 cluster"
+	SETUP=default,metallb-test $XCLUSTER mkcdrom private-reg test metallb
+	xcstart
+
+	otc 1 check_namespaces
+	otc 1 nodes
+	otc 2 check_coredns
+	otc 2 "start_controller_version $__controller_version"	
+	otc 2 controller_ready
+
+	test "$__no_stop" = "yes" && return 0
+	tcase "Stop xcluster"
+	$XCLUSTER stop
+}
+
+test_controller_ready_time_ipv6() {
+	test -n "$__controller_version" || __controller_version=v0.7.4-nordix-alpha2
+	tlog "--- Test readiness time of the controller in an IPv6 cluster"
+	SETUP=metallb-test,ipv6 $XCLUSTER mkcdrom private-reg test metallb k8s-config
+	xcstart
+
+	otc 1 check_namespaces
+	otc 1 nodes
+	otc 2 check_coredns
+	otc 2 "start_controller_version $__controller_version"	
+	otc 2 controller_ready
+
+	test "$__no_stop" = "yes" && return 0
+	tcase "Stop xcluster"
+	$XCLUSTER stop
+}
+
+test_start_controller_version() {
+	test -n "$__controller_version" || __controller_version=v0.7.4-nordix-alpha2
+	tlog "--- Starting controller version [$__controller_version]"
+
+	SETUP=default,metallb-test $XCLUSTER mkcdrom private-reg test metallb
+	xcstart
+
+	otc 1 check_namespaces
+	otc 1 nodes
+	otc 2 check_coredns
+	otc 2 "start_controller_version $__controller_version"	
+}
+
 
 xcstart() {
 	$XCLUSTER $start

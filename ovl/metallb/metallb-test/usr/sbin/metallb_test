@@ -46,7 +46,36 @@ cmd_tcase_start_dual_stack() {
 	tcase "Start metallb controller with dual-stack config"
 	$kubectl apply -f /etc/kubernetes/metallb-config-dual-stack.yaml || tdie
 	$kubectl apply -f /etc/kubernetes/metallb.yaml || tdie
-	tex "npods metallb- 1" || tdie
+	$kubectl apply -f /etc/kubernetes/metallb-speaker.yaml || tdie
+	tex "npods metallb-speaker- 4" || tdie
+	tex "npods metallb- 5" || tdie
+}
+
+cmd_tcase_start_controller_version() {
+	tcase "Starting metallb controller ver [$1]"
+	test -n "$1" || tdie "No version"
+	local f=/etc/metallb/metallb-controller-version.yaml
+	sed -i -e "s,__controller_version,$1," $f || tdie
+	$kubectl apply -f $f || tdie
+	# Do not check here! We want to measure the readiness time.
+}
+
+pod_ready() {
+	local pat=".status.conditions[]|select(.type == \"Ready\")|.status"
+	local status=$(kubectl get pod -o json $1 | jq -r "$pat")
+	test "$status" = "True"
+}
+
+cmd_tcase_controller_ready() {
+	tcase "Check controller ready status"
+	local begin=$(date +%s)
+	local pod=$($kubectl -o json get pods -l 'app=metallb-controller' | jq -r .items[0].metadata.name)
+	local timeout=40
+	pushv $timeout $timeout 1
+	tex "pod_ready $pod" || tdie
+	popv
+	local now=$(date +%s)
+	tlog "Controller ready after $((now-begin)) seconds"
 }
 
 cmd_tcase_start_mconnect_dual_stack() {
@@ -62,6 +91,24 @@ cmd_tcase_check_svc_dual_stack() {
 	test "$ip" = "10.0.0.0" || tdie "Unexpected ipv4 [$ip]"
 	ip=$($kubectl get svc mconnect-ipv6 -o json | jq -r $pat)
 	test "$ip" = "1000::" || tdie "Unexpected ipv6 [$ip]"
+}
+
+cmd_tcase_ping_vips() {
+	tcase "Ping the vip addresses"
+	tex "ping -c 1 -W 1 10.0.0.0"
+	tex "ping -c 1 -W 1 1000::"
+}
+
+cmd_tcase_external_ipv4() {
+	tcase "Test external ipv4 traffic"
+	do_mconnect 10.0.0.0 || tdie
+	check_mconnect_result $tmp/out || tdie
+}
+
+cmd_tcase_external_ipv6() {
+	tcase "Test external ipv6 traffic"
+	do_mconnect '[1000::]' || tdie
+	check_mconnect_result $tmp/out || tdie
 }
 
 ##  tcase_config [config]
@@ -137,10 +184,19 @@ cmd_tcase_route() {
 	popv
 }
 
+cmd_tcase_check_connectivity() {
+	tcase "Check connectivity"
+	tex "mconnect -address 10.0.0.0:5001 -nconn 4" || tdie
+	tex "mconnect -address [1000::]:5001 -nconn 4" || tdie
+}
+
 cmd_tcase_mconnect() {
 	tcase "Mconnect to [$1]"
 	tex "do_mconnect $1"
 }
+
+
+
 
 cmd_tcase_lroute() {
 	tcase "Local route to [$1] on $(hostname)"
@@ -202,6 +258,11 @@ cmd_tcase_configure_routes() {
 		nexthop via 1000::1:192.168.1.4
 }
 
+cmd_tcase_configure_l2_routing() {
+	tcase "Configure L2 routing for ipv4 and ipv6"
+	ip route add 10.0.0.0/28 dev eth1 || tdie
+	ip -6 route add 1000::/124 dev eth1 || tdie
+}
 
 . /etc/profile
 . /usr/lib/xctest
