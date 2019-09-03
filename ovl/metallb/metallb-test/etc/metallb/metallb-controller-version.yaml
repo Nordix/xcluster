@@ -21,10 +21,10 @@ spec:
         livenessProbe:
           tcpSocket:
             port: 7472
-          initialDelaySeconds: 5
+          initialDelaySeconds: 3
           periodSeconds: 5
         readinessProbe:
           tcpSocket:
             port: 7472
-          initialDelaySeconds: 5
+          initialDelaySeconds: 0
           periodSeconds: 5

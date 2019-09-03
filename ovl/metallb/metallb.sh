@@ -57,7 +57,8 @@ cmd_test() {
 			test_$t
 		done
 	else
-		for t in basic basic_ipv6 local local_ipv6 ipv4_dual_stack; do
+		for t in basic basic_ipv6 local local_ipv6 controller_ready_time_ipv4 \
+			controller_ready_time_ipv6 ipv4_dual_stack; do
 			test_$t
 		done
 	fi	
@@ -182,8 +183,13 @@ test_controller_ready_time_ipv4() {
 	otc 1 check_namespaces
 	otc 1 nodes
 	otc 2 check_coredns
+
+	otc 4 "start_mconnect svc"
+	otc 4 "config default"
+
 	otc 2 "start_controller_version $__controller_version"	
 	otc 2 controller_ready
+	otc 2 lbip_assigned
 
 	test "$__no_stop" = "yes" && return 0
 	tcase "Stop xcluster"
@@ -199,8 +205,13 @@ test_controller_ready_time_ipv6() {
 	otc 1 check_namespaces
 	otc 1 nodes
 	otc 2 check_coredns
+
+	otc 4 "start_mconnect svc"
+	otc 4 "config default-ipv6"
+
 	otc 2 "start_controller_version $__controller_version"	
 	otc 2 controller_ready
+	otc 2 lbip_assigned
 
 	test "$__no_stop" = "yes" && return 0
 	tcase "Stop xcluster"

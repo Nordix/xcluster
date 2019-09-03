@@ -63,6 +63,7 @@ cmd_tcase_start_controller_version() {
 pod_ready() {
 	local pat=".status.conditions[]|select(.type == \"Ready\")|.status"
 	local status=$(kubectl get pod -o json $1 | jq -r "$pat")
+	echo "Ready = $status"
 	test "$status" = "True"
 }
 
@@ -70,12 +71,26 @@ cmd_tcase_controller_ready() {
 	tcase "Check controller ready status"
 	local begin=$(date +%s)
 	local pod=$($kubectl -o json get pods -l 'app=metallb-controller' | jq -r .items[0].metadata.name)
-	local timeout=40
+	local timeout=10
 	pushv $timeout $timeout 1
 	tex "pod_ready $pod" || tdie
 	popv
 	local now=$(date +%s)
 	tlog "Controller ready after $((now-begin)) seconds"
+}
+
+get_lbip() {
+	$kubectl get svc $1 -o json | jq -r .status.loadBalancer.ingress[0].ip \
+		| ogrep -v null
+}
+
+cmd_tcase_lbip_assigned() {
+	tcase "Check assigned lbip"
+	local timeout=5
+	pushv $timeout $timeout 1
+	tex "get_lbip mconnect" || tdie
+	popv
+	tlog "Assigned loadBalancerIP; $(get_lbip mconnect)"
 }
 
 cmd_tcase_start_mconnect_dual_stack() {
