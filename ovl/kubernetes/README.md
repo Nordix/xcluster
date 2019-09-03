@@ -180,7 +180,7 @@ cd $GOPATH/src/github.com/cri-o/cri-o
 git checkout master
 #git checkout -t origin/release-1.15
 git pull
-make install.tools
+# OBSOLETE? make install.tools
 make BUILDTAGS=""
 git status --ignored
 strip bin/*

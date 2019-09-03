@@ -32,6 +32,7 @@ test -n "$KUBERNETESD" || KUBERNETESD=$GOPATH/src/k8s.io/kubernetes/_output/bin
 test -d "$KUBERNETESD" || die "Not a directory [$KUBERNETESD]"
 f=$KUBERNETESD/hyperkube
 test -x $f || die "Not executable [$f]"
+log $(readlink -f $f)
 cp $f $tmp/bin
 
 # Install CNI plugins;
