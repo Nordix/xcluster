@@ -22,6 +22,7 @@ kubelet --container-runtime=remote --node-ip=192.168.1.$i \
 	--container-runtime-endpoint=unix:///var/run/crio/crio.sock \
 	--image-service-endpoint=unix:///var/run/crio/crio.sock \
 	--register-node=true --kubeconfig $KUBECONFIG \
+	--feature-gates IPv6DualStack=true \
 	--network-plugin=cni > /var/log/kubelet.log 2>&1 &
 
 kube-proxy --config /etc/kubernetes/kube-proxy.config --v 7 \

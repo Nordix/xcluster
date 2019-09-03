@@ -104,7 +104,11 @@ cmd_update_routes() {
 		for cidr in $(echo $i | jq -r '.podCIDRs[]'); do
 			echo $cidr | grep -qi null | continue
 			if echo $cidr | grep -q : ; then
-				cmd_x ip -6 ro replace $cidr via 1000::1:$a
+				if echo $a | grep -q : ; then
+					cmd_x ip -6 ro replace $cidr via $a
+				else
+					cmd_x ip -6 ro replace $cidr via 1000::1:$a
+				fi
 			else
 				cmd_x ip ro replace $cidr via $a
 			fi

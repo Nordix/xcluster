@@ -27,11 +27,7 @@ echo "export KUBECONFIG=/etc/kubernetes/kubeconfig" >> /etc/profile
 mkdir -p /var/lib/kubelet
 
 # Create chains created by kubelet in ip6tables
-ip6tables -t nat -N KUBE-MARK-MASQ
 ip6tables -t nat -N KUBE-MARK-DROP
-ip6tables -t nat -N KUBE-POSTROUTING
-ip6tables -t filter -N KUBE-FIREWALL
-iptables -t nat -N KUBE-MARK-DROP
 
 ip link add name cbr0 type bridge
 ip link set dev cbr0 up
