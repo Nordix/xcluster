@@ -27,6 +27,16 @@ vm() {
 cdo() {
 	cd $($XCLUSTER ovld $1)
 }
+_cdo_completion() {
+	local XCLUSTER_OVLPATH d o
+	eval $($XCLUSTER env | grep XCLUSTER_OVLPATH=)
+	for d in $(echo $XCLUSTER_OVLPATH | tr : ' '); do
+		test -d $d || continue
+		o+=$(find $d -mindepth 1 -maxdepth 1 -type d -name "$2*" -printf "%f ")
+	done
+	COMPREPLY=($o)
+}
+complete -F _cdo_completion cdo
 
 export XCLUSTER="$(readlink -f .)/xcluster.sh"
 alias xc=$XCLUSTER
