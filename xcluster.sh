@@ -524,7 +524,9 @@ cmd_boot_vm() {
 	local hd=$XCLUSTER_TMP/hd-$nodeid.img
 	qemu-img create -f qcow2 -o backing_file="$__image" $hd
 
-	test -n "$__mem" || __mem=1024
+	local tmem
+	eval tmem=\$__mem$nodeid
+	test -n "$tmem" && __mem=$tmem
 	echo "Memory: $__mem"
 	rm -rf $tmp
 
