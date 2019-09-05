@@ -67,7 +67,7 @@ cmd_test() {
             test_$t
         done
     else
-        for t in basic4 basic6; do
+        for t in basic4 basic6 basic_dual; do
             test_$t
         done
     fi      
@@ -78,27 +78,22 @@ cmd_test() {
 }
 
 test_basic4() {
-	tlog "Basic test of test-template on ipv4-only"
-
-	tcase "Build cluster"
-	$XCLUSTER mkcdrom test-template test || tdie
-	xcstart
-
-	otc 1 check_namespaces
-	otc 1 check_nodes
-	otc 2 check_coredns
-	
-	test "$__no_stop" = "yes" && return 0
-	tcase "Stop xcluster"
-    $XCLUSTER stop
+	basic ipv4
 }
 
 test_basic6() {
-	tlog "Basic test of test-template on ipv6-only"
+	basic ipv6
+}
 
-	tcase "Build cluster"
-	SETUP=ipv6 $XCLUSTER mkcdrom k8s-config test-template test || tdie
-	xcstart
+test_basic_dual() {
+	basic dual-stack
+}
+
+basic() {
+	tlog "=== Basic test of test-template on $1"
+
+	xcluster_prep $1
+	xcluster_start test-template
 
 	otc 1 check_namespaces
 	otc 1 check_nodes
@@ -114,14 +109,6 @@ test_basic6() {
 cmd_otc() {
 	test -n "$__vm" || __vm=2
 	otc $__vm $@
-}
-
-xcstart() {
-	tcase "Cluster start"
-    $XCLUSTER $start || tdie
-    sleep 2
-    tcase "VM connectivity"
-    tex check_vm || tdie
 }
 
 . $($XCLUSTER ovld test)/default/usr/lib/xctest
