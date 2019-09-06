@@ -32,7 +32,7 @@ More info;
  * [Build from scratch](doc/build.md). If the binary release can't be used.
  * [Xcluster for CI](doc/ci.md). Headless operation.
  * [Local docker registry](ovl/private-reg/README.md).
- * [Test](test/README.md)
+ * [Test](doc/test.md)
  * [Fedora](doc/fedora.md). Not maintained.
 
 The VMs are given "roles" depending on their hostname;

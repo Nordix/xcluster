@@ -1,32 +1,37 @@
 # Xcluster testing
 
-No "tool" or procedure is imposed or recommended. To do that at early
-stages usually leads to regrets. A wise advice I once got;
+No "tool" or procedure required, do as you please. There is a minimal
+framework in "shell" (not bash) that may be useful. A wise advice I
+once got;
 
 > It doesn't matter how you write the tests, just write them!
 
 The danger is to spend too much time searching for the perfect tool so
 at the end of the day no tests are written.
 
-## Run tests
-
-Prerequisite; A private docker registry is started and contains
-`alpine` and `metallb` images (see below).
+Tests are placed in ovl's and are invoked with;
 
 ```
-$(dirname $XCLUSTER)/test/xctest.sh test --xovl=private-reg \
-  > /tmp/$USER/xctest.log
-# Or a single test;
-$(dirname $XCLUSTER)/test/xctest.sh test --list
-$(dirname $XCLUSTER)/test/xctest.sh test --xovl=private-reg k8s_metallb \
-  > /tmp/$USER/xctest.log
+t=test-template
+$($XCLUSTER ovld $t)/$t.sh test > $XCLUSTER_TMP/$t-test.log
 ```
 
-## Test structure
+That means that the ovl directory should have an executabe that is
+named "ovl-name.sh" that takes "test" as a parameter. The
+`test-template` is a template for this (of course).
 
-For now all tests are in one shell script; `xctest.sh`. This script
-configures the `xcluster`, start and stop and invoke on-cluster tests
-defined in the [test overlay](../ovl/test/README.md).
+The test program shall print test summary on `stderr` and verbose
+logging to `stdout`.
+
+
+## Test ovl and script library
+
+Check the [test overlay](../ovl/test/README.md).
+
+Examine the script lib, help printout with;
+```
+$($XCLUSTER ovld test)/default/usr/lib/xctest help
+```
 
 
 
