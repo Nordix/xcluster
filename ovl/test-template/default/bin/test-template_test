@@ -44,6 +44,40 @@ cmd_tcase_check_coredns() {
 cmd_tcase_start_mconnect() {
 	start_mconnect /etc/kubernetes/mconnect.yaml || tdie
 }
+cmd_tcase_start_alpine() {
+	tcase "Start alpine pods"
+	$kubectl apply -f /etc/kubernetes/alpine.yaml || tdie
+}
+cmd_tcase_check_alpine() {
+	tcase "Check alpine pods"
+	tex "npods alpine-deployment- 4" || tdie
+}
+
+get_global_addresses() {
+	$kubectl exec $1 ip addr show dev eth0 | grep 'scope global' | sed -E 's,.*inet.? ([^ ]+) .*,\1,' | tr '\n' ' '
+}
+
+cmd_tcase_check_pod_addresses() {
+	tcase "Check POD addresses for; $1"
+	local adr found=0
+	local pod=$(get_pod alpine)
+	test -n "$pod" || tdie "Can't find an alpine POD"
+	local adrs=$(get_global_addresses $pod)
+	tlog "POD addresses [$adrs]"
+	for adr in $adrs; do
+		if echo $adr | grep -q : ; then
+			found=$((found+100))
+		else
+			found=$((found+1))
+		fi
+	done
+	case $1 in
+		ipv4) test $found -eq 1 || tdie "Invalid adr for $1; $adrs";;
+		ipv6) test $found -eq 100 || tdie "Invalid adr for $1; $adrs";;
+		*) test $found -eq 101 || tdie "Invalid adr for $1; $adrs";;
+	esac
+}
+
 
 . /etc/profile
 . /usr/lib/xctest

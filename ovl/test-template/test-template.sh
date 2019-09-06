@@ -98,7 +98,10 @@ basic() {
 	otc 1 check_namespaces
 	otc 1 check_nodes
 	otc 2 check_coredns
+	otc 2 start_alpine
 	otc 3 start_mconnect
+	otc 2 check_alpine
+	otc 2 "check_pod_addresses $1"
 
 	test "$__no_stop" = "yes" && return 0
 	tcase "Stop xcluster"
