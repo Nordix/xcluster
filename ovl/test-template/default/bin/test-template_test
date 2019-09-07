@@ -43,6 +43,19 @@ cmd_tcase_check_coredns() {
 }
 cmd_tcase_start_mconnect() {
 	start_mconnect /etc/kubernetes/mconnect.yaml || tdie
+	if test "$1" = "dual-stack"; then
+		$kubectl apply -f /etc/kubernetes/mconnect-svc-ipv6.yaml || tdie
+	fi
+}
+cmd_tcase_internal_mconnect() {
+	local adr=mconnect.default.svc.xcluster
+	tcase "Traffic to $adr"
+	do_mconnect $adr
+	if test "$1" = "dual-stack"; then
+		adr=mconnect-ipv6.default.svc.xcluster
+		tcase "Traffic to $adr"
+		do_mconnect $adr
+	fi
 }
 cmd_tcase_start_alpine() {
 	tcase "Start alpine pods"
