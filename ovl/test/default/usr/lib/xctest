@@ -170,7 +170,7 @@ test_coredns() {
 test_nodes() {
 	tcase "Wait for k8s nodes"
 	pushv 30 30 1
-	tex "$kubectl get nodes 2>&1 | ogrep vm-001" || tdie
+	tex "$kubectl get nodes 2>&1 | ogrep vm-002" || tdie
 	popv
 }
 
