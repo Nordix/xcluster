@@ -78,16 +78,15 @@ cmd_test() {
 }
 
 test_basic4() {
-	tlog "Dual-stack on an ipv4-only cluster"
+	tlog "=== dual-stack; ipv4 base cluster"
 
-	tcase "Build cluster"
-	$XCLUSTER mkcdrom private-reg k8s-dual-stack test || tdie
-	xcstart
+	xcluster_prep dual-stack
+	xcluster_start k8s-dual-stack
 
 	otc 1 check_namespaces
 	otc 1 start_alpine
 	otc 1 check_nodes
-    otc 2 check_coredns
+	otc 2 check_coredns
 	otc 3 check_podcidrs
 	otc 2 check_alpine
 	otc 3 check_podips
