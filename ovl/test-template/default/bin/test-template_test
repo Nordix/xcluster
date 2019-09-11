@@ -47,14 +47,21 @@ cmd_tcase_start_mconnect() {
 		$kubectl apply -f /etc/kubernetes/mconnect-svc-ipv6.yaml || tdie
 	fi
 }
+cmd_tcase_nslookup() {
+	tcase "Nslookup $1"
+	test -n "$1" || tdie "Nothing to lookup"
+	pushv 40 20 2
+	tex "nslookup $1" || tdie
+	popv
+}
 cmd_tcase_internal_mconnect() {
 	local adr=mconnect.default.svc.xcluster
 	tcase "Traffic to $adr"
-	do_mconnect $adr
+	tex do_mconnect $adr || tdie
 	if test "$1" = "dual-stack"; then
 		adr=mconnect-ipv6.default.svc.xcluster
 		tcase "Traffic to $adr"
-		do_mconnect $adr
+		do_mconnect $adr || tdie
 	fi
 }
 cmd_tcase_start_alpine() {

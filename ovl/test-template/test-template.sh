@@ -90,7 +90,7 @@ test_basic_dual() {
 }
 
 basic() {
-	tlog "=== Basic test of test-template on $1"
+	tlog "=== test-template: Basic test on $1"
 
 	xcluster_prep $1
 	xcluster_start test-template
@@ -102,6 +102,7 @@ basic() {
 	otc 3 "start_mconnect $1"
 	otc 2 check_alpine
 	otc 2 "check_pod_addresses $1"
+	otc 2 "nslookup mconnect.default.svc.xcluster"
 	otc 3 "internal_mconnect $1"
 
 	test "$__no_stop" = "yes" && return 0
