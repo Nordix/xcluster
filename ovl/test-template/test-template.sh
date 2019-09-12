@@ -105,9 +105,7 @@ basic() {
 	otc 2 "nslookup mconnect.default.svc.xcluster"
 	otc 3 "internal_mconnect $1"
 
-	test "$__no_stop" = "yes" && return 0
-	tcase "Stop xcluster"
-    $XCLUSTER stop
+	xcluster_stop
 }
 
 

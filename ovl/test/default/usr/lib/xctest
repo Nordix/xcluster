@@ -325,6 +325,12 @@ xcluster_unprep() {
 	unset SETUP BASEOVLS 
 }
 
+xcluster_stop() {
+	test "$__no_stop" = "yes" && return 0
+	tcase "Stop xcluster"
+	$XCLUSTER stop
+}
+
 test -n "$XCTEST_HOOK" -a -r "$XCTEST_HOOK" && . "$XCTEST_HOOK"
 
 

@@ -61,7 +61,7 @@ cmd_tcase_internal_mconnect() {
 	if test "$1" = "dual-stack"; then
 		adr=mconnect-ipv6.default.svc.xcluster
 		tcase "Traffic to $adr"
-		do_mconnect $adr || tdie
+		tex "do_mconnect $adr" || tdie
 	fi
 }
 cmd_tcase_start_alpine() {
