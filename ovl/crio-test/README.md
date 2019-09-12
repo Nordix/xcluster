@@ -9,7 +9,7 @@ cd $GOPATH/src/github.com/cri-o/cri-o
 git reset --hard HEAD
 git pull
 git clean -dxf
-curl -L https://github.com/cri-o/cri-o/pull/2447.patch | patch -p1
+curl -L https://github.com/cri-o/cri-o/pull/2781.patch | patch -p1
 make
 ```
 

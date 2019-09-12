@@ -70,7 +70,9 @@ cmd_tcase_start_alpine() {
 }
 cmd_tcase_check_alpine() {
 	tcase "Check alpine pods"
+	pushv 40 20 2
 	tex "npods alpine-deployment- 4" || tdie
+	popv
 }
 
 get_global_addresses() {

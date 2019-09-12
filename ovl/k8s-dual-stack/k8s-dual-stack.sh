@@ -81,7 +81,7 @@ test_basic4() {
 	tlog "=== dual-stack; ipv4 base cluster"
 
 	xcluster_prep dual-stack
-	xcluster_start k8s-dual-stack
+	xcluster_start
 
 	otc 1 check_namespaces
 	otc 1 start_alpine
