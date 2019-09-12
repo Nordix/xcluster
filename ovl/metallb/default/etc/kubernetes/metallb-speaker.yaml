@@ -24,5 +24,3 @@ spec:
             valueFrom:
               fieldRef:
                 fieldPath: spec.nodeName
-          - name: METALLB_BGP_MP
-            value: "yes"

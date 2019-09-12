@@ -130,6 +130,14 @@ mconnect -address 10.0.0.0:5001 -nconn 100
 mconnect -address [1000::]:5001 -nconn 100
 ```
 
+## Test
+
+```
+cdo metallb
+./metallb.sh test > $XCLUSTER_TMP/metallb-test.log
+```
+
+
 
 ## IP address sharing
 

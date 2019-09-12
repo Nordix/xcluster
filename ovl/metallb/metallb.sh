@@ -2,7 +2,7 @@
 ##
 ## metallb.sh --
 ##
-##   Test script for metallb.
+##	 Test script for metallb.
 ##
 ## Commands;
 ##
@@ -32,9 +32,9 @@ dbg() {
 	test -n "$__verbose" && echo "$prg: $*" >&2
 }
 
-##   test --list
-##   test [--xterm] [test...] > logfile
-##     Test metallb
+##  test --list
+##  test [--xterm] [test...] > logfile
+##    Test metallb
 ##
 cmd_test() {
 	if test "$__list" = "yes"; then
@@ -54,7 +54,7 @@ cmd_test() {
 			test_$t
 		done
 	else
-		for t in basic4; do
+		for t in basic4 basic6 basic_dual; do
 			test_$t
 		done
 	fi	
@@ -65,8 +65,67 @@ cmd_test() {
 
 test_basic4() {
 	tlog "=== metallb; Basic tests with ipv4"
+
+	xcluster_prep ipv4
+	xcluster_start metallb gobgp
+	otc 1 check_namespaces
+	otc 1 check_nodes
+	otc 2 check_coredns
+
+	otc 2 start_metallb
+	otc 2 "configure_metallb metallb-config.yaml"
+	otc 2 start_mconnect
+	otc 2 "lbip_assigned mconnect 10.0.0.0"
+
+	otc 201 peers
+	otc 201 "external_traffic 10.0.0.0"
+
+	xcluster_stop
 }
 
+test_basic6() {
+	tlog "=== metallb; Basic tests with ipv6"
+
+	xcluster_prep ipv6
+	xcluster_start metallb
+	otc 1 check_namespaces
+	otc 1 check_nodes
+	otc 2 check_coredns
+
+	otc 2 start_metallb
+	otc 2 "configure_metallb metallb-config-ipv6-L2.yaml"
+	otc 2 start_mconnect
+	otc 2 "lbip_assigned mconnect 1000::"
+
+	otc 201 configure_routes
+	otc 201 "external_traffic '[1000::]'"
+
+	xcluster_stop
+}
+
+
+test_basic_dual() {
+	tlog "=== metallb; Basic tests with dual-stack"
+
+	xcluster_prep dual-stack
+	xcluster_start metallb
+	otc 1 check_namespaces
+	otc 1 check_nodes
+	otc 2 check_coredns
+
+	otc 2 start_local_metallb
+	otc 2 "configure_metallb metallb-config-dual-stack.yaml"
+
+	otc 2 start_mconnect_dual_stack
+	otc 2 "lbip_assigned mconnect-ipv4 10.0.0.0"
+	otc 2 "lbip_assigned mconnect-ipv6 1000::"
+
+	otc 201 configure_l2_routing
+	otc 201 "external_traffic '[1000::]'"
+	otc 201 "external_traffic 10.0.0.0"
+
+	xcluster_stop
+}
 
 . $($XCLUSTER ovld test)/default/usr/lib/xctest
 indent=''

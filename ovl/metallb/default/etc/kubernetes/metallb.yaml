@@ -1,18 +1,17 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: metallb
+  name: metallb-controller
 spec:
   selector:
     matchLabels:
-      app: metallb
+      app: metallb-controller
   replicas: 1
   template:
     metadata:
       labels:
-        app: metallb
+        app: metallb-controller
     spec:
-      hostNetwork: true
       containers:
       - name: metallb
         image: library/metallb:0.8.1

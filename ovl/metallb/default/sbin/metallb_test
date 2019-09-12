@@ -32,7 +32,7 @@ dbg() {
 }
 
 ##  tcase_nodes
-cmd_tcase_nodes() {
+cmd_tcase_check_nodes() {
 	test_nodes
 }
 cmd_tcase_check_namespaces() {
@@ -42,13 +42,28 @@ cmd_tcase_check_coredns() {
 	test_coredns
 }
 
-cmd_tcase_start_dual_stack() {
-	tcase "Start metallb controller with dual-stack config"
-	$kubectl apply -f /etc/kubernetes/metallb-config-dual-stack.yaml || tdie
+cmd_tcase_start_local_controller() {
+	tcase "Start local controller"
 	$kubectl apply -f /etc/kubernetes/metallb.yaml || tdie
+}
+cmd_tcase_check_local_controller() {
+	tcase "Check local controller"
+	tex "npods metallb-controller- 1" || tdie
+}
+cmd_tcase_start_local_speaker() {
+	tcase "Start local speaker"
 	$kubectl apply -f /etc/kubernetes/metallb-speaker.yaml || tdie
+}
+cmd_tcase_check_local_speaker() {
+	tcase "Check local speaker"
 	tex "npods metallb-speaker- 4" || tdie
-	tex "npods metallb- 5" || tdie
+}
+
+cmd_tcase_start_local_metallb() {
+	cmd_tcase_start_local_controller
+	cmd_tcase_start_local_speaker
+	cmd_tcase_check_local_controller
+	cmd_tcase_check_local_speaker
 }
 
 cmd_tcase_start_controller_version() {
@@ -81,16 +96,16 @@ cmd_tcase_controller_ready() {
 
 get_lbip() {
 	$kubectl get svc $1 -o json | jq -r .status.loadBalancer.ingress[0].ip \
-		| ogrep -v null
+		| grep -v null
 }
 
 cmd_tcase_lbip_assigned() {
-	tcase "Check assigned lbip"
-	local timeout=5
-	pushv $timeout $timeout 1
-	tex "get_lbip mconnect" || tdie
-	popv
-	tlog "Assigned loadBalancerIP; $(get_lbip mconnect)"
+	tcase "Check svc $1 for assigned lbip $2"
+	test -n "$1" || tdie "No svc"
+	test -n "$2" || tdie "No lbip"
+	tex "get_lbip $1" || tdie
+	local lbip=$(get_lbip $1)
+	test "$lbip" = "$2" || tdie "Lbip [$lbip], expected [$2]"
 }
 
 cmd_tcase_start_mconnect_dual_stack() {
@@ -108,57 +123,43 @@ cmd_tcase_check_svc_dual_stack() {
 	test "$ip" = "1000::" || tdie "Unexpected ipv6 [$ip]"
 }
 
-cmd_tcase_ping_vips() {
-	tcase "Ping the vip addresses"
-	tex "ping -c 1 -W 1 10.0.0.0"
-	tex "ping -c 1 -W 1 1000::"
+external_traffic() {
+	do_mconnect $1 && check_mconnect_result $tmp/out
 }
 
-cmd_tcase_external_ipv4() {
-	tcase "Test external ipv4 traffic"
-	do_mconnect 10.0.0.0 || tdie
-	check_mconnect_result $tmp/out || tdie
-}
-
-cmd_tcase_external_ipv6() {
-	tcase "Test external ipv6 traffic"
-	do_mconnect '[1000::]' || tdie
-	check_mconnect_result $tmp/out || tdie
+cmd_tcase_external_traffic() {
+	tcase "External to $1"
+	test -n "$1" || tdie 'No address'
+	tex "external_traffic $1" || tdie
 }
 
 ##  tcase_config [config]
-cmd_tcase_config() {
-	local cfg=default
-	test -n "$1" && cfg=$1
-	tcase "Set config [$cfg]"
-	cfg=/etc/metallb/$cfg.conf
-	test -r $cfg || tdie
-	cp $cfg /tmp/config
-	tex "kubectl create configmap config --from-file=/tmp/config 2>&1" || tdie
-	return 0
+cmd_tcase_configure_metallb() {
+	tcase "Configure metallb $1"
+	test -n "$1" || tdie "No config"
+	kubectl apply -f /etc/kubernetes/$1 || tdie
 }
 
-##  tcase_start
-cmd_tcase_start() {
-	tcase "Start metallb"
-	kubectl apply -f /etc/metallb/metallb.yaml || tdie
+##  tcase_start_metallb
+cmd_tcase_start_metallb() {
+	local f=/etc/kubernetes/metallb-orig.yaml
+	local v=$(grep 'image: metallb/controller:' $f | cut -d: -f3)
+	tcase "Start metallb version $v"
+
+	kubectl apply -f $f || tdie
 	sleep 2
+	kubectl='kubectl -n metallb-system'
 	pushv 60 20 3
-	local pod=metallb-controller-
-	tex "kubectl get pods 2>&1 | ogrep -E '^$pod.*Running'" || tdie
-	pod=metallb-speaker-
-	tex "kubectl get pods | ogrep -E '^$pod.*Running'" || tdie
+	local pod=controller-
+	tex "npods $pod 1" || tdie
+	pod=speaker-
 	tex "npods $pod 4" || tdie
 	popv
 	return 0
 }
 
 cmd_tcase_start_mconnect() {
-	start_mconnect /etc/metallb/mconnect.yaml || tdie
-	if test -n "$1"; then
-		kubectl apply -f /etc/metallb/$1.yaml || tdie
-	fi
-	return 0
+	start_mconnect /etc/kubernetes/mconnect.yaml || tdie
 }
 
 cmd_tcase_lbip() {
@@ -178,25 +179,8 @@ check_peers() {
 	return 0
 }
 cmd_tcase_peers() {
-	tcase "Check peers on router"
+	tcase "Check peers"
 	tex "check_peers $1"
-}
-
-check_route() {
-	mkdir -p $tmp
-	local out=$tmp/out
-	local opt
-	echo $1 | grep -q : && opt=-6
-	ip $opt route show $1 > $out
-	cat $out
-	local nhops=$(grep nexthop $out | wc -l)
-	test $nhops -eq 4
-}
-cmd_tcase_route() {
-	tcase "Check routes"
-	pushv 30 15 2
-	tex "check_route $1"
-	popv
 }
 
 cmd_tcase_check_connectivity() {
@@ -260,17 +244,12 @@ cmd_tcase_multi_mconnect() {
 }
 
 cmd_tcase_configure_routes() {
-	tcase "Configure routes when metallb-speaker does not support ipv6"
-	ip -6 route add 1000:: \
+	tcase "Configure ipv6 routes"
+	ip -6 route replace 1000::/124 \
 		nexthop via 1000::1:192.168.1.1 \
 		nexthop via 1000::1:192.168.1.2 \
 		nexthop via 1000::1:192.168.1.3 \
-		nexthop via 1000::1:192.168.1.4
-	ip -6 route add 1000::2 \
-		nexthop via 1000::1:192.168.1.1 \
-		nexthop via 1000::1:192.168.1.2 \
-		nexthop via 1000::1:192.168.1.3 \
-		nexthop via 1000::1:192.168.1.4
+		nexthop via 1000::1:192.168.1.4 || tdie
 }
 
 cmd_tcase_configure_l2_routing() {
