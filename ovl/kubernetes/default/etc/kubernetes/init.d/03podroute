@@ -1,7 +1,11 @@
 #! /bin/sh
 
-export __log_file=/var/log/podroute.log
-service-watcher -watch-nodes -script "/bin/node-util check_routes" \
- > /var/log/service-watcher.log 2>&1 &
+if test "$1" = "watch"; then
+	while true; do
+		/bin/node-util check_routes
+		sleep 5
+	done
+fi
 
+$0 watch > /var/log/podroute.log 2>&1 &
 
