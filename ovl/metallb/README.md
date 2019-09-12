@@ -1,5 +1,4 @@
-Xcluster overlay - metallb
-==========================
+# Xcluster overlay - metallb
 
 For experiments and tests with the
 [metallb](https://github.com/danderson/metallb).
@@ -18,39 +17,104 @@ Metallb has two major (independent) functions;
 <img src="metallb-overview.svg" alt="metallb-overview" width="80%" />
 
 
+The main focus in this ovl is metallb development so a local built
+version is most often used.
 
-Usage
------
 
+## Official release usage
+
+A local built metallb is normally used for devalopment, but an
+official release can also be used. A [private
+registry](../private-reg) is strongly recommended but not really
+necessary.
+
+
+Pre-load the private registry;
 ```
-configd=$($XCLUSTER ovld metallb)/default/etc/kubernetes
-xc mkcdrom gobgp; xc start
-# or
-xc mkcdrom gobgp private-reg; xc start
-kubectl apply -f https://raw.githubusercontent.com/google/metallb/v0.7.3/manifests/metallb.yaml
-kubectl apply -f $configd/metallb-config.yaml
-kubectl apply -f $configd/mconnect.yaml
-kubectl get pods -n metallb-system
+images lreg_cache docker.io/metallb/speaker:v0.8.1
+images lreg_cache docker.io/metallb/controller:v0.8.1
+```
+
+Ipv4 with BGP;
+```
+xc mkcdrom metallb gobgp private-reg; xc starts
+# On cluster;
+kubectl apply -f /etc/kubernetes/metallb-orig.yaml
+kubectl apply -f /etc/kubernetes/metallb-config.yaml
+kubectl apply -f /etc/kubernetes/mconnect.yaml
+kubectl get pods -A
 kubectl get svc
-# On a router vm;
+# On vm-201 (router);
 gobgp neighbor
 ip ro
-mconnect -address 10.0.0.2:5001 -nconn 400
+mconnect -address 10.0.0.0:5001 -nconn 400
 ```
 
-Static router an controller active only;
+Ipv6 with L2 (BGP is not supported for IPv6);
 ```
-xc mkcdrom externalip private-reg; xc starts
-configd=$($XCLUSTER ovld metallb)/default/etc/kubernetes
-kubectl apply -f https://raw.githubusercontent.com/google/metallb/v0.7.3/manifests/metallb.yaml
-kubectl apply -f $configd/metallb-config.yaml
-kubectl apply -f $configd/mconnect.yaml
-
-# On vm-201;
-mconnect -address 10.0.0.2:5001 -nconn 400
+SETUP=ipv6 xc mkcdrom metallb private-reg k8s-config; xc starts
+# On cluster;
+kubectl apply -f /etc/kubernetes/metallb-orig.yaml
+kubectl apply -f /etc/kubernetes/metallb-config-ipv6-L2.yaml
+kubectl apply -f /etc/kubernetes/mconnect.yaml
+kubectl get pods -A
+kubectl get svc
+# On vm-201 (router);
+ip -6 route add 1000::/124 dev eth1
+mconnect -address [1000::]:5001 -nconn 100
 ```
 
-Local image with L2 and dual-stack;
+## Build a local image
+
+For internal experiments a local pod is used, read the instructions
+[contributing](https://metallb.universe.tf/community/#contributing).
+
+For local development a [private registry](../private-reg) is *required*.
+
+Clone;
+```
+git_project=git@github.com:Your-project-here
+mkdir -p $GOPATH/src/github.com/danderson
+cd $GOPATH/src/github.com/danderson
+git clone $git_project/metallb.git
+cd metallb
+git remote add upstream git@github.com:danderson/metallb.git
+git remote set-url --push upstream no_push
+git remote -v
+```
+
+Sync;
+```
+cd $GOPATH/src/github.com/danderson/metallb
+git checkout master
+git fetch upstream
+git rebase upstream/master
+git push
+```
+
+Apply a PR on the local clone (optional)
+```
+pr=466
+cd $GOPATH/src/github.com/danderson/metallb
+#(sync)
+git checkout -b pr-$pr
+curl -sL https://github.com/danderson/metallb/pull/$pr.patch | patch -p1
+```
+
+Build;
+```
+cd $GOPATH/src/github.com/danderson/metallb
+git clean -dxf
+GO111MODULE=on go install ./controller
+GO111MODULE=on go install ./speaker
+cdo metallb
+images mkimage --force --upload ./image
+```
+
+
+## Usage local image
+
+Local image with L2 and dual-stack (assumes PR #466);
 ```
 xc mkcdrom metallb k8s-dual-stack private-reg; xc starts
 # On cluster;
@@ -67,138 +131,7 @@ mconnect -address [1000::]:5001 -nconn 100
 ```
 
 
-Helm installstion (install helm and start `tiller` as described in the
-[kubernets ovelay](../kubernetes/README.md);
-
-```
-configd=$($XCLUSTER ovld metallb)/default/etc/kubernetes
-xc mkcdrom metallb gobgp; xc start
-helm install --name metallb stable/metallb
-kubectl apply -f $configd/metallb-config-helm.yaml
-```
-
-You can start a private docker registry to avoid loading from the
-internet every time or images can be pre-pulled for faster (and safer)
-operation for instance in CI environment;
-
-```
-curl -L  https://raw.githubusercontent.com/google/metallb/v0.7.3/manifests/metallb.yaml \
- > $($XCLUSTER ovld metallb)/default/etc/metallb.yaml
-images make coredns nordixorg/mconnect:v1.2 \
- metallb/speaker:v0.7.3 metallb/controller:v0.7.3
-xc mkcdrom metallb gobgp images; xc start
-# On cluster;
-images         # to check that the metallb images are pre-pulled
-kubectl apply -f /etc/kubernetes/metallb-config.yaml
-kubectl apply -f /etc/metallb.yaml
-kubectl get pods -n metallb-system
-kubectl apply -f /etc/kubernetes/mconnect.yaml
-```
-
-
-## Home-built pod
-
-For internal experiments a local pod can be used Read the instructions
-[contributing](https://metallb.universe.tf/community/#contributing).
-
-Clone;
-```
-mkdir -p $GOPATH/src/github.com/danderson
-cd $GOPATH/src/github.com/danderson
-git clone git@github.com:Nordix/metallb.git
-cd metallb
-git remote add upstream git@github.com:danderson/metallb.git
-git remote set-url --push upstream no_push
-git remote -v
-```
-
-Sync;
-```
-git checkout master
-# Or;
-git checkout nordix-dev
-git fetch upstream
-git rebase upstream/master
-git push
-```
-
-Build;
-```
-cd $GOPATH/src/github.com/danderson/metallb
-GO111MODULE=on go install ./controller
-GO111MODULE=on go install ./speaker
-images mkimage --force --upload ./image
-```
-
-Update on new branch;
-```
-git checkout v0.7.4-nordix
-git push --set-upstream origin v0.7.4-nordix
-git tag v0.7.4-nordix-alpha2
-git push origin v0.7.4-nordix-alpha2
-```
-
-Build on an old release;
-```
-mkdir -p $GOPATH/src/go.universe.tf
-cd $GOPATH/src/go.universe.tf
-git clone git@github.com:Nordix/metallb.git
-cd metallb
-git checkout v0.7.4-nordix-alpha2
-go install -ldflags "-extldflags '-static' \
-  -X go.universe.tf/metallb/internal/version.version=$(date +%F:%T)" \
-  ./controller/...
-images mkimage --manifest=./image/manifest-old.json --force --upload ./image
-```
-
-Dual-stack;
-```
-# Rebuild
-GO111MODULE=on go install ./controller
-images mkimage --force --upload ./image
-# 
-xc mkcdrom metallb k8s-dual-stack kube-proxy private-reg; xc starts
-kubectl get nodes
-kubectl apply -f /etc/kubernetes/metallb-config-dual-stack.yaml
-kubectl apply -f /etc/kubernetes/metallb.yaml
-kubectl get pods
-kubectl apply -f /etc/kubernetes/mconnect-dual-stack.yaml
-kubectl get svc
-```
-
-Ipv4;
-```
-xc mkcdrom metallb gobgp private-reg; xc starts
-# On cluster;
-kubectl apply -f /etc/kubernetes/metallb-config-internal.yaml
-kubectl apply -f /etc/kubernetes/metallb.yaml
-kubectl apply -f /etc/kubernetes/metallb-speaker.yaml
-kubectl apply -f /etc/kubernetes/mconnect.yaml
-kubectl get pods
-kubectl logs pod/...
-kubectl get svc
-mconnect -address mconnect.default.svc.xcluster:5001 -nconn 400
-# On router;
-gobgp neighbor
-ip ro
-# Outside cluster;
-mconnect -address 10.0.0.2:5001 -nconn 400
-```
-
-IPv6;
-```
-# Pre-pull
-images make coredns metallb nordixorg/mconnect:v1.2
-SETUP=ipv6 xc mkcdrom k8s-config metallb gobgp images; xc start
-# Private reg
-SETUP=ipv6 xc mkcdrom metallb gobgp private-reg k8s-config; xc start
-# Outside cluster;
-mconnect -address [1000::]:5001 -nconn 400
-```
-
-
-IP address sharing
-------------------
+## IP address sharing
 
 Metallb supports that several services share the same `loadBalancerIP`
 (VIP) (described
