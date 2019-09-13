@@ -18,15 +18,31 @@ ip route add default via 192.168.1.201
 crio -log-level debug > /var/log/crio.log 2>&1 &
 sleep 0.2
 
-kubelet --container-runtime=remote --node-ip=192.168.1.$i \
-	--container-runtime-endpoint=unix:///var/run/crio/crio.sock \
-	--image-service-endpoint=unix:///var/run/crio/crio.sock \
-	--register-node=true --kubeconfig $KUBECONFIG \
-	--feature-gates IPv6DualStack=true \
-	--network-plugin=cni > /var/log/kubelet.log 2>&1 &
+run_kubelet() {
+	kubelet --container-runtime=remote --node-ip=192.168.1.$i \
+		--container-runtime-endpoint=unix:///var/run/crio/crio.sock \
+		--image-service-endpoint=unix:///var/run/crio/crio.sock \
+		--register-node=true --kubeconfig $KUBECONFIG \
+		--feature-gates IPv6DualStack=true \
+		--network-plugin=cni >> /var/log/kubelet.log 2>&1
+}
 
-kube-proxy --config /etc/kubernetes/kube-proxy.config --v 7 \
-	> /var/log/kube-proxy.log 2>&1 &
+run_kube_proxy() {
+	kube-proxy --config /etc/kubernetes/kube-proxy.config --v 7 \
+		>> /var/log/kube-proxy.log 2>&1
+}
+
+monitor() {
+	while true; do
+		logger -t K8s-monitor "STARTING: $1"
+		$1
+		logger -t K8s-monitor "DIED: $1"
+		sleep 2
+	done
+}
+
+(monitor run_kubelet) > /dev/null 2>&1 &
+(monitor run_kube_proxy) > /dev/null 2>&1 &
 
 # NOTE: For --proxy-mode=iptables you *must* uncomment this line!
 #ip route add 12.0.0.0/16 via 127.0.0.1
