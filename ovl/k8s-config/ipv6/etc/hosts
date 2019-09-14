@@ -1,7 +1,17 @@
-::1                     localhost.localdomain localhost
-1000::1:192.168.1.1		vm-001 vm-001.localdomain
-1000::1:192.168.1.2		vm-002 vm-002.localdomain
-1000::1:192.168.1.3		vm-003 vm-003.localdomain
-1000::1:192.168.1.4		vm-004 vm-004.localdomain
-127.0.0.1               localhost.localdomain localhost
+127.0.0.1               localhost
 
+1000::1:192.168.1.1		vm-001
+1000::1:192.168.1.2		vm-002
+1000::1:192.168.1.3		vm-003
+1000::1:192.168.1.4		vm-004
+192.168.1.4		vm-004
+192.168.1.1		vm-001
+192.168.1.2		vm-002
+192.168.1.3		vm-003
+
+# The following lines are desirable for IPv6 capable hosts
+::1     ip6-localhost ip6-loopback
+fe00::0 ip6-localnet
+ff00::0 ip6-mcastprefix
+ff02::1 ip6-allnodes
+ff02::2 ip6-allrouters

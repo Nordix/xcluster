@@ -14,10 +14,6 @@ log() {
 }
 test -n "$1" || die "No out-file"
 
-# Get the IPv6 address to the local registry
-regip=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.GlobalIPv6Address}}{{end}}' registry)
-test -n "$regip" || log 'No local ipv6 docker registry'
-#log "Address [$regip]"
 
 rm -rf $tmp
 mkdir -p $tmp/etc
@@ -28,14 +24,6 @@ for s in $(echo "$SETUP" | tr ',' ' '); do
 done
 test "$setup_copied" != "yes" -a -d $dir/default && cp -R $dir/default/* $tmp
 
-echo "$regip example.com" >> $tmp/etc/hosts
-if test -n "$__dns_spoof"; then
-	test -r "$__dns_spoof" || die "Not readable [$__dns_spoof]"
-	dip=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.Gateway}}{{end}}' registry)
-	for n in $(cat $__dns_spoof); do
-		echo "$dip $n" >> $tmp/etc/hosts
-	done
-fi
 
 cd $tmp
 tar cf "$1" *
