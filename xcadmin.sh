@@ -95,24 +95,15 @@ cmd_build_release() {
 	$XCLUSTER dropbear_build || die dropbear_build
 	$XCLUSTER mkimage
 
-	cmd_cache_refresh
-
 	now=$(date +%s)
 	echo "Elapsed time; $((now-begin)) sec"
 }
 cmd_cache_refresh() {
-	if test -z "$__cache_workspace"; then
-		log "WARNING: Build ovl cache SKIPPED!"
-		return 0
-	fi
 	$XCLUSTER cache --clear
-	export __cached=$XCLUSTER_WORKSPACE/xcluster/cache
-	export XCLUSTER_WORKSPACE=$__cache_workspace
 	local o
-	for o in iptools etcd gobgp; do
+	for o in etcd iptools gobgp images; do
 		log "Caching ovl [$o]"
 		$XCLUSTER cache $o
-		SETUP=ipv6 $XCLUSTER cache $o
 	done
 }
 
@@ -132,12 +123,34 @@ cmd_release() {
 	cp -R $d/* $T
 	rm -rf $T/.git
 
-	H=$T/workspace/xcluster
+	cmd_mkworkspace $T/workspace
+
+	cd $tmp
+	ar=/tmp/xcluster-$__version.tar
+	tar --group=0 --owner=0 -cf $ar xcluster
+	cd
+	log "Created [$ar]"
+}
+
+cmd_mkworkspace() {
+	test -n "$XCLUSTER" || die 'Not set [$XCLUSTER]'
+	eval $($XCLUSTER env)
+	local d W H S
+	d=$(dirname $XCLUSTER)
+	d=$(readlink -f $d)
+
+	test -n "$1" || die "No target"
+	test -e "$1" && die "Already exists [$1]"
+	mkdir -p "$1" || die "Mkdir failed [$1]"
+	local W=$(readlink -f "$1")
+	log "Creating workspace at [$W]"
+
+	H=$W/xcluster
 	mkdir -p $H
 	for n in bzImage cache hd.img base-libs.txt; do
 		cp -r $XCLUSTER_HOME/$n $H
 	done
-	chmod 444 $H/hd*
+	chmod 444 $H/hd.img
 	cat > $H/dns-spoof.txt <<EOF
 docker.io
 registry-1.docker.io
@@ -146,35 +159,42 @@ gcr.io
 registry.nordix.org
 EOF
 
-	H=$T/workspace/dropbear-$__dropbearver
-	mkdir -p $H
-	n=$XCLUSTER_WORKSPACE/dropbear-$__dropbearver
-	for f in dropbear scp dbclient; do
-		test -x $n/$f || die "Not executable [$n/$f]"
-		cp $n/$f $H
-	done
-	H=$T/workspace/$__bbver
+	H=$W/$__bbver
 	f=$XCLUSTER_WORKSPACE/$__bbver/busybox
 	mkdir -p $H
 	cp $f $H
+
 	f=$XCLUSTER_WORKSPACE/iproute2-$__ipver/ip/ip
-	H=$T/workspace/iproute2-$__ipver/ip
+	H=$W/iproute2-$__ipver/ip
 	mkdir -p $H
 	cp $f $H
 
-	mkdir -p $T/bin
-	for f in mconnect coredns kubectl helm tiller; do
-		test -x $GOPATH/bin/$f || die "Not executable [$GOPATH/bin/$f]"
-		cp $GOPATH/bin/$f $T/bin
-	done
+	H=$W/diskim-$__diskimver
+	mkdir -p $H/tmp
+	cp $DISKIM $H
+	S=$(dirname $DISKIM)/tmp
+	cp $S/bzImage $S/initrd.cpio $H/tmp
 
-	cd $tmp
-	ar=/tmp/xcluster-$__version.tar
-	tar --group=0 --owner=0 -cf $ar xcluster
-	cd
-	echo "Created [$ar]"
+	mkdir -p $W/bin
+	for f in mconnect coredns kubectl; do
+		test -x $GOPATH/bin/$f || die "Not executable [$GOPATH/bin/$f]"
+		cp $GOPATH/bin/$f $W/bin
+	done
 }
 
+##   workspace_ar <file>
+##     Builds a xcluster "workspace" archive for a binary release.
+##     Use; "./xcadmin.sh workspace_ar - | tar t" to test
+##
+cmd_workspace_ar() {
+	test -n "$1" || die "No ar"
+	test "$__force" = "yes" && rm -f $1
+	test -e "$1" && die "Already exists [$1]"
+	touch "$1" || die "Can't create [$1]"
+	mkdir -p $tmp
+	cmd_mkworkspace $tmp/workspace
+	tar -C $tmp -cf "$1" workspace
+}
 
 # Get the command
 cmd=$1
