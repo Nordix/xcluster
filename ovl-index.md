@@ -1,7 +1,9 @@
 # Overlay index
 
  * [coredns](ovl/coredns/README.md)
+ * [crio-test](ovl/crio-test/README.md)
  * [ctraffic](ovl/ctraffic/README.md)
+ * [docker](ovl/docker/README.md)
  * [ecmp](ovl/ecmp/README.md)
  * [etcd](ovl/etcd/README.md)
  * [externalip](ovl/externalip/README.md)
@@ -15,6 +17,7 @@
  * [k3s](ovl/k3s/README.md)
  * [k8s-base](ovl/k8s-base/README.md)
  * [k8s-config](ovl/k8s-config/README.md)
+ * [k8s-dual-stack](ovl/k8s-dual-stack/README.md)
  * [k8s-old](ovl/k8s-old/README.md)
  * [kube-proxy-ipv6](ovl/kube-proxy-ipv6/README.md)
  * [kubernetes](ovl/kubernetes/README.md)
@@ -29,6 +32,7 @@
  * [skopeo](ovl/skopeo/README.md)
  * [systemd](ovl/systemd/README.md)
  * [test](ovl/test/README.md)
+ * [test-template](ovl/test-template/README.md)
  * [timezone](ovl/timezone/README.md)
  * [wireguard](ovl/wireguard/README.md)
  * [xnet](ovl/xnet/README.md)

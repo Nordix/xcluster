@@ -149,106 +149,88 @@ want something better.
 ## Quick start
 
 Verify that `kvm` is installed and can be used and install
-dependencies if necessary;
+dependencies if necessary (see
+[above](#execution-environment-and-dependencies);
 
 ```
-> kvm-ok
-INFO: /dev/kvm exists
-KVM acceleration can be used
-> id
-# (you must be member of the "kvm" group)
-> sudo apt install -y xterm pxz genisoimage jq
+kvm-ok
+id     # (you must be member of the "kvm" group)
+sudo apt install -y xterm pxz genisoimage jq   # (if necessary)
 ```
 
-If necessary install `kvm` as described
-[above](#execution-environment-and-dependencies).
-
-
-Download from the release page and install;
-
+To get a k8s cluster with dual-stack running do;
 ```
-ver=v1.0
-cd $HOME
-tar xf Downloads/xcluster-$ver.tar.xz
-cd xcluster
-. ./Envsettings
-```
-
-Start an empty cluster. Xterms shall pop-up like in the screenshot
-above. If they don't, please check the
-[troubleshooting](doc/troubleshooting.md) doc.
-
-```
-xc start
-# If the windows closes immediately, to troubleshoot do;
-xtermopt=-hold xc start --nrouters=0 --nvm=2
-```
-
-This is the base `xcluster`. All VMs are connected to the "internal"
-network and are reachable with `ssh` or `telnet`. You can login to a
-vm using `vm` function. Experiment some and then stop the ckuster;
-
-```
-vm 1          # "vm" is a shell function that opens an xterm on the vm
-ssh root@localhost -p 12301   # Qemu port forwarding is used
-xc stop
-```
-
-### Xcluster with Kubernetes
-
-From release v2.0 the kubernetes image `hd-k8s.img` is not included in
-the `xcluster` releases and must be downloaded. Please see the
-[wiki](https://github.com/Nordix/xcluster/wiki/Kubernetes-Images).
-
-```
-cd $HOME/xcluster
+XCDIR=$HOME/tmp   # Change to your preference
+mkdir -p $XCDIR
+cd $XCDIR
+curl -L https://github.com/Nordix/xcluster/releases/download/v2.2/xcluster-v2.2.tar.xz | tar xJ
+cd $XCDIR/xcluster
 . ./Envsettings.k8s
-# If you see "The image is not readable...", download the image.
-# (this have to be done only once, or when you want to switch or upgrade the image)
-curl -L http://artifactory.nordix.org/artifactory/cloud-native/xcluster/images/hd-k8s.img.xz | xz -d > $__image
-# Build and start
-xc mkcdrom externalip; xc start
-```
+armurl=http://artifactory.nordix.org/artifactory/cloud-native
+curl -L $armurl/xcluster/images/hd-k8s.img.xz | xz -d > $__image
+xc mkcdrom k8s-dual-stack
+xc start   # (no xterms? See below) (use "xc starts" to start without xterms)
+vm 2     # Opens a terminal on vm-002
 
-
-Open a terminal on a node with `vm`;
-
-```
-vm 4
-# On the cluster node;
-kubectl version
-kubectl get nodes
-images  # alias that lists the pre-pulled images
-```
-
-The [mconnect](https://github.com/Nordix/mconnect) image can be used
-for basic connectivity tests;
-
-```
-kubectl apply -f /etc/kubernetes/mconnect.yaml
-kubectl get pods
+# In the terminal (on cluster) test things, for example;
+kubectl get nodes  # (may take ~10 sec to appear)
+kubectl get node vm-002 -o json | jq .spec   # "podCIDRs" is dual-stack
+kubectl -o json get pods -l 'app=coredns' | jq .items[0].status.podIPs
+nslookup www.google.se   # (doesn't work? See below)
+wget -4 -O /dev/null http://www.google.se # (doesn't work? See below)
+# Traffic test with mconnect
+kubectl apply -f /etc/kubernetes/mconnect-dual.yaml # (image is pre-pulled)
 kubectl get svc
-mconnect -address mconnect.default.svc.xcluster:5001 -nconn 400
-# On a router;
-mconnect -address 10.0.0.2:5001 -nconn 400
-```
-
-#### Kubernetes ipv6-only
-
-```
-SETUP=ipv6 xc mkcdrom etcd k8s-config externalip; xc start
-vm 1
-# On the cluster node;
-kubectl get nodes -o wide
-kubectl apply -f /etc/kubernetes/mconnect.yaml
+assign-lb-ip -svc mconnect; assign-lb-ip -svc mconnect-ipv6
 kubectl get svc
+mconnect -address mconnect.default.svc.xcluster:5001 -nconn 100
+mconnect -address mconnect-ipv6.default.svc.xcluster:5001 -nconn 100
 ```
 
-As you can see the `mconnect` service has an external ip
-`1000::2`. Test to access it from a router VM;
+No xterms? Start with "xtermopt=-hold xc start" to keep the window.
+See also the [troubleshooting doc](https://github.com/Nordix/xcluster/blob/master/doc/troubleshooting.md)
 
+Nslookup doesn't work? See [DNS-troubleshooting](https://github.com/Nordix/xcluster/blob/master/doc/networking.md#dns-trouble-shooting)
+
+External access does not work (wget http://www.google.se)? Check you
+host firewall settings. If this does not work then images can not be
+loaded from external sites (dicker.io).
+
+
+Run some test-suites;
 ```
-vm 201
-# On the router vm;
-mconnect -address [1000::2]:5001 -nconn 400
+cdo test-template
+./test-template.sh test > /tmp/xcluster-test.log
+cdo metallb
+./metallb.sh test basic4 basic6 > /tmp/xcluster-test.log
 ```
+
+## K8s test and development with xcluster
+
+**NOTE**: `xcluster` is intended for test and development of network
+functions. It is *not* intended for general k8s application
+development.
+
+If you want to use `xcluster` for some more serious test/development
+you *must* run `xcluster` inside an own netns as described
+[here](https://github.com/Nordix/xcluster/blob/master/doc/netns.md).
+In netns "bridged" networking is used, see the [networking
+topology](https://github.com/Nordix/xcluster/blob/master/doc/networking.md).
+
+While the user-space networking works (sort of) the performance is
+*horrible*, slow and lossy. This will cause all sorts of weird problems
+that you may not relate to poor network performance at first.
+
+While not a requirement it is *strongly recommended* that you use a
+[private docker
+registry](https://github.com/Nordix/xcluster/tree/master/ovl/private-reg).
+I recommend to modify the image so a private registry is always used;
+```
+xc ximage private-reg
+```
+
+To keep up with `xcluster` updates use a clone rather than a release
+as described [here](doc/misc.md).
+
+
+

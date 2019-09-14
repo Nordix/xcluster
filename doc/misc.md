@@ -11,28 +11,25 @@ The `cdo` function (defined in `Envsettings`) let you cd to a ovl directory;
 cdo metallb
 ```
 
+`cdo` had command competion in "bash".
+
+
 ## Use the master branch with a binary release
 
-The binary releases will lag behind and sometimes you may want to use
-a binary release as base but use for instance overlays from the
-`master` branch;
+The binary releases will lag behind and you may want to use the
+workspace from a binary release but use `xcluster` from the `master`
+branch;
 
 ```
-# Download and unpack the binary release;
-ver=v0.4
-cd $HOME
-tar xf Downloads/xcluster-$ver.tar.xz
-# Copy the pre-built binaries ($GOPATH assumed to be set);
-cp $HOME/xcluster/bin/* $GOPATH/bin
-# Clone xcluster to another place;
-mkdir -p $HOME/work
-cd $HOME/work
-git clone https://github.com/Nordix/xcluster.git
-# Use the workspace from the binary release;
-cd $HOME/work/xcluster
-export XCLUSTER_WORKSPACE=$HOME/xcluster/workspace
+XCDIR=$HOME/tmp   # Change to your preference
+mkdir -p $XCDIR
+cd $XCDIR
+git clone --depth 1 https://github.com/Nordix/xcluster.git
+curl -L https://github.com/Nordix/xcluster/releases/download/v2.2/xcluster-workspace-v2.2.tar.xz | tar xJ
+export XCLUSTER_WORKSPACE=$XCDIR/workspace
+cd $XCDIR/xcluster
 . ./Envsettings.k8s   # set XCLUSTER_WORKSPACE *before* sourcing!
-xc ovld kube-router   # Should be our cloned dir
+# Go on as usual. Download hd-k8s.img if needed.
 ```
 
 
