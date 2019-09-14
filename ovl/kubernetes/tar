@@ -83,6 +83,9 @@ test -x $n && cp $n $tmp/bin
 jq=$(which jq)
 test -n "$jq" && cp $jq $tmp/bin
 
+f=$GOPATH/bin/assign-lb-ip
+test -x $f && cp $f $tmp/bin
+
 # Install libraries
 $XCLUSTER cplib --dest=$tmp $tmp/bin/*
 

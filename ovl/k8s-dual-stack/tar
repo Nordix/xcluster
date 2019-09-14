@@ -26,12 +26,8 @@ test "$setup_copied" != "yes" && test -d $dir/default && cp -R $dir/default/* $t
 $XCLUSTER install_prog --dest=$tmp wget
 
 f=$GOPATH/src/github.com/Nordix/ipam-node-local/node-local
-test -x $f || die "Not executable [$f]"
 mkdir -p $tmp/opt/cni/bin
-cp $f $tmp/opt/cni/bin
-
-f=$GOPATH/bin/assign-lb-ip
-test -x $f && cp $f $tmp/bin
+test -x $f && cp $f $tmp/opt/cni/bin
 
 cd $tmp
 tar cf "$1" *
