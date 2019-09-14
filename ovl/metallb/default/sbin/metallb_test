@@ -130,7 +130,15 @@ external_traffic() {
 cmd_tcase_external_traffic() {
 	tcase "External to $1"
 	test -n "$1" || tdie 'No address'
+	pushv 60 20 3
 	tex "external_traffic $1" || tdie
+	popv
+}
+
+# Image-loading in user-space network will fail if we go via the routers.
+cmd_tcase_set_default_route() {
+	tcase "Default ipv4 route to 192.168.0.250"
+	ip route replace default via 192.168.0.250 || tdie
 }
 
 ##  tcase_config [config]
@@ -149,7 +157,7 @@ cmd_tcase_start_metallb() {
 	kubectl apply -f $f || tdie
 	sleep 2
 	kubectl='kubectl -n metallb-system'
-	pushv 60 20 3
+	pushv 100 25 4
 	local pod=controller-
 	tex "npods $pod 1" || tdie
 	pod=speaker-
