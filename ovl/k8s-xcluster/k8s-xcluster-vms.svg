@@ -1,0 +1,341 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   xmlns:dc="http://purl.org/dc/elements/1.1/"
+   xmlns:cc="http://creativecommons.org/ns#"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:xlink="http://www.w3.org/1999/xlink"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   width="881.5"
+   height="334.5"
+   viewBox="0 0 881.5 334.5"
+   version="1.1"
+   id="SVGRoot"
+   inkscape:version="0.92.3 (2405546, 2018-03-11)"
+   sodipodi:docname="k8s-xcluster-vms.svg">
+  <sodipodi:namedview
+     id="base"
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1.0"
+     inkscape:pageopacity="0.0"
+     inkscape:pageshadow="2"
+     inkscape:zoom="1"
+     inkscape:cx="534.44344"
+     inkscape:cy="263.25"
+     inkscape:document-units="px"
+     inkscape:current-layer="layer1"
+     showgrid="false"
+     inkscape:window-width="1717"
+     inkscape:window-height="1046"
+     inkscape:window-x="2361"
+     inkscape:window-y="79"
+     inkscape:window-maximized="0"
+     fit-margin-top="10"
+     fit-margin-right="10"
+     fit-margin-bottom="10"
+     fit-margin-left="10" />
+  <defs
+     id="defs3737">
+    <marker
+       inkscape:isstock="true"
+       style="overflow:visible"
+       id="marker963"
+       refX="0"
+       refY="0"
+       orient="auto"
+       inkscape:stockid="DotL">
+      <path
+         transform="matrix(0.8,0,0,0.8,5.92,0.8)"
+         style="fill:#000000;fill-opacity:1;fill-rule:evenodd;stroke:#000000;stroke-width:1.00000003pt;stroke-opacity:1"
+         d="m -2.5,-1 c 0,2.76 -2.24,5 -5,5 -2.76,0 -5,-2.24 -5,-5 0,-2.76 2.24,-5 5,-5 2.76,0 5,2.24 5,5 z"
+         id="path961"
+         inkscape:connector-curvature="0" />
+    </marker>
+    <marker
+       inkscape:stockid="DotL"
+       orient="auto"
+       refY="0"
+       refX="0"
+       id="marker5317"
+       style="overflow:visible"
+       inkscape:isstock="true"
+       inkscape:collect="always">
+      <path
+         inkscape:connector-curvature="0"
+         id="path5315"
+         d="m -2.5,-1 c 0,2.76 -2.24,5 -5,5 -2.76,0 -5,-2.24 -5,-5 0,-2.76 2.24,-5 5,-5 2.76,0 5,2.24 5,5 z"
+         style="fill:#000000;fill-opacity:1;fill-rule:evenodd;stroke:#000000;stroke-width:1.00000003pt;stroke-opacity:1"
+         transform="matrix(0.8,0,0,0.8,5.92,0.8)" />
+    </marker>
+  </defs>
+  <metadata
+     id="metadata3740">
+    <rdf:RDF>
+      <cc:Work
+         rdf:about="">
+        <dc:format>image/svg+xml</dc:format>
+        <dc:type
+           rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
+        <dc:title></dc:title>
+      </cc:Work>
+    </rdf:RDF>
+  </metadata>
+  <g
+     id="layer1"
+     inkscape:groupmode="layer"
+     inkscape:label="Layer 1"
+     transform="translate(-110.75,-272.75)">
+    <rect
+       style="opacity:1;vector-effect:none;fill:#c7ca82;fill-opacity:1;stroke:#000000;stroke-width:0.5;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1"
+       id="rect849"
+       width="137"
+       height="81"
+       x="121"
+       y="516" />
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-weight:normal;font-size:18.66666603px;line-height:1.25;font-family:sans-serif;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none"
+       x="158"
+       y="540"
+       id="text855"><tspan
+         sodipodi:role="line"
+         x="158"
+         y="540"
+         id="tspan857">Master</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-weight:normal;font-size:13.33333302px;line-height:1.25;font-family:sans-serif;text-align:center;letter-spacing:0px;word-spacing:0px;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none"
+       x="191.82877"
+       y="558"
+       id="text863"><tspan
+         sodipodi:role="line"
+         id="tspan861"
+         x="191.82877"
+         y="558">vm-001</tspan><tspan
+         sodipodi:role="line"
+         x="191.82877"
+         y="574.66669"
+         id="tspan882">(not a node in</tspan><tspan
+         sodipodi:role="line"
+         x="191.82877"
+         y="591.33331"
+         id="tspan865">the cluster)</tspan></text>
+    <g
+       id="g874"
+       transform="translate(338)">
+      <rect
+         style="opacity:1;vector-effect:none;fill:#90c993;fill-opacity:1;stroke:#000000;stroke-width:0.5;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1"
+         id="rect851"
+         width="137"
+         height="81"
+         x="338"
+         y="516" />
+      <text
+         id="text869"
+         y="544.28711"
+         x="369"
+         style="font-style:normal;font-weight:normal;font-size:18.66666603px;line-height:1.25;font-family:sans-serif;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none"
+         xml:space="preserve"><tspan
+           y="544.28711"
+           x="369"
+           id="tspan867"
+           sodipodi:role="line">Worker</tspan></text>
+    </g>
+    <use
+       x="0"
+       y="0"
+       xlink:href="#g874"
+       id="use876"
+       transform="translate(-169)"
+       width="100%"
+       height="100%" />
+    <use
+       x="0"
+       y="0"
+       xlink:href="#use876"
+       id="use878"
+       transform="translate(-169)"
+       width="100%"
+       height="100%" />
+    <use
+       x="0"
+       y="0"
+       xlink:href="#use878"
+       id="use880"
+       transform="translate(507)"
+       width="100%"
+       height="100%" />
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-weight:normal;font-size:13.33333302px;line-height:1.25;font-family:sans-serif;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none"
+       x="716.33337"
+       y="565"
+       id="text886"><tspan
+         sodipodi:role="line"
+         id="tspan884"
+         x="716.33337"
+         y="565">vm-004</tspan></text>
+    <text
+       id="text890"
+       y="565"
+       x="546.66663"
+       style="font-style:normal;font-weight:normal;font-size:13.33333302px;line-height:1.25;font-family:sans-serif;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none"
+       xml:space="preserve"><tspan
+         y="565"
+         x="546.66663"
+         id="tspan888"
+         sodipodi:role="line">vm-003</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-weight:normal;font-size:13.33333302px;line-height:1.25;font-family:sans-serif;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none"
+       x="377"
+       y="565"
+       id="text894"><tspan
+         sodipodi:role="line"
+         id="tspan892"
+         x="377"
+         y="565">vm-002</tspan></text>
+    <text
+       id="text898"
+       y="565"
+       x="885.99994"
+       style="font-style:normal;font-weight:normal;font-size:13.33333302px;line-height:1.25;font-family:sans-serif;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none"
+       xml:space="preserve"><tspan
+         y="565"
+         x="885.99994"
+         id="tspan896"
+         sodipodi:role="line">vm-005</tspan></text>
+    <path
+       style="fill:none;stroke:#000000;stroke-width:3;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+       d="M 147,440 H 958"
+       id="path900"
+       inkscape:connector-curvature="0" />
+    <path
+       style="fill:none;stroke:#000000;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;marker-end:url(#marker5317)"
+       d="M 189.5,516.26999 V 440.60956"
+       id="path902"
+       inkscape:connector-curvature="0" />
+    <use
+       x="0"
+       y="0"
+       xlink:href="#path902"
+       id="use922"
+       transform="translate(555)"
+       width="100%"
+       height="100%" />
+    <use
+       x="0"
+       y="0"
+       xlink:href="#use922"
+       id="use924"
+       transform="translate(169)"
+       width="100%"
+       height="100%" />
+    <use
+       x="0"
+       y="0"
+       xlink:href="#use922"
+       id="use926"
+       transform="translate(-169)"
+       width="100%"
+       height="100%" />
+    <use
+       x="0"
+       y="0"
+       xlink:href="#use926"
+       id="use928"
+       transform="translate(-169)"
+       width="100%"
+       height="100%" />
+    <path
+       style="fill:none;stroke:#000000;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;marker-end:url(#marker963)"
+       d="m 425.5,346.44303 v 93.3381"
+       id="path959"
+       inkscape:connector-curvature="0" />
+    <g
+       id="g945"
+       transform="translate(32,18)">
+      <rect
+         style="opacity:1;vector-effect:none;fill:#bb9191;fill-opacity:1;stroke:#000000;stroke-width:0.5;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1"
+         id="rect930"
+         width="137"
+         height="81"
+         x="325"
+         y="265" />
+      <text
+         id="text934"
+         y="293"
+         x="361.63998"
+         style="font-style:normal;font-weight:normal;font-size:18.66666603px;line-height:1.25;font-family:sans-serif;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none"
+         xml:space="preserve"><tspan
+           y="293"
+           x="361.63998"
+           id="tspan932"
+           sodipodi:role="line">Router</tspan></text>
+      <text
+         id="text938"
+         y="314"
+         x="368.33398"
+         style="font-style:normal;font-weight:normal;font-size:13.33333302px;line-height:1.25;font-family:sans-serif;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none"
+         xml:space="preserve"><tspan
+           y="314"
+           x="368.33398"
+           id="tspan936"
+           sodipodi:role="line">vm-201</tspan></text>
+    </g>
+    <use
+       x="0"
+       y="0"
+       xlink:href="#path959"
+       id="use1025"
+       transform="translate(184)"
+       width="100%"
+       height="100%" />
+    <g
+       id="g957"
+       transform="translate(216,18)">
+      <rect
+         y="265"
+         x="325"
+         height="81"
+         width="137"
+         id="rect947"
+         style="opacity:1;vector-effect:none;fill:#bb9191;fill-opacity:1;stroke:#000000;stroke-width:0.5;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1" />
+      <text
+         xml:space="preserve"
+         style="font-style:normal;font-weight:normal;font-size:18.66666603px;line-height:1.25;font-family:sans-serif;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none"
+         x="361.63998"
+         y="293"
+         id="text951"><tspan
+           sodipodi:role="line"
+           id="tspan949"
+           x="361.63998"
+           y="293">Router</tspan></text>
+      <text
+         xml:space="preserve"
+         style="font-style:normal;font-weight:normal;font-size:13.33333302px;line-height:1.25;font-family:sans-serif;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none"
+         x="368.33398"
+         y="314"
+         id="text955"><tspan
+           sodipodi:role="line"
+           id="tspan953"
+           x="368.33398"
+           y="314">vm-202</tspan></text>
+    </g>
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-weight:normal;font-size:13.33333302px;line-height:1.25;font-family:sans-serif;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none"
+       x="149.75"
+       y="426.25"
+       id="text1048"><tspan
+         sodipodi:role="line"
+         id="tspan1046"
+         x="149.75"
+         y="426.25">(eth1)</tspan></text>
+  </g>
+</svg>

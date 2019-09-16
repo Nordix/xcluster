@@ -1,0 +1,49 @@
+#! /bin/sh
+
+dir=$(dirname $0); dir=$(readlink -f $dir)
+tmp=/tmp/xcluster_$$
+die() {
+	echo "ERROR: $*" >&2
+	rm -rf $tmp
+	exit 1
+}
+log() {
+	echo "$*" >&2
+}
+test -n "$1" || die "No out-file"
+
+rm -rf $tmp
+mkdir -p $tmp/bin $tmp/sbin
+
+cp -R $dir/default/* $tmp
+
+for s in $(echo "$SETUP" | tr ',' ' '); do
+	test -d $dir/$s || continue
+	cp -R $dir/$s/* $tmp
+	setup_copied=yes
+done
+
+# Install CNI plugins;
+d=$GOPATH/src/github.com/containernetworking/plugins/bin
+if ! test -x $d/bridge; then
+	cat >&2 <<"EOF"
+
+CNI plugins does not exist in;
+$GOPATH/src/github.com/containernetworking/plugins/bin
+
+These must be built manually. Check the README.md.
+
+EOF
+	die "Not executable [$d/bridge]"
+fi
+
+mkdir -p $tmp/opt/cni/bin
+for n in bridge host-local loopback; do
+	test -x $d/$n || die "Not executable [$d/$n]"
+	cp $d/$n $tmp/opt/cni/bin
+done
+
+cd $tmp
+tar cf "$1" *
+cd - > /dev/null
+rm -rf $tmp

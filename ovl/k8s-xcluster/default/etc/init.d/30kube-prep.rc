@@ -1,0 +1,36 @@
+#! /bin/sh
+
+export PATH="/bin:/sbin:/usr/bin:/usr/sbin"
+
+die() {
+	echo "$@"
+	exit 1
+}
+
+hostname | grep -Eq 'vm-[0-9]+$' || die "Invalid hostname [$(hostname)]"
+i=$(hostname | cut -d- -f2 | sed -re 's,^0+,,')
+test $i -le 200 || exit 0
+
+printf '35f15062-7e2b-11e9-b640-0000000100%02x\n' $i > /etc/machine-id
+
+for n in kube-controller-manager kube-scheduler kube-apiserver \
+	kube-proxy kubectl kubelet; do
+	test -e /bin/$n && continue
+	ln -s hyperkube /bin/$n
+done
+
+# Work around for bad install of dropbear
+test -r /usr/bin/dbclient || ln /bin/dbclient /usr/bin/dbclient
+
+mount -t tmpfs tmpfs /sys/fs/cgroup
+for d in cpuset memory; do
+	mkdir /sys/fs/cgroup/$d
+	mount -t cgroup cgroup /sys/fs/cgroup/$d
+done
+mount --make-rshared /
+
+echo "export KUBECONFIG=/etc/kubernetes/kubeconfig" >> /etc/profile
+
+test $i -eq 1 && exit 0
+
+mkdir -p /var/lib/kubelet

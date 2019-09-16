@@ -1,0 +1,18 @@
+#! /bin/sh
+xcluster_prep() {
+	case $1 in
+		ipv4)
+			SETUP=ipv4
+			BASEOVLS=k8s-xcluster
+			;;
+		ipv6)
+			SETUP=ipv6
+			BASEOVLS=k8s-xcluster
+			;;
+		dual-stack) ;;
+		*) ;;
+	esac
+}
+xcluster_unprep() {
+	unset SETUP BASEOVLS 
+}

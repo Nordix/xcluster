@@ -1,0 +1,35 @@
+#! /bin/sh
+
+# node-local - A meta IPAM plugin
+#
+# Node-local adds a node unique "range" to the config (on stdin) and
+# pipes the request to the "host-local" ipam.
+
+
+# These variables are used for local testing;
+#
+#   echo "11.0.3.0/24" > /tmp/podCIDR
+#   echo "1000:300::/24" >> /tmp/podCIDR
+#   HOSTNAME=vm-003 HOST_LOCAL=cat ./dual-stack/opt/cni/bin/node-local \
+#     < ../kubernetes/default/etc/cni/net.d/cni.conf
+#
+test -n "$HOSTNAME" || HOSTNAME=$(hostname)
+test -n "$HOST_LOCAL" || HOST_LOCAL=/opt/cni/bin/host-local
+
+# Get the node number
+i=$(echo $HOSTNAME | cut -d- -f2 | sed -re 's,^0+,,')
+
+test -r /tmp/podCIDR || \
+	kubectl get node $HOSTNAME -o json | jq -r '.spec.podCIDRs[]' > /tmp/podCIDR
+
+range=$(cat /tmp/podCIDR)
+logger "podCIDR: [$range]"
+
+for r in $range; do
+	gw=$(echo $r | sed -e 's,0/24,1,')
+	echo $r | grep -q : && gw=$(echo $r | sed -e 's,::/24,::1,')
+	test -n "$subnets" && subnets="$subnets,"
+	subnets="$subnets[{subnet: \"$r\", gateway: \"$gw\"}]"
+done
+# Emit the config with ranges added;
+jq ".ipam = {type: \"host-local\", ranges: [$subnets]}" | $HOST_LOCAL
