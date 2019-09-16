@@ -107,7 +107,7 @@ test_basic6() {
 	otc 2 start_mconnect
 	otc 2 "lbip_assigned mconnect 1000::"
 
-	otc 201 configure_routes
+	otc 201 configure_l2_routing
 	otc 201 "external_traffic '[1000::]'"
 
 	xcluster_stop
