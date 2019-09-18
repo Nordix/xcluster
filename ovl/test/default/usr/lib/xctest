@@ -159,7 +159,7 @@ test_namespaces() {
 ##
 test_coredns() {
 	tcase "Wait for the coredns pod"
-	pushv 60 30 2
+	pushv 180 60 3
 	tex "$kubectl get pods 2>&1 | ogrep -E '^coredns.*Running'" || tdie
 	popv
 }
