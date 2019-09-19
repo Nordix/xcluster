@@ -194,7 +194,7 @@ Nslookup doesn't work? See [DNS-troubleshooting](https://github.com/Nordix/xclus
 
 External access does not work (wget http://www.google.se)? Check you
 host firewall settings. If this does not work then images can not be
-loaded from external sites (dicker.io).
+loaded from external sites (docker.io).
 
 
 Run some test-suites;
