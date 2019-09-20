@@ -16,25 +16,50 @@ test $i -eq 1 || exit 0
 
 sleep 1
 MASTER_IP=1000::1:192.168.1.1
-kube-apiserver --token-auth-file=/srv/kubernetes/known_tokens.csv \
-	--allow-privileged=true \
-	--insecure-bind-address=$MASTER_IP --advertise-address=$MASTER_IP \
-	--authorization-mode=AlwaysAllow \
-	--etcd-servers=http://127.0.0.1:2379 --anonymous-auth=false \
-	--service-cluster-ip-range=fd00:4000::/112 \
-	--enable-admission-plugins=ServiceAccount,AlwaysAdmit \
-	--client-ca-file=/srv/kubernetes/ca.crt \
-	--tls-private-key-file=/srv/kubernetes/server.key \
-	--tls-cert-file=/srv/kubernetes/server.crt \
-	> /var/log/kube-apiserver.log 2>&1 &
+apiserver() {
+	local log=/var/log/kube-apiserver.log
+	logger -s -t K8s "STARTED: kube-apiserver at $(date)" >> log 2>&1
+	kube-apiserver --token-auth-file=/srv/kubernetes/known_tokens.csv \
+		--allow-privileged=true \
+		--feature-gates=SCTPSupport=true \
+		--insecure-bind-address=$MASTER_IP --advertise-address=$MASTER_IP \
+		--authorization-mode=AlwaysAllow \
+		--etcd-servers=http://127.0.0.1:2379 --anonymous-auth=false \
+		--service-cluster-ip-range=fd00:4000::/112 \
+		--enable-admission-plugins=ServiceAccount,AlwaysAdmit \
+		--client-ca-file=/srv/kubernetes/ca.crt \
+		--tls-private-key-file=/srv/kubernetes/server.key \
+		--tls-cert-file=/srv/kubernetes/server.crt \
+		>> $log 2>&1
+}
+controller() {
+	local log=/var/log/kube-controller-manager.log
+	logger -s -t K8s "STARTED: kube-controller-manager at $(date)" >> log 2>&1
+	kube-controller-manager --kubeconfig $KUBECONFIG \
+		--allocate-node-cidrs=true --cluster-cidr=1000::2:11.0.0.0/112 \
+		--node-cidr-mask-size=120 \
+		--controllers="*,serviceaccount,serviceaccount-token" \
+		--service-account-private-key-file=/srv/kubernetes/server.key \
+		--root-ca-file=/srv/kubernetes/server.crt \
+		>> $log 2>&1
+}
 
-kube-controller-manager --kubeconfig $KUBECONFIG \
-	--allocate-node-cidrs=true --cluster-cidr=1000::2:11.0.0.0/112 \
-	--node-cidr-mask-size=120 \
-	--controllers="*,serviceaccount,serviceaccount-token" \
-	--service-account-private-key-file=/srv/kubernetes/server.key \
-	--root-ca-file=/srv/kubernetes/server.crt \
-	> /var/log/kube-controller-manager.log 2>&1 &
+scheduler() {
+	local log=/var/log/kube-scheduler.log
+	logger -s -t K8s "STARTED: kube-scheduler at $(date)" >> log 2>&1
+	kube-scheduler --kubeconfig $KUBECONFIG	 --leader-elect=false \
+		>> $log 2>&1
+}
 
-kube-scheduler --kubeconfig $KUBECONFIG \
-	> /var/log/kube-scheduler.log 2>&1 &
+monitor() {
+	while true; do
+		logger -t K8s-monitor "STARTING: $1"
+		$1
+		logger -t K8s-monitor "DIED: $1"
+		sleep 2
+	done
+}
+
+(monitor apiserver) > /dev/null 2>&1 &
+(monitor controller) > /dev/null 2>&1 &
+(monitor scheduler) > /dev/null 2>&1 &

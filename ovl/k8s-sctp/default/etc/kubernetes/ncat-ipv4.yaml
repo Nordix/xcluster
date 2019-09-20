@@ -1,0 +1,38 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: ncat-ipv4
+spec:
+  selector:
+    app: ncat
+  ports:
+  - port: 5001
+  type: LoadBalancer
+  loadBalancerIP: "10.0.0.0"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ncat-deployment
+spec:
+  selector:
+    matchLabels:
+      app: ncat
+  replicas: 4
+  template:
+    metadata:
+      labels:
+        app: ncat
+    spec:
+      containers:
+      - name: ncat
+        image: registry.nordix.org/cloud-native/ncat:v0.1
+        ports:
+        - containerPort: 5001
+      - image: registry.nordix.org/cloud-native/mserver:v1.0
+        name: mserver
+        env:
+        - name: NO_SERVERS
+          value: "yes"
+        securityContext:
+          privileged: true

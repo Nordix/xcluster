@@ -1,0 +1,30 @@
+#! /bin/sh
+
+dir=$(dirname $0); dir=$(readlink -f $dir)
+tmp=/tmp/${prg}_$$
+die() {
+    echo "ERROR: $*" >&2
+    rm -rf $tmp
+    exit 1
+}
+log() {
+    echo "INFO: $*" >&2
+}
+
+test -n "$1" || die "No out-file"
+
+mkdir -p $tmp
+for n in ncat hostname; do
+	f=$(which $n)
+	test -n "$f" || tdie "Not found [$n]"
+	test -x "$f" || tdie "Not executable [$f]"
+	cp $f $tmp
+done
+
+$XCLUSTER cplib --base-libs=/dev/null --dest=$tmp $tmp/*
+$XCLUSTER cploader --dest=$tmp
+
+cd $tmp
+tar cf "$1" *
+cd - > /dev/null
+rm -rf $tmp
