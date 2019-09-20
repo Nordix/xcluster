@@ -13,6 +13,15 @@ log() {
 	echo "INFO: $*" >&2
 }
 
+modmaster() {
+	local f=$($XCLUSTER ovld k8s-xcluster)/$1/etc/init.d/31kube-master.rc
+	test -r $f || die "Not readable [$f]"
+	mkdir -p $tmp/etc/init.d
+	dst=$tmp/etc/init.d/31kube-master.rc
+	sed -e 's,--allocate-node-cidrs=true,,' < $f > $dst
+	chmod a+x $dst
+}
+
 test -n "$1" || die "No out-file"
 
 mkdir -p $tmp
@@ -20,8 +29,12 @@ for s in $(echo "$SETUP" | tr ',' ' '); do
 	test -d $dir/$s || continue
 	cp -R $dir/$s/* $tmp
 	setup_copied=yes
+	modmaster $s
 done
-test "$setup_copied" != "yes" && test -d $dir/default && cp -R $dir/default/* $tmp
+if test "$setup_copied" != "yes" && test -d $dir/default; then
+	cp -R $dir/default/* $tmp
+	modmaster default
+fi
 
 d=$GOPATH/src/github.com/containernetworking/plugins/bin
 mkdir -p $tmp/opt/cni/bin
