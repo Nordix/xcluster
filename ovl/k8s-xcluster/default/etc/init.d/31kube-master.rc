@@ -23,7 +23,7 @@ apiserver() {
 		--allow-privileged=true \
 		--insecure-bind-address=0.0.0.0 --advertise-address=$MASTER_IP \
 		--authorization-mode=AlwaysAllow \
-		--feature-gates IPv6DualStack=true \
+		--feature-gates IPv6DualStack=true,SCTPSupport=true \
 		--etcd-servers=http://localhost:2379 --anonymous-auth=false \
 		--service-cluster-ip-range=12.0.0.0/16,fd00:4000::/112 \
 		--enable-admission-plugins=ServiceAccount,AlwaysAdmit \

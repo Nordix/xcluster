@@ -24,6 +24,7 @@ apiserver() {
 		--allow-privileged=true \
 		--insecure-bind-address=$MASTER_IP --advertise-address=$MASTER_IP \
 		--authorization-mode=AlwaysAllow \
+		--feature-gates SCTPSupport=true \
 		--etcd-servers=http://127.0.0.1:2379 --anonymous-auth=false \
 		--service-cluster-ip-range=$SERVICE_CIDR \
 		--enable-admission-plugins=ServiceAccount,AlwaysAdmit \
