@@ -12,8 +12,17 @@ set.
 
 ## Build
 
+Build local image;
 ```
 images mkimage --force --upload ./image
+```
+
+Or;
+
+Prepare [private-reg](../private-reg);
+```
+images lreg_cache registry.nordix.org/cloud-native/ncat:v0.1
+images lreg_cache registry.nordix.org/cloud-native/mserver:v1.0
 ```
 
 ## Usage
