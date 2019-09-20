@@ -163,7 +163,8 @@ To get a k8s cluster with dual-stack running do;
 XCDIR=$HOME/tmp   # Change to your preference
 mkdir -p $XCDIR
 cd $XCDIR
-curl -L https://github.com/Nordix/xcluster/releases/download/v2.2/xcluster-v2.2.tar.xz | tar xJ
+ver=<latest>
+curl -L https://github.com/Nordix/xcluster/releases/download/$ver/xcluster-$ver.tar.xz | tar xJ
 cd $XCDIR/xcluster
 . ./Envsettings.k8s
 armurl=http://artifactory.nordix.org/artifactory/cloud-native
