@@ -96,11 +96,6 @@ basic() {
 	xcluster_prep $1
 	xcluster_start test-template
 
-	test $__nvm -gt 4 && first_worker=2
-	for n in $(seq $first_worker $__nvm); do
-		otc $n set_default_route
-	done
-
 	otc 1 check_namespaces
 	otc 1 check_nodes
 	otc 2 check_coredns
