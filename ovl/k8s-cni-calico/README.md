@@ -20,7 +20,7 @@ export __nvm=5
 # Ipv4-only, ipv6-only, dual-stack;
 SETUP=ipv4 xc mkcdrom k8s-xcluster k8s-cni-calico private-reg; xc starts
 SETUP=ipv6 xc mkcdrom k8s-xcluster k8s-cni-calico private-reg; xc starts
-xc mkcdrom k8s-cni-calico crio-test private-reg; xc starts
+xc mkcdrom k8s-cni-calico private-reg; xc starts
 ```
 
 ## Test
@@ -54,6 +54,15 @@ t=test-template
 $($XCLUSTER ovld $t)/$t.sh test basic_dual > /dev/null
 ```
 
+### Install calicoctl
+
+```
+ver=v3.8.2
+curl -L \
+ https://github.com/projectcalico/calicoctl/releases/download/$ver/calicoctl \
+ > $GOPATH/bin/calicoctl
+chmod a+x $GOPATH/bin/calicoctl
+```
 
 ## Doc
 

@@ -43,6 +43,10 @@ for n in bridge host-local loopback portmap; do
     cp $d/$n $tmp/opt/cni/bin
 done
 		
+f=$GOPATH/bin/calicoctl
+mkdir -p $tmp/bin
+test -x $f && cp $f $tmp/bin
+
 cd $tmp
 tar cf "$1" *
 cd - > /dev/null
