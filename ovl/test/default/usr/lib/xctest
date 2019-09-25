@@ -182,6 +182,21 @@ get_pod() {
 	test -n "$__podi" || __podi=0
 	$kubectl -o json get pods -l "app=$1" | jq -r .items[$__podi].metadata.name
 }
+get_pods() {
+	$kubectl -o json get pods -l "$1" | jq -r .items[].metadata.name
+}
+pod_ready() {
+	$kubectl -o json get pod "$1" | jq -r .status.containerStatuses[].ready \
+		| ogrep -v true && return 1
+	return 0
+}
+check_pods_ready() {
+	local p
+	for p in $(get_pods "$1"); do
+		pod_ready $p || return 1
+	done
+	return 0
+}
 
 ##  kubectl_exec <pod> <kubectl-exec options...>
 ##    Execute a command in a pod (container).
