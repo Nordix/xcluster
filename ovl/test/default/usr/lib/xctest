@@ -180,7 +180,9 @@ test_nodes() {
 ##
 get_pod() {
 	test -n "$__podi" || __podi=0
-	$kubectl -o json get pods -l "app=$1" | jq -r .items[$__podi].metadata.name
+	local l=$1
+	echo $1 | grep -q = || l="app=$1"
+	$kubectl -o json get pods -l $l | jq -r .items[$__podi].metadata.name
 }
 get_pods() {
 	$kubectl -o json get pods -l "$1" | jq -r .items[].metadata.name
