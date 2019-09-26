@@ -18,16 +18,17 @@ You can read more about deploying registries in the
 ## Start a local docker registry
 
 ```
-# Start (the '-p' option is not necessary)
-docker run -d --restart=always --name registry \
+sudo docker run -d -p 80:5000 --restart=always --name registry \
   -e REGISTRY_STORAGE_DELETE_ENABLED=true registry:2
 # Get the address to the registry;
 docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' registry
 # Stop (if you want);
 docker container stop registry
 docker container rm -v registry
+```
 
-# Secure registry;
+Secure registry (not used);
+```
 certd=$XCLUSTER_WORKSPACE/cert
 openssl genrsa -out $certd/docker.key 2048
 openssl req -new -x509 -sha256 -key $certd/docker.key -out $certd/dockercrt -days 3650
