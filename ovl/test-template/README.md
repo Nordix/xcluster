@@ -11,8 +11,8 @@ Copy the test scripts in this ovl to your new ovl, rename and sed;
 
 ```
 testtmpl=$($XCLUSTER ovld test-template)
-myovl=some-name
-cdo $myovl
+cdo some-ovl
+myovl=$(basename $PWD)
 mkdir -p default/bin
 cp $testtmpl/test-template.sh $myovl.sh
 cp $testtmpl/default/bin/test-template_test default/bin/${myovl}_test

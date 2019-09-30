@@ -1,8 +1,8 @@
 #! /bin/sh
 ##
-## <name>_test --
+## test-template_test --
 ##
-##   Test script for <name> executed in xcluster.
+##   Test script for test-template executed in xcluster.
 ##
 ## Commands;
 ##
