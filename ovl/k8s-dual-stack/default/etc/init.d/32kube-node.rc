@@ -24,7 +24,10 @@ run_kubelet() {
 		--image-service-endpoint=unix:///var/run/crio/crio.sock \
 		--register-node=true --kubeconfig $KUBECONFIG \
 		--feature-gates IPv6DualStack=true \
-		--network-plugin=cni >> /var/log/kubelet.log 2>&1
+		--network-plugin=cni \
+		--cluster-dns=12.0.0.2 --cluster-domain=xcluster \
+		--runtime-cgroups=/systemd/system.slice \
+		--kubelet-cgroups=/systemd/system.slice >> /var/log/kubelet.log 2>&1
 }
 
 run_kube_proxy() {
