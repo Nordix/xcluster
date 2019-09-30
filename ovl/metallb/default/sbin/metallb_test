@@ -135,12 +135,6 @@ cmd_tcase_external_traffic() {
 	popv
 }
 
-# Image-loading in user-space network will fail if we go via the routers.
-cmd_tcase_set_default_route() {
-	tcase "Default ipv4 route to 192.168.0.250"
-	ip route replace default via 192.168.0.250 || tdie
-}
-
 ##  tcase_config [config]
 cmd_tcase_configure_metallb() {
 	tcase "Configure metallb $1"

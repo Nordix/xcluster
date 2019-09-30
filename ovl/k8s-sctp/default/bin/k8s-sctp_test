@@ -41,11 +41,6 @@ cmd_tcase_check_nodes() {
 cmd_tcase_check_coredns() {
 	test_coredns
 }
-# Image-loading in user-space network will fail if we go via the routers.
-cmd_tcase_set_default_route() {
-	tcase "Default ipv4 route to 192.168.0.250"
-	ip route replace default via 192.168.0.250 || tdie
-}
 cmd_tcase_nslookup() {
 	tcase "Nslookup $1"
 	test -n "$1" || tdie "Nothing to lookup"

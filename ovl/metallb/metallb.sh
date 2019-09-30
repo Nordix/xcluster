@@ -72,11 +72,6 @@ test_basic4() {
 	otc 1 check_nodes
 	otc 2 check_coredns
 
-	otc 1 set_default_route
-	otc 2 set_default_route
-	otc 3 set_default_route
-	otc 4 set_default_route
-
 	otc 2 start_metallb
 	otc 2 "configure_metallb metallb-config.yaml"
 	otc 2 start_mconnect
@@ -96,11 +91,6 @@ test_basic6() {
 	otc 1 check_namespaces
 	otc 1 check_nodes
 	otc 2 check_coredns
-
-	otc 1 set_default_route
-	otc 2 set_default_route
-	otc 3 set_default_route
-	otc 4 set_default_route
 
 	otc 2 start_metallb
 	otc 2 "configure_metallb metallb-config-ipv6-L2.yaml"

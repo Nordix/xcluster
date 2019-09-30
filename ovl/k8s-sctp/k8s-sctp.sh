@@ -91,15 +91,9 @@ test_basic_dual() {
 
 basic46() {
 	tlog "=== k8s-sctp: Basic test on $1"
-	local n first_worker=1
 
 	xcluster_prep $1
 	xcluster_start k8s-sctp
-
-	test $__nvm -gt 4 && first_worker=2
-	for n in $(seq $first_worker $__nvm); do
-		otc $n set_default_route
-	done
 
 	otc 1 check_namespaces
 	otc 1 check_nodes
@@ -117,15 +111,9 @@ basic46() {
 
 basic_dual() {
 	tlog "=== k8s-sctp: Basic test on dual-stack"
-	local n first_worker=1
 
 	xcluster_prep dual-stack
 	xcluster_start k8s-sctp
-
-	test $__nvm -gt 4 && first_worker=2
-	for n in $(seq $first_worker $__nvm); do
-		otc $n set_default_route
-	done
 
 	otc 1 check_namespaces
 	otc 1 check_nodes
