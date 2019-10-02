@@ -33,6 +33,7 @@ run_kubelet() {
 		--image-service-endpoint=unix:///var/run/crio/crio.sock \
 		--register-node=true --kubeconfig $KUBECONFIG \
 		--network-plugin=cni \
+		--cluster-dns=fd00:4000::2 --cluster-domain=xcluster \
 		--runtime-cgroups=/systemd/system.slice \
 		--kubelet-cgroups=/systemd/system.slice >> /var/log/kubelet.log 2>&1
 }

@@ -25,4 +25,4 @@ rm -f /etc/resolv.conf
 for n in $ept; do
 	echo "nameserver $n" >> /etc/resolv.conf
 done
-echo "search .xcluster .svc.xcluster .default.svc.xcluster" >> /etc/resolv.conf
+echo "options use-vc"  >> /etc/resolv.conf
