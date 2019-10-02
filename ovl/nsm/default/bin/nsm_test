@@ -1,0 +1,186 @@
+#! /bin/sh
+##
+## nsm_test --
+##
+##
+## Commands;
+##
+
+prg=$(basename $0)
+dir=$(dirname $0); dir=$(readlink -f $dir)
+tmp=/tmp/${prg}_$$
+
+die() {
+    echo "ERROR: $*" >&2
+    rm -rf $tmp
+    exit 1
+}
+help() {
+    grep '^##' $0 | cut -c3-
+    rm -rf $tmp
+    exit 0
+}
+test -n "$1" || help
+echo "$1" | grep -qi "^help\|-h" && help
+
+log() {
+	echo "$prg: $*" >&2
+}
+dbg() {
+	test -n "$__verbose" && echo "$prg: $*" >&2
+}
+
+##  env
+##    Print environment.
+##
+cmd_env() {
+	test "$cmd" = "env" && set | grep -E '^(__.*|ARCHIVE)='
+}
+
+##  bind_mount
+##
+cmd_bind_mount() {
+	mkdir -p /var/lib/kubelet
+	mount --bind /var/lib/rancher/k3s/agent/kubelet /var/lib/kubelet
+}
+
+cmd_tcase_check_namespaces() {
+	test_namespaces
+}
+cmd_tcase_check_nodes() {
+	test_nodes
+}
+cmd_tcase_check_coredns() {
+	test_coredns
+}
+
+cmd_tcase_check_nsm() {
+	tcase "Check NSM"
+	pushv 120 60 2
+	tex "npods nsmgr- 4" || tdie
+	tex "npods nsm-vpp-forwarder- 4" || tdie
+	tex "npods nsm-admission-webhook- 1" || tdie
+
+	# Check that all containers are "ready"
+	# If NSM is not ready no interfaces are inserver and no recover
+	tex "check_pods_ready app=nsmgr-daemonset" || tdie
+	popv
+	
+}
+
+cmd_tcase_check_icmp_responder() {
+	tcase "Check icmp-responder"
+	pushv 120 60 2
+	tex "npods icmp-responder-nse- 2" || tdie
+	tex "npods alpine-nsc- 4" || tdie
+	tex "check_pods_ready networkservicemesh.io/app=icmp-responder" || tdie
+	tex "check_pods_ready networkservicemesh.io/app=icmp-responder-nsc" || tdie
+	popv
+	return 0
+}
+
+cmd_tcase_bridge_domain_install() {
+	tcase "Install bridge-domain"
+	$kubectl apply -f /etc/kubernetes/bridge-domain/bridge.yaml || tdie
+	tex "npods bridge-domain- 1" || tdie
+}
+
+cmd_tcase_bridge_domain_install_mserver() {
+	tcase "Install mserver with bridge-domain"
+	$kubectl apply -f /etc/kubernetes/mserver-bridge-domain.yaml || tdie
+	pushv 120 60 2
+	tex "npods mserver-bridge-domain- 4" || tdie
+	tex "check_pods_ready app=mserver-bridge-domain" || tdie
+	popv
+	return 0
+}
+
+cmd_tcase_bridge_domain_ping() {
+	tcase "Ping via bridge-domain"
+	local i p
+	p=$(get_pod app=mserver-bridge-domain)
+	echo "kubectl exec $p ..."
+	for i in 1 2 3 4; do
+		$kubectl exec -c mserver $p -- /bin/ping -c 1 -W 1 10.60.1.$i || tdie
+	done
+	return 0
+}
+
+cmd_tcase_bridge_domain_install_simple_client() {
+	tcase "Install simple-client with bridge-domain"
+	$kubectl apply -f /etc/kubernetes/bridge-domain/simple-client.yaml || tdie
+	pushv 120 60 2
+	tex "npods simple-client- 3" || tdie
+	tex "check_pods_ready networkservicemesh.io/app=simple-client" || tdie
+	popv
+	return 0
+}
+
+cmd_tcase_bridge_domain_ping_simple_client() {
+	tcase "Ping via bridge-domain in simple-client"
+	local i p
+	p=$(get_pod networkservicemesh.io/app=simple-client)
+	echo "kubectl exec $p ..."
+	for i in 1 2 3 ; do
+		$kubectl exec -c alpine-img $p -- /bin/ping -c 1 -W 1 10.60.1.$i || tdie
+	done
+	return 0
+}
+
+cmd_tcase_bridge_domain_install_ipv6() {
+	tcase "Install bridge-domain ipv6"
+	$kubectl apply -f /etc/kubernetes/bridge-domain/bridge-ipv6.yaml || tdie
+	tex "npods bridge-domain- 1" || tdie
+}
+
+cmd_tcase_bridge_domain_install_simple_client_ipv6() {
+	tcase "Install simple-client with bridge-domain ipv6"
+	$kubectl apply -f /etc/kubernetes/bridge-domain/simple-client-ipv6.yaml || tdie
+	pushv 120 60 2
+	tex "npods simple-client-ipv6- 3" || tdie
+	tex "check_pods_ready networkservicemesh.io/app=simple-client-ipv6" || tdie
+	popv
+	return 0
+}
+
+cmd_tcase_bridge_domain_ping_simple_client_ipv6() {
+	tcase "Ping via bridge-domain in simple-client ipv6"
+	local i p
+	p=$(get_pod networkservicemesh.io/app=simple-client-ipv6)
+	echo "kubectl exec $p ..."
+	for i in 1 2 3 ; do
+		$kubectl exec -c alpine-img $p -- /bin/ping -c 1 -W 1 1200::$i || tdie
+	done
+	return 0
+}
+
+
+. /etc/profile
+test -r /usr/lib/xctest && . /usr/lib/xctest
+indent='  '
+
+# Get the command
+cmd=$1
+shift
+grep -q "^cmd_$cmd()" $0 $hook || die "Invalid command [$cmd]"
+
+while echo "$1" | grep -q '^--'; do
+    if echo $1 | grep -q =; then
+	o=$(echo "$1" | cut -d= -f1 | sed -e 's,-,_,g')
+	v=$(echo "$1" | cut -d= -f2-)
+	eval "$o=\"$v\""
+    else
+	o=$(echo "$1" | sed -e 's,-,_,g')
+	eval "$o=yes"
+    fi
+    shift
+done
+unset o v
+long_opts=`set | grep '^__' | cut -d= -f1`
+
+# Execute command
+trap "die Interrupted" INT TERM
+cmd_$cmd "$@"
+status=$?
+rm -rf $tmp
+exit $status
