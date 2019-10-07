@@ -14,17 +14,15 @@ test $i -eq 1 && exit 0
 
 . /etc/profile
 
-# Cri-o *requires* a default route to start(?!)
-ip route add default via 192.168.1.201
-crio --host-ip 192.168.1.$i -log-level debug > /var/log/crio.log 2>&1 &
-sleep 0.2
+# Read $CRI_OPTS;
+test -r /etc/cri-plugin.rc && . /etc/cri-plugin.rc
 
 run_kubelet() {
-	kubelet --container-runtime=remote --node-ip=192.168.1.$i \
-		--container-runtime-endpoint=unix:///var/run/crio/crio.sock \
-		--image-service-endpoint=unix:///var/run/crio/crio.sock \
+	kubelet --node-ip=192.168.1.$i $CRI_OPTS \
 		--register-node=true --kubeconfig $KUBECONFIG \
-		--network-plugin=cni > /var/log/kubelet.log 2>&1
+		--network-plugin=cni \
+		--runtime-cgroups=/systemd/system.slice \
+        --kubelet-cgroups=/systemd/system.slice > /var/log/kubelet.log 2>&1
 }
 
 run_kube_proxy() {
