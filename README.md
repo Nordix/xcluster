@@ -1,7 +1,8 @@
 # Xcluster - Experimental Cluster Environment
 
-A very lightweight and configurable cluster environment primarily
-intended for development and test of network functions.
+A [very lightweight](doc/100nodes.md) and configurable cluster
+environment primarily intended for development and test of network
+functions.
 
 To see how `xcluster` can be used with
 [Kubernetes](https://kubernetes.io/) please see the demo video below
@@ -22,6 +23,7 @@ file-system). On start specified packages
 More info;
 
  * [Quick Start](#quick-start)
+ * [100 VMs](doc/100nodes.md)
  * [Troubleshooting](doc/troubleshooting.md)
  * [Misc info](doc/misc.md). Prettiy xterms, use master-branch, and more...
  * [Networking](doc/networking.md). Default network and DNS setup.
