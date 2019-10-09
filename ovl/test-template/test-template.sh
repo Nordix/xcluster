@@ -106,6 +106,13 @@ basic() {
 	otc 2 "nslookup mconnect.default.svc.xcluster"
 	otc 3 "internal_mconnect $1"
 	otc 3 "nslookup www.google.se"
+	otc 201 set_vip_routes
+	if test "$1" = "ipv4" -o "$1" = "ipv6"; then
+		otc 201 "external_mconnect $1"
+	else
+		otc 201 "external_mconnect ipv4"
+		otc 201 "external_mconnect ipv6"
+	fi
 
 	xcluster_stop
 }

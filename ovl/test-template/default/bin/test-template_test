@@ -42,9 +42,15 @@ cmd_tcase_check_coredns() {
 	test_coredns
 }
 cmd_tcase_start_mconnect() {
-	start_mconnect /etc/kubernetes/mconnect.yaml || tdie
 	if test "$1" = "dual-stack"; then
-		$kubectl apply -f /etc/kubernetes/mconnect-svc-ipv6.yaml || tdie
+		start_mconnect /etc/kubernetes/mconnect-dual.yaml || tdie
+		assign-lb-ip -svc mconnect-ipv4 || tdie
+		assign-lb-ip -svc mconnect-ipv6 || tdie
+	else
+		start_mconnect /etc/kubernetes/mconnect.yaml || tdie
+		local adr=10.0.0.0
+		test "$1" = "ipv6" && adr=1000::
+		assign-lb-ip -svc mconnect -ip $adr || tdie
 	fi
 }
 cmd_tcase_nslookup() {
@@ -55,15 +61,32 @@ cmd_tcase_nslookup() {
 	popv
 }
 cmd_tcase_internal_mconnect() {
-	local adr=mconnect.default.svc.xcluster
-	tcase "Traffic to $adr"
-	tex do_mconnect $adr || tdie
+	local adr
 	if test "$1" = "dual-stack"; then
+		adr=mconnect-ipv4.default.svc.xcluster
+		tcase "Traffic to $adr"
+		tex "do_mconnect $adr" || tdie
 		adr=mconnect-ipv6.default.svc.xcluster
 		tcase "Traffic to $adr"
 		tex "do_mconnect $adr" || tdie
+	else
+		local adr=mconnect.default.svc.xcluster
+		tcase "Traffic to $adr"
+		tex do_mconnect $adr || tdie
 	fi
 }
+cmd_tcase_set_vip_routes() {
+	tcase "Set routes to the VIP address via vm-002"
+	ip ro replace 10.0.0.0/24 via 192.168.1.2 || tdie
+	ip -6 ro replace 1000::/120 via 1000::1:192.168.1.2 || tdie
+}
+cmd_tcase_external_mconnect() {
+	local adr=10.0.0.0
+	test "$1" = "ipv6" && adr='[1000::]'
+	tcase "External traffic to $adr"
+	tex "do_mconnect $adr" || tdie
+}
+
 cmd_tcase_start_alpine() {
 	tcase "Start alpine pods"
 	$kubectl apply -f /etc/kubernetes/alpine.yaml || tdie

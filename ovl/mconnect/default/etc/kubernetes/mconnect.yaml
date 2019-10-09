@@ -7,7 +7,7 @@ spec:
     app: mconnect
   ports:
   - port: 5001
-  type: NodePort
+  type: LoadBalancer
 ---
 apiVersion: v1
 kind: Service
@@ -20,7 +20,7 @@ spec:
   - name: udp
     port: 5001
     protocol: UDP
-  type: NodePort
+  type: LoadBalancer
 ---
 apiVersion: apps/v1
 kind: Deployment
