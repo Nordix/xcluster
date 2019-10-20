@@ -65,8 +65,29 @@ alias images="crictl --runtime-endpoint=unix:///var/run/crio/crio.sock images"
 ```
 
 
-Build local images
-------------------
+## Build local images
+
+An directory with a working `./tar` file and a `Dockerfile` can be
+used to create a local image. A temporary docker "context" directory
+is created. The `./tar` file is used to produce a `ovl.tar` in that
+context which should be used. Here is an example from ovl/metallb;
+
+```
+FROM scratch
+ADD --chown=0:0 ovl.tar /
+CMD ["/bin/controller"]
+```
+
+The image can then be build with the "images mkimage" command;
+
+```
+images mkimage --force --tag=library/metallb:latest --upload ./image
+```
+
+### The old way
+
+The old way using a `manifest.json` file is still supported but is
+obsolete.
 
 The principle is;
 
@@ -74,11 +95,9 @@ The principle is;
 
  * Import it with `docker import`
 
-As you may have noticed `xcluster` is not unfamiliar with tar files
-and the procedures used for "overlays" fits perfectly for this
-purpose. When a overlay dir is given to `images.sh` it looks for an
-`image/' subdir in that overlay dir. In the `image/` subdir there must
-be a `tar` script, working exactly as for overlays.
+When a overlay dir is given to `images.sh` it looks for an `image/'
+subdir in that overlay dir. In the `image/` subdir there must be a
+`tar` script, working exactly as for overlays.
 
 In the `image/` dir there must also be a manifest named
 `manifest.json`. The only things used are;

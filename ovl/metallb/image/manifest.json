@@ -1,13 +1,11 @@
 {
-    "acKind":"ImageManifest",
-    "acVersion":"0.8.11",
     "name":"library/metallb",
     "labels":[
-	{"name":"version","value":"0.8.1"},
-	{"name":"arch","value":"amd64"},
-	{"name":"os","value":"linux"}],
+		{"name":"version","value":"latest"},
+		{"name":"arch","value":"amd64"},
+		{"name":"os","value":"linux"}],
     "app":{
-	"exec":["/bin/controller"],
-	"user":"0","group":"0"
+		"exec":["/bin/controller"],
+		"user":"0","group":"0"
     }
 }

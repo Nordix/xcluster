@@ -108,7 +108,7 @@ git clean -dxf
 GO111MODULE=on go install ./controller
 GO111MODULE=on go install ./speaker
 cdo metallb
-images mkimage --force --upload ./image
+images mkimage --force --tag=library/metallb:latest --upload ./image
 ```
 
 

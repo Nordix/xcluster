@@ -197,16 +197,22 @@ cmd_get_rootfs() {
 	echo $d/$rootfs
 }
 
-##   mkimage [--manifest=manifest] [--force] [--upload] [--strip-host] <dir>
+##   mkimage [--manifest=manifest] [--force] [--upload] [--strip-host] [--tag=] <dir>
 ##     Create an image in local docker from the <dir>. An executable
 ##     "tar" script must exist in the directory. '--upload' uploads
 ##     to a *local* private docker registry.
 ##
 cmd_mkimage() {
-	test -n "$1" || die "No rootfs"
+	test -n "$1" || die "No <dir>"
 	test -d "$1" || die "Not a directory [$1]"
 	test -x "$1/tar" || die "Not executable [$1/tar]"
 	test -n "$__manifest" || __manifest="$(readlink -f $1)/manifest.json"
+
+	if test -r "$1/Dockerfile"; then
+		mkimage_dockerfile $1
+		return
+	fi
+
 	test -r "$__manifest" || die "Not readable [$__manifest]"
 	which jq > /dev/null || die "Not executable [jq]"
 
@@ -227,6 +233,18 @@ cmd_mkimage() {
 	fi
 	echo "$n:$v"
 }
+mkimage_dockerfile() {
+	test -n "$__tag" || die "No --tag specified"
+	mkdir -p $tmp/ovl
+	$1/tar $tmp/ovl/ovl.tar || die "Failed to create ovl.tar"
+	docker build -t $__tag -f "$(readlink -f $1)/Dockerfile" $tmp/ovl \
+		|| die "Failed to build $__tag"
+	if test "$__upload" = "yes"; then
+		cmd_lreg_upload $__tag || die "Upload failed"
+	fi
+	echo "$__tag"
+}
+
 
 #   mktar --user=user [--tar=-] <images...>
 #     Create a tar file with a container-storage structure.
