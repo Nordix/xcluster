@@ -16,8 +16,7 @@ test $i -gt 1 || exit 0
 ip link add name cbr0 type bridge
 ip link set dev cbr0 up
 
-iptables -t nat -I POSTROUTING 1 -s 11.0.0.0/16 ! -d 11.0.0.0/16 -j MASQUERADE
-ip6tables -t nat -I POSTROUTING 1 -s 1100::/16 ! -d 1100::/16 -j MASQUERADE
+ip6tables -t nat -I POSTROUTING 1 -s 1000::2:0:0/96 ! -d 1000::2:0:0/96 -j MASQUERADE
 
 # Enable to trace cni communication
 if false; then
