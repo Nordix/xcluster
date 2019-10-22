@@ -40,6 +40,7 @@ dbg() {
 ##
 cmd_start() {
 	hostname | grep -q vm-0 || return 0
+	hostname | grep -q vm-001 && return 0
 	# Restart myself in background
 	test -n "$__log" || __log=/var/log/$prg
 	($me waitfor_k8s > $__log < /dev/null 2>&1) &
