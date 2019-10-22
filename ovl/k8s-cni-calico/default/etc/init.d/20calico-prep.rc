@@ -11,7 +11,7 @@ hostname | grep -Eq 'vm-[0-9]+$' || die "Invalid hostname [$(hostname)]"
 i=$(hostname | cut -d- -f2 | sed -re 's,^0+,,')
 
 echo 1 > /proc/sys/net/ipv6/conf/all/forwarding
-ip6tables -t nat -I POSTROUTING 1 -s 1000::2:b00:0/112 ! -d 1000::2:b00:0/112 -j MASQUERADE
+ip6tables -t nat -I POSTROUTING 1 -s 1100::/16 ! -d 1100::/16 -j MASQUERADE
 
 # Re-generate VM addresses in /etc/hosts
 sed -i -e '/vm-00/d' -e '/localhost/d' /etc/hosts

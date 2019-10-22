@@ -66,9 +66,6 @@ cmd_waitfor_k8s() {
 		test -d /etc/kubernetes/load && kubectl apply -f /etc/kubernetes/load
 	fi
 
-	# ToDo; Fix this, at least move it;
-	iptables -t nat -I POSTROUTING 1 -s 11.0.0.0/16 ! -d 11.0.0.0/16 -j MASQUERADE
-
 	# Execute hooks;
 	for f in $(find /etc/kubernetes/init.d -maxdepth 1 -type f | sort); do
 		log "Process [$f]..."
