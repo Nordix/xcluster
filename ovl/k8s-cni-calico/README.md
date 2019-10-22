@@ -6,7 +6,7 @@ Use [project calico](https://www.projectcalico.org/) in `xcluster`.
 
 Pre-load the local registry;
 ```
-ver=v3.8.2
+ver=v3.10.0
 images lreg_cache docker.io/calico/cni:$ver
 images lreg_cache docker.io/calico/node:$ver
 images lreg_cache docker.io/calico/kube-controllers:$ver
@@ -36,7 +36,7 @@ XOVLS="k8s-cni-calico private-reg" $($XCLUSTER ovld $t)/$t.sh test > $XCLUSTER_T
 
 Build an image with dual-stack and calico pre-pulled;
 ```
-ver=v3.8.2
+ver=v3.10.0
 docker pull calico/cni:$ver
 docker pull calico/node:$ver
 docker pull calico/kube-controllers:$ver
@@ -57,7 +57,7 @@ $($XCLUSTER ovld $t)/$t.sh test basic_dual > /dev/null
 ### Install calicoctl
 
 ```
-ver=v3.8.2
+ver=v3.10.0
 curl -L \
  https://github.com/projectcalico/calicoctl/releases/download/$ver/calicoctl \
  > $GOPATH/bin/calicoctl
