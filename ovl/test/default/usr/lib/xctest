@@ -139,6 +139,14 @@ npods() {
 	test $n -eq $2
 }
 
+##  nreplicas <deployment>
+##    Print the number of replicas in a Deployment.
+##
+nreplicas() {
+	$kubectl get deployment $1 > /dev/null || tdie
+	kubectl get deployment $1 -o json | jq -r .spec.replicas
+}
+
 ##  lsimages
 ##    Output the images loaded in the system
 ##
@@ -174,15 +182,19 @@ test_nodes() {
 	popv
 }
 
-##  get_pod <name>
+##  get_pod <name> [host]
 ##    Print the pod-id (used for instance for "kubectl exec"). Print "null"
 ##    if the pod can't be found.
 ##
 get_pod() {
-	test -n "$__podi" || __podi=0
 	local l=$1
 	echo $1 | grep -q = || l="app=$1"
-	$kubectl -o json get pods -l $l | jq -r .items[$__podi].metadata.name
+	if test -z "$2"; then
+		$kubectl -o json get pods -l $l | jq -r .items[0].metadata.name
+	else
+		$kubectl -o json get pods -l $l | jq -r \
+			"[.items[]|select(.spec.nodeName == \"$2\")|.metadata.name]|.[0]"
+	fi
 }
 get_pods() {
 	$kubectl -o json get pods -l "$1" | jq -r .items[].metadata.name

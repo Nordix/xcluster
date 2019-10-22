@@ -77,6 +77,16 @@ cmd_test() {
 
 }
 
+test_start() {
+	test -n "$__mode" || __mode=dual-stack
+	xcluster_prep $__mode
+	xcluster_start test-template
+
+	otc 1 check_namespaces
+	otc 1 check_nodes
+	otc 2 check_coredns
+}
+
 test_basic4() {
 	basic ipv4
 }
@@ -91,14 +101,10 @@ test_basic_dual() {
 
 basic() {
 	tlog "=== test-template: Basic test on $1"
-	local n first_worker=1
 
-	xcluster_prep $1
-	xcluster_start test-template
+	__mode=$1
+	test_start
 
-	otc 1 check_namespaces
-	otc 1 check_nodes
-	otc 2 check_coredns
 	otc 2 start_alpine
 	otc 3 "start_mconnect $1"
 	otc 2 check_alpine
