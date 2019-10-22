@@ -24,6 +24,7 @@ run_kubelet() {
 	kubelet --address=:: --node-ip=1000::1:192.168.1.$i $CRI_OPTS \
 		--register-node=true --kubeconfig $KUBECONFIG \
 		--network-plugin=cni \
+		--cluster-dns=fd00:4000::2 --cluster-domain=xcluster \
 		--runtime-cgroups=/systemd/system.slice \
 		--kubelet-cgroups=/systemd/system.slice > /var/log/kubelet.log 2>&1
 }

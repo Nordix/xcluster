@@ -22,6 +22,7 @@ run_kubelet() {
 		--feature-gates IPv6DualStack=true \
 		--register-node=true --kubeconfig $KUBECONFIG \
 		--network-plugin=cni \
+		--cluster-dns=12.0.0.2 --cluster-domain=xcluster \
 		--runtime-cgroups=/systemd/system.slice \
 		--kubelet-cgroups=/systemd/system.slice > /var/log/kubelet.log 2>&1
 }
