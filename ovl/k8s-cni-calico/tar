@@ -38,7 +38,7 @@ fi
 
 d=$GOPATH/src/github.com/containernetworking/plugins/bin
 mkdir -p $tmp/opt/cni/bin
-for n in bridge host-local loopback portmap; do
+for n in loopback; do
     test -x $d/$n || die "Not executable [$d/$n]"
     cp $d/$n $tmp/opt/cni/bin
 done

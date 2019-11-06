@@ -611,6 +611,12 @@ spec:
               value: "Always"
             - name: CALICO_IPV6POOL_IPIP
               value: "Always"
+            - name: CALICO_IPV6POOL_NAT_OUTGOING
+              value: "true"
+            - name: IP_AUTODETECTION_METHOD
+              value: "interface=eth1"
+            - name: IP6_AUTODETECTION_METHOD
+              value: "interface=eth1"
             # Set MTU for tunnel device used if ipip is enabled
             - name: FELIX_IPINIPMTU
               valueFrom:
