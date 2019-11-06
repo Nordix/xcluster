@@ -23,16 +23,16 @@ version is most often used.
 
 ## Official release usage
 
-A local built metallb is normally used for devalopment, but an
+A local built metallb is normally used for development, but an
 official release can also be used. A [private
 registry](../private-reg) is strongly recommended but not really
 necessary.
 
-
 Pre-load the private registry;
 ```
-images lreg_cache docker.io/metallb/speaker:v0.8.1
-images lreg_cache docker.io/metallb/controller:v0.8.1
+ver=v0.8.2
+images lreg_cache docker.io/metallb/speaker:$ver
+images lreg_cache docker.io/metallb/controller:$ver
 ```
 
 Ipv4 with BGP;
@@ -88,7 +88,7 @@ Sync;
 cd $GOPATH/src/github.com/danderson/metallb
 git checkout master
 git fetch upstream
-git rebase upstream/master
+git rebase upstream/main
 git push
 ```
 
@@ -105,10 +105,12 @@ Build;
 ```
 cd $GOPATH/src/github.com/danderson/metallb
 git clean -dxf
-GO111MODULE=on go install ./controller
-GO111MODULE=on go install ./speaker
+export GO111MODULE=on
+go install ./controller
+go install ./speaker
 cdo metallb
-images mkimage --force --tag=library/metallb:latest --upload ./image
+images mkimage --force --tag=metallb/controller:latest --upload ./image
+images mkimage --force --tag=metallb/speaker:latest --upload ./speaker
 ```
 
 

@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
       - name: metallb
-        image: library/metallb:latest
+        image: metallb/controller:latest
         securityContext:
           privileged: true
 

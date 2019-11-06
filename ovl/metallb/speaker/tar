@@ -1,0 +1,36 @@
+#! /bin/sh
+
+dir=$(dirname $0); dir=$(readlink -f $dir)
+tmp=/tmp/${prg}_$$
+die() {
+    echo "ERROR: $*" >&2
+    rm -rf $tmp
+    exit 1
+}
+log() {
+    echo "INFO: $*" >&2
+}
+
+test -n "$1" || die "No out-file"
+
+mkdir -p $tmp/bin
+for n in controller speaker; do
+	f=$GOPATH/bin/$n
+	test -x $f || die "Not executable [$f]"
+	cp $f $tmp/bin
+done
+
+for s in $(echo "$SETUP" | tr ',' ' '); do
+	test -d $dir/$s || continue
+	setup_copied=yes
+	cp -R $dir/$s/* $tmp
+done
+test "$setup_copied" != "yes" -a -d $dir/default && cp -R $dir/default/* $tmp
+
+$XCLUSTER cplib --base-libs=/dev/null --dest=$tmp $tmp/bin/*
+$XCLUSTER cploader --dest=$tmp
+
+cd $tmp
+tar cf "$1" *
+cd - > /dev/null
+rm -rf $tmp

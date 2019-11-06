@@ -1,5 +1,5 @@
 {
-    "name":"library/metallb",
+    "name":"metallb/controller",
     "labels":[
 		{"name":"version","value":"latest"},
 		{"name":"arch","value":"amd64"},

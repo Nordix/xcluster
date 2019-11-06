@@ -17,11 +17,6 @@ test -n "$1" || die "No out-file"
 
 mkdir -p $tmp
 
-manifest=$dir/image/manifest.json
-v=$(jq -r '.labels[] | select(.name=="version") | .value' $manifest)
-grep -q "metallb:$v" $dir/default/etc/kubernetes/metallb.yaml || \
-	die "Version mismatch"
-
 for s in $(echo "$SETUP" | tr ',' ' '); do
 	test -d $dir/$s || continue
 	cp -R $dir/$s/* $tmp
