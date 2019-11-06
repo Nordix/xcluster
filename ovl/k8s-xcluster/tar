@@ -76,6 +76,11 @@ test -n "$jq" && cp $jq $tmp/bin
 f=$GOPATH/bin/assign-lb-ip
 test -x $f && cp $f $tmp/bin
 
+d=$GOPATH/src/github.com/containernetworking/plugins/bin
+test -x $d/loopback || die "Not executable [$d/loopback]"
+mkdir -p $tmp/opt/cni/bin
+cp $d/loopback $tmp/opt/cni/bin
+
 # Install libraries
 $XCLUSTER cplib --dest=$tmp $tmp/bin/*
 
