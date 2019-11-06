@@ -13,6 +13,8 @@ vm() {
 	echo 0 > /proc/sys/net/ipv6/conf/eth1/accept_dad
 	ip addr add 192.168.1.$i/24 dev eth1
 	ip -6 addr add 1000::1:192.168.1.$i/120 dev eth1
+	eval $(grep -oE 'mtu1=[0-9]+' /proc/cmdline)
+	test -n "$mtu1" && ip link set eth1 mtu $mtu1
 	ip link set up dev eth1
 
 	ip ro replace default nexthop via 192.168.1.201 nexthop via 192.168.1.202
@@ -31,6 +33,8 @@ router() {
 	echo 0 > /proc/sys/net/ipv6/conf/eth1/accept_dad
 	ip addr add 192.168.1.$i/24 dev eth1
 	ip -6 addr add 1000::1:192.168.1.$i/120 dev eth1
+	eval $(grep -oE 'mtu1=[0-9]+' /proc/cmdline)
+	test -n "$mtu1" && ip link set eth1 mtu $mtu1
 	ip link set up dev eth1
 
 	echo 0 > /proc/sys/net/ipv6/conf/eth2/accept_dad
@@ -57,6 +61,9 @@ local_dns() {
 	# Setup a local coredns
 	cat > /etc/Corefile <<EOF
 .:53 {
+    kubernetes xcluster {
+      endpoint http://192.168.1.1:8080
+    }
     proxy . 192.168.0.250:10053
     cache 3000
     log stdout
