@@ -92,9 +92,10 @@ cmd_tcase_start_alpine() {
 	$kubectl apply -f /etc/kubernetes/alpine.yaml || tdie
 }
 cmd_tcase_check_alpine() {
-	tcase "Check alpine pods"
+	local nrep=$(nreplicas alpine-deployment)
+	tcase "Check alpine pods ($nrep)"
 	pushv 40 20 2
-	tex "npods alpine-deployment- 4" || tdie
+	tex "npods alpine-deployment- $nrep" || tdie
 	popv
 }
 
@@ -123,6 +124,16 @@ cmd_tcase_check_pod_addresses() {
 	esac
 }
 
+cmd_tcase_pod_nslookup() {
+	tcase "Nslookup from PODs"
+	local n pod
+	for n in $($kubectl get nodes -o json | jq -r '.items[].metadata.name'); do
+		pod=$(get_pod app=alpine $n)
+		echo $pod | grep -q alpine || continue
+		tlog "Nslookup from a POD on $n"
+		$kubectl exec $pod nslookup kubernetes 2>&1 || tdie
+	done
+}
 
 . /etc/profile
 . /usr/lib/xctest
