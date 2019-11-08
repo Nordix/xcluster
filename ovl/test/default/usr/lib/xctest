@@ -166,6 +166,10 @@ test_namespaces() {
 ##    Wait for the coredns pod to become "Running".
 ##
 test_coredns() {
+	if test "$__coredns_pod" != "yes"; then
+		tcase "SKIPPED; Wait for the coredns pod"
+		return 0
+	fi
 	tcase "Wait for the coredns pod"
 	pushv 180 60 3
 	tex "$kubectl get pods 2>&1 | ogrep -E '^coredns.*Running'" || tdie
@@ -177,9 +181,15 @@ test_coredns() {
 ##
 test_nodes() {
 	tcase "Wait for k8s nodes"
-	pushv 30 30 1
+	pushv 60 30 2
 	tex "$kubectl get nodes 2>&1 | ogrep vm-002" || tdie
+	tex all_nodes_ready
 	popv
+}
+all_nodes_ready() {
+	! kubectl get nodes -o json | \
+		jq -r '.items[]|.status.conditions[]|select(.type == "Ready")|.status' \
+		| grep -v True
 }
 
 ##  get_pod <name> [host]
