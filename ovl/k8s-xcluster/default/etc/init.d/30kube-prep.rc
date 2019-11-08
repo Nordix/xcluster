@@ -13,11 +13,13 @@ test $i -le 200 || exit 0
 
 printf '35f15062-7e2b-11e9-b640-0000000100%02x\n' $i > /etc/machine-id
 
-for n in kube-controller-manager kube-scheduler kube-apiserver \
-	kube-proxy kubectl kubelet; do
-	test -e /bin/$n && continue
-	ln -s hyperkube /bin/$n
-done
+if test -x /bin/hyperkube; then
+	for n in kube-controller-manager kube-scheduler kube-apiserver \
+		kube-proxy kubectl kubelet; do
+		test -e /bin/$n && continue
+		ln -s hyperkube /bin/$n
+	done
+fi
 
 # Work around for bad install of dropbear
 test -r /usr/bin/dbclient || ln /bin/dbclient /usr/bin/dbclient

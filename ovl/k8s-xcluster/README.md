@@ -25,7 +25,7 @@ xc mkcdrom k8s-cni-bridge; xc starts
 #export KUBERNETESD=$ARCHIVE/kubernetes/server/bin
 export __image=$XCLUSTER_WORKSPACE/xcluster/hd-k8s-xcluster.img
 cp $XCLUSTER_WORKSPACE/xcluster/hd.img $__image
-xc ximage xnet etcd iptools k8s-xcluster mconnect images coredns
+xc ximage xnet etcd iptools k8s-xcluster mconnect images
 ```
 
 
