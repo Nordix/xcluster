@@ -466,8 +466,10 @@ cmd_cat_tar() {
 cmd_collect_tar() {
 	test -n "$__dest" || die "No dest"
 	test -d "$__dest" || die "Not a directory [$__dest]"
-	local c d b i=0
-	for d in $@; do
+	local c d b i=0 collected=:
+	for d in $@ $XOVLS; do
+		echo $collected | grep -Fq ":$d:" && continue
+		collected="$collected$d:"
 		# Check the cache
 		if c=$(cmd_cached_tar $d); then
 			echo "Use Cached [$c]"
