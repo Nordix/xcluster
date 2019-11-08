@@ -11,7 +11,7 @@ hostname | grep -Eq 'vm-[0-9]+$' || die "Invalid hostname [$(hostname)]"
 i=$(hostname | cut -d- -f2 | sed -re 's,^0+,,')
 test $i -le 200 || exit 0
 
-test -x /bin/hyperkube || die "Not executable [/bin/hyperkube]"
+test -x /bin/hyperkube || return 0
 
 for n in kube-controller-manager kube-scheduler kube-apiserver \
 	kube-proxy kubectl kubelet; do

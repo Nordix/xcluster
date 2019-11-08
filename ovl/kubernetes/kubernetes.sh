@@ -63,6 +63,20 @@ cmd_runc_download() {
 	ls -lh $runc >&2
 }
 
+##   build
+##     Build the k8s binaries
+##
+cmd_build() {
+	local n d=$GOPATH/src/k8s.io/kubernetes
+	cd $d
+	for n in kube-controller-manager kube-scheduler kube-apiserver \
+		kube-proxy kubectl kubelet; do
+		make WHAT=cmd/$n || die "Failed to build [$n]"
+	done
+}
+
+
+
 # Check the hook
 if test -r $hook; then
 	. $hook
