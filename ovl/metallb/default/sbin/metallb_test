@@ -48,7 +48,9 @@ cmd_tcase_start_local_controller() {
 }
 cmd_tcase_check_local_controller() {
 	tcase "Check local controller"
+	pushv 30 15 2
 	tex "npods metallb-controller- 1" || tdie
+	popv
 }
 cmd_tcase_start_local_speaker() {
 	tcase "Start local speaker"
