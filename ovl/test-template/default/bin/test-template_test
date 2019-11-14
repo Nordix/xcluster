@@ -57,7 +57,7 @@ cmd_tcase_nslookup() {
 	tcase "Nslookup $1"
 	test -n "$1" || tdie "Nothing to lookup"
 	pushv 40 20 2
-	tex "nslookup $1" || tdie
+	tex "nslookup $1 | ogrep 'Name:'" || tdie
 	popv
 }
 cmd_tcase_internal_mconnect() {

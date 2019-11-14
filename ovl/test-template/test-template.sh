@@ -96,7 +96,23 @@ test_basic6() {
 }
 
 test_basic_dual() {
-	basic dual-stack
+	tlog "=== test-template: Basic test on dual-stack"
+	__mode=dual-stack
+	test_start
+
+	otc 2 start_alpine
+	otc 3 "start_mconnect $__mode"
+	otc 2 check_alpine
+	otc 2 "check_pod_addresses $__mode"
+	otc 2 "nslookup mconnect-ipv6.default.svc.xcluster"
+	otc 3 "internal_mconnect $__mode"
+	otc 3 "nslookup www.google.se"
+	otc 3 pod_nslookup
+	otc 201 set_vip_routes
+	otc 201 "external_mconnect ipv4"
+	otc 201 "external_mconnect ipv6"
+
+	xcluster_stop
 }
 
 basic() {
@@ -114,12 +130,7 @@ basic() {
 	otc 3 "nslookup www.google.se"
 	otc 3 pod_nslookup
 	otc 201 set_vip_routes
-	if test "$1" = "ipv4" -o "$1" = "ipv6"; then
-		otc 201 "external_mconnect $1"
-	else
-		otc 201 "external_mconnect ipv4"
-		otc 201 "external_mconnect ipv6"
-	fi
+	otc 201 "external_mconnect $1"
 
 	xcluster_stop
 }
