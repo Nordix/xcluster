@@ -5,11 +5,10 @@ environment primarily intended for development and test of network
 functions.
 
 To see how `xcluster` can be used with
-[Kubernetes](https://kubernetes.io/) please see the demo video below
-and the [Quick Start](#quick-start) section. See also the Kubernetes
-[overlay](ovl/kubernetes/README.md) and fast `kube-proxy` ipv6
-development in the [kube-proxy-ipv6](ovl/kube-proxy-ipv6/README.md)
-overlay.
+[Kubernetes](https://kubernetes.io/) please see the [Quick
+Start](#quick-start) section. See also the Kubernetes
+[overlay](ovl/kubernetes/README.md).
+
 
 An `xcluster` consists of a number of identical (kvm) VMs. The disk
 image is shared among the VMs and the `qemu-img` "backing_file"
@@ -19,8 +18,16 @@ file-system). On start specified packages
 
 <img src="xcluster-img.svg" alt="Figure of xcluster disks" width="80%" />
 
+The VMs are given "roles" depending on their hostname;
 
-More info;
+```
+vm-001 - vm-200   Cluster nodes
+vm-201 - vm-220   Router VMs
+vm-221 - vm-240   Tester VMs
+vm-250 -          Reserved
+```
+
+#### More info;
 
  * [Quick Start](#quick-start)
  * [100 VMs](doc/100nodes.md)
@@ -37,20 +44,6 @@ More info;
  * [Test](doc/test.md)
  * [Fedora](doc/fedora.md). Not maintained.
 
-The VMs are given "roles" depending on their hostname;
-
-```
-vm-001 - vm-200   Cluster nodes
-vm-201 - vm-220   Router VMs
-vm-221 - vm-240   Tester VMs
-vm-250 -          Reserved
-```
-
-By default `xcluster` starts with consoles in `xterm` windows. This
-short (<3min) demo shows Kubernetes ipv6-only on `xcluster`;
-
-
-[![Xcluster demo video](http://img.youtube.com/vi/benldT1Ev-I/0.jpg)](http://www.youtube.com/watch?v=benldT1Ev-I)
 
 #### Overlays
 
@@ -62,7 +55,7 @@ ovl directories. Example;
 
 ```
 # Start an xcluster with overlays (xc is an alias for the xcluster.sh script)
-xc mkcdrom systemd etcd; xc start
+xc mkcdrom iptools; xc start
 ```
 
 **NOTE**; You do not normally install SW on a running `xcluster`,
@@ -178,7 +171,6 @@ vm 2     # Opens a terminal on vm-002
 # In the terminal (on cluster) test things, for example;
 kubectl get nodes  # (may take ~10 sec to appear)
 kubectl get node vm-002 -o json | jq .spec   # "podCIDRs" is dual-stack
-kubectl -o json get pods -l 'app=coredns' | jq .items[0].status.podIPs
 nslookup www.google.se   # (doesn't work? See below)
 wget -4 -O /dev/null http://www.google.se # (doesn't work? See below)
 # Traffic test with mconnect
@@ -195,7 +187,7 @@ See also the [troubleshooting doc](https://github.com/Nordix/xcluster/blob/maste
 
 Nslookup doesn't work? See [DNS-troubleshooting](https://github.com/Nordix/xcluster/blob/master/doc/networking.md#dns-trouble-shooting)
 
-External access does not work (wget http://www.google.se)? Check you
+External access does not work (wget http://www.google.se)? Check your
 host firewall settings. If this does not work then images can not be
 loaded from external sites (docker.io).
 
@@ -227,13 +219,10 @@ that you may not relate to poor network performance at first.
 While not a requirement it is *strongly recommended* that you use a
 [private docker
 registry](https://github.com/Nordix/xcluster/tree/master/ovl/private-reg).
-I recommend to modify the image so a private registry is always used;
+Set the `XOVLS` to automatically include the `private-reg` ovl;
 ```
-xc ximage private-reg
+export XOVLS="private-reg"
 ```
 
 To keep up with `xcluster` updates use a clone rather than a release
 as described [here](doc/misc.md).
-
-
-
