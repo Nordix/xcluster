@@ -11,6 +11,7 @@ prg=$(basename $0)
 dir=$(dirname $0); dir=$(readlink -f $dir)
 me=$dir/$prg
 tmp=/tmp/${prg}_$$
+test -n "$__cname" || __cname=xcluster
 
 die() {
 	echo "ERROR: $*" >&2
@@ -63,14 +64,14 @@ cmd_tcase_nslookup() {
 cmd_tcase_internal_mconnect() {
 	local adr
 	if test "$1" = "dual-stack"; then
-		adr=mconnect-ipv4.default.svc.xcluster
+		adr=mconnect-ipv4.default.svc.$__cname
 		tcase "Traffic to $adr"
 		tex "do_mconnect $adr" || tdie
-		adr=mconnect-ipv6.default.svc.xcluster
+		adr=mconnect-ipv6.default.svc.$__cname
 		tcase "Traffic to $adr"
 		tex "do_mconnect $adr" || tdie
 	else
-		local adr=mconnect.default.svc.xcluster
+		local adr=mconnect.default.svc.$__cname
 		tcase "Traffic to $adr"
 		tex do_mconnect $adr || tdie
 	fi

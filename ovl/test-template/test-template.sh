@@ -42,6 +42,7 @@ cmd_env() {
 		retrun 0
 	fi
 
+	test -n "$__cluster_domain" || __cluster_domain=xcluster
 	test -n "$XCLUSTER" || die 'Not set [$XCLUSTER]'
 	test -x "$XCLUSTER" || die "Not executable [$XCLUSTER]"
 	eval $($XCLUSTER env)
@@ -98,16 +99,16 @@ test_basic6() {
 test_basic_dual() {
 	tlog "=== test-template: Basic test on dual-stack"
 	__mode=dual-stack
-	test_start
+	test "$__no_start" != "yes" && test_start
 
-	otc 2 start_alpine
-	otc 3 "start_mconnect $__mode"
-	otc 2 check_alpine
-	otc 2 "check_pod_addresses $__mode"
-	otc 2 "nslookup mconnect-ipv6.default.svc.xcluster"
+	otc 1 start_alpine
+	otc 1 "start_mconnect $__mode"
+	otc 1 check_alpine
+	otc 1 "check_pod_addresses $__mode"
+	otc 2 "nslookup mconnect-ipv6.default.svc.$__cluster_domain"
 	otc 3 "internal_mconnect $__mode"
 	otc 3 "nslookup www.google.se"
-	otc 3 pod_nslookup
+	otc 1 pod_nslookup
 	otc 201 set_vip_routes
 	otc 201 "external_mconnect ipv4"
 	otc 201 "external_mconnect ipv6"
