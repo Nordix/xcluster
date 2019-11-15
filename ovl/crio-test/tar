@@ -21,6 +21,8 @@ crio=$criod/bin/crio
 test -x $crio || die "Not executable [$crio]"
 cp $crio $tmp/bin
 
+test -d $dir/default && cp -r $dir/default/* $tmp
+
 cd $tmp
 tar cf "$1" *
 cd - > /dev/null

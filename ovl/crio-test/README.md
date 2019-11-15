@@ -9,7 +9,7 @@ cd $GOPATH/src/github.com/cri-o/cri-o
 git reset --hard HEAD
 git pull
 git clean -dxf
-curl -L https://github.com/cri-o/cri-o/pull/2781.patch | patch -p1
+curl -L https://github.com/cri-o/cri-o/pull/2925.patch | patch -p1
 make
 ```
 
@@ -54,3 +54,11 @@ Note the used images are pre-pulled, no internet access is needed.
 The `crio` binary is assumed to be in
 `$GOPATH/src/github.com/cri-o/cri-o/bin`, if it is some place else,
 please edit the `./tar` script.
+
+
+## Problems
+
+Resource exhaust (from slack);
+```
+lsof 2>/dev/null | grep inotify | awk '{print $2}' | sort | uniq -c
+```
