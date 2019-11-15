@@ -101,7 +101,7 @@ cmd_build_release() {
 cmd_cache_refresh() {
 	$XCLUSTER cache --clear
 	local o
-	for o in etcd iptools gobgp images; do
+	for o in iptools gobgp xnet images; do
 		log "Caching ovl [$o]"
 		$XCLUSTER cache $o
 	done
@@ -193,7 +193,7 @@ cmd_workspace_ar() {
 	touch "$1" || die "Can't create [$1]"
 	mkdir -p $tmp
 	cmd_mkworkspace $tmp/workspace
-	tar -C $tmp -cf "$1" workspace
+	tar -C $tmp --group=0 --owner=0 -cf "$1" workspace
 }
 
 # Get the command
