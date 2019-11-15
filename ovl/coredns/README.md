@@ -52,6 +52,27 @@ xc mkcdrom xnet etcd iptools kubernetes coredns private-reg; xc start
 SETUP=ipv6 xc mkcdrom xnet etcd iptools kubernetes coredns private-reg k8s-config
 ```
 
+## The local-pod problem
+
+When a query is sent to the ClusterIP of the coredns POD and it
+happens to be on the local node the query will fail because the
+response has the coredns pod-address as source;
+
+```
+14:00:49.090285 IP 11.0.1.3.43648 > 12.0.0.2.53: 16620+ A? kubernetes.default.svc.xcluster.default.svc.xcluster. (70)
+14:00:49.090543 IP 11.0.1.3.43648 > 12.0.0.2.53: 17340+ AAAA? kubernetes.default.svc.xcluster.default.svc.xcluster. (70)
+14:00:49.090712 IP 11.0.1.2.53 > 11.0.1.3.43648: 16620 NXDomain* 0/1/0 (148)
+14:00:49.090884 IP 11.0.1.2.53 > 11.0.1.3.43648: 17340 NXDomain* 0/1/0 (148)
+```
+
+From a pod on another node the ClusterIP is source and the query works;
+```
+14:02:46.001573 IP 11.0.0.2.36545 > 12.0.0.2.53: 9367+ A? kubernetes.default.svc.xcluster.default.svc.xcluster. (70)
+14:02:46.001766 IP 11.0.0.2.36545 > 12.0.0.2.53: 11076+ AAAA? kubernetes.default.svc.xcluster.default.svc.xcluster. (70)
+14:02:46.003548 IP 12.0.0.2.53 > 11.0.0.2.36545: 11076 NXDomain 0/1/0 (148)
+14:02:46.003781 IP 12.0.0.2.53 > 11.0.0.2.36545: 9367 NXDomain 0/1/0 (148)
+```
+
 
 Local setup
 -----------
