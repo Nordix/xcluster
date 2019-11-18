@@ -134,6 +134,7 @@ cmd_tcase_pod_nslookup() {
 		tlog "Nslookup from a POD on $n"
 		$kubectl exec $pod nslookup kubernetes 2>&1 || tdie
 	done
+	test -n "$pod" || tdie "No PODs (or nodes) were found"
 }
 
 . /etc/profile

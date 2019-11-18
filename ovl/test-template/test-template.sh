@@ -120,16 +120,16 @@ basic() {
 	tlog "=== test-template: Basic test on $1"
 
 	__mode=$1
-	test_start
+	test "$__no_start" != "yes" && test_start
 
-	otc 2 start_alpine
-	otc 3 "start_mconnect $1"
-	otc 2 check_alpine
-	otc 2 "check_pod_addresses $1"
-	otc 2 "nslookup mconnect.default.svc.xcluster"
+	otc 1 start_alpine
+	otc 1 "start_mconnect $1"
+	otc 1 check_alpine
+	otc 1 "check_pod_addresses $1"
+	otc 2 "nslookup mconnect.default.svc.$__cluster_domain"
 	otc 3 "internal_mconnect $1"
 	otc 3 "nslookup www.google.se"
-	otc 3 pod_nslookup
+	otc 1 pod_nslookup
 	otc 201 set_vip_routes
 	otc 201 "external_mconnect $1"
 
