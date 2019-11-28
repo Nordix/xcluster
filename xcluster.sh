@@ -532,7 +532,7 @@ cmd_boot_vm() {
 	echo "Memory: $__mem"
 	rm -rf $tmp
 
-	local kvmboot="-drive file=$hd,if=virtio -smp $__smp -k sv -clock unix"
+	local kvmboot="-drive file=$hd,if=virtio -smp $__smp -k sv"
     test -r $__cdrom && kvmboot="$kvmboot -drive file=$__cdrom,if=virtio,media=cdrom"
 
 	test -n "$__mtu" || __mtu=1500
