@@ -60,6 +60,10 @@ for n in bridge host-local loopback; do
 	test -x $d/$n || die "Not executable [$d/$n]"
 	cp $d/$n $tmp/opt/cni/bin
 done
+d=$GOPATH/src/github.com/Nordix/xcluster-cni/image
+test -d $d || die "Not a directory [$d]"
+rm -f $d/build-date $d/opt/cni/bin/podCIDR
+cp -r $d/* $tmp
 
 # Install cri-o
 f=$ARCHIVE/runc.amd64

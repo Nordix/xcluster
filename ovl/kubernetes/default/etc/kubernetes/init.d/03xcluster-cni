@@ -1,0 +1,2 @@
+#! /bin/sh
+/xcluster-cni.sh start > /var/log/xcluster-cni.log 2>&1 &
