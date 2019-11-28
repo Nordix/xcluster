@@ -14,7 +14,7 @@ test $i -eq 1 || exit 0
 
 . /etc/profile
 
-CLUSTER_CIDR=11.0.0.0/16,1100::/16
+CLUSTER_CIDR=11.0.0.0/16,1100::/48
 MASTER_IP=192.168.1.1
 apiserver() {
 	local log=/var/log/kube-apiserver.log

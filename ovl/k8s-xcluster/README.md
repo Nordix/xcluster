@@ -22,8 +22,9 @@ xc mkcdrom k8s-cni-bridge; xc starts
 ## Build
 
 ```
-#export KUBERNETESD=$ARCHIVE/kubernetes/server/bin
-export __image=$XCLUSTER_WORKSPACE/xcluster/hd-k8s-xcluster.img
+ver=v1.17.0-rc.1
+export KUBERNETESD=$ARCHIVE/kubernetes-$ver/server/bin
+export __image=$XCLUSTER_WORKSPACE/xcluster/hd-k8s-xcluster-$ver.img
 cp $XCLUSTER_WORKSPACE/xcluster/hd.img $__image
 xc ximage xnet etcd iptools k8s-xcluster mconnect images
 ```

@@ -51,7 +51,8 @@ else
 		cp $KUBERNETESD/$n $tmp/bin
 	done
 fi
-
+mkdir -p $tmp/etc/kubernetes
+$KUBERNETESD/kubectl version --client --short > $tmp/etc/kubernetes/version
 
 # Install cri-o
 f=$ARCHIVE/runc.amd64
