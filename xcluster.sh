@@ -104,7 +104,7 @@ cmd_env() {
 	test -n "$__cdrom" || __cdrom=$XCLUSTER_TMP/cdrom.iso
 	test -n "$__mem" || __mem=128
 	test -n "$__smp" || __smp=2
-	test -n "$__ipv4_base" || __ipv4_base=172.30
+	test -n "$__ipv4_base" || __ipv4_base=172.30.0.0/24
 	test -n "$__ipv6_prefix" || __ipv6_prefix=fd00:1723::
 	test -n "$__loader" || __loader=/lib64/ld-linux-x86-64.so.2
 	test -n "$__cached" || __cached=$XCLUSTER_HOME/cache
@@ -126,7 +126,7 @@ cmd_env() {
 }
 
 ##  Network name-space commands;
-##   nsadd [--ipv4-base=172.30] [--ipv6-prefix=fd00:1723::] <index>
+##   nsadd [--ipv4-base=172.30.0.0] [--ipv6-prefix=fd00:1723::] <index>
 ##   nsdel <index>
 ##   nsenter <index>
 ##
@@ -140,11 +140,12 @@ cmd_nsadd() {
     ip link add dev xcluster$1 type veth peer name host$1
     ip link set xcluster$1 up
 
-	ip addr add $__ipv4_base.1.$1/32 dev xcluster$1
-	ip ro add $__ipv4_base.0.$1/32 dev xcluster$1
+	set_netns_ipv4_addresses $1
+	ip addr add $ipv4_host/32 dev xcluster$1
+	ip ro add $ipv4_ns/32 dev xcluster$1
 
-	ip -6 addr add $__ipv6_prefix$__ipv4_base.1.$1/128 dev xcluster$1
-	ip -6 ro add $__ipv6_prefix$__ipv4_base.0.$1/128 dev xcluster$1
+	ip -6 addr add $__ipv6_prefix$ipv4_host/128 dev xcluster$1
+	ip -6 ro add $__ipv6_prefix$ipv4_ns/128 dev xcluster$1
 
     ip link set host$1 netns $netns
     sudo ip netns exec $netns \
@@ -175,14 +176,15 @@ cmd_nsenter() {
 
 cmd_nssetup() {
 	test -n "$1" || die 'No index'
+	set_netns_ipv4_addresses $1
 	ip link set lo up
 	ip link set host$1 up
-	ip addr add $__ipv4_base.0.$1/32 dev host$1
-	ip ro add $__ipv4_base.1.$1/32 dev host$1
-	ip ro add default via $__ipv4_base.1.$1
-	ip -6 addr add $__ipv6_prefix$__ipv4_base.0.$1/128 dev host$1
-	ip -6 ro add $__ipv6_prefix$__ipv4_base.1.$1/128 dev host$1
-	ip -6 ro add default via $__ipv6_prefix$__ipv4_base.1.$1
+	ip addr add $ipv4_ns/32 dev host$1
+	ip ro add $ipv4_host/32 dev host$1
+	ip ro add default via $ipv4_host
+	ip -6 addr add $__ipv6_prefix$ipv4_ns/128 dev host$1
+	ip -6 ro add $__ipv6_prefix$ipv4_host/128 dev host$1
+	ip -6 ro add default via $__ipv6_prefix$ipv4_host
 	iptables -t nat -A POSTROUTING -s 192.168.0.0/24 -o host$1 -j MASQUERADE
 	ip6tables -t nat -A POSTROUTING -s 2000::/64 -o host$1 -j MASQUERADE
 	echo 1 > /proc/sys/net/ipv4/conf/all/forwarding
@@ -193,12 +195,45 @@ cmd_nssetup() {
 	cmd_br_setup 2
 }
 cmd_masq() {
-	iptables -t nat -L -nv | grep -q "$__ipv4_base.0.0/22" && return 0
+	set_netns_ipv4_addresses 0
+	iptables -t nat -L -nv | grep -q "$ipv4_masq" && return 0
 	echo 1 > /proc/sys/net/ipv4/conf/all/forwarding
 	echo 1 > /proc/sys/net/ipv6/conf/all/forwarding
-	iptables -t nat -A POSTROUTING -s $__ipv4_base.0.0/22 -j MASQUERADE
-	iptables -A FORWARD -s $__ipv4_base.0.0/22 -j ACCEPT
-	iptables -A FORWARD -d $__ipv4_base.0.0/22 -j ACCEPT
+	iptables -t nat -A POSTROUTING -s $ipv4_masq -j MASQUERADE
+	iptables -A FORWARD -s $ipv4_masq -j ACCEPT
+	iptables -A FORWARD -d $ipv4_masq -j ACCEPT
+}
+
+# set_netns_ipv4_addresses <index>
+#   Set the global variables; ipv4_host ipv4_ns ipv4_masq
+set_netns_ipv4_addresses() {
+	test -n "$1" || die "No index"
+	test -n "$ipv4_host" && return 0
+	test -n "$__ipv4_base" || cmd_env
+	local i=$1
+	
+	# The __ipv4_base can be specified in 2 ways;
+	#  Old-way; 172.30
+	#  New-way: 127.30.0.0/28
+	
+	if echo $__ipv4_base | grep -qE '^[0-9]+\.[0-9]+$'; then
+		# Old way (backward compatible)
+		ipv4_host=$__ipv4_base.1.$1
+		ipv4_ns=$__ipv4_base.0.$1
+		ipv4_masq=$__ipv4_base.0.0/22
+		return
+	fi
+
+	echo $__ipv4_base | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+/[0-9]+$' \
+		|| die "Syntax err --ipv4-base=$__ipv4_base"
+
+	ipv4_masq=$__ipv4_base
+	local ipv4=$(echo $__ipv4_base | cut -d/ -f1)
+	local b0=$(echo $ipv4 | cut -d. -f4)
+	local pre=$(echo $ipv4 | cut -d. -f-3)
+
+	ipv4_host=$pre.$((b0+1+i*2))
+	ipv4_ns=$pre.$((b0+i*2))
 }
 
 cmd_br_setup() {
