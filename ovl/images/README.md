@@ -45,7 +45,9 @@ is created in the `$XCLUSTER_TMP` directory. The items may be;
 
 ```
 # ("images" alias defined in $h/Envsettings)
-images make nordixorg/mconnect:v1.2 library/alpine:3.8  # Requires "sudo"
+# Requires "sudo"
+images make nordixorg/mconnect:v1.2 library/alpine:3.8 \
+  k8s.gcr.io/metrics-server-amd64:v0.3.6
 eval $($XCLUSTER env | grep XCLUSTER_TMP)
 ls $XCLUSTER_TMP/images.tar
 xc mkcdrom [overlays...] images
