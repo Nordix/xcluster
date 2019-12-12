@@ -54,7 +54,7 @@ cmd_tcase_start_ncat() {
 }
 cmd_tcase_check_ncat() {
 	tcase "Check the ncat server"
-	pushv 40 20 2
+	pushv 60 30 2
 	tex "npods ncat-deployment-sctp- 4" || tdie
 	popv
 }
