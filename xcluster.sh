@@ -92,6 +92,7 @@ cmd_env() {
 	test -n "$XCLUSTER_MONITOR_BASE" || XCLUSTER_MONITOR_BASE=4000
 	test -n "$XCLUSTER_OVLPATH" || XCLUSTER_OVLPATH=$dir/ovl
 	test -n "$ARCHIVE" || ARCHIVE=$HOME/Downloads
+	test -n "$KERNELDIR" || KERNELDIR=$HOME/tmp/linux
 	export ARCHIVE
 
 	test -n "$__kver" || __kver=linux-5.3
@@ -118,7 +119,7 @@ cmd_env() {
 	test -n "$DISKIM" || DISKIM=$XCLUSTER_WORKSPACE/diskim-$__diskimver/diskim.sh
 
 	if test "$cmd" = "env"; then
-		set | grep -E '^(__.+=|XCLUSTER|ARCHIVE=|DISKIM=)' | sort
+		set | grep -E '^(__.+=|XCLUSTER|ARCHIVE=|DISKIM=|KERNELDIR=)' | sort
 	else
 		mkdir -p $XCLUSTER_HOME || die "Failed mkdir [$XCLUSTER_HOME]"
 		mkdir -p $XCLUSTER_TMP || die "Failed mkdir [$XCLUSTER_TMP]"
@@ -266,7 +267,7 @@ cmd_br_setup() {
 cmd_kernel_build() {
 	cmd_env
 	$DISKIM kernel_download --kver=$__kver
-	$DISKIM kernel_build --kdir=$ARCHIVE/$__kver --kernel=$__kbin \
+	$DISKIM kernel_build --kdir=$KERNELDIR/$__kver --kernel=$__kbin \
 		--kver=$__kver --kobj=$__kobj --kcfg=$__kcfg \
 		--menuconfig=$__menuconfig \
 		|| die "Kernel build failed [$__kver]"
