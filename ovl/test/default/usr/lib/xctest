@@ -98,6 +98,14 @@ pop() {
 ##  pushv __timeout __retries __interval
 ##    Combo push. Example; "pushv 60 15 4"
 pushv() {
+	if test -z "$2"; then
+		# Only timeout
+		local timeout=$1
+		push __timeout $timeout
+		push __retries $((timeout / 2))
+		push __interval 2
+		return
+	fi
 	push __timeout $1
 	push __retries $2
 	push __interval $3
@@ -135,7 +143,12 @@ mynode() {
 npods() {
 	local n
 	$kubectl get pods 2>&1 | ogrep 'No resources' && return 1
-	n=$($kubectl get pods | grep -E "^$1.*Running" | wc -l)
+	if echo "$1" | grep -q '='; then
+		# Use a match label
+		n=$($kubectl get pods -l $1 | grep "Running" | wc -l)
+	else
+		n=$($kubectl get pods | grep -E "^$1.*Running" | wc -l)
+	fi
 	test $n -eq $2
 }
 
@@ -144,7 +157,7 @@ npods() {
 ##
 nreplicas() {
 	$kubectl get deployment $1 > /dev/null || tdie
-	kubectl get deployment $1 -o json | jq -r .spec.replicas
+	$kubectl get deployment $1 -o json | jq -r .spec.replicas
 }
 
 ##  lsimages
@@ -175,6 +188,50 @@ test_coredns() {
 	tex "$kubectl get pods 2>&1 | ogrep -E '^coredns.*Running'" || tdie
 	popv
 }
+
+##  test_deployment <deployment> [timeout]
+##    Verify that all PODs in a deployment are ready
+##
+test_deployment() {
+	tlog "  Checking Deployment [$1]"
+	test -n "$1" || tdie "No deployment"
+	local replicas=$(nreplicas $1)
+	echo "Expected replicas [$replicas]"
+	local selector=$($kubectl get deployment $1 -o json | \
+		jq -r '.spec.selector.matchLabels|to_entries[0]|.key + "=" + .value')
+	echo "POD selector [$selector]"
+	test -n "$2" && pushv $2
+	tex "npods $selector $replicas" || tdie
+	tex "check_pods_ready $selector" || tdie
+	test -n "$2" && popv
+	return 0
+}
+
+##  test_daemonset <daemonset> [timeout]
+##    Verify that all PODs in a deployment are ready
+##
+test_daemonset() {
+	mkdir -p $tmp
+	local nodes=$(kubectl get nodes -o json | jq '.items|length')
+	tlog "  Checking DaemonSet [$1] (nodes=$nodes)"
+	$kubectl get daemonset $1 -o json > $tmp/out || tdie
+	local selector=$(get_selector < $tmp/out)
+	test -n "$2" && pushv $2
+	tex "daemonset_ready $1 $nodes" || tdie
+	tex "npods $selector $nodes" || tdie
+	tex "check_pods_ready $selector" || tdie
+	test -n "$2" && popv
+	return 0	
+}
+daemonset_ready() {
+	local ready=$($kubectl get daemonset $1 -o json | jq -r .status.numberReady)
+	echo "DaemonSet [$1], ready=$ready"
+	test $2 -eq $ready
+}
+get_selector() {
+	jq -r '.spec.selector.matchLabels|to_entries[0]|.key + "=" + .value'
+}
+
 
 ##  test_nodes
 ##    Wait for the k8s nodes to become available through the API
@@ -239,11 +296,7 @@ kubectl_exec() {
 start_mconnect() {
 	tcase "Start mconnect"
 	tex "$kubectl apply -f $1" || return 1
-	sleep 1
-	pushv 60 30 2
-	tex "$kubectl get pods 2>&1 | grep -E '^mconnect.*Running'" || return 1
-	tex "npods mconnect 4" || return 1
-	popv
+	test_deployment mconnect-deployment 60
 }
 
 ##  check_mconnect_result <file.json>

@@ -43,6 +43,10 @@ cmd_tcase_check_nodes() {
 cmd_tcase_check_coredns() {
 	test_coredns
 }
+cmd_tcase_check_metric_server() {
+	kubectl="kubectl -n kube-system"
+	test_deployment metrics-server 180
+}
 cmd_tcase_start_mconnect() {
 	if test "$1" = "dual-stack"; then
 		start_mconnect /etc/kubernetes/mconnect-dual.yaml || tdie
@@ -94,11 +98,7 @@ cmd_tcase_start_alpine() {
 	$kubectl apply -f /etc/kubernetes/alpine.yaml || tdie
 }
 cmd_tcase_check_alpine() {
-	local nrep=$(nreplicas alpine-deployment)
-	tcase "Check alpine pods ($nrep)"
-	pushv 40 20 2
-	tex "npods alpine-deployment- $nrep" || tdie
-	popv
+	test_deployment alpine-deployment 40
 }
 
 get_global_addresses() {

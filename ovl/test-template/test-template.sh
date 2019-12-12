@@ -85,7 +85,7 @@ test_start() {
 
 	otc 1 check_namespaces
 	otc 1 check_nodes
-	otc 2 check_coredns
+	otc 1 check_metric_server
 }
 
 test_basic4() {
