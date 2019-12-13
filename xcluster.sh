@@ -267,6 +267,7 @@ cmd_br_setup() {
 cmd_kernel_build() {
 	cmd_env
 	$DISKIM kernel_download --kver=$__kver
+	mkdir -p $KERNELDIR
 	$DISKIM kernel_build --kdir=$KERNELDIR/$__kver --kernel=$__kbin \
 		--kver=$__kver --kobj=$__kobj --kcfg=$__kcfg \
 		--menuconfig=$__menuconfig \
