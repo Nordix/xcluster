@@ -30,7 +30,7 @@ EOF
 alias images="$($XCLUSTER ovld images)/images.sh"
 test -n "$__dns_spoof" || export __dns_spoof=$XCLUSTER_WORKSPACE/xcluster/dns-spoof.txt
 
-mynetns=$(ip netns id $$)
+mynetns=$(ip netns id)
 if ! netstat -lutan | grep -q :::10053; then
 	cdns=$GOPATH/bin/coredns
 	test -x $cdns || cdns=$XCLUSTER_WORKSPACE/bin/coredns
