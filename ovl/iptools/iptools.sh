@@ -69,7 +69,7 @@ build() {
 	cd $d
 	if test "$n" = "iptables" -o "$n" = "ipset"; then
 		./configure --prefix=/usr \
-			--with-kbuild=$__kobj --with-ksource=$ARCHIVE/$__kver
+			--with-kbuild=$__kobj --with-ksource=$KERNELDIR/$__kver
 	else
 		./configure --prefix=/usr
 	fi
