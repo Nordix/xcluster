@@ -67,12 +67,11 @@ done
 f=$GOPATH/src/github.com/containers/conmon/bin/conmon
 test -x $f || die "Not executable [$f]"
 cp $f $tmp/bin
+ver=v1.16.1
+ar=$ARCHIVE/crictl-$ver-linux-amd64.tar.gz
+test -r $ar || die "Not readable [$ar]"
+tar -C $tmp/bin -xf $ar
 
-d=$GOPATH/bin
-for f in crictl service-watcher; do
-	test -x $d/$f || die "Not executable [$d/$f]"
-	cp $d/$f $tmp/bin
-done
 # (until we have some hooks...)
 mkdir -p $tmp/usr/share/containers/oci/hooks.d
 
