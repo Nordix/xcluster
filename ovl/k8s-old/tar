@@ -38,22 +38,20 @@ cd - > /dev/null
 
 # Install CNI plugins;
 d=$GOPATH/src/github.com/containernetworking/plugins/bin
-if ! test -x $d/bridge; then
-	cat >&2 <<"EOF"
-
-CNI plugins does not exist in;
-$GOPATH/src/github.com/containernetworking/plugins/bin
-
-These must be built manually. Check the README.md.
-
-EOF
-	die "Not executable [$d/bridge]"
-fi
 mkdir -p $tmp/opt/cni/bin
-for n in bridge host-local loopback; do
-	test -x $d/$n || die "Not executable [$d/$n]"
-	cp $d/$n $tmp/opt/cni/bin
-done
+if test -x $d/bridge; then
+	log "Using locally built CNI-plugins"
+	for n in bridge host-local loopback; do
+		test -x $d/$n || die "Not executable [$d/$n]"
+		cp $d/$n $tmp/opt/cni/bin
+	done
+else
+	ver=v0.8.2
+	log "Using CNI-plugins ver $ver"
+	ar=$HOME/Downloads/cni-plugins-linux-amd64-$ver.tgz
+	test -r "$ar" || die "Not readable [$ar]"
+	tar -C $tmp/opt/cni/bin -xf $ar ./bridge ./host-local ./loopback
+fi
 
 # Install cri-o
 f=$ARCHIVE/runc.amd64
