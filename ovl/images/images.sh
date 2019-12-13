@@ -255,10 +255,14 @@ cmd_mktar() {
 	test $(id -u) -eq 0 || die 'Must run as "root"'
 	rm -rf /tmp/var > /dev/null 2>&1
 	local f n
+	mkdir -p $tmp
 	for f in $@; do
 		log "Adding [$f]"
-        skopeo --insecure-policy copy docker-daemon:$f \
-            containers-storage:$f > /dev/null 2>&1 || die "skopeo failed [$f]"
+        if ! skopeo --insecure-policy copy docker-daemon:$f \
+            containers-storage:$f > $tmp/out 2>&1; then
+			cat $tmp/out
+			die "skopeo failed [$f]"
+		fi
 	done
 
 	tar -C /tmp -cf $__tar var
