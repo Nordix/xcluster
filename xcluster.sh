@@ -82,7 +82,7 @@ cmd_env() {
 	test -n "$XCLUSTER" || export XCLUSTER=$me
 	test -n "$XCLUSTER_HOME" || XCLUSTER_HOME=$XCLUSTER_WORKSPACE/xcluster
 	if test -z "$XCLUSTER_TMP"; then
-		local mynetns=$(ip netns id $$)
+		local mynetns=$(ip netns id)
 		if test -n "$mynetns"; then
 			XCLUSTER_TMP="/tmp/$USER/xcluster/$mynetns/tmp"
 		else
