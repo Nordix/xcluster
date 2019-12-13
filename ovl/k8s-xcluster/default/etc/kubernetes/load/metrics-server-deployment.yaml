@@ -46,7 +46,6 @@ spec:
           readOnlyRootFilesystem: true
           runAsNonRoot: true
           runAsUser: 1000
-        imagePullPolicy: Always
         volumeMounts:
         - name: tmp-dir
           mountPath: /tmp
