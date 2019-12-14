@@ -158,6 +158,22 @@ cmd_lreg_rm() {
 	skopeo delete --tls-verify=false docker://$regip:5000/$1
 	return 0
 }
+##   lreg_isloaded <image:tag>
+##     Returns ok if an image is loaded.
+cmd_lreg_isloaded() {
+	test -n "$1" || die "No image"
+	local regip=$(cmd_get_regip) || return 1
+	local image=$(echo $1 | cut -d: -f1)
+	local tag=$(echo $1 | cut -d: -f2)
+	if echo $image | grep -qF . ; then
+		# Strip host
+		image=$(echo $image | cut -d/ -f2-)
+	fi
+	mkdir -p $tmp
+	curl -s -X GET http://$regip:5000/v2/$image/tags/list > $tmp/out 2>&1 \
+		|| return 1
+	jq -r .tags[] < $tmp/out | grep -qE "^$tag$"
+}
 ##
 cmd_get_regip() {
 	local regip=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' registry)
