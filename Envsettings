@@ -38,7 +38,7 @@ _cdo_completion() {
 }
 complete -F _cdo_completion cdo
 _xc_completion() {
-	COMPREPLY=($(XCLUSTER completion $2))
+	COMPREPLY=($($XCLUSTER completion $2))
 }
 complete -F _xc_completion xc
 
