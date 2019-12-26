@@ -125,6 +125,10 @@ cmd_env() {
 		mkdir -p $XCLUSTER_TMP || die "Failed mkdir [$XCLUSTER_TMP]"
 	fi
 }
+cmd_completion() {
+	grep -oE "^cmd_[a-zA-Z_]+" $me | grep "cmd_$1" | sed -e 's,cmd_,,'
+}
+
 
 ##  Network name-space commands;
 ##   nsadd [--ipv4-base=172.30.0.0] [--ipv6-prefix=fd00:1723::] <index>

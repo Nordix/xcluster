@@ -37,6 +37,10 @@ _cdo_completion() {
 	COMPREPLY=($o)
 }
 complete -F _cdo_completion cdo
+_xc_completion() {
+	COMPREPLY=($(XCLUSTER completion $2))
+}
+complete -F _xc_completion xc
 
 export XCLUSTER="$(readlink -f .)/xcluster.sh"
 alias xc=$XCLUSTER
