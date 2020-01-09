@@ -271,11 +271,49 @@ cmd_br_setup() {
 cmd_kernel_build() {
 	cmd_env
 	$DISKIM kernel_download --kver=$__kver
-	mkdir -p $KERNELDIR
+	mkdir -p $KERNELDIR $__kobj
+	cmd_cpio_list $dir/image/initfs > $__kobj/cpio_list
 	$DISKIM kernel_build --kdir=$KERNELDIR/$__kver --kernel=$__kbin \
 		--kver=$__kver --kobj=$__kobj --kcfg=$__kcfg \
 		--menuconfig=$__menuconfig \
 		|| die "Kernel build failed [$__kver]"
+	if grep -q cpio_list $__kcfg; then
+		cmd_emit_cpio_list > $__kobj/cpio_list
+		$DISKIM kernel_build --kdir=$KERNELDIR/$__kver --kernel=$__kbin \
+			--kver=$__kver --kobj=$__kobj --kcfg=$__kcfg \
+			|| die "Kernel build failed [$__kver]"
+	fi
+}
+cmd_emit_cpio_list() {
+	cmd_env
+	test -n "$__tmp" || __tmp=$tmp
+	mkdir -p $__tmp
+	INSTALL_MOD_PATH=$__tmp make -C $__kobj modules_install 1>&2 > /dev/null \
+		|| die "Failed to install modules from [$__kobj]"
+	cmd_cpio_list $__tmp
+	cmd_cpio_list $dir/image/initfs
+	cat <<EOF
+dir /dev 755 0 0
+nod /dev/console 644 0 0 c 5 1
+dir /bin 755 0 0
+file /bin/busybox /bin/busybox 755 0 0
+EOF
+}
+cmd_cpio_list() {
+	test -n "$1" || return 0
+	local n f p
+	for n in $(find "$1" -mindepth 1); do
+		f=$(echo $n | sed -e "s,$1,,")
+		if test -d $n; then
+			echo "dir $f 0755 0 0"
+		elif test -f $n; then
+			p=0544
+			test -x $n && p=0755
+			echo "file $f $n $p 0 0"
+		else
+			die "Unknown file [$n]"
+		fi
+	done
 }
 cmd_busybox_build() {
 	cmd_env
@@ -348,7 +386,6 @@ cmd_mkimage() {
 		done
 	fi
 }
-
 cmd_cache() {
 	cmd_env
 	if test "$__list" = "yes"; then

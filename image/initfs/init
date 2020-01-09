@@ -1,0 +1,13 @@
+#! /bin/busybox ash
+/bin/busybox echo "==== Init ramfs ===="
+/bin/busybox mkdir -p /sbin /var/log /var/run /proc /sys /tmp /dev /usr/bin /usr/sbin
+/bin/busybox --install -s
+mount -t sysfs sysfs /sys
+mount -t proc procfs /proc
+mdev -s
+test -b /dev/vda || exec /bin/busybox ash
+
+mkdir /mnt
+mount /dev/vda /mnt
+cp -R /lib/modules /mnt/lib
+exec switch_root /mnt /init
