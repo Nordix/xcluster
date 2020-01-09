@@ -172,6 +172,7 @@ cmd_lreg_isloaded() {
 	mkdir -p $tmp
 	curl -s -X GET http://$regip:5000/v2/$image/tags/list > $tmp/out 2>&1 \
 		|| return 1
+	grep -q null $tmp/out && return 1
 	jq -r .tags[] < $tmp/out | grep -qE "^$tag$"
 }
 ##
