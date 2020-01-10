@@ -176,9 +176,9 @@ wget -4 -O /dev/null http://www.google.se # (doesn't work? See below)
 # Traffic test with mconnect
 kubectl apply -f /etc/kubernetes/mconnect-dual.yaml # (image is pre-pulled)
 kubectl get svc
-assign-lb-ip -svc mconnect; assign-lb-ip -svc mconnect-ipv6
+assign-lb-ip -svc mconnect-ipv4; assign-lb-ip -svc mconnect-ipv6
 kubectl get svc
-mconnect -address mconnect.default.svc.xcluster:5001 -nconn 100
+mconnect -address mconnect-ipv4.default.svc.xcluster:5001 -nconn 100
 mconnect -address mconnect-ipv6.default.svc.xcluster:5001 -nconn 100
 ```
 
