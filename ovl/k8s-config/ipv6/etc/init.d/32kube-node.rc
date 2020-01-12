@@ -20,8 +20,7 @@ ip -6 route add fd00:2008::/64 via 2000::250
 # an ipv4 route on a ipv6 cluster.
 ip -6 route add default \
 	nexthop via 1000::1:192.168.1.201 nexthop via 1000::1:192.168.1.202
-
-crio -log-level debug > /var/log/crio.log 2>&1 &
+crio --host-ip=1000::1:192.168.1.$i -log-level debug > /var/log/crio.log 2>&1 &
 sleep 0.2
 
 # See;
