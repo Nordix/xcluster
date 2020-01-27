@@ -20,6 +20,7 @@ criod=$GOPATH/src/github.com/cri-o/cri-o
 crio=$criod/bin/crio
 test -x $crio || die "Not executable [$crio]"
 cp $crio $tmp/bin
+cp $criod/bin/pinns $tmp/bin
 
 test -d $dir/default && cp -r $dir/default/* $tmp
 
