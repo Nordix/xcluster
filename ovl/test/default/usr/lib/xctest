@@ -352,7 +352,9 @@ rsh() {
 ##
 check_vm() {
 	test -n "$__nvm" || __nvm=4
-	local vms="$(seq -s' ' 1 $__nvm) 201 202"
+	test -n "$__nrouters" || __nrouters=2
+	local last_router=$((200 + __nrouters))
+	local vms="$(seq -s' ' 1 $__nvm) $(seq 201 $last_router)"
 	test -n "$1" && vms=$@
 	for vm in $vms; do
 		rsh $vm hostname || return 1
