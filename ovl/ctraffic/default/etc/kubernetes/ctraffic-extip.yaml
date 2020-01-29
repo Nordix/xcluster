@@ -31,6 +31,6 @@ spec:
     spec:
       containers:
       - name: ctraffic
-        image: nordixorg/ctraffic:v0.2
+        image: registry.nordix.org/cloud-native/ctraffic:latest
         ports:
         - containerPort: 5003

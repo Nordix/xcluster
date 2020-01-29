@@ -1,0 +1,158 @@
+#! /bin/sh
+##
+## ctraffic_test --
+##
+##   Test script for ctraffic executed in xcluster.
+##
+## Commands;
+##
+
+prg=$(basename $0)
+dir=$(dirname $0); dir=$(readlink -f $dir)
+me=$dir/$prg
+tmp=/tmp/${prg}_$$
+test -n "$__cname" || __cname=xcluster
+
+die() {
+	echo "ERROR: $*" >&2
+	rm -rf $tmp
+	exit 1
+}
+help() {
+	grep '^##' $0 | cut -c3-
+	rm -rf $tmp
+	exit 0
+}
+test -n "$1" || help
+echo "$1" | grep -qi "^help\|-h" && help
+
+log() {
+	echo "$prg: $*" >&2
+}
+dbg() {
+	test -n "$__verbose" && echo "$prg: $*" >&2
+}
+
+cmd_tcase_check_namespaces() {
+	test_namespaces
+	tlog "$(kubectl version --short=true | grep Server)"
+}
+cmd_tcase_check_nodes() {
+	test_nodes
+}
+cmd_tcase_check_coredns() {
+	test_coredns
+}
+cmd_tcase_check_metric_server() {
+	kubectl="kubectl -n kube-system"
+	test_deployment metrics-server 180
+}
+cmd_tcase_start_ctraffic() {
+	$kubectl apply -f /etc/kubernetes/ctraffic-dual-stack.yaml
+	test_deployment ctraffic-deployment 180
+	tlog "Ctraffic client $(ctraffic -version)"
+}
+
+cmd_tcase_internal_traffic_ipv4() {
+	tcase "Internal IPv4 traffic"
+	traffic_test ctraffic-ipv4.default.svc.xcluster
+}
+cmd_tcase_internal_traffic_ipv6() {
+	tcase "Internal IPv6 traffic"
+	traffic_test ctraffic-ipv6.default.svc.xcluster
+}
+cmd_tcase_external_traffic_ipv4() {
+	tcase "External IPv4 traffic"
+	traffic_test 10.0.0.0
+}
+cmd_tcase_external_traffic_ipv6() {
+	tcase "External IPv6 traffic"
+	traffic_test '[1000::]'
+}
+
+traffic_test() {
+	local x m
+	ctraffic -address $1:5003 \
+		-rate 50 -nconn 10 -timeout 5s > /tmp/ctraffic.out
+	jq . < /tmp/ctraffic.out
+	for m in FailedConnections Dropped FailedConnects; do
+		x=$(jq .$m < /tmp/ctraffic.out)
+		test $x -eq 0 || tdie "Metric $m [$x]"
+	done
+	m=Retransmits
+	x=$(jq .$m < /tmp/ctraffic.out)
+	test $x -gt 10 && tdie "Unexpected $m [$x]"
+	test $x -gt 0 && tlog "$m [$x]"
+	return 0
+}
+
+cmd_tcase_assign_lb_ip() {
+	tcase "Assign external addresses"
+	assign-lb-ip -svc ctraffic-ipv4 -ip 10.0.0.0 || tdie
+	assign-lb-ip -svc ctraffic-ipv6 -ip 1000:: || tdie
+}
+
+cmd_tcase_routes() {
+	tcase "Setup routes to the ctraffic VIPs"
+	ip ro replace 10.0.0.0/24 via 192.168.1.2
+	ip -6 ro replace 1000::/120 via 1000::1:192.168.1.2
+}
+
+
+
+cmd_tcase_lossy_traffic_ipv4() {
+	tcase "External IPv4 traffic with 5% packet-loss"
+	iptables -I INPUT 1 -i eth1 -m statistic --mode random --probability 0.05 -j DROP || tdie
+	ctraffic -address 10.0.0.0:5003 \
+		-rate 100 -nconn 10 -timeout 5s > /tmp/ctraffic.out
+	iptables -D INPUT 1 || tdie
+	jq . < /tmp/ctraffic.out
+
+	for m in FailedConnections FailedConnects; do
+		x=$(jq .$m < /tmp/ctraffic.out)
+		test $x -eq 0 || tdie "Metric $m [$x]"
+	done
+
+	m=Dropped
+	x=$(jq .$m < /tmp/ctraffic.out)
+	test $x -gt 15 -a $x -lt 35 || tdie "Unexpected $m [$x]"
+	tlog "$m [$x]"
+
+	m=Retransmits
+	x=$(jq .$m < /tmp/ctraffic.out)
+	test $x -gt 5 -a $x -lt 25 || tdie "Unexpected $m [$x]"
+	tlog "$m [$x]"
+}
+
+
+
+. /etc/profile
+. /usr/lib/xctest
+indent='  '
+
+
+# Get the command
+cmd=$1
+shift
+grep -q "^cmd_$cmd()" $0 || die "Invalid command [$cmd]"
+
+while echo "$1" | grep -q '^--'; do
+	if echo $1 | grep -q =; then
+		o=$(echo "$1" | cut -d= -f1 | sed -e 's,-,_,g')
+		v=$(echo "$1" | cut -d= -f2-)
+		eval "$o=\"$v\""
+	else
+		o=$(echo "$1" | sed -e 's,-,_,g')
+		eval "$o=yes"
+	fi
+	shift
+done
+unset o v
+long_opts=`set | grep '^__' | cut -d= -f1`
+
+# Execute command
+trap "die Interrupted" INT TERM
+cmd_$cmd "$@"
+status=$?
+rm -rf $tmp
+exit $status
