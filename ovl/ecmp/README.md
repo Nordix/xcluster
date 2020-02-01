@@ -1,9 +1,20 @@
 Xcluster overlay - ecmp
 =======================
 
-Demonstrates Equal Cost Multi Path (ECMP) with a simple load balancer.
+Demonstrates Equal Cost Multi Path
+[ECMP](https://en.wikipedia.org/wiki/Equal-cost_multi-path_routing)
+with a simple load balancer.
 
 <img src="ipv6-ecmp.svg" alt="Picture of ecmp setup" width="80%" />
+
+Some articles on the topic;
+
+* https://codecave.cc/multipath-routing-in-linux-part-1.html
+* https://codecave.cc/multipath-routing-in-linux-part-2.html
+* https://codecave.cc/multipath-routing-ecmp-in-linux-part-3.html
+* https://cumulusnetworks.com/blog/celebrating-ecmp-part-one/
+* https://cumulusnetworks.com/blog/celebrating-ecmp-part-two/
+
 
 Usage
 -----
@@ -13,7 +24,7 @@ Usage
 eval $($XCLUSTER env | grep XCLUSTER_HOME)
 export __image=$XCLUSTER_HOME/hd.img
 # Start;
-xc mkcdrom ecmp; xc start --ntesters=1
+xc mkcdrom xnet ecmp; xc start --ntesters=1
 # On the tester;
 mconnect -address [1000::2]:5001 -nconn 100
 mconnect -address 10.0.0.2:5001 -nconn 100
@@ -29,6 +40,63 @@ mconnect -address [1000::2]:5001 -nconn 100  # WILL NOT BE LOAD-BALANCED!
 The tester is setup with additional sub-nets on the `lo` interface
 that can be used as sources by
 [mconnect](https://github.com/Nordix/mconnect#many-source-addresses).
+
+
+### Continuous traffic
+
+This measures the disturbance on ongoing connections if an ECMP target
+is added or removed.
+
+```
+unset XOVLS __mem1
+export __mem=512
+xc mkcdrom xnet ecmp; xc starts --nvm=10 --nrouters=1 --ntesters=1
+# On vm-201
+ip ro replace 10.0.0.0/24 \
+  nexthop via 192.168.1.1 \
+  nexthop via 192.168.1.2 \
+  nexthop via 192.168.1.3 \
+  nexthop via 192.168.1.4 \
+  nexthop via 192.168.1.5 \
+  nexthop via 192.168.1.6 \
+  nexthop via 192.168.1.7 \
+  nexthop via 192.168.1.8 \
+  nexthop via 192.168.1.9 \
+  nexthop via 192.168.1.10
+# On vm-221 (tester)
+ctraffic -address 10.0.0.2:5003 -nconn 100 -rate 500 -monitor \
+  -timeout 20s -stats=all > /tmp/ctraffic4.json 
+# On vm-201 while the test is running;
+ip ro replace 10.0.0.0/24 \
+  nexthop via 192.168.1.1 \
+  nexthop via 192.168.1.2 \
+  nexthop via 192.168.1.3 \
+  nexthop via 192.168.1.4 \
+  nexthop via 192.168.1.5 \
+  nexthop via 192.168.1.6 \
+  nexthop via 192.168.1.7 \
+  nexthop via 192.168.1.8 \
+  nexthop via 192.168.1.9
+# (wait a few sec...)
+ip ro replace 10.0.0.0/24 \
+  nexthop via 192.168.1.1 \
+  nexthop via 192.168.1.2 \
+  nexthop via 192.168.1.3 \
+  nexthop via 192.168.1.4 \
+  nexthop via 192.168.1.5 \
+  nexthop via 192.168.1.6 \
+  nexthop via 192.168.1.7 \
+  nexthop via 192.168.1.8 \
+  nexthop via 192.168.1.9 \
+  nexthop via 192.168.1.10
+```
+
+Post-processing;
+```
+scp root@192.168.0.221:/tmp/ctraffic4.json /tmp
+cd $GOPATH/src/github.com/Nordix/ctraffic
+./scripts/plot.sh connections < /tmp/ctraffic4.json > /tmp/ctraffic4.svg
+```
 
 
 The ipv6/ecmp/ssh bug
