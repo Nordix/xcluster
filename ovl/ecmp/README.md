@@ -45,7 +45,8 @@ that can be used as sources by
 ### Continuous traffic
 
 This measures the disturbance on ongoing connections if an ECMP target
-is added or removed.
+is added or removed. The [ctraffic](https://github.com/Nordix/ctraffic)
+test program is used.
 
 ```
 unset XOVLS __mem1
@@ -127,7 +128,7 @@ Conn act/fail/connecting: 100/286/0, Packets send/rec/dropped: 14616/14387/0
 
 A plot of the lost connections looks like this;
 
-<img src="removing-targets.svg"  width="60%" />
+<img src="removing-targets.svg"  width="80%" />
 
 
 
