@@ -193,7 +193,7 @@ test_coredns() {
 ##    Verify that all PODs in a deployment are ready
 ##
 test_deployment() {
-	tlog "  Checking Deployment [$1]"
+	tcase "Checking Deployment [$1]"
 	test -n "$1" || tdie "No deployment"
 	local replicas=$(nreplicas $1)
 	echo "Expected replicas [$replicas]"
@@ -213,7 +213,7 @@ test_deployment() {
 test_daemonset() {
 	mkdir -p $tmp
 	local nodes=$(kubectl get nodes -o json | jq '.items|length')
-	tlog "  Checking DaemonSet [$1] (nodes=$nodes)"
+	tcase "Checking DaemonSet [$1] (nodes=$nodes)"
 	$kubectl get daemonset $1 -o json > $tmp/out || tdie
 	local selector=$(get_selector < $tmp/out)
 	test -n "$2" && pushv $2
