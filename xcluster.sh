@@ -406,7 +406,7 @@ cmd_cache() {
 		test -x $d/tar || die "Not executable [$d/tar]"
 		$d/tar "$dest/$n.tar"
 		rm -f "$dest/$n.tar.xz"
-		pxz "$dest/$n.tar"
+		xz "$dest/$n.tar"
 	done
 }
 cmd_cached_tar() {
@@ -535,7 +535,7 @@ cmd_cat_tar() {
 	elif echo $t | grep -q 'bzip2 compressed'; then
 		bzcat "$1"
 	elif echo $t | grep -q 'XZ compressed'; then
-		pxz -cd "$1"
+		xz -cd "$1"
 	elif echo $t | grep -q 'gzip compressed'; then
 		pigz -cd "$1"
 	fi
