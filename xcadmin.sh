@@ -52,56 +52,83 @@ EOF
 }
 
 
-##   build_release <workdir>
-##     Builds xcluster from scratch (more or less). This is both a
-##     test and a release procedure.
-##
-cmd_build_release() {
-	local begin now
-	begin=$(date +%s)
-
-	test -n "$1" || die "No workdir"
-	test -e "$1" && die "Already exist [$1]"
-	mkdir -p "$1" ||  die "Could not create [$1]"
-	cd "$1"
-	local workdir=$(readlink -f .)
-
-
-	# Clone
-	#local url=https://github.com/Nordix/xcluster.git
-	local url=file:///$HOME/go/src/github.com/Nordix/xcluster
-	git clone --depth 1 $url || die "Failed to clone xcluster"
-	
-	# Setup env
-	export XCLUSTER_WORKSPACE=$workdir/workspace
-	mkdir -p $XCLUSTER_WORKSPACE
-	cd xcluster
-	. ./Envsettings
-	eval $($XCLUSTER env)
-
-	# Install diskim
-	ar=diskim-$__diskimver.tar.xz
-	url=https://github.com/lgekman/diskim/releases/download/$__diskimver
-	test -r $ARCHIVE/$ar || curl -L $url/$ar > $ARCHIVE/$ar || \
-		die "Failed to dovnload diskim-$__diskimver"
-	tar -I pxz -C $XCLUSTER_WORKSPACE -xf $ARCHIVE/$ar || \
-		die "Failed to unpack diskim-$__diskimver"
-	sed -ie "s,-j4,-j$(nproc)," $DISKIM
-
-	# Create the base image
-	$XCLUSTER kernel_build || die "kernel_build"
-	$XCLUSTER busybox_build || die "busybox_build"
-	$XCLUSTER iproute2_build || log "iproute2_build fails always, go on..."
-	$XCLUSTER dropbear_build || die dropbear_build
-	$XCLUSTER mkimage
-
-	now=$(date +%s)
-	echo "Elapsed time; $((now-begin)) sec"
+cmd_mark() {
+	test -n "$__mark_file" || __mark_file=/tmp/$USER/mark
+	if test "$1" = "clean"; then
+		rm -f "$__mark_file"
+		mkdir -p $(dirname $__mark_file)
+		return 0
+	fi
+	test -r "$__mark_file" || echo "$(date +%s:%F-%T): Begin" > "$__mark_file"
+	local begin=$(head -1 $__mark_file | cut -d: -f1)
+	local now=$(date +%s)
+	local elapsed=$((now-begin))
+	echo "$(printf "%-4d" $elapsed):$(date +%F-%T): $@" >> "$__mark_file"
 }
+
+##   build_base <workspace>
+##     Builds the base xcluster workspace from scratch (more or less).
+##     This is both a test and a release procedure.
+##
+cmd_build_base() {
+	cmd_mark clean
+	cmd_mark "Build xcluster"
+
+	test -n "$1" || die "No workspace"
+	test -e "$1" && die "Already exist [$1]"
+	test -n "$XCLUSTER" || die 'Not set [$XCLUSTER]'
+
+	local workdir=$(readlink -f $1)
+	mkdir -p "$workdir" ||  die "Could not create [$workdir]"
+
+	# Pre-check
+	for ar in diskim-$__diskimver.tar.xz $__kver.tar.xz $__bbver.tar.bz2 \
+		dropbear-$__dropbearver.tar.bz2 iproute2-$__ipver.tar.xz \
+		; do
+		test -r $ARCHIVE/$ar || die "Not readable [$ARCHIVE/$ar]"
+	done
+
+	# Setup env
+	export XCLUSTER_WORKSPACE=$workdir
+	mkdir -p $XCLUSTER_WORKSPACE
+	eval $($XCLUSTER env)
+	export __image=$XCLUSTER_HOME/hd.img
+
+	if ! test -x $DISKIM; then
+		ar=$ARCHIVE/diskim-$__diskimver.tar.xz
+		tar -C $XCLUSTER_WORKSPACE -xf $ar
+	fi
+	# Work-arounds for diskim;
+	if ! which pxz > /dev/null; then
+		test -d $HOME/bin || die "Not executable [pxz]. Make a link to xz"
+		ln -s $(which xz) $HOME/bin/pxz
+		which pxz > /dev/null || die "Not executable [pxz]"
+	fi
+	sed -i -e 's,-j4,-j$(nproc),' $DISKIM
+	cmd_mark "Diskim installed"
+
+	$XCLUSTER kernel_build || die "Failed to build kernel"
+	cmd_mark "Kernel built"
+
+	$XCLUSTER busybox_build || die "Failed to build busybox"
+	cmd_mark "Busybox built"
+
+	$XCLUSTER dropbear_build || die "Failed to build dropbear"
+	cmd_mark "Dropbear built"
+
+	$XCLUSTER iproute2_build || die "Failed to build iproute2"
+	cmd_mark "Iproute2 built"
+
+	$XCLUSTER mkimage --size=8G || die "Failed to build image"
+	cmd_mark "Image built"
+
+	cat $__mark_file
+}
+
 cmd_cache_refresh() {
 	$XCLUSTER cache --clear
 	local o
-	for o in iptools gobgp xnet images; do
+	for o in iptools xnet images; do
 		log "Caching ovl [$o]"
 		$XCLUSTER cache $o
 	done
