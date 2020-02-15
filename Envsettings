@@ -59,7 +59,9 @@ vm() {
 }
 export __net_setup="$(readlink -f .)/config/net-setup-userspace.sh"
 
-test "$0" = "bash" || return 0
+# completion is a bash thing
+test "$(readlink -f /proc/$$/exe)" = "/bin/bash" || return 0
+test -n "$PS1" || return 0
 
 _cdo_completion() {
 	local XCLUSTER_OVLPATH d o
