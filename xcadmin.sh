@@ -32,6 +32,70 @@ dbg() {
 	test -n "$__verbose" && echo "$prg: $*" >&2
 }
 
+##  env
+##    Print environment.
+##
+cmd_env() {
+	test -n "$__corednsver" || __corednsver=1.6.7
+	test -n "$__k8sver" || __k8sver=v1.17.2
+	test -n "$__mconnectver" || __mconnectver=v2.0
+	test -n "$GOPATH" || GOPATH=$HOME/go
+	test "$cmd" = "env" && set | grep -E '^(__.*|ARCHIVE)='
+}
+
+cmd_find_ar() {
+	test -n "$1" || die "No file"
+	local d
+	for d in $ARCHIVE $HOME/Downloads; do
+		if test -r $d/$1; then
+			echo $d/$1
+			return 0
+		fi
+	done
+	die "Not found [$1]"
+}
+cmd_bin_add() {
+	test -n "$1" || die "No bin-dir"
+	cmd_env
+	local ar f
+	local bindir=$1
+
+	mkdir -p $bindir
+	f=$bindir/coredns
+	if ! test -x $f; then
+		ar=$(cmd_find_ar coredns_${__corednsver}_linux_amd64.tgz) || return 1
+		tar -C $bindir -xf $ar
+	fi
+
+	f=$bindir/kubectl
+	if ! test -x $f; then
+		ar=$(cmd_find_ar kubernetes-server-$__k8sver-linux-amd64.tar.gz) || return 1
+		tar -C $bindir -O -xf $ar kubernetes/server/bin/kubectl > $f
+		chmod a+x $f
+	fi
+
+	f=$bindir/mconnect
+	if ! test -x $f; then
+		ar=$(cmd_find_ar mconnect-$__mconnectver.gz) || return 1
+		gzip -d -c $ar > $f
+		chmod a+x $f
+	fi
+}
+cmd_mkimages_ar() {
+	if test -r $ARCHIVE/images.tar.xz; then
+		echo "Already built [$ARCHIVE/images.tar.xz]"
+		return 0
+	fi
+	test -n "$XCLUSTER" || die 'Not set [$XCLUSTER]'
+	local images="$($XCLUSTER ovld images)/images.sh"
+	test -x $images || die "Not executable [$images]"
+	$images make --tar=$ARCHIVE/images.tar \
+		docker.io/library/alpine:3.8 \
+		docker.io/nordixorg/mconnect:v1.2 \
+		k8s.gcr.io/metrics-server-amd64:v0.3.6 || die "Failed"
+	xz $ARCHIVE/images.tar
+}
+
 ##   ovlindex --src=dir
 ##     Print a overlay-index on stdout.
 ##
@@ -77,6 +141,7 @@ cmd_build_base() {
 	test -n "$1" || die "No workspace"
 	test -e "$1" && die "Already exist [$1]"
 	test -n "$XCLUSTER" || die 'Not set [$XCLUSTER]'
+	eval $($XCLUSTER env)
 
 	local workdir=$(readlink -f $1)
 	mkdir -p "$workdir" ||  die "Could not create [$workdir]"
@@ -91,7 +156,6 @@ cmd_build_base() {
 	# Setup env
 	export XCLUSTER_WORKSPACE=$workdir
 	mkdir -p $XCLUSTER_WORKSPACE
-	eval $($XCLUSTER env)
 	export __image=$XCLUSTER_HOME/hd.img
 
 	if ! test -x $DISKIM; then
@@ -125,13 +189,59 @@ cmd_build_base() {
 	cat $__mark_file
 }
 
+##   k8s_workspace
+##     Extend a base $XCLUSTER_WORKSPACE for use with with K8s.
+##
+cmd_k8s_workspace() {
+	local ar
+	cmd_env
+	ar=$ARCHIVE/images.tar.xz
+	if ! test -r $ar; then
+		cat <<EOF
+
+The images archive is not built. Pull the required images to your local
+docker daemon;
+
+docker pull k8s.gcr.io/pause:3.1
+docker pull docker.io/library/alpine:3.8
+docker pull docker.io/nordixorg/mconnect:v1.2
+docker pull k8s.gcr.io/metrics-server-amd64:v0.3.6
+
+Then do;
+
+./xcadmin.sh mkimages_ar
+
+(requires "sudo")
+
+EOF
+		die "Not readable [$ARCHIVE/items.tar.xz]"
+	fi
+
+	cmd_bin_add $GOPATH/bin
+	cmd_build_iptools
+	cmd_cache_refresh
+}
+cmd_build_iptools() {
+	local iptools="$($XCLUSTER ovld iptools)/iptools.sh"
+	test -x $iptools || die "Not executable [$iptools]"
+	$iptools download
+	$iptools build
+}
+
+
+##   cache_refresh
+##
 cmd_cache_refresh() {
+	local ar=$ARCHIVE/images.tar.xz
+	test -r $ar || die "Not readable [$ar]"
 	$XCLUSTER cache --clear
 	local o
-	for o in iptools xnet images; do
+	for o in iptools xnet; do
 		log "Caching ovl [$o]"
-		$XCLUSTER cache $o
+		$XCLUSTER cache $o || die "Failed"
 	done
+	eval $($XCLUSTER env | grep __cached)
+	cp $ar $__cached/default
 }
 
 ##   release --version=ver
@@ -161,8 +271,9 @@ cmd_release() {
 
 cmd_mkworkspace() {
 	test -n "$XCLUSTER" || die 'Not set [$XCLUSTER]'
+	cmd_env
 	eval $($XCLUSTER env)
-	local d W H S
+	local d W H S f
 	d=$(dirname $XCLUSTER)
 	d=$(readlink -f $d)
 
@@ -170,6 +281,7 @@ cmd_mkworkspace() {
 	test -e "$1" && die "Already exists [$1]"
 	mkdir -p "$1" || die "Mkdir failed [$1]"
 	local W=$(readlink -f "$1")
+
 	log "Creating workspace at [$W]"
 
 	H=$W/xcluster
@@ -203,9 +315,10 @@ EOF
 	cp $S/bzImage $S/initrd.cpio $H/tmp
 
 	mkdir -p $W/bin
+	local bindir=$GOPATH/bin
 	for f in mconnect coredns kubectl; do
-		test -x $GOPATH/bin/$f || die "Not executable [$GOPATH/bin/$f]"
-		cp $GOPATH/bin/$f $W/bin
+		test -x $bindir/$f || die "Not executable [$bindir/$f]"
+		cp $bindir/$f $W/bin
 	done
 }
 
