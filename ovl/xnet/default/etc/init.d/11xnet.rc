@@ -80,7 +80,7 @@ EOF
 EOF
 	fi
 	cat > /etc/resolv.conf <<EOF
-nameserver 192.168.1.$i
+nameserver 192.168.0.$i
 options use-vc
 EOF
 	coredns -conf /etc/Corefile > /var/log/coredns.log 2>&1 &
