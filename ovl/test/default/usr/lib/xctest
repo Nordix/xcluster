@@ -354,7 +354,9 @@ check_vm() {
 	test -n "$__nvm" || __nvm=4
 	test -n "$__nrouters" || __nrouters=2
 	local last_router=$((200 + __nrouters))
-	local vms="$(seq -s' ' 1 $__nvm) $(seq 201 $last_router)"
+	test -n "$__ntesters" || __ntesters=0
+	local last_tester=$((220 + __ntesters))
+	local vms="$(seq -s' ' 1 $__nvm) $(seq 201 $last_router) $(seq 221 $last_tester)"
 	test -n "$1" && vms=$@
 	for vm in $vms; do
 		rsh $vm hostname || return 1
@@ -391,10 +393,10 @@ xcluster_start() {
 	fi
 
 	tcase "Cluster start ($(basename $__image))"
-    $XCLUSTER $start || tdie
-    sleep 2
-    tcase "VM connectivity"
-    tex check_vm $EXPECTED_VMS || tdie
+	$XCLUSTER $start || tdie
+	sleep 2
+	tcase "VM connectivity"
+	tex check_vm $EXPECTED_VMS || tdie
 	xcluster_unprep
 }
 
