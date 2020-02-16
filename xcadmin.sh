@@ -137,6 +137,7 @@ cmd_mark() {
 cmd_build_base() {
 	cmd_mark clean
 	cmd_mark "Build xcluster"
+	cmd_env
 
 	test -n "$1" || die "No workspace"
 	test -e "$1" && die "Already exist [$1]"
@@ -147,16 +148,21 @@ cmd_build_base() {
 	mkdir -p "$workdir" ||  die "Could not create [$workdir]"
 
 	# Pre-check
+	local ar
 	for ar in diskim-$__diskimver.tar.xz $__kver.tar.xz $__bbver.tar.bz2 \
 		dropbear-$__dropbearver.tar.bz2 iproute2-$__ipver.tar.xz \
-		; do
+		coredns_${__corednsver}_linux_amd64.tgz; do
 		test -r $ARCHIVE/$ar || die "Not readable [$ARCHIVE/$ar]"
 	done
 
 	# Setup env
 	export XCLUSTER_WORKSPACE=$workdir
-	mkdir -p $XCLUSTER_WORKSPACE
 	export __image=$XCLUSTER_HOME/hd.img
+	mkdir -p $XCLUSTER_WORKSPACE/bin
+
+	ar=$ARCHIVE/coredns_${__corednsver}_linux_amd64.tgz
+	tar -C $XCLUSTER_WORKSPACE/bin -xf $ar
+	cmd_mark "Coredns  installed"
 
 	if ! test -x $DISKIM; then
 		ar=$ARCHIVE/diskim-$__diskimver.tar.xz
