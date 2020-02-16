@@ -17,13 +17,6 @@ fi
 test -n "$ARCHIVE" || export ARCHIVE=$HOME/Downloads
 mkdir -p $ARCHIVE
 
-vm() {
-	local bg='#040'
-	test "$1" -gt 200 && bg='#400'
-	test "$1" -gt 220 && bg='#004'
-	XXTERM=XCLUSTER exec xterm -T "vm-$1" -fg wheat -bg "$bg" \
-		-e "telnet 192.168.0.$1" &
-}
 cdo() {
 	cd $($XCLUSTER ovld $1)
 }
@@ -42,22 +35,46 @@ if ip netns id | grep -q -E "^${USER}_xcluster[0-9]+\$"; then
 	# netns.
 	echo $__net_setup | grep -q '/config/net-setup-userspace.sh' && \
 		unset __net_setup
-	return
+
+	vm() {
+		local bg='#040'
+		test "$1" -gt 200 && bg='#400'
+		test "$1" -gt 220 && bg='#004'
+		XXTERM=XCLUSTER exec xterm -T "vm-$1" -fg wheat -bg "$bg" \
+			-e "telnet 192.168.0.$1" &
+	}
+
+else
+	# We are not in a xcluster netns. Use user-space networking.
+	export __net_setup="$(readlink -f .)/config/net-setup-userspace.sh"
+
+	vm() {
+		local bg='#040'
+		test "$1" -gt 200 && bg='#400'
+		test "$1" -gt 220 && bg='#004'
+		local nodeid=$1
+		local p=$((12000+nodeid))
+		test -n "$XCLUSTER_TELNET_BASE" && p=$((XCLUSTER_TELNET_BASE+nodeid))
+		XXTERM=XCLUSTER exec xterm -T "vm-$1" -fg wheat -bg "$bg" \
+			-e "telnet 127.0.0.1 $p" &
+	}
 fi
 
-# We are not in a xcluster netns. Use user-space networking.
-
-vm() {
-	local bg='#040'
-	test "$1" -gt 200 && bg='#400'
-	test "$1" -gt 220 && bg='#004'
-	local nodeid=$1
-	local p=$((12000+nodeid))
-	test -n "$XCLUSTER_TELNET_BASE" && p=$((XCLUSTER_TELNET_BASE+nodeid))
-	XXTERM=XCLUSTER exec xterm -T "vm-$1" -fg wheat -bg "$bg" \
-		-e "telnet 127.0.0.1 $p" &
-}
-export __net_setup="$(readlink -f .)/config/net-setup-userspace.sh"
+mynetns=$(ip netns id)
+if ! netstat -lutan | grep -q :::10053; then
+	cdns=$GOPATH/bin/coredns
+	test -x $cdns || cdns=$XCLUSTER_WORKSPACE/bin/coredns
+	if test -x $cdns; then
+		cdnslog=/tmp/$USER/coredns.log
+		test -n "$mynetns" && cdnslog=/tmp/$USER/coredns-$mynetns.log
+		mkdir -p /tmp/$USER
+		echo "Starting a local coredns on port 10053. Log in $cdnslog"
+		$cdns -conf $($XCLUSTER ovld coredns)/Corefile.k8s > $cdnslog 2>&1 &
+	else
+		echo "WARNING: CoreDNS not found. DNS from within the cluster will not work!"
+	fi
+	unset cdns cdnslog
+fi
 
 # completion is a bash thing
 test "$(readlink -f /proc/$$/exe)" = "/bin/bash" || return 0
