@@ -16,15 +16,11 @@ log() {
 test -n "$1" || die "No out-file"
 
 mkdir -p $tmp
-for s in $(echo "$SETUP" | tr ',' ' '); do
-	test -d $dir/$s || continue
-	cp -R $dir/$s/* $tmp
-	setup_copied=yes
-done
-test "$setup_copied" != "yes" && test -d $dir/default && cp -R $dir/default/* $tmp
+cp -R $dir/default/* $tmp
 
 mkdir -p $tmp/bin
 f=$GOPATH/bin/mconnect
+test -x $f || f=$XCLUSTER_WORKSPACE/bin/mconnect
 test -x $f || die "Not executable [$f]"
 strip $f
 cp $f $tmp/bin
