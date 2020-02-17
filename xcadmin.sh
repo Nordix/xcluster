@@ -39,7 +39,8 @@ cmd_env() {
 	test -n "$__corednsver" || __corednsver=1.6.7
 	test -n "$__k8sver" || __k8sver=v1.17.2
 	test -n "$__mconnectver" || __mconnectver=v2.0
-	test -n "$GOPATH" || GOPATH=$HOME/go
+	test -n "$GOPATH" || export GOPATH=$HOME/go
+	test -n "$ARCHIVE" || ARCHIVE=$HOME/Downloads
 	test "$cmd" = "env" && set | grep -E '^(__.*|ARCHIVE)='
 }
 
@@ -81,6 +82,18 @@ cmd_bin_add() {
 		chmod a+x $f
 	fi
 }
+
+##   prepulled_images
+##     Print pre-pulled images (needed for "mkimages_ar")
+##   mkimages_ar
+##     Create a "images.tar.xz" file. This requires "sudo"!!
+##
+cmd_prepulled_images() {
+	echo docker.io/library/alpine:3.8
+	echo docker.io/nordixorg/mconnect:v1.2
+	echo k8s.gcr.io/metrics-server-amd64:v0.3.6
+	echo k8s.gcr.io/pause:3.1
+}
 cmd_mkimages_ar() {
 	if test -r $ARCHIVE/images.tar.xz; then
 		echo "Already built [$ARCHIVE/images.tar.xz]"
@@ -89,10 +102,7 @@ cmd_mkimages_ar() {
 	test -n "$XCLUSTER" || die 'Not set [$XCLUSTER]'
 	local images="$($XCLUSTER ovld images)/images.sh"
 	test -x $images || die "Not executable [$images]"
-	$images make --tar=$ARCHIVE/images.tar \
-		docker.io/library/alpine:3.8 \
-		docker.io/nordixorg/mconnect:v1.2 \
-		k8s.gcr.io/metrics-server-amd64:v0.3.6 || die "Failed"
+	$images make --tar=$ARCHIVE/images.tar $(cmd_prepulled_images) || die "Failed"
 	xz $ARCHIVE/images.tar
 }
 
@@ -130,30 +140,38 @@ cmd_mark() {
 	echo "$(printf "%-4d" $elapsed):$(date +%F-%T): $@" >> "$__mark_file"
 }
 
+##   base_archives
+##     Print the base archives.
 ##   build_base <workspace>
 ##     Builds the base xcluster workspace from scratch (more or less).
 ##     This is both a test and a release procedure.
 ##
+cmd_base_archives() {
+	cmd_env
+	test -n "$XCLUSTER" || die 'Not set [$XCLUSTER]'
+	eval $($XCLUSTER env)
+	echo $ARCHIVE/diskim-$__diskimver.tar.xz
+	echo $ARCHIVE/$__kver.tar.xz
+	echo $ARCHIVE/$__bbver.tar.bz2
+	echo $ARCHIVE/dropbear-$__dropbearver.tar.bz2
+	echo $ARCHIVE/iproute2-$__ipver.tar.xz
+	echo $ARCHIVE/coredns_${__corednsver}_linux_amd64.tgz
+}
 cmd_build_base() {
 	cmd_mark clean
 	cmd_mark "Build xcluster"
-	cmd_env
-
-	test -n "$1" || die "No workspace"
-	test -e "$1" && die "Already exist [$1]"
-	test -n "$XCLUSTER" || die 'Not set [$XCLUSTER]'
-	eval $($XCLUSTER env)
-
-	local workdir=$(readlink -f $1)
-	mkdir -p "$workdir" ||  die "Could not create [$workdir]"
 
 	# Pre-check
 	local ar
-	for ar in diskim-$__diskimver.tar.xz $__kver.tar.xz $__bbver.tar.bz2 \
-		dropbear-$__dropbearver.tar.bz2 iproute2-$__ipver.tar.xz \
-		coredns_${__corednsver}_linux_amd64.tgz; do
-		test -r $ARCHIVE/$ar || die "Not readable [$ARCHIVE/$ar]"
+	for ar in $(cmd_base_archives); do
+		test -r $ar || die "Not readable [$ar]"
 	done
+
+	test -n "$1" || die "No workspace"
+	test -e "$1" && die "Already exist [$1]"
+
+	local workdir=$(readlink -f $1)
+	mkdir -p "$workdir" ||  die "Could not create [$workdir]"
 
 	# Setup env
 	export XCLUSTER_WORKSPACE=$workdir
@@ -198,6 +216,13 @@ cmd_build_base() {
 ##   k8s_workspace
 ##     Extend a base $XCLUSTER_WORKSPACE for use with with K8s.
 ##
+cmd_k8s_archives() {
+	cmd_env
+	echo $ARCHIVE/coredns_${__corednsver}_linux_amd64.tgz
+	echo $ARCHIVE/kubernetes-server-$__k8sver-linux-amd64.tar.gz
+	echo $ARCHIVE/mconnect-$__mconnectver.gz
+}
+
 cmd_k8s_workspace() {
 	local ar
 	cmd_env
@@ -222,6 +247,10 @@ Then do;
 EOF
 		die "Not readable [$ARCHIVE/items.tar.xz]"
 	fi
+
+	for ar in $(cmd_k8s_archives); do
+		test -r $ar || die "Not readable [$ar]"
+	done
 
 	cmd_bin_add $GOPATH/bin
 	cmd_build_iptools
@@ -250,6 +279,42 @@ cmd_cache_refresh() {
 	cp $ar $__cached/default
 }
 
+##   k8s_build_images [--k8sver=...]
+##     Build images hd-k8s-<k8sver>.img and hd-k8s-xcluster-<k8sver>.img
+##     Soft-links; hd-k8s.img hd-k8s-xcluster.img are updated.
+##
+cmd_k8s_build_images() {
+	cmd_env
+	eval $($XCLUSTER env)
+	test -n "$KUBERNETESD" || \
+		export KUBERNETESD=$XCLUSTER_WORKSPACE/kubernetes-$__k8sver/server/bin
+	if ! test -d $KUBERNETESD; then
+		local ar=$(cmd_find_ar kubernetes-server-$__k8sver-linux-amd64.tar.gz)
+		test -r $ar || die "Not readable [$ar]"
+		rm -rf $XCLUSTER_WORKSPACE/kubernetes
+		tar -C $XCLUSTER_WORKSPACE -xf $ar
+		mv $XCLUSTER_WORKSPACE/kubernetes $XCLUSTER_WORKSPACE/kubernetes-$__k8sver
+	fi
+
+	# Build the k8s-xcluster image;
+	local image
+	image=$XCLUSTER_HOME/hd-k8s-xcluster-$__k8sver.img
+	cp $__image $image
+	$XCLUSTER ximage --image=$image xnet etcd iptools k8s-xcluster mconnect images
+	test -e $XCLUSTER_HOME/hd-k8s-xcluster.img || \
+		ln -s $(basename $image)  $XCLUSTER_HOME/hd-k8s-xcluster.img
+	echo "Created [$image]"
+	
+	# Build the legacy k8s image;
+	image=$XCLUSTER_HOME/hd-k8s-$__k8sver.img
+	cp $__image $image
+	$XCLUSTER ximage --image=$image xnet etcd iptools kubernetes mconnect images
+	test -e $XCLUSTER_HOME/hd-k8s.img || \
+		ln -s $(basename $image)  $XCLUSTER_HOME/hd-k8s.img
+	echo "Created [$image]"
+
+}
+
 ##   release --version=ver
 ##     Create a release tar archive.
 ##
@@ -257,7 +322,7 @@ cmd_release() {
 	test -n "$__version" || die 'No version'
 	test -n "$XCLUSTER" || die 'Not set [$XCLUSTER]'
 	eval $($XCLUSTER env)
-	local d T f n ar H
+	local d T ar
 	d=$(dirname $XCLUSTER)
 	d=$(readlink -f $d)
 

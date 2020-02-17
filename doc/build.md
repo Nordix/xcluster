@@ -1,8 +1,9 @@
 # Build xcluster
 
-Describes howto build kernel, images and some overlays (including
-Kubernetes) from scratch. This may be necessary for instance if your
-distribution is incompatible with the binary release.
+Describes howto build kernel, and images from scratch. This may be
+necessary for instance if your distribution is incompatible with the
+binary release. Most of the work is done by the
+[xcadmin.sh](../xcadmin.sh) script.
 
 Also how to create a binary release is described here.
 
@@ -22,250 +23,134 @@ apt install -y skopeo
 For image handling you will also need
 [docker](https://www.digitalocean.com/community/tutorials/how-to-install-and-use-docker-on-ubuntu-18-04).
 
+## The $ARCHIVE
 
-## Environment setup
-
-Clone the `xcluster` repository. Then setup your environment for
-development;
+To build `xcluster` a number of archives are needed. These are assumed
+to be in a directory defined in the `$ARCHIVE` variable which defaults
+to `$HOME/Downloads`. It might be a good idea to set it to something else;
 
 ```
-cd $HOME                       # (or some other place)
-git clone https://github.com/Nordix/xcluster.git
 export ARCHIVE=$HOME/archive
-mkdir -p $ARCHIVE              # Downloaded items stored here
-export XCLUSTER_WORKSPACE=$HOME/tmp/xlcuster/workspace
-mkdir -p $XCLUSTER_WORKSPACE   # Keep separated from the xcluster repo
-cd xcluster
-. ./Envsettings
-# Install diskim if necessary;
-wget -O - -q \
- https://github.com/lgekman/diskim/releases/download/v0.4.0/diskim-v0.4.0.tar.xz \
- | tar -I pxz -C /home/guest/xcluster/workspace -xf -
+mkdir -p $ARCHIVE
 ```
+
 
 ## Kernel and base image
 
-Please see the also the [image](image.md) documentation. Below is the
-short version. Sources are downloaded to `$ARCHIVE` if needed.
-
+Clone the xcluster repo and source `Envsettings`.  You will build the
+$XCLUSTER_WORKSPACE so set that variable before sourcing;
 ```
-xc kernel_build     # Unpacked on $ARCHIVE if needed
-xc busybox_build
-xc iproute2_build
-# This will probably fail! But don't worry, "ip" is probably built fine so
-# just go on...
-xc dropbear_build
-./image/tar - | tar t   # OPTIONAL! Check what goes into the image
-xc mkimage
-```
-
-Your base system is ready. Test it;
-
-```
-cd $HOME/xcluster
+builddir=/tmp/$USER/xcluster-build
+mkdir -p $builddir; cd $builddir
+git clone --depth 1 https://github.com/Nordix/xcluster.git
+export XCLUSTER_WORKSPACE=$builddir/workspace
+export XCLUSTER_TMP=$builddir/tmp
+export KERNELDIR=$HOME/tmp/linux
+cd xcluster
 . ./Envsettings
-xc start --nrouters=0 --nvm=2
+```
+
+`XCLUSTER_TMP` will be used to store temporary xcluster files such
+as cdrom image and hd overlay images.
+
+`KERNELDIR` is the place where the Linux kernel source is
+unpacked. Since this is used read-only it can be stored in a
+(semi-)permanent place.
+
+
+Make sure that the base archives are downloaded;
+```
+$ ./xcadmin.sh base_archives
+/home/guest/archive/diskim-v0.4.0.tar.xz
+/home/guest/archive/linux-5.4.2.tar.xz
+/home/guest/archive/busybox-1.30.1.tar.bz2
+/home/guest/archive/dropbear-2016.74.tar.bz2
+/home/guest/archive/iproute2-4.19.0.tar.xz
+/home/guest/archive/coredns_1.6.7_linux_amd64.tgz
+```
+
+Build the base system;
+```
+$ ./xcadmin.sh build_base $XCLUSTER_WORKSPACE
+... (lots of printouts)
+0   :2020-02-17-12:40:12: Build xcluster
+0   :2020-02-17-12:40:12: Coredns  installed
+0   :2020-02-17-12:40:12: Diskim installed
+130 :2020-02-17-12:42:22: Kernel built
+142 :2020-02-17-12:42:34: Busybox built
+151 :2020-02-17-12:42:43: Dropbear built
+158 :2020-02-17-12:42:50: Iproute2 built
+165 :2020-02-17-12:42:57: Image built
+```
+
+Test the build;
+```
+# Manual start in xterms
+xc mkcdrom; xc start
 xc stop
+# Automatic test;
+cdo test
+./test.sh test
 ```
 
-## Overlays
-
-Clear the cache;
-
-```
-xc cache --clear
-```
-
-### Iptools
-
-Tools such as `iptables` or `ipset` must be built to a specific kernel
-so they can not be taken from your host machine.
-
-```
-cd $($XCLUSTER ovld iptools)
-./iptools.sh download
-./iptools.sh build
-# Cache it;
-xc cache iptools
-SETUP=ipv6 xc cache iptools
-```
-
-## Kubernetes overlays
-
-These overlays are needed to run [Kubernetes](https://kubernetes.io/)
-on `xcluster`.
+The automatic test only tests cluster start and DNS for now.
 
 
-### Ovl etcd
 
-```
-cd $($XCLUSTER ovld etcd)
-./etcd.sh download
-# Cache it;
-xc cache etcd
-SETUP=ipv6 xc cache etcd
-```
+## Binary release
 
-### Ovl gobgp
+Unfortunately a `xcluster` binary release must be prepared for
+Kubernetes. This is for legacy reasons and because I can't really find
+a better way.
 
-```
-cd $($XCLUSTER ovld gobgp)
-./gobgp.sh zdownload
-./gobgp.sh zbuild
-go get -u github.com/golang/dep/cmd/dep
-go get -u github.com/osrg/gobgp
-cd $GOPATH/src/github.com/osrg/gobgp
-dep ensure
-go install ./cmd/...
-# Cache it;
-xc cache gobgp
-SETUP=ipv6 xc cache gobgp
-```
-
-### Kubernetes
-
-Read the overlay [readme](../ovl/kubernetes/README.md). Here is the
-short version;
-
-Cri-o;
-
-```
-go get github.com/kubernetes-incubator/cri-tools/cmd/crictl
-cd $GOPATH/src/github.com/kubernetes-incubator/cri-tools
-make
-go get -u github.com/kubernetes-incubator/cri-o
-cd $GOPATH/src/github.com/kubernetes-incubator/cri-o
-git checkout -b release-1.12
-make install.tools
-make
-strip bin/*
-```
-
-Build the plugins with;
-
-```
-go get github.com/containernetworking/plugins/
-cd $GOPATH/src/github.com/containernetworking/plugins
-./build.sh
-strip bin/*
-```
-
-Kubernetes;
-
-```
-curl -L https://dl.k8s.io/v1.12.0/kubernetes-server-linux-amd64.tar.gz \
-  > $ARCHIVE/kubernetes-server-linux-v1.12.0-amd64.tar.gz
-tar -C $ARCHIVE -xf $ARCHIVE/kubernetes-server-linux-v1.12.0-amd64.tar.gz
-export KUBERNETESD=$ARCHIVE/kubernetes/server/bin
-strip $KUBERNETESD/*
-cd $($XCLUSTER ovld kubernetes)
-./kubernetes.sh runc_download
-# Do not cache but test with
-xc mkcdrom kubernetes
-```
-
-Optional: skopeo;
-
-The `skopeo` program is not required on the cluster but is a good
-troubleshooting tool.
-
-```
-xc cache skopeo
-SETUP=ipv6 xc cache skopeo
-```
-
-### Kube-router
-
-```
-go get -u github.com/cloudnativelabs/kube-router
-go get github.com/matryer/moq
-cd $GOPATH/src/github.com/cloudnativelabs/kube-router
-make clean; make
-# Cache it;
-xc cache kube-router
-# (ipv6 not supported yet)
-```
 
 ### Pre-pulled images
 
-Some kubernetes images must be built and be "pre-pulled". Read more in
-the image overlay [readme](../ovl/images/README.md). To build an image
-overlay requires `docker` access (without root) and `sudo`. It also
-requires that the `skopeo` program is available.
+`Xcluster` required some K8s images to be "pre-pulled". That is they
+must exist when K8s starts. This makes it possible to execute basic
+K8s tests "offline".
 
-Prepare host (if needed);
+The problem is that building an archive with the pre-pulled images
+requires `sudo`.
 
+First pull the images to your local `docker`;
 ```
-cd $($XCLUSTER ovld images)
-sudo mkdir -r /etc/containers
-sudo cp policy.json storage.conf /etc/containers
-```
-
-Build CoreDNS;
-
-```
-go get -u github.com/coredns/coredns
-cd $GOPATH/src/github.com/coredns/coredns
-make
-mkdir -p $GOPATH/bin
-mv coredns $GOPATH/bin
+for i in $(./xcadmin.sh prepulled_images); do
+  docker pull $i
+done
 ```
 
-Create the images overlay;
-
+The build the archive;
 ```
-cd $($XCLUSTER ovld images)
-docker rmi example.com/coredns:0.1
-./images.sh make coredns docker.io/nordixorg/mconnect:0.2
-eval $($XCLUSTER env | grep XCLUSTER_TMP)
-ls $XCLUSTER_TMP   # An "images.tar" should be here
+./xcadmin.sh mkimages_ar    # You will be prompted for passwd
 ```
 
-## Kubernetes disk image
+The "images.tar.xz" is rarely updated so keep this so you don't have
+to execute "sudo" again (likely required for CI).
 
+### K8s'ify the workspace
+
+Download more archives;
 ```
-curl -L https://github.com/Nordix/mconnect/releases/download/v0.2/mconnect \
-  > $GOPATH/bin/mconnect
-chmod a+x $GOPATH/bin/mconnect
-eval $($XCLUSTER env | grep XCLUSTER_HOME)
-export __image=$XCLUSTER_HOME/hd-k8s.img
-xc mkimage
-xc ximage etcd iptools kubernetes coredns mconnect images
-```
-
-Test it as described in the [Quick-start](../README.md#quick-start).
-
-## Release
-
-Build everything as described above.
-
-Make sure the ovl cache looks like this;
-
-```
-> xc cache --list
-Cache dir [.../workspace/xcluster/cache];
-ipv6/iptools.tar.xz
-ipv6/etcd.tar.xz
-ipv6/skopeo.tar.xz
-default/gobgp.tar.xz
-default/iptools.tar.xz
-default/etcd.tar.xz
-default/skopeo.tar.xz
+$ ./xcadmin.sh k8s_archives
+/home/guest/archive/coredns_1.6.7_linux_amd64.tgz
+/home/guest/archive/kubernetes-server-v1.17.2-linux-amd64.tar.gz
+/home/guest/archive/mconnect-v2.0.gz
 ```
 
-Test
-```
-cd $(dirname $XCLUSTER)
-./xcadmin.sh test > /tmp/$USER/xctest.log
-```
+The `kubernetes` and `mconnect` archive anes does not contain a
+version and must be renamed after download.
 
-Create the release tar and compress it;
 
 ```
-ver=v0.6
-cd $(dirname $XCLUSTER)
-./xcadmin.sh release --version=$ver
-pxz /tmp/xcluster-$ver.tar
-git tag $ver
-git push origin $ver
+./xcadmin.sh k8s_workspace
 ```
+
+The first time a lot of source archives are downloaded.
+
+## Create a binary release
+
+```
+./xcadmin.sh release --version=test
+```
+
