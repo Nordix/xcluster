@@ -161,6 +161,10 @@ cmd_build_base() {
 	cmd_mark clean
 	cmd_mark "Build xcluster"
 
+	cmd_env
+	test -n "$XCLUSTER" || die 'Not set [$XCLUSTER]'
+	eval $($XCLUSTER env)
+
 	# Pre-check
 	local ar
 	for ar in $(cmd_base_archives); do
