@@ -103,30 +103,39 @@ Unfortunately a `xcluster` binary release must be prepared for
 Kubernetes. This is for legacy reasons and because I can't really find
 a better way.
 
+When the pre-build cache archive is built, do;
 
-### Pre-pulled images
+```
+./xcadmin.sh release --version=my-test
+```
 
-`Xcluster` required some K8s images to be "pre-pulled". That is they
-must exist when K8s starts. This makes it possible to execute basic
-K8s tests "offline".
+### Pre-build cache archive
 
-The problem is that building an archive with the pre-pulled images
-requires `sudo`.
+Some ovls are hard to build, for instance the "images" ovl requires
+"sudo" access. This makes automation and CI hard. Fortunately these
+ovls are rerely altered so we can pre-buid them and store them in the
+xcluster "cache".
 
-First pull the images to your local `docker`;
+Pull the pre-pulled images to your local `docker`;
 ```
 for i in $(./xcadmin.sh prepulled_images); do
   docker pull $i
 done
 ```
 
-The build the archive;
+[Cri-o](https://github.com/cri-o/cri-o) has not (yet) any binary
+release so it must be built from source.
+
+Then build the pre-built cache archive;
 ```
-./xcadmin.sh mkimages_ar    # You will be prompted for passwd
+./xcadmin.sh mkcache_ar    # You will be prompted for passwd
 ```
+
+This builds `$ARCHIVE/xcluster-cache.tar`.
 
 The "images.tar.xz" is rarely updated so keep this so you don't have
 to execute "sudo" again (likely required for CI).
+
 
 ### K8s'ify the workspace
 

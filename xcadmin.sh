@@ -85,8 +85,8 @@ cmd_bin_add() {
 
 ##   prepulled_images
 ##     Print pre-pulled images (needed for "mkimages_ar")
-##   mkimages_ar
-##     Create a "images.tar.xz" file. This requires "sudo"!!
+##   mkcache_ar
+##     Create a "$ARCHIVE/xcluster-cache.tar" file. This requires "sudo"!!
 ##
 cmd_prepulled_images() {
 	echo docker.io/library/alpine:3.8
@@ -94,16 +94,17 @@ cmd_prepulled_images() {
 	echo k8s.gcr.io/metrics-server-amd64:v0.3.6
 	echo k8s.gcr.io/pause:3.1
 }
-cmd_mkimages_ar() {
-	if test -r $ARCHIVE/images.tar.xz; then
-		echo "Already built [$ARCHIVE/images.tar.xz]"
-		return 0
-	fi
+cmd_mkcache_ar() {
 	test -n "$XCLUSTER" || die 'Not set [$XCLUSTER]'
+	local ar=$ARCHIVE/xcluster-cache.tar
+	rm -f $ar
 	local images="$($XCLUSTER ovld images)/images.sh"
-	test -x $images || die "Not executable [$images]"
-	$images make --tar=$ARCHIVE/images.tar $(cmd_prepulled_images) || die "Failed"
-	xz $ARCHIVE/images.tar
+	$images make $(cmd_prepulled_images)
+	cmd_cache_refresh
+	eval $($XCLUSTER env | grep __cached)
+	cd $__cached
+	tar cf $ar *
+	cd - > /dev/null
 }
 
 ##   ovlindex --src=dir
@@ -225,32 +226,11 @@ cmd_k8s_archives() {
 	echo $ARCHIVE/coredns_${__corednsver}_linux_amd64.tgz
 	echo $ARCHIVE/kubernetes-server-$__k8sver-linux-amd64.tar.gz
 	echo $ARCHIVE/mconnect-$__mconnectver.gz
+	echo $ARCHIVE/xcluster-cache.tar
 }
 
 cmd_k8s_workspace() {
-	local ar
 	cmd_env
-	ar=$ARCHIVE/images.tar.xz
-	if ! test -r $ar; then
-		cat <<EOF
-
-The images archive is not built. Pull the required images to your local
-docker daemon;
-
-docker pull k8s.gcr.io/pause:3.1
-docker pull docker.io/library/alpine:3.8
-docker pull docker.io/nordixorg/mconnect:v1.2
-docker pull k8s.gcr.io/metrics-server-amd64:v0.3.6
-
-Then do;
-
-./xcadmin.sh mkimages_ar
-
-(requires "sudo")
-
-EOF
-		die "Not readable [$ARCHIVE/items.tar.xz]"
-	fi
 
 	for ar in $(cmd_k8s_archives); do
 		test -r $ar || die "Not readable [$ar]"
@@ -269,18 +249,23 @@ cmd_build_iptools() {
 
 
 ##   cache_refresh
-##
+##     From "$ARCHIVE/xcluster-cache.tar" if ti exists otherwise
+##     build. Build requires "sudo"!
 cmd_cache_refresh() {
-	local ar=$ARCHIVE/images.tar.xz
-	test -r $ar || die "Not readable [$ar]"
+	local ar=$ARCHIVE/xcluster-cache.tar
+	if test -r $ar; then
+		eval $($XCLUSTER env | grep __cached)
+		rm -rf $__cached
+		mkdir -p  $__cached
+		tar -C $__cached -xf $ar || die
+		return 0
+	fi
 	$XCLUSTER cache --clear
 	local o
-	for o in iptools xnet; do
+	for o in iptools xnet images crio; do
 		log "Caching ovl [$o]"
 		$XCLUSTER cache $o || die "Failed"
 	done
-	eval $($XCLUSTER env | grep __cached)
-	cp $ar $__cached/default
 }
 
 ##   k8s_build_images [--k8sver=...]
