@@ -300,12 +300,22 @@ cmd_k8s_build_images() {
 		mv $XCLUSTER_WORKSPACE/kubernetes $XCLUSTER_WORKSPACE/kubernetes-$__k8sver
 	fi
 
+	# Pre checks
+	local ovl="$($XCLUSTER ovld etcd)"
+	$ovl/etcd.sh download || die "Etcd download"
+	$ovl/tar - > /dev/null || die "etcd/tar failed"
+	ovl="$($XCLUSTER ovld kubernetes)"
+	$ovl/tar - > /dev/null || die "kubernetes/tar failed"
+	ovl="$($XCLUSTER ovld k8s-xcluster)"
+	$ovl/tar - > /dev/null || die "k8s-xcluster/tar failed"
+
 	# Build the k8s-xcluster image;
 	local image
 	image=$XCLUSTER_HOME/hd-k8s-xcluster-$__k8sver.img
+	rm -rf $image
 	cp $__image $image
 	chmod +w $image
-	$XCLUSTER ximage --image=$image xnet etcd iptools k8s-xcluster mconnect images || die "ximage failed"
+	$XCLUSTER ximage --image=$image xnet etcd iptools crio k8s-xcluster mconnect images || die "ximage failed"
 	chmod -w $image
 	test -e $XCLUSTER_HOME/hd-k8s-xcluster.img || \
 		ln -s $(basename $image)  $XCLUSTER_HOME/hd-k8s-xcluster.img
@@ -313,9 +323,10 @@ cmd_k8s_build_images() {
 	
 	# Build the legacy k8s image;
 	image=$XCLUSTER_HOME/hd-k8s-$__k8sver.img
+	rm -rf $image
 	cp $__image $image
 	chmod +w $image
-	$XCLUSTER ximage --image=$image xnet etcd iptools kubernetes mconnect images || die "ximage failed"
+	$XCLUSTER ximage --image=$image xnet etcd iptools crio kubernetes mconnect images || die "ximage failed"
 	chmod -w $image
 	test -e $XCLUSTER_HOME/hd-k8s.img || \
 		ln -s $(basename $image)  $XCLUSTER_HOME/hd-k8s.img
