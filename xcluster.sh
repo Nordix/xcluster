@@ -439,7 +439,7 @@ cmd_ximage() {
 	rm -f "$__cdrom"
 
 	cmd_stop
-	$DISKIM ximage --image=$__image --script=$__script $ovls
+	$DISKIM ximage --image=$__image --script=$__script $ovls || die "diskim failed"
 }
 
 cmd_install_prog() {

@@ -304,7 +304,9 @@ cmd_k8s_build_images() {
 	local image
 	image=$XCLUSTER_HOME/hd-k8s-xcluster-$__k8sver.img
 	cp $__image $image
-	$XCLUSTER ximage --image=$image xnet etcd iptools k8s-xcluster mconnect images
+	chmod +w $image
+	$XCLUSTER ximage --image=$image xnet etcd iptools k8s-xcluster mconnect images || die "ximage failed"
+	chmod -w $image
 	test -e $XCLUSTER_HOME/hd-k8s-xcluster.img || \
 		ln -s $(basename $image)  $XCLUSTER_HOME/hd-k8s-xcluster.img
 	echo "Created [$image]"
@@ -312,7 +314,9 @@ cmd_k8s_build_images() {
 	# Build the legacy k8s image;
 	image=$XCLUSTER_HOME/hd-k8s-$__k8sver.img
 	cp $__image $image
-	$XCLUSTER ximage --image=$image xnet etcd iptools kubernetes mconnect images
+	chmod +w $image
+	$XCLUSTER ximage --image=$image xnet etcd iptools kubernetes mconnect images || die "ximage failed"
+	chmod -w $image
 	test -e $XCLUSTER_HOME/hd-k8s.img || \
 		ln -s $(basename $image)  $XCLUSTER_HOME/hd-k8s.img
 	echo "Created [$image]"
