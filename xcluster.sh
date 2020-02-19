@@ -385,6 +385,9 @@ cmd_mkimage() {
 			echo "/$l" >> $__base_libs
 		done
 	fi
+
+	# Ubuntu 19 work-around; libpcre.so.3 doesn't exist;
+	sed -i -e '/libpcre.so.3/d' $__base_libs
 }
 cmd_cache() {
 	cmd_env
