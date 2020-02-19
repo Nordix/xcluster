@@ -81,6 +81,13 @@ cmd_bin_add() {
 		gzip -d -c $ar > $f
 		chmod a+x $f
 	fi
+
+	f=$bindir/assign-lb-ip
+	if ! test -x $f; then
+		ar=$(cmd_find_ar assign-lb-ip.xz) || return 1
+		xz -d -c $ar > $f
+		chmod a+x $f
+	fi
 }
 
 ##   prepulled_images
