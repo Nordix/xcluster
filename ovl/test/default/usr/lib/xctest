@@ -396,7 +396,9 @@ xcluster_start() {
 	$XCLUSTER $start || tdie
 	sleep 2
 	tcase "VM connectivity"
+	pushv 60 30 2
 	tex check_vm $EXPECTED_VMS || tdie
+	popv
 	xcluster_unprep
 }
 
