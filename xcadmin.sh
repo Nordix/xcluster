@@ -227,7 +227,6 @@ cmd_build_base() {
 
 ##   k8s_workspace
 ##     Extend a base $XCLUSTER_WORKSPACE for use with with K8s.
-##
 cmd_k8s_archives() {
 	cmd_env
 	echo $ARCHIVE/coredns_${__corednsver}_linux_amd64.tgz
@@ -278,7 +277,6 @@ cmd_cache_refresh() {
 ##   k8s_build_images [--k8sver=...]
 ##     Build images hd-k8s-<k8sver>.img and hd-k8s-xcluster-<k8sver>.img
 ##     Soft-links; hd-k8s.img hd-k8s-xcluster.img are updated.
-##
 cmd_k8s_build_images() {
 	cmd_env
 	eval $($XCLUSTER env)
@@ -325,6 +323,52 @@ cmd_k8s_build_images() {
 	echo "Created [$image]"
 
 }
+
+##   k8s_test [--cni=[xcluster|calico|cilium]] \
+##     [--list] [--no-stop] <ovl> [args]
+##     Execute k8s test with xcluster.
+##
+cmd_k8s_test() {
+	test -n "$1" || die "No ovl to test"
+	test -n "$XCLUSTER" || die 'Not set [$XCLUSTER]'
+	eval $($XCLUSTER env | grep XCLUSTER_HOME)
+	if test -n "$__cni"; then
+		# Test with k8s-xcluster;
+		export __image=$XCLUSTER_HOME/hd-k8s-xcluster.img
+		test -r $__image || die "Not readable [$__image]"
+		export XCTEST_HOOK=$($XCLUSTER ovld k8s-xcluster)/xctest-hook
+		export __nvm=5
+		export __mem=1536
+		export XOVLS="k8s-cni-$__cni private-reg $XXOVLS"
+	else
+		# Test on "normal" xcluster
+		export __image=$XCLUSTER_HOME/hd-k8s.img
+		test -r $__image || die "Not readable [$__image]"
+		unset XCTEST_HOOK
+		export __nvm=4
+		export __mem1=2048
+		export __mem=1536
+		export XOVLS="private-reg $XXOVLS"
+	fi
+
+	if test "$__cni" = "cilium"; then
+		# Cilium is a horrible memory-hog
+		export __mem1=1024
+		export __mem=2560
+	fi
+
+	local ovld="$($XCLUSTER ovld $1)"
+	test -n "$ovld" || die "Invalid ovl [$1]"
+	local script="$ovld/$1.sh"
+	test -x $script || die "Not executable [$script]"
+	shift
+
+	export __list __no_stop
+	echo "$@" grep -q start && export __mode
+	$script test $@
+}
+
+
 
 ##   release --version=ver
 ##     Create a release tar archive.
