@@ -1,0 +1,17 @@
+#! /bin/sh
+
+export PATH="/bin:/sbin:/usr/bin:/usr/sbin"
+
+die() {
+	echo "$@"
+	exit 1
+}
+
+hostname | grep -Eq 'vm-[0-9]+$' || die "Invalid hostname [$(hostname)]"
+i=$(hostname | cut -d- -f2 | sed -re 's,^0+,,')
+
+test $i -le 200 || exit 0
+test $i -gt 1 || exit 0
+
+iptables -t nat -I POSTROUTING 1 -s 11.0.0.0/16 ! -d 11.0.0.0/16 -j MASQUERADE
+ip6tables -t nat -I POSTROUTING 1 -s 1100::/16 ! -d 1100::/16 -j MASQUERADE

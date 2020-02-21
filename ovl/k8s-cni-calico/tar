@@ -36,12 +36,12 @@ if test "$setup_copied" != "yes" && test -d $dir/default; then
 	modmaster default
 fi
 
-d=$GOPATH/src/github.com/containernetworking/plugins/bin
+cniver=v0.8.2
+log "Using cni-plugins $cniver"
+ar=$ARCHIVE/cni-plugins-linux-amd64-$cniver.tgz
+test -r $ar || die "Not readable [$ar]"
 mkdir -p $tmp/opt/cni/bin
-for n in loopback; do
-    test -x $d/$n || die "Not executable [$d/$n]"
-    cp $d/$n $tmp/opt/cni/bin
-done
+tar -C $tmp/opt/cni/bin -xf $ar ./loopback
 		
 f=$GOPATH/bin/calicoctl
 mkdir -p $tmp/bin
