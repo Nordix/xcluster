@@ -1,0 +1,66 @@
+#! /bin/sh
+
+export PATH="/bin:/sbin:/usr/bin:/usr/sbin"
+
+die() {
+        echo "$@"
+        exit 1
+}
+
+hostname | grep -Eq 'vm-[0-9]+$' || die "Invalid hostname [$(hostname)]"
+i=$(hostname | cut -d- -f2 | sed -re 's,^0+,,')
+
+test $i -eq 1 || exit 0
+
+. /etc/profile
+
+CLUSTER_CIDR=1100::/80
+MASTER_IP=1000::1:192.168.1.1
+SERVICE_CIDR=fd00:4000::/112
+apiserver() {
+	local log=/var/log/kube-apiserver.log
+	logger -s -t K8s "STARTED: kube-apiserver at $(date)" >> log 2>&1
+	kube-apiserver --token-auth-file=/srv/kubernetes/known_tokens.csv \
+		--allow-privileged=true \
+		--insecure-bind-address=$MASTER_IP --advertise-address=$MASTER_IP \
+		--authorization-mode=AlwaysAllow \
+		--etcd-servers=http://127.0.0.1:2379 --anonymous-auth=false \
+		--service-cluster-ip-range=$SERVICE_CIDR \
+		--enable-admission-plugins=ServiceAccount,AlwaysAdmit \
+		--client-ca-file=/srv/kubernetes/ca.crt \
+		--tls-private-key-file=/srv/kubernetes/server.key \
+		--tls-cert-file=/srv/kubernetes/server.crt \
+		>> $log 2>&1
+}
+
+controller() {
+	local log=/var/log/kube-controller-manager.log
+	logger -s -t K8s "STARTED: kube-controller-manager at $(date)" >> log 2>&1
+	kube-controller-manager --kubeconfig $KUBECONFIG \
+		--allocate-node-cidrs=true --cluster-cidr=$CLUSTER_CIDR \
+		--node-cidr-mask-size=96 \
+		--controllers="*,serviceaccount,serviceaccount-token" \
+		--service-account-private-key-file=/srv/kubernetes/server.key \
+		--root-ca-file=/srv/kubernetes/server.crt --leader-elect=false \
+		>> $log 2>&1
+}
+
+scheduler() {
+	local log=/var/log/kube-scheduler.log
+	logger -s -t K8s "STARTED: kube-scheduler at $(date)" >> log 2>&1
+	kube-scheduler --kubeconfig $KUBECONFIG --leader-elect=false \
+		>> $log 2>&1
+}
+
+monitor() {
+	while true; do
+		logger -t K8s-monitor "STARTING: $1"
+		$1
+		logger -t K8s-monitor "DIED: $1"
+		sleep 2
+	done
+}
+
+(monitor apiserver) > /dev/null 2>&1 &
+(monitor controller) > /dev/null 2>&1 &
+(monitor scheduler) > /dev/null 2>&1 &
