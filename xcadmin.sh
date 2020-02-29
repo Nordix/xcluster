@@ -364,7 +364,7 @@ cmd_k8s_test() {
 	shift
 
 	export __list __no_stop
-	echo "$@" grep -q start && export __mode
+	echo "$@" | grep -q start && export __mode
 	$script test $@
 }
 
