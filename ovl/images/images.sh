@@ -188,8 +188,8 @@ cmd_lreg_missingimages() {
 	for i in $(getimages $1); do
 		if ! cmd_lreg_isloaded $i; then
 			fqi=$(echo $i | tr -d '"')
-			echo $fqi | grep -Fq . || fqi="docker.io/$fqi"
 			echo $fqi | grep -q : || fqi="$fqi:latest"
+			echo $fqi | cut -d: -f1 | grep -Fq . || fqi="docker.io/$fqi"
 			echo $fqi
 			ok=NO
 		fi
@@ -204,7 +204,7 @@ getimages() {
 		d=$($XCLUSTER ovld $1)
 		test -n "$d" || return 1
 	fi
-	grep -hs 'image:' $(find $d -name '*.yaml') | sort | uniq | sed -E 's,.*image: *,,'
+	grep -hs ' image:' $(find $d -name '*.yaml') | sort | uniq | sed -E 's,.*image: *,,'
 }
 
 ##
