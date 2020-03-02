@@ -163,25 +163,38 @@ cmd_lreg_rm() {
 cmd_lreg_isloaded() {
 	test -n "$1" || die "No image"
 	local regip=$(cmd_get_regip) || return 1
-	local image=$(echo $1 | cut -d: -f1)
-	local tag=$(echo $1 | cut -d: -f2)
+	local image=$(echo $1 | tr -d '"' | cut -d: -f1)
+	local tag=$(echo $1: | tr -d '"' | cut -d: -f2)
+	test -z "$tag" && tag=latest
 	# Strip host
 	image="$(echo $image |sed -E 's,^[^/]*\.[^/]*/,,')"
 	mkdir -p $tmp
 	curl -s -X GET http://$regip:5000/v2/$image/tags/list > $tmp/out 2>&1 \
 		|| return 1
-	grep -q null $tmp/out && return 1
-	jq -r .tags[] < $tmp/out | grep -qE "^$tag$"
+	grep -Eq 'null|errors' $tmp/out && return 1
+	if ! jq -r .tags[] < $tmp/out | grep -qE "^$tag$"; then
+		jq -r .tags[] < $tmp/out
+		dbg "NOT Cached [$image:$tag]"
+		return 1
+	fi
+	dbg "Cached [$image:$tag]"
+	return 0
 }
-##   lreg_checkimages <dir/ovl>
-##     Check that all images in an ovl are cached.
-cmd_lreg_checkimages() {
+##   lreg_missingimages <dir/ovl>
+##     List non-cached images.
+cmd_lreg_missingimages() {
 	test -n "$1" || die 'No dir/ovl'
-	local i
+	local i ok=yes fqi
 	for i in $(getimages $1); do
-		# Strip the host name (if any)
-		cmd_lreg_isloaded $i || die "Not in local registry [$i]"
+		if ! cmd_lreg_isloaded $i; then
+			fqi=$(echo $i | tr -d '"')
+			echo $fqi | grep -Fq . || fqi="docker.io/$fqi"
+			echo $fqi | grep -q : || fqi="$fqi:latest"
+			echo $fqi
+			ok=NO
+		fi
 	done
+	test "$ok" = "yes"
 }
 getimages() {
 	local d
