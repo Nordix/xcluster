@@ -165,16 +165,35 @@ cmd_lreg_isloaded() {
 	local regip=$(cmd_get_regip) || return 1
 	local image=$(echo $1 | cut -d: -f1)
 	local tag=$(echo $1 | cut -d: -f2)
-	if echo $image | grep -qF . ; then
-		# Strip host
-		image=$(echo $image | cut -d/ -f2-)
-	fi
+	# Strip host
+	image="$(echo $image |sed -E 's,^[^/]*\.[^/]*/,,')"
 	mkdir -p $tmp
 	curl -s -X GET http://$regip:5000/v2/$image/tags/list > $tmp/out 2>&1 \
 		|| return 1
 	grep -q null $tmp/out && return 1
 	jq -r .tags[] < $tmp/out | grep -qE "^$tag$"
 }
+##   lreg_checkimages <dir/ovl>
+##     Check that all images in an ovl are cached.
+cmd_lreg_checkimages() {
+	test -n "$1" || die 'No dir/ovl'
+	local i
+	for i in $(getimages $1); do
+		# Strip the host name (if any)
+		cmd_lreg_isloaded $i || die "Not in local registry [$i]"
+	done
+}
+getimages() {
+	local d
+	if test -d "$1"; then
+		d=$(readlink -f $1)
+	else
+		d=$($XCLUSTER ovld $1)
+		test -n "$d" || return 1
+	fi
+	grep -hs 'image:' $(find $d -name '*.yaml') | sort | uniq | sed -E 's,.*image: *,,'
+}
+
 ##
 cmd_get_regip() {
 	local regip=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' registry)
