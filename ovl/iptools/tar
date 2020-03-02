@@ -37,6 +37,8 @@ cp -R $sysd/usr/sbin $tmp/usr
 cp -R $sysd/usr/lib $tmp/usr
 $XCLUSTER cplib --dest=$tmp $tmp/usr/sbin/ipvsadm
 
+$XCLUSTER install_prog --dest=$tmp socat
+
 # Lib-to-lib dependecies enforces this;
 LD_LIBRARY_PATH=$XCLUSTER_WORKSPACE/sys/usr/lib \
 	$XCLUSTER cplib --dest=$tmp $tmp/usr/sbin/nft
