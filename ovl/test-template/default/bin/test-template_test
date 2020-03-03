@@ -68,6 +68,7 @@ cmd_tcase_nslookup() {
 }
 cmd_tcase_internal_mconnect() {
 	local adr
+	pushv 40 20 2
 	if test "$1" = "dual-stack"; then
 		adr=mconnect-ipv4.default.svc.$__cname
 		tcase "Traffic to $adr"
@@ -80,6 +81,7 @@ cmd_tcase_internal_mconnect() {
 		tcase "Traffic to $adr"
 		tex do_mconnect $adr || tdie
 	fi
+	popv
 }
 cmd_tcase_set_vip_routes() {
 	tcase "Set routes to the VIP address via vm-002"
