@@ -173,7 +173,6 @@ cmd_lreg_isloaded() {
 		|| return 1
 	grep -Eq 'null|errors' $tmp/out && return 1
 	if ! jq -r .tags[] < $tmp/out | grep -qE "^$tag$"; then
-		jq -r .tags[] < $tmp/out
 		dbg "NOT Cached [$image:$tag]"
 		return 1
 	fi
@@ -185,9 +184,9 @@ cmd_lreg_isloaded() {
 cmd_lreg_missingimages() {
 	test -n "$1" || die 'No dir/ovl'
 	local i ok=yes fqi
-	for i in $(getimages $1); do
+	for i in $(cmd_getimages $1); do
 		if ! cmd_lreg_isloaded $i; then
-			fqi=$(echo $i | tr -d '"')
+			fqi=$i
 			echo $fqi | grep -q : || fqi="$fqi:latest"
 			echo $fqi | cut -d: -f1 | grep -Fq . || fqi="docker.io/$fqi"
 			echo $fqi
@@ -196,7 +195,7 @@ cmd_lreg_missingimages() {
 	done
 	test "$ok" = "yes"
 }
-getimages() {
+cmd_getimages() {
 	local d
 	if test -d "$1"; then
 		d=$(readlink -f $1)
@@ -204,7 +203,7 @@ getimages() {
 		d=$($XCLUSTER ovld $1)
 		test -n "$d" || return 1
 	fi
-	grep -hs ' image:' $(find $d -name '*.yaml') | sort | uniq | sed -E 's,.*image: *,,'
+	grep -hs ' image:' $(find $d -name '*.yaml') | sort | uniq | sed -E 's,.*image: *,,' | tr -d '"'
 }
 
 ##
