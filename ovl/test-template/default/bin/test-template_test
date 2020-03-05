@@ -36,6 +36,7 @@ dbg() {
 cmd_tcase_check_namespaces() {
 	test_namespaces
 	tlog "$(kubectl version --short=true | grep Server)"
+	tlog "$(uname -s -r -v)"
 }
 cmd_tcase_check_nodes() {
 	test_nodes
