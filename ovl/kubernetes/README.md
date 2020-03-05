@@ -128,6 +128,9 @@ be found
 ./kubernetes.sh ca
 ```
 
+### Problems
+
+In no particular order.
 
 #### Security or lack threreof
 
@@ -141,7 +144,7 @@ a pod uses the secure port. An API token is needed and some x509
 stuff; [1287](https://github.com/kubernetes/dashboard/issues/1287)
 
 
-### The random problem
+#### The random problem
 
 This showed up as a real problem in `linux-4.17`.
 
@@ -167,4 +170,21 @@ Then configure it in the kvm startup. We can't use the host
 __kvm_opt+=" -object rng-random,filename=/dev/urandom,id=rng0"
 __kvm_opt+=" -device virtio-rng-pci,rng=rng0,max-bytes=1024,period=80000"
 export __kvm_opt
+```
+
+#### HugeTLB
+
+From K8s v1.18.x cgroups for huge-tables is required.
+
+```
+> grep HUGE config/linux-5.4.2
+CONFIG_CGROUP_HUGETLB=y
+CONFIG_ARCH_WANT_GENERAL_HUGETLB=y
+CONFIG_HAVE_ARCH_TRANSPARENT_HUGEPAGE=y
+CONFIG_HAVE_ARCH_TRANSPARENT_HUGEPAGE_PUD=y
+CONFIG_HAVE_ARCH_HUGE_VMAP=y
+CONFIG_ARCH_WANT_HUGE_PMD_SHARE=y
+# CONFIG_TRANSPARENT_HUGEPAGE is not set
+CONFIG_HUGETLBFS=y
+CONFIG_HUGETLB_PAGE=y
 ```

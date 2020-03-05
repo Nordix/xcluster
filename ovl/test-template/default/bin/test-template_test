@@ -32,11 +32,36 @@ log() {
 dbg() {
 	test -n "$__verbose" && echo "$prg: $*" >&2
 }
+cni_plugin_info() {
+	local f d=/etc/kubernetes/load
+
+	f=$d/quick-install.yaml
+	if test -r $f; then
+		grep '  image:' $f | grep -o 'cilium:.*' | tr -d '"'
+		return 0
+	fi
+
+	f=$d/calico.yaml
+	if test -r $f; then
+		grep '  image:' $f | grep -o "calico/cni:.*" | uniq
+		return 0
+	fi
+
+	f=$d/xcluster-cni.yaml
+	if test -r $f; then
+		grep '  image:' $f | grep -o "xcluster-cni:.*"
+		return 0
+	fi
+
+	echo "xcluster internal"
+}
 
 cmd_tcase_check_namespaces() {
 	test_namespaces
 	tlog "$(kubectl version --short=true | grep Server)"
 	tlog "$(uname -s -r -v)"
+	tlog "CNI-plugin; $(cni_plugin_info)"
+	tlog "Proxy-$(grep mode /etc/kubernetes/kube-proxy.config)"
 }
 cmd_tcase_check_nodes() {
 	test_nodes
