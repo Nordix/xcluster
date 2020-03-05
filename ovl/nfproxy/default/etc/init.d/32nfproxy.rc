@@ -1,0 +1,33 @@
+#! /bin/sh
+
+export PATH="/bin:/sbin:/usr/bin:/usr/sbin"
+
+die() {
+	echo "$@"
+	exit 1
+}
+
+hostname | grep -Eq 'vm-[0-9]+$' || die "Invalid hostname [$(hostname)]"
+i=$(hostname | cut -d- -f2 | sed -re 's,^0+,,')
+test $i -le 200 || exit 0
+test $i -eq 1 && exit 0
+
+. /etc/profile
+export API_PUBLIC_ENDPOINT="https://192.168.1.1:8080"
+
+run_nfproxy() {
+	nfproxy -kubeconfig /etc/kubernetes/kubeconfig \
+		-ipv4clustercidr 11.0.0.0/16 -ipv6clustercidr 1100::/48 \
+		>> /var/log/nfproxy.log 2>&1
+}
+
+monitor() {
+	while true; do
+		logger -t K8s-monitor "STARTING: $1"
+		$1
+		logger -t K8s-monitor "DIED: $1"
+		sleep 2
+	done
+}
+
+(monitor run_nfproxy) > /dev/null 2>&1 &
