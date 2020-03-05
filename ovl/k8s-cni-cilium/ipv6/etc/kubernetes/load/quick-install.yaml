@@ -1,4 +1,18 @@
 ---
+# Source: cilium/charts/agent/templates/serviceaccount.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: cilium
+  namespace: kube-system
+---
+# Source: cilium/charts/operator/templates/serviceaccount.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: cilium-operator
+  namespace: kube-system
+---
 # Source: cilium/charts/config/templates/configmap.yaml
 apiVersion: v1
 kind: ConfigMap
@@ -34,6 +48,18 @@ data:
   # to "low", "medium", or "maximum". The higher the level, the less packets
   # that will be seen in monitor output.
   monitor-aggregation: medium
+
+  # The monitor aggregation interval governs the typical time between monitor
+  # notification events for each allowed connection.
+  #
+  # Only effective when monitor aggregation is set to "medium" or higher.
+  monitor-aggregation-interval: 5s
+
+  # The monitor aggregation flags determine which TCP flags which, upon the
+  # first observation, cause monitor notifications to be generated.
+  #
+  # Only effective when monitor aggregation is set to "medium" or higher.
+  monitor-aggregation-flags: all
 
   # ct-global-max-entries-* specifies the maximum number of connections
   # supported across all endpoints, split by protocol: tcp or other. One pair
@@ -76,7 +102,7 @@ data:
   #   - disabled
   #   - vxlan (default)
   #   - geneve
-  tunnel: disabled
+  tunnel: vxlan
 
   # Name of the cluster. Only relevant when building a mesh of clusters.
   cluster-name: default
@@ -105,49 +131,16 @@ data:
   # wait-bpf-mount makes init container wait until bpf filesystem is mounted
   wait-bpf-mount: "false"
 
-  # Enable fetching of container-runtime specific metadata
-  #
-  # By default, the Kubernetes pod and namespace labels are retrieved and
-  # associated with endpoints for identification purposes. By integrating
-  # with the container runtime, container runtime specific labels can be
-  # retrieved, such labels will be prefixed with container:
-  #
-  # CAUTION: The container runtime labels can include information such as pod
-  # annotations which may result in each pod being associated a unique set of
-  # labels which can result in excessive security identities being allocated.
-  # Please review the labels filter when enabling container runtime labels.
-  #
-  # Supported values:
-  # - containerd
-  # - crio
-  # - docker
-  # - none
-  # - auto (automatically detect the container runtime)
-  #
-  container-runtime: none
-
   masquerade: "true"
-
+  enable-xt-socket-fallback: "true"
   install-iptables-rules: "true"
   auto-direct-node-routes: "false"
+  kube-proxy-replacement:  "probe"
+  enable-host-reachable-services: "false"
+  enable-external-ips: "false"
   enable-node-port: "false"
-
----
-# Source: cilium/charts/agent/templates/serviceaccount.yaml
-apiVersion: v1
-kind: ServiceAccount
-metadata:
-  name: cilium
-  namespace: kube-system
-
----
-# Source: cilium/charts/operator/templates/serviceaccount.yaml
-apiVersion: v1
-kind: ServiceAccount
-metadata:
-  name: cilium-operator
-  namespace: kube-system
-
+  enable-well-known-identities: "false"
+  enable-remote-node-identity: "true"
 ---
 # Source: cilium/charts/agent/templates/clusterrole.yaml
 apiVersion: rbac.authorization.k8s.io/v1
@@ -164,13 +157,20 @@ rules:
   - list
   - watch
 - apiGroups:
+  - discovery.k8s.io
+  resources:
+  - endpointslices
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
   - ""
   resources:
   - namespaces
   - services
   - nodes
   - endpoints
-  - componentstatuses
   verbs:
   - get
   - list
@@ -193,15 +193,6 @@ rules:
   verbs:
   - patch
 - apiGroups:
-  - extensions
-  resources:
-  - ingresses
-  verbs:
-  - create
-  - get
-  - list
-  - watch
-- apiGroups:
   - apiextensions.k8s.io
   resources:
   - customresourcedefinitions
@@ -216,6 +207,8 @@ rules:
   resources:
   - ciliumnetworkpolicies
   - ciliumnetworkpolicies/status
+  - ciliumclusterwidenetworkpolicies
+  - ciliumclusterwidenetworkpolicies/status
   - ciliumendpoints
   - ciliumendpoints/status
   - ciliumnodes
@@ -224,7 +217,6 @@ rules:
   - ciliumidentities/status
   verbs:
   - '*'
-
 ---
 # Source: cilium/charts/operator/templates/clusterrole.yaml
 apiVersion: rbac.authorization.k8s.io/v1
@@ -232,13 +224,6 @@ kind: ClusterRole
 metadata:
   name: cilium-operator
 rules:
-- apiGroups:
-  - ""
-  resources:
-  # to get k8s version and status
-  - componentstatuses
-  verbs:
-  - get
 - apiGroups:
   - ""
   resources:
@@ -250,6 +235,14 @@ rules:
   - list
   - watch
   - delete
+- apiGroups:
+  - discovery.k8s.io
+  resources:
+  - endpointslices
+  verbs:
+  - get
+  - list
+  - watch
 - apiGroups:
   - ""
   resources:
@@ -271,6 +264,8 @@ rules:
   resources:
   - ciliumnetworkpolicies
   - ciliumnetworkpolicies/status
+  - ciliumclusterwidenetworkpolicies
+  - ciliumclusterwidenetworkpolicies/status
   - ciliumendpoints
   - ciliumendpoints/status
   - ciliumnodes
@@ -279,7 +274,6 @@ rules:
   - ciliumidentities/status
   verbs:
   - '*'
-
 ---
 # Source: cilium/charts/agent/templates/clusterrolebinding.yaml
 apiVersion: rbac.authorization.k8s.io/v1
@@ -294,7 +288,6 @@ subjects:
 - kind: ServiceAccount
   name: cilium
   namespace: kube-system
-
 ---
 # Source: cilium/charts/operator/templates/clusterrolebinding.yaml
 apiVersion: rbac.authorization.k8s.io/v1
@@ -309,7 +302,6 @@ subjects:
 - kind: ServiceAccount
   name: cilium-operator
   namespace: kube-system
-
 ---
 # Source: cilium/charts/agent/templates/daemonset.yaml
 apiVersion: apps/v1
@@ -317,14 +309,12 @@ kind: DaemonSet
 metadata:
   labels:
     k8s-app: cilium
-    kubernetes.io/cluster-service: "true"
   name: cilium
   namespace: kube-system
 spec:
   selector:
     matchLabels:
       k8s-app: cilium
-      kubernetes.io/cluster-service: "true"
   template:
     metadata:
       annotations:
@@ -333,16 +323,39 @@ spec:
         # gets priority scheduling.
         # https://kubernetes.io/docs/tasks/administer-cluster/guaranteed-scheduling-critical-addon-pods/
         scheduler.alpha.kubernetes.io/critical-pod: ""
-        scheduler.alpha.kubernetes.io/tolerations: '[{"key":"dedicated","operator":"Equal","value":"master","effect":"NoSchedule"}]'
       labels:
         k8s-app: cilium
-        kubernetes.io/cluster-service: "true"
     spec:
       containers:
       - args:
         - --config-dir=/tmp/cilium/config-map
         command:
         - cilium-agent
+        livenessProbe:
+          exec:
+            command:
+            - cilium
+            - status
+            - --brief
+          failureThreshold: 10
+          # The initial delay for the liveness probe is intentionally large to
+          # avoid an endless kill & restart cycle if in the event that the initial
+          # bootstrapping takes longer than expected.
+          initialDelaySeconds: 120
+          periodSeconds: 30
+          successThreshold: 1
+          timeoutSeconds: 5
+        readinessProbe:
+          exec:
+            command:
+            - cilium
+            - status
+            - --brief
+          failureThreshold: 3
+          initialDelaySeconds: 5
+          periodSeconds: 30
+          successThreshold: 1
+          timeoutSeconds: 5
         env:
         - name: K8S_NODE_NAME
           valueFrom:
@@ -380,43 +393,19 @@ spec:
               key: custom-cni-conf
               name: cilium-config
               optional: true
-        image: "docker.io/cilium/cilium:v1.7.0"
+        image: "docker.io/cilium/cilium:v1.7.1"
         imagePullPolicy: IfNotPresent
         lifecycle:
           postStart:
             exec:
               command:
-              - /cni-install.sh
+              - "/cni-install.sh"
+              - "--enable-debug=false"
           preStop:
             exec:
               command:
               - /cni-uninstall.sh
-        livenessProbe:
-          exec:
-            command:
-            - cilium
-            - status
-            - --brief
-          failureThreshold: 10
-          # The initial delay for the liveness probe is intentionally large to
-          # avoid an endless kill & restart cycle if in the event that the initial
-          # bootstrapping takes longer than expected.
-          initialDelaySeconds: 120
-          periodSeconds: 30
-          successThreshold: 1
-          timeoutSeconds: 5
         name: cilium-agent
-        readinessProbe:
-          exec:
-            command:
-            - cilium
-            - status
-            - --brief
-          failureThreshold: 3
-          initialDelaySeconds: 5
-          periodSeconds: 30
-          successThreshold: 1
-          timeoutSeconds: 5
         securityContext:
           capabilities:
             add:
@@ -467,7 +456,7 @@ spec:
               key: wait-bpf-mount
               name: cilium-config
               optional: true
-        image: "docker.io/cilium/cilium:v1.7.0"
+        image: "docker.io/cilium/cilium:v1.7.1"
         imagePullPolicy: IfNotPresent
         name: clean-cilium-state
         securityContext:
@@ -478,9 +467,11 @@ spec:
         volumeMounts:
         - mountPath: /sys/fs/bpf
           name: bpf-maps
+          mountPropagation: HostToContainer
         - mountPath: /var/run/cilium
           name: cilium-run
       restartPolicy: Always
+      priorityClassName: system-node-critical
       serviceAccount: cilium
       serviceAccountName: cilium
       terminationGracePeriodSeconds: 1
@@ -530,7 +521,6 @@ spec:
     rollingUpdate:
       maxUnavailable: 2
     type: RollingUpdate
-
 ---
 # Source: cilium/charts/operator/templates/deployment.yaml
 apiVersion: apps/v1
@@ -563,6 +553,7 @@ spec:
       - args:
         - --debug=$(CILIUM_DEBUG)
         - --identity-allocation-mode=$(CILIUM_IDENTITY_ALLOCATION_MODE)
+        - --synchronize-k8s-nodes=true
         command:
         - cilium-operator
         env:
@@ -642,11 +633,12 @@ spec:
               key: identity-allocation-mode
               name: cilium-config
               optional: true
-        image: "docker.io/cilium/operator:v1.7.0"
+        image: "docker.io/cilium/operator:v1.7.1"
         imagePullPolicy: IfNotPresent
         name: cilium-operator
         livenessProbe:
           httpGet:
+            host: '127.0.0.1'
             path: /healthz
             port: 9234
             scheme: HTTP
@@ -657,16 +649,3 @@ spec:
       restartPolicy: Always
       serviceAccount: cilium-operator
       serviceAccountName: cilium-operator
-
----
-# Source: cilium/charts/agent/templates/servicemonitor.yaml
-
----
-# Source: cilium/charts/agent/templates/svc.yaml
-
----
-# Source: cilium/charts/operator/templates/servicemonitor.yaml
-
----
-# Source: cilium/charts/operator/templates/svc.yaml
-
