@@ -122,15 +122,15 @@ download() {
 
 
 libmnl_ver=1.0.4
-libnftnl_ver=1.1.1
-iptables_ver=1.8.2
-nftables_ver=0.9.0
+libnftnl_ver=1.1.5
+iptables_ver=1.8.4
+nftables_ver=0.9.3
 libnfnetlink_ver=1.0.1
 libnetfilter_cttimeout_ver=1.0.0
-libnetfilter_conntrack_ver=1.0.6
+libnetfilter_conntrack_ver=1.0.7
 libnetfilter_cthelper_ver=1.0.0
 libnetfilter_queue_ver=1.0.3
-conntrack_tools_ver=1.4.4
+conntrack_tools_ver=1.4.5
 libnl_ver=1.1.4
 ipvsadm_ver=1.26
 ipset_ver=6.38
