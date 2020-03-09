@@ -10,7 +10,7 @@ die() {
 hostname | grep -Eq 'vm-[0-9]+$' || die "Invalid hostname [$(hostname)]"
 i=$(hostname | cut -d- -f2 | sed -re 's,^0+,,')
 test $i -le 200 || exit 0
-test $i -eq 1 && exit 0
+#test $i -eq 1 && exit 0
 
 . /etc/profile
 export API_PUBLIC_ENDPOINT="https://192.168.1.1:8080"
