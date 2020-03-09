@@ -4,18 +4,32 @@
 Kubernetes in `xcluster`. Cri-o has not yet any binary release so this
 ovl builds `cri-o` from source.
 
-## Build cri-o
+## Build
 
+cri-o;
 ```
+mkdir -p $GOPATH/src/github.com/cri-o
+cd $GOPATH/src/github.com/cri-o
+rm -rf cri-o
+git clone --depth 1 https://github.com/cri-o/cri-o.git
 cd $GOPATH/src/github.com/cri-o/cri-o
 git reset --hard HEAD
 git pull
 git clean -dxf
 git status -u --ignored
-curl -L https://github.com/cri-o/cri-o/pull/2925.patch | patch -p1
+#curl -L https://github.com/cri-o/cri-o/pull/2925.patch | patch -p1
 make
 ```
 
+conmon;
+```
+mkdir -p $GOPATH/src/github.com/containers
+cd $GOPATH/src/github.com/containers
+rm -rf conmon
+git clone --depth 1 https://github.com/containers/conmon.git
+cd conmon
+make
+```
 
 
 ## Problems
