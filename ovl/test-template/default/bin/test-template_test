@@ -130,7 +130,7 @@ cmd_tcase_check_alpine() {
 }
 
 get_global_addresses() {
-	$kubectl exec $1 ip addr show dev eth0 | grep 'scope global' | sed -E 's,.*inet.? ([^ ]+) .*,\1,' | tr '\n' ' '
+	$kubectl exec $1 -- ip addr show dev eth0 | grep 'scope global' | sed -E 's,.*inet.? ([^ ]+) .*,\1,' | tr '\n' ' '
 }
 
 cmd_tcase_check_pod_addresses() {
@@ -161,7 +161,7 @@ cmd_tcase_pod_nslookup() {
 		pod=$(get_pod app=alpine $n)
 		echo $pod | grep -q alpine || continue
 		tlog "Nslookup from a POD on $n"
-		$kubectl exec $pod nslookup kubernetes 2>&1 || tdie
+		$kubectl exec $pod -- nslookup kubernetes 2>&1 || tdie
 	done
 	test -n "$pod" || tdie "No PODs (or nodes) were found"
 }
