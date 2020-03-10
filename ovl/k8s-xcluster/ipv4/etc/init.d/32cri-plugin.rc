@@ -16,7 +16,7 @@ test $i -eq 1 && exit 0
 
 # Cri-o *requires* a default route to start(?!)
 ip route add default via 192.168.1.201
-crio --host-ip 192.168.1.$i -log-level debug > /var/log/crio.log 2>&1 &
+crio -log-level debug > /var/log/crio.log 2>&1 &
 sleep 0.2
 
 cat > /etc/cri-plugin.rc <<EOF

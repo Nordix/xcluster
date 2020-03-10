@@ -13,6 +13,3 @@ xcluster_prep() {
 		*) ;;
 	esac
 }
-xcluster_unprep() {
-	unset SETUP BASEOVLS 
-}
