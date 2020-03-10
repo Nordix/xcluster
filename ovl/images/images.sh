@@ -203,7 +203,7 @@ cmd_getimages() {
 		d=$($XCLUSTER ovld $1)
 		test -n "$d" || return 1
 	fi
-	grep -hs ' image:' $(find $d -name '*.yaml') | sort | uniq | sed -E 's,.*image: *,,' | tr -d '"'
+	grep -hs ' image:' $(find $d -name '*.yaml') | sort | uniq | sed -E 's,.*image: *,,' | tr -d "\"'"
 }
 
 ##
