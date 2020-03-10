@@ -87,6 +87,7 @@ image for load-balancing test are provided;
 ```
 vm 1
 # On vm-001;
+images  # (alias to print loaded images)
 kubectl apply -f /etc/kubernetes/alpine.yaml
 kubectl get pods
 kubectl exec -it (an-alpine-pod) sh
@@ -97,23 +98,18 @@ mconnect -address mconnect.default.svc.xcluster:5001 -nconn 100
 kubectl top pods
 ```
 
-### Dual-stack
+## Single-stack
 
+K8s in dual-stack mode is started by default. If you want to start K8s in
+single-stack mode do;
 
+```
+SETUP=ipv4 xc mkcdrom kubernetes; xc starts
+# or;
+SETUP=ipv6 xc mkcdrom kubernetes; xc starts
+```
 
-
-### Images
-
-[Images](https://kubernetes.io/docs/concepts/containers/images/) are
-"Pre-pulled" in xcluster since we often run "off-line" and since it is
-much faster. The image "pull" operation is quite complicated with
-`cri-o`, please read more in the [images](../images/README.md)
-overlay.
-
-
-
-Service Account
----------------
+## Service Account
 
 To access the API from within a pod a [Service
 Account](https://kubernetes.io/docs/admin/service-accounts-admin/)
