@@ -13,8 +13,6 @@ test $i -le 200 || exit 0
 
 . /etc/profile
 
-# Cri-o *requires* a default route to start.
-ip route add default via 192.168.1.201
 crio -log-level debug > /var/log/crio.log 2>&1 &
 sleep 0.2
 
@@ -23,6 +21,7 @@ run_kubelet() {
 		--container-runtime-endpoint=unix:///var/run/crio/crio.sock \
 		--image-service-endpoint=unix:///var/run/crio/crio.sock \
 		--register-node=true --kubeconfig $KUBECONFIG \
+		--feature-gates IPv6DualStack=true \
 		--network-plugin=cni \
 		--cluster-dns=192.168.1.$i --cluster-domain=xcluster \
 		--runtime-cgroups=/systemd/system.slice \
@@ -30,7 +29,7 @@ run_kubelet() {
 }
 
 run_kube_proxy() {
-	kube-proxy --config /etc/kubernetes/kube-proxy.config \
+	kube-proxy --config /etc/kubernetes/kube-proxy.config --v 7 \
 		>> /var/log/kube-proxy.log 2>&1
 }
 

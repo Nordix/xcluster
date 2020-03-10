@@ -407,13 +407,15 @@ xcluster_start() {
 ##
 xcluster_prep() {
 	case $1 in
-		ipv4) ;;
+		ipv4)
+			SETUP=ipv4
+			BASEOVLS=kubernetes
+			;;
 		ipv6)
 			SETUP=ipv6
-			BASEOVLS=k8s-config
+			BASEOVLS=kubernetes
 			;;
 		dual-stack)
-			BASEOVLS=k8s-dual-stack
 			;;
 		*)
 		;;

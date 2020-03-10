@@ -12,13 +12,18 @@ log() {
 }
 test -n "$1" || die "No out-file"
 
-rm -rf $tmp
 mkdir -p $tmp/bin $tmp/sbin
-cp -R $dir/default/* $tmp
 for s in $(echo "$SETUP" | tr ',' ' '); do
 	test -d $dir/$s || continue
 	cp -R $dir/$s/* $tmp
+	cd $tmp
+	tar cf "$1" *
+	cd - > /dev/null
+	rm -rf $tmp
+	return
 done
+
+cp -R $dir/default/* $tmp
 
 # Some binaries can't be replaced by BusyBox applets
 f=/bin/kmod
