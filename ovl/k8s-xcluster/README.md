@@ -1,6 +1,6 @@
 # Xcluster ovl - k8s-xcluster
 
-Kubernetes in `xcluster`.
+- Kubernetes in `xcluster` with downloaded CNI-plugin.
 
 This is and updated version of "ovl/kubernetes". It isolates the
 "master" in a similar way as k3s;
@@ -8,7 +8,7 @@ This is and updated version of "ovl/kubernetes". It isolates the
 <img src="k8s-xcluster-vms.svg" alt="Figure of VMs" width="80%" />
 
 The normal "hd-k8s-xcluster.img" does not include a CNI-plugin. A
-CNI-plugin ovl should be used, e.g. `k8s-cni-bridge`.
+CNI-plugin ovl should be used, e.g. `k8s-cni-xcluster`.
 
 
 ## Usage

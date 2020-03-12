@@ -1,7 +1,6 @@
-Xcluster ovl - Kubernetes
-=========================
+# Xcluster ovl - Kubernetes
 
-A [Kubernetes](https://kubernetes.io/) cluster.
+- A [Kubernetes](https://kubernetes.io/) cluster with built-in CNI-plugin.
 
 This overlay provides a platform with fast turn-around times and very
 flexible network setup. The main purpose is development and trouble

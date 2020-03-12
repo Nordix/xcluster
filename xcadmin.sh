@@ -130,12 +130,11 @@ EOF
 	for f in $(sort < $tmp/ovls); do
 		n=$(echo $f | sed -s 's,/README.md,,')
 		n=$(basename $n)
-		echo " * [$n]($f)$(slogan $f)"
+		echo " * [$n]($f) $(slogan $f)"
 	done
 }
 slogan() {
-	head -1 $f | grep -q '^#' || return
-	head -4 $f | grep -Pzo '\n\n\N+\n\n' | tr -s '\n' ' '
+	head -4 $f | grep '^-'
 }
 
 cmd_mark() {
