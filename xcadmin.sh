@@ -114,25 +114,29 @@ cmd_mkcache_ar() {
 	cd - > /dev/null
 }
 
-##   ovlindex --src=dir
+##   ovlindex [--src=./ovl]
 ##     Print a overlay-index on stdout.
 ##
 cmd_ovlindex() {
+	test -n "$__src" || __src=./ovl
+	test -d "$__src" || die "Not a directory [$__src]"
 	cat <<EOF
 # Overlay index
 
 EOF
-	test -n "$__src" || return 0
 	mkdir -p $tmp
 	find "$__src" -maxdepth 2 -mindepth 2 -name README.md > $tmp/ovls
 	local f n
 	for f in $(sort < $tmp/ovls); do
 		n=$(echo $f | sed -s 's,/README.md,,')
 		n=$(basename $n)
-		echo " * [$n]($f)"
+		echo " * [$n]($f)$(slogan $f)"
 	done
 }
-
+slogan() {
+	head -1 $f | grep -q '^#' || return
+	head -4 $f | grep -Pzo '\n\n\N+\n\n' | tr -s '\n' ' '
+}
 
 cmd_mark() {
 	test -n "$__mark_file" || __mark_file=/tmp/$USER/mark
