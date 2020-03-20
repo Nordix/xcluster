@@ -1,0 +1,33 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: mserver-daemonset
+spec:
+  selector:
+    matchLabels:
+      app: mserver-daemonset
+  template:
+    metadata:
+      labels:
+        app: mserver-daemonset
+    spec:
+      serviceAccount: default
+      containers:
+      - name: mserver
+        image: registry.nordix.org/cloud-native/mserver:v1.0
+        ports:
+        - containerPort: 5001
+        securityContext:
+          privileged: true
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mserver-daemonset
+spec:
+  selector:
+    app: mserver-daemonset
+  ports:
+  - port: 5001
+  type: LoadBalancer
+

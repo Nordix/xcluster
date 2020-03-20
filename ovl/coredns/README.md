@@ -1,18 +1,15 @@
-Xcluster ovl - CoreDNS
-======================
+# Xcluster ovl - CoreDNS
 
-Adds CoreDNS in a Kubernetes cluster.
+* CoreDNS POD in `xcluster` (obsolete)
 
-Also describes howto setup `CoreDNS` locally.
+`Xcluster` uses node-local `coredns` instances running in main netns
+on each node. This ovl is kept for tests, e.g for
+[k8s #87426](https://github.com/kubernetes/kubernetes/issues/87426).
 
-Usage
------
-
-Coredns should be included in the base Kubernetes image.
+## Usage
 
 ```
-# Include "coredns" in images
-xc mkcdrom coredns
+./coredns.sh test start
 ```
 
 Test;
@@ -25,8 +22,7 @@ nslookup -type=AAAA www.ericsson.se 2000::250
 ```
 
 
-Build
------
+## Build
 
 ```
 go get github.com/coredns/coredns
@@ -73,41 +69,6 @@ From a pod on another node the ClusterIP is source and the query works;
 14:02:46.003781 IP 12.0.0.2.53 > 11.0.0.2.36545: 9367 NXDomain 0/1/0 (148)
 ```
 
-
-Local setup
------------
-
-```
-sudo setcap 'cap_net_bind_service=+ep' /home/uablrek/go/bin/coredns
-cfg=$($XCLUSTER ovld coredns)/Corefile
-coredns -conf $cfg > /tmp/$USER/coredns.log 2>&1 &
-```
-
-## DNS64
-
-Add the plugin in `plugin.cfg`. **NOTE** that the order is important!
-Insert the dns64 plugin after `log` for instance;
-
-```
-log:log
-dns64:github.com/serverwentdown/dns64
-...
-```
-
-Rebuild `coredns` and start.
-
-```
-nslookup -port=10053 -type=AAAA www.ericsson.se ::1
-```
-
-The `Corefile.k8s` file assumes that the "translateAll" PR is applied
-[#4](https://github.com/serverwentdown/dns64/pull/4).
-
-From a VM use;
-
-```
-nslookup www.google.se [2000::250]:10053
-```
 
 ## Connection tracking
 

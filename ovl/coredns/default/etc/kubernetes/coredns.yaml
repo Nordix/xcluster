@@ -43,6 +43,8 @@ spec:
             valueFrom:
               fieldRef:
                 fieldPath: status.hostIP
+      nodeSelector:
+        kubernetes.io/hostname: vm-002
       dnsPolicy: Default
       volumes:
         - name: config-volume
@@ -59,7 +61,7 @@ metadata:
 spec:
   selector:
     app: coredns
-  clusterIP: 12.0.0.2
+  clusterIP: 12.0.0.5
   ports:
   - name: dns
     port: 53
