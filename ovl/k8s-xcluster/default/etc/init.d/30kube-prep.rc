@@ -39,4 +39,8 @@ if test $i -eq 1; then
 	exit 0
 fi
 
+# https://github.com/kubernetes/kubernetes/issues/87426
+modprobe br-netfilter
+sysctl -w net.bridge.bridge-nf-call-iptables=1
+
 mkdir -p /var/lib/kubelet

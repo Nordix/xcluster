@@ -40,3 +40,6 @@ if false; then
 	done
 fi
 
+# https://github.com/kubernetes/kubernetes/issues/87426
+modprobe br-netfilter
+sysctl -w net.bridge.bridge-nf-call-iptables=1

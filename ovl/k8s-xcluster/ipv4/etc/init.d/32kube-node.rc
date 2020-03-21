@@ -43,5 +43,6 @@ monitor() {
 (monitor run_kubelet) > /dev/null 2>&1 &
 (monitor run_kube_proxy) > /dev/null 2>&1 &
 
-# NOTE: For --proxy-mode=iptables you *must* uncomment this line!
-#ip route add 12.0.0.0/16 via 127.0.0.1
+# NOTE: For --proxy-mode=iptables you *must* set this!
+grep -qF 'mode: "ipvs"' /etc/kubernetes/kube-proxy.config || \
+	ip route add 12.0.0.0/16 via 127.0.0.1
