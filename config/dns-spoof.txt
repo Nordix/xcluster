@@ -3,3 +3,4 @@ registry-1.docker.io
 k8s.gcr.io
 gcr.io
 registry.nordix.org
+quay.io
