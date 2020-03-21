@@ -408,14 +408,15 @@ xcluster_start() {
 xcluster_prep() {
 	case $1 in
 		ipv4)
-			SETUP=ipv4
+			SETUP="ipv4,$XSETUP"
 			BASEOVLS=kubernetes
 			;;
 		ipv6)
-			SETUP=ipv6
+			SETUP="ipv6,$XSETUP"
 			BASEOVLS=kubernetes
 			;;
 		dual-stack)
+			SETUP=$XSETUP
 			;;
 		*)
 		;;
