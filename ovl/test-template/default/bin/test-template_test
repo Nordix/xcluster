@@ -37,7 +37,7 @@ cni_plugin_info() {
 
 	f=$d/quick-install.yaml
 	if test -r $f; then
-		grep '  image:' $f | grep -o 'cilium:.*' | tr -d '"'
+		grep '  image:' $f | grep -o 'cilium:.*' | tr -d '"' | uniq
 		return 0
 	fi
 
@@ -50,6 +50,12 @@ cni_plugin_info() {
 	f=$d/xcluster-cni.yaml
 	if test -r $f; then
 		grep '  image:' $f | grep -o "xcluster-cni:.*"
+		return 0
+	fi
+
+	f=$d/weave.yaml
+	if test -r $f; then
+		grep '  image:' $f | grep -o "weave-kube:.*" | tr -d "'" | uniq
 		return 0
 	fi
 
