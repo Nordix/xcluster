@@ -69,7 +69,7 @@ if ! netstat -lutan | grep -q :::10053; then
 		test -n "$mynetns" && cdnslog=/tmp/$USER/coredns-$mynetns.log
 		mkdir -p /tmp/$USER
 		echo "Starting a local coredns on port 10053. Log in $cdnslog"
-		$cdns -conf $($XCLUSTER ovld coredns)/Corefile.k8s > $cdnslog 2>&1 &
+		$cdns -conf "$(readlink -f .)/config/Corefile" > $cdnslog 2>&1 &
 	else
 		echo "WARNING: CoreDNS not found. DNS from within the cluster will not work!"
 	fi
