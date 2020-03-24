@@ -1,5 +1,21 @@
 #! /bin/sh
 
+# Already sourced?
+test -n "$XCLUSTER" && return 0
+
+if ! ./xcadmin.sh env_check; then
+	cat <<EOF
+
+# Install dependecies;
+sudo apt install -y net-tools qemu-kvm xterm screen
+# Add user to the "kvm" group;
+sudo usermod -a -G kvm $USER
+# (logout/login after usermod)
+
+EOF
+	return 0
+fi
+
 if test -z "$XCLUSTER_WORKSPACE"; then
 	export XCLUSTER_WORKSPACE="$(readlink -f .)/workspace"
 	if ! test -d "$XCLUSTER_WORKSPACE"; then

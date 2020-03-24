@@ -465,6 +465,65 @@ cmd_workspace_ar() {
 	tar -C $tmp --group=0 --owner=0 -cf "$1" workspace
 }
 
+##   mkplay [--name=xcplay] [--tar=/tmp/$__name.tar] [file/dir]
+##     Create a "xcluster-play" archive.
+##
+cmd_mkplay() {
+	test -n "$__name" || __name=xcplay
+	test -n "$__tar" || __tar=/tmp/$__name.tar
+	local O=$tmp/$__name
+	local W=$O/workspace
+
+	mkdir -p $O
+	if test -n "$1"; then
+		test -r "$1" || die "Not readable [$1]"
+		test -f "$1" && cp "$1" $O
+		test -d "$1" && cp -r "$1/*" $O
+	fi
+
+	mkdir -p $W
+	cp $dir/xcadmin.sh $dir/xcluster.sh $dir/LICENSE $dir/Envsettings.k8s \
+		$dir/Envsettings $O
+
+	mkdir -p $O/config
+	cp $dir/config/net-setup-userspace.sh $dir/config/kubeconfig* \
+		$dir/config/Corefile $O/config
+
+	cmd_bin_add $W/bin
+	rm -f $W/bin/assign-lb-ip $W/bin/mconnect
+
+	mkdir -p $W/xcluster
+	cp -L $__image $W/xcluster/hd-k8s.img
+	eval $($XCLUSTER env | grep __kbin=)
+	cp $__kbin $W/xcluster
+
+	rm -f $__tar.xz
+	cd $tmp
+	tar -cf $__tar $__name
+	cd - > /dev/null
+	nice xz -T0 $__tar
+	log "Created [$__tar.xz]"
+}
+
+##   env_check
+##     Perform basic checks.
+##
+cmd_env_check() {
+	mkdir -p $tmp
+	local x
+	for x in netstat kvm xterm screen telnet; do
+		which $x > /dev/null || die "Not executable [$x]"
+	done
+	if which kvm-ok > /dev/null; then
+		kvm-ok > $tmp/out || die "Failed [kvm-ok]"
+		if ! grep -q "acceleration can be used" $tmp/out; then
+			cat $tmp/out
+			die "No acceleration?"
+		fi
+	fi
+	id | grep -Fq '(kvm)' || die "Not member of group [kvm]"
+}
+
 # Get the command
 cmd=$1
 shift

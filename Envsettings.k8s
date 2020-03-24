@@ -1,6 +1,7 @@
 #! /bin/sh
 
 test -n "$XCLUSTER" || . ./Envsettings
+test -n "$XCLUSTER" || return 0
 
 # Kubernetes settings;
 # Make sure the guest /dev/random is connected to the host /dev/urandom
@@ -24,7 +25,7 @@ curl -L \$armurl/xcluster/images/hd-k8s.img.xz | xz -d > \$__image
 
 EOF
 
-alias images="$($XCLUSTER ovld images)/images.sh"
+alias images="$(readlink -f .)/ovl/images/images.sh"
 test -n "$__dns_spoof" || export __dns_spoof=$(readlink -f .)/config/dns-spoof.txt
 
 mynetns=$(ip netns id)
