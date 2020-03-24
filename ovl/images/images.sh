@@ -59,7 +59,9 @@ cmd_in_docker() {
 ##   docker_save_layers <image> <layers...> | tar t
 ##     Saves files from layers to tar on stdout
 ##   docker_export <image>
-##     Same as "docker export" byt for an image
+##     Same as "docker export" but for an image
+##   docker_save --output=file.tar <images...>
+##     Saves images in a structure.
 ##
 cmd_docker_ls() {
 	cmd_docker_export $1 | tar t | sort
@@ -100,6 +102,28 @@ cmd_docker_save_layers() {
 	tar c .
 	cd
 	rm -rf $tmp
+}
+
+cmd_docker_save() {
+	test -n "$1" || die 'No images'
+	test -n "$__output" || die 'No output file'
+	touch "$__output" || die "Not writable [$__output]"
+	test -f "$__output" || die "Not file [$__output]"
+	__output="$(readlink -f $__output)"
+	mkdir -p $tmp/out
+	docker images --format "{{.Repository}}:{{.Tag}}" > $tmp/images
+	local i o
+	for i in $@; do
+		grep -q "^$i$" $tmp/images || die "Not in docker [$i]"
+		o=$i
+		echo $o | grep -q / || o="docker.io/library/$o"
+		echo $o | grep -Eq "^[^/]+\.[^/]+/" || o="docker.io/$o"
+		o="$tmp/out/$o"
+		mkdir -p $(dirname $o)
+		docker save $i > $o
+	done
+	cd $tmp/out
+	tar cf "$__output" *
 }
 
 ##   lreg_ls
