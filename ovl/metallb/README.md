@@ -71,39 +71,9 @@ For internal experiments a local pod is used, read the instructions
 
 For local development a [private registry](../private-reg) is *required*.
 
-Clone;
-```
-git_project=git@github.com:Your-project-here
-mkdir -p $GOPATH/src/github.com/danderson
-cd $GOPATH/src/github.com/danderson
-git clone $git_project/metallb.git
-cd metallb
-git remote add upstream git@github.com:danderson/metallb.git
-git remote set-url --push upstream no_push
-git remote -v
-```
-
-Sync;
-```
-cd $GOPATH/src/github.com/danderson/metallb
-git checkout master
-git fetch upstream
-git rebase upstream/main
-git push
-```
-
-Apply a PR on the local clone (optional)
-```
-pr=466
-cd $GOPATH/src/github.com/danderson/metallb
-#(sync)
-git checkout -b pr-$pr
-curl -sL https://github.com/danderson/metallb/pull/$pr.patch | patch -p1
-```
-
 Build;
 ```
-cd $GOPATH/src/github.com/danderson/metallb
+cd $GOPATH/src/github.com/metallb/metallb
 git clean -dxf
 export GO111MODULE=on
 go install ./controller
@@ -118,7 +88,7 @@ images mkimage --force --tag=metallb/speaker:latest --upload ./speaker
 
 Local image with L2 and dual-stack (assumes PR #466);
 ```
-xc mkcdrom metallb k8s-dual-stack private-reg; xc starts
+xc mkcdrom metallb private-reg; xc starts
 # On cluster;
 kubectl apply -f /etc/kubernetes/metallb-config-dual-stack.yaml
 kubectl apply -f /etc/kubernetes/metallb.yaml
