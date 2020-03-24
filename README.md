@@ -94,7 +94,7 @@ Some additional packets may have to be installed. Below is the bare
 minimum for development you will need [more](doc/build.md);
 
 ```
-sudo apt install -y xterm pxz genisoimage jq screen
+sudo apt install -y xterm genisoimage jq screen
 ```
 
 For image handling you will also need
