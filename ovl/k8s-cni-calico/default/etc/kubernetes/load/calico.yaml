@@ -656,8 +656,6 @@ spec:
               value: "true"
             - name: FELIX_USAGEREPORTINGENABLED
               value: "false"
-            - name: FELIX_CHAININSERTMODE
-              value: "APPEND"
           securityContext:
             privileged: true
           resources:

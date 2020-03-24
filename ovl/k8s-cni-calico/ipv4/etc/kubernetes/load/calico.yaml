@@ -616,7 +616,9 @@ spec:
               value: "autodetect"
             # Enable IPIP
             - name: CALICO_IPV4POOL_IPIP
-              value: "Always"
+              value: "Never"
+            - name: IP_AUTODETECTION_METHOD
+              value: "interface=eth1"
             # Set MTU for tunnel device used if ipip is enabled
             - name: FELIX_IPINIPMTU
               valueFrom:
@@ -644,6 +646,8 @@ spec:
               value: "true"
             - name: FELIX_USAGEREPORTINGENABLED
               value: "false"
+            - name: FELIX_CHAININSERTMODE
+              value: "APPEND"
           securityContext:
             privileged: true
           resources:
