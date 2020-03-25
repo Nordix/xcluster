@@ -1,0 +1,4 @@
+#! /bin/sh
+
+f=/etc/xcluster_env
+test -r $f && cat $f >> /etc/profile
