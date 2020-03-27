@@ -424,11 +424,11 @@ otc() {
 ##
 xcluster_start() {
 	if test -n "$SETUP"; then
-		tcase "Build cluster SETUP=$SETUP [$BASEOVLS $@ $XOVLS test]"
-		SETUP=$SETUP $XCLUSTER mkcdrom $BASEOVLS $@ $XOVLS test || tdie
+		tcase "Build cluster SETUP=$SETUP [env $BASEOVLS $@ $XOVLS test]"
+		SETUP=$SETUP $XCLUSTER mkcdrom env $BASEOVLS $@ $XOVLS test || tdie
 	else
-		tcase "Build cluster [$BASEOVLS $@ $XOVLS test]"
-		$XCLUSTER mkcdrom $BASEOVLS $@ $XOVLS test || tdie
+		tcase "Build cluster [env $BASEOVLS $@ $XOVLS test]"
+		$XCLUSTER mkcdrom env $BASEOVLS $@ $XOVLS test || tdie
 	fi
 
 	tcase "Cluster start ($(basename $__image))"
