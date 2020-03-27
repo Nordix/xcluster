@@ -1,6 +1,7 @@
 #! /bin/sh
 
 export PATH="/bin:/sbin:/usr/bin:/usr/sbin"
+. /etc/profile
 
 die() {
 	echo "$@"
@@ -16,14 +17,23 @@ test $i -le 200 || exit 0
 crio -log-level debug > /var/log/crio.log 2>&1 &
 sleep 0.2
 
+ANY_ADDR=0.0.0.0
+if test -n "$IPV6_PREFIX"; then
+	ANY_ADDR=::
+	sed -i -e 's,bindAddress: 0.0.0.0,bindAddress: "::1",' \
+		/etc/kubernetes/kube-proxy.config
+fi
+
 run_kubelet() {
-	kubelet --container-runtime=remote --node-ip=192.168.1.$i \
+	kubelet --container-runtime=remote --address=$ANY_ADDR \
+		--node-ip=${IPV6_PREFIX}192.168.1.$i \
 		--container-runtime-endpoint=unix:///var/run/crio/crio.sock \
 		--image-service-endpoint=unix:///var/run/crio/crio.sock \
 		--register-node=true --kubeconfig $KUBECONFIG \
 		--feature-gates IPv6DualStack=true \
 		--network-plugin=cni \
-		--cluster-dns=192.168.1.$i --cluster-domain=xcluster \
+		--cluster-dns=${IPV6_PREFIX}192.168.1.$i \
+		--cluster-domain=xcluster \
 		--runtime-cgroups=/systemd/system.slice \
 		--kubelet-cgroups=/systemd/system.slice >> /var/log/kubelet.log 2>&1
 }

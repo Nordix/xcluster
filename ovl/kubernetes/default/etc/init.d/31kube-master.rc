@@ -1,6 +1,7 @@
 #! /bin/sh
 
 export PATH="/bin:/sbin:/usr/bin:/usr/sbin"
+. /etc/profile
 
 die() {
         echo "$@"
@@ -15,16 +16,17 @@ test $i -eq 1 || exit 0
 . /etc/profile
 
 CLUSTER_CIDR=11.0.0.0/16,1100::/48
-MASTER_IP=192.168.1.1
+MASTER_IP=${IPV6_PREFIX}192.168.1.1
+
 apiserver() {
 	local log=/var/log/kube-apiserver.log
 	logger -s -t K8s "STARTED: kube-apiserver at $(date)" >> log 2>&1
 	kube-apiserver --token-auth-file=/srv/kubernetes/known_tokens.csv \
 		--allow-privileged=true \
-		--insecure-bind-address=0.0.0.0 --advertise-address=$MASTER_IP \
+		--insecure-bind-address=$MASTER_IP --advertise-address=$MASTER_IP \
 		--authorization-mode=AlwaysAllow \
 		--feature-gates IPv6DualStack=true,SCTPSupport=true \
-		--etcd-servers=http://localhost:2379 --anonymous-auth=false \
+		--etcd-servers=http://127.0.0.1:2379 --anonymous-auth=false \
 		--service-cluster-ip-range=12.0.0.0/16,fd00:4000::/112 \
 		--enable-admission-plugins=ServiceAccount,AlwaysAdmit \
 		--client-ca-file=/srv/kubernetes/ca.crt \
