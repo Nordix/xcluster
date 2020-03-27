@@ -327,6 +327,45 @@ do_mconnect() {
 }
 
 
+##  log_versions
+##    Log versions of various things
+##
+log_version() {
+	tlog "$(kubectl version --short=true | grep Server)"
+	tlog "$(uname -s -r -v)"
+	tlog "CNI-plugin; $(cni_plugin_info)"
+	tlog "Proxy-$(grep mode /etc/kubernetes/kube-proxy.config)"
+}
+cni_plugin_info() {
+	local f d=/etc/kubernetes/load
+
+	f=$d/quick-install.yaml
+	if test -r $f; then
+		grep '  image:' $f | grep -o 'cilium:.*' | tr -d '"' | uniq
+		return 0
+	fi
+
+	f=$d/calico.yaml
+	if test -r $f; then
+		grep '  image:' $f | grep -o "calico/cni:.*" | uniq
+		return 0
+	fi
+
+	f=$d/xcluster-cni.yaml
+	if test -r $f; then
+		grep '  image:' $f | grep -o "xcluster-cni:.*"
+		return 0
+	fi
+
+	f=$d/weave.yaml
+	if test -r $f; then
+		grep '  image:' $f | grep -o "weave-kube:.*" | tr -d "'" | uniq
+		return 0
+	fi
+
+	echo "xcluster internal"
+}
+
 ## On-host Functions
 ## -----------------
 ## NOTE: Called from host (not within the cluster).
