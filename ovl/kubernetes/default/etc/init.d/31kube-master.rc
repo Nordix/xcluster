@@ -18,6 +18,9 @@ test $i -eq 1 || exit 0
 CLUSTER_CIDR=11.0.0.0/16,1100::/48
 MASTER_IP=${IPV6_PREFIX}192.168.1.1
 
+SERVICE_RANGE=12.0.0.0/16,fd00:4000::/112
+test -n "$IPV6_PREFIX" && SERVICE_RANGE=fd00:4000::/112,12.0.0.0/16
+
 apiserver() {
 	local log=/var/log/kube-apiserver.log
 	logger -s -t K8s "STARTED: kube-apiserver at $(date)" >> log 2>&1
@@ -27,7 +30,7 @@ apiserver() {
 		--authorization-mode=AlwaysAllow \
 		--feature-gates IPv6DualStack=true,SCTPSupport=true \
 		--etcd-servers=http://127.0.0.1:2379 --anonymous-auth=false \
-		--service-cluster-ip-range=12.0.0.0/16,fd00:4000::/112 \
+		--service-cluster-ip-range=$SERVICE_RANGE \
 		--enable-admission-plugins=ServiceAccount,AlwaysAdmit \
 		--client-ca-file=/srv/kubernetes/ca.crt \
 		--tls-private-key-file=/srv/kubernetes/server.key \
