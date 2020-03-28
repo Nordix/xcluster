@@ -1,0 +1,38 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: alpine-daemonset
+spec:
+  selector:
+    matchLabels:
+      app: alpine
+  template:
+    metadata:
+      labels:
+        app: alpine
+    spec:
+      containers:
+      - name: alpine
+        image: library/alpine:3.8
+        command: ["sh", "-f", "/pod-init/pod-init"]
+        env:
+          - name: MY_NODE_NAME
+            valueFrom:
+              fieldRef:
+                fieldPath: spec.nodeName
+        volumeMounts:
+          - mountPath: /pod-init
+            name: pod-init
+      volumes:
+        - name: pod-init
+          configMap:
+            name: pod-init
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: pod-init
+data:
+  pod-init: |
+    echo "Starting POD $(hostname) on $MY_NODE_NAME"
+    nc -lk -p 5001 -e hostname

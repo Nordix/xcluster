@@ -1,6 +1,7 @@
 #! /bin/sh
 
 export PATH="/bin:/sbin:/usr/bin:/usr/sbin"
+. /etc/profile
 
 die() {
 	echo "$@"
@@ -12,17 +13,24 @@ i=$(hostname | cut -d- -f2 | sed -re 's,^0+,,')
 test $i -le 200 || exit 0
 test $i -eq 1 && exit 0
 
-. /etc/profile
+ANY_ADDR=0.0.0.0
+if test -n "$IPV6_PREFIX"; then
+	f=/etc/kubernetes/kube-proxy.config
+	ANY_ADDR=::
+	sed -i -e 's%11.0.0.0/16,1100::/48%1100::/48,11.0.0.0/16%' $f
+	sed -i -e 's,bindAddress: 0.0.0.0,bindAddress: "::1",' $f
+fi
 
 # Read $CRI_OPTS;
 test -r /etc/cri-plugin.rc && . /etc/cri-plugin.rc
 
 run_kubelet() {
-	kubelet --node-ip=192.168.1.$i $CRI_OPTS \
+	kubelet --address=$ANY_ADDR \
+		--node-ip=${IPV6_PREFIX}192.168.1.$i $CRI_OPTS \
 		--feature-gates IPv6DualStack=true \
 		--register-node=true --kubeconfig $KUBECONFIG \
 		--network-plugin=cni \
-		--cluster-dns=192.168.1.$i --cluster-domain=xcluster \
+		--cluster-dns=${IPV6_PREFIX}192.168.1.$i --cluster-domain=xcluster \
 		--runtime-cgroups=/systemd/system.slice \
 		--kubelet-cgroups=/systemd/system.slice > /var/log/kubelet.log 2>&1
 }
