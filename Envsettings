@@ -1,8 +1,5 @@
 #! /bin/sh
 
-# Already sourced?
-test -n "$XCLUSTER" && return 0
-
 if ! ./xcadmin.sh env_check; then
 	cat <<EOF
 
