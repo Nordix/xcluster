@@ -176,6 +176,7 @@ cmd_nsdel() {
 cmd_nsenter() {
 	test -n "$1" || die 'No index'
 	local netns=${USER}_xcluster$1
+	unset KUBECONFIG XCLUSTER
 	exec ip netns exec $netns /bin/bash
 }
 
