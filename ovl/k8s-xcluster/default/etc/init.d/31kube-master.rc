@@ -19,14 +19,18 @@ CLUSTER_CIDR=11.0.0.0/16,1100::/48
 MASTER_IP=${IPV6_PREFIX}192.168.1.1
 
 SERVICE_RANGE=12.0.0.0/16,fd00:4000::/112
-test -n "$IPV6_PREFIX" && SERVICE_RANGE=fd00:4000::/112,12.0.0.0/16
+ANY_ADDR=0.0.0.0
+if test -n "$IPV6_PREFIX"; then
+	SERVICE_RANGE=fd00:4000::/112,12.0.0.0/16
+	ANY_ADDR=::
+fi
 
 apiserver() {
 	local log=/var/log/kube-apiserver.log
 	logger -s -t K8s "STARTED: kube-apiserver at $(date)" >> log 2>&1
 	kube-apiserver --token-auth-file=/srv/kubernetes/known_tokens.csv \
 		--allow-privileged=true \
-		--insecure-bind-address=$MASTER_IP --advertise-address=$MASTER_IP \
+		--insecure-bind-address=$ANY_ADDR --advertise-address=$MASTER_IP \
 		--authorization-mode=AlwaysAllow \
 		--feature-gates IPv6DualStack=true,SCTPSupport=true \
 		--etcd-servers=http://127.0.0.1:2379 --anonymous-auth=false \
@@ -45,6 +49,7 @@ controller() {
 		--allocate-node-cidrs=true --cluster-cidr=$CLUSTER_CIDR \
 		--controllers="*,serviceaccount,serviceaccount-token" \
 		--feature-gates IPv6DualStack=true \
+		--service-cluster-ip-range=$SERVICE_RANGE \
 		--service-account-private-key-file=/srv/kubernetes/server.key \
 		--root-ca-file=/srv/kubernetes/server.crt --leader-elect=false \
 		>> $log 2>&1
