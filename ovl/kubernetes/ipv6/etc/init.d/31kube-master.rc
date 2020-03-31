@@ -22,7 +22,7 @@ apiserver() {
 	kube-apiserver --token-auth-file=/srv/kubernetes/known_tokens.csv \
 		--allow-privileged=true \
 		--feature-gates=SCTPSupport=true \
-		--insecure-bind-address=$MASTER_IP --advertise-address=$MASTER_IP \
+		--insecure-bind-address=:: --advertise-address=$MASTER_IP \
 		--authorization-mode=AlwaysAllow \
 		--etcd-servers=http://127.0.0.1:2379 --anonymous-auth=false \
 		--service-cluster-ip-range=fd00:4000::/112 \
