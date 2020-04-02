@@ -363,6 +363,12 @@ cni_plugin_info() {
 		return 0
 	fi
 
+	f=$d/kube-flannel.yaml
+	if test -r $f; then
+		grep '  image:' $f | grep -o "flannel:.*" | tr -d "'" | uniq
+		return 0
+	fi
+
 	echo "xcluster internal"
 }
 
