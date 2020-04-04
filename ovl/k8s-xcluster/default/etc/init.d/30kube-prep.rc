@@ -14,6 +14,9 @@ test $i -le 200 || exit 0
 
 printf '35f15062-7e2b-11e9-b640-0000000100%02x\n' $i > /etc/machine-id
 
+test -n "$PROXY_MODE" -a "$PROXY_MODE" != "ipvs" &&
+	sed -i -e "s,mode: \"ipvs\",mode: \"$PROXY_MODE\"," /etc/kubernetes/kube-proxy.config
+
 test -n "$IPV6_PREFIX" && \
 	sed -i -e "s,192.168.1.1,[${IPV6_PREFIX}192.168.1.1]," \
 	/etc/kubernetes/kubeconfig
@@ -25,6 +28,9 @@ if test -x /bin/hyperkube; then
 		ln -s hyperkube /bin/$n
 	done
 fi
+
+test -n "$PROXY_MODE" -a "$PROXY_MODE" != "ipvs" &&
+	sed -i -e "s,mode: \"ipvs\",mode: \"$PROXY_MODE\"," /etc/kubernetes/kube-proxy.config
 
 # Work around for bad install of dropbear
 test -r /usr/bin/dbclient || ln /bin/dbclient /usr/bin/dbclient
