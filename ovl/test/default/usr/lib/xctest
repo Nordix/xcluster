@@ -167,12 +167,18 @@ lsimages() {
 	crictl --runtime-endpoint=unix:///var/run/crio/crio.sock images
 }
 
+##  test_namespaces
+##    Test (and waits for) the basic namespaces to appear. This should
+##    normally be the first test executes on all K8s clusters. Prints versions
+##    of central components if succesful.
+##
 test_namespaces() {
 	tcase "Check namespaces (and API-server availability)"
 	pushv 60 30 2
 	tex "$kubectl get namespace default 2>&1 | ogrep -E '^default *Active'" || tdie	
 	tex "$kubectl get namespace kube-system 2>&1 | ogrep -E '^kube-system *Active'" || tdie	
 	popv
+	log_version
 }
 
 ##  test_coredns

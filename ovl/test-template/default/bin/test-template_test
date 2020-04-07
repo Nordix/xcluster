@@ -35,7 +35,6 @@ dbg() {
 
 cmd_tcase_check_namespaces() {
 	test_namespaces
-	log_version
 }
 cmd_tcase_check_nodes() {
 	test_nodes
