@@ -13,8 +13,14 @@ The best configuration documentation is the
 
 ## Prepare
 
+Update the manifest;
 ```
-ver=2.6.0
+curl -L https://cloud.weave.works/k8s/net > weave-orig.yaml
+meld weave-orig.yaml ipv4/etc/kubernetes/load/weave.yaml
+```
+
+```
+ver=2.6.2
 images lreg_cache docker.io/weaveworks/weave-kube:$ver
 images lreg_cache docker.io/weaveworks/weave-npc:$ver
 ```
@@ -35,4 +41,14 @@ kubectl apply -f /etc/kubernetes/weave-daemonset-k8s-1.11.yaml
 pod=$(kubectl -n kube-system get pods -l name=weave-net -o json | jq -r .items[0].metadata.name)
 kubectl -n kube-system logs $pod -c weave
 kubectl -n kube-system logs $pod -c weave-npc
+```
+
+## Troubleshooting
+
+See; https://www.weave.works/docs/net/latest/kubernetes/kube-addon/#-troubleshooting
+
+```
+kubectl get pods -n kube-system -l name=weave-net
+# pick a pod from the list and do
+kubectl exec -n kube-system  your-pod-id-here -c weave -- /home/weave/weave --local status
 ```

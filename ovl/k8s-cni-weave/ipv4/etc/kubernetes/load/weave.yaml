@@ -10,7 +10,7 @@ items:
           {
             "original-request": {
               "url": "/k8s/v1.13/net.yaml",
-              "date": "Tue Mar 10 2020 11:33:37 GMT+0000 (UTC)"
+              "date": "Thu Apr 02 2020 10:42:59 GMT+0000 (UTC)"
             },
             "email-address": "support@weave.works"
           }
@@ -26,7 +26,7 @@ items:
           {
             "original-request": {
               "url": "/k8s/v1.13/net.yaml",
-              "date": "Tue Mar 10 2020 11:33:37 GMT+0000 (UTC)"
+              "date": "Thu Apr 02 2020 10:42:59 GMT+0000 (UTC)"
             },
             "email-address": "support@weave.works"
           }
@@ -67,7 +67,7 @@ items:
           {
             "original-request": {
               "url": "/k8s/v1.13/net.yaml",
-              "date": "Tue Mar 10 2020 11:33:37 GMT+0000 (UTC)"
+              "date": "Thu Apr 02 2020 10:42:59 GMT+0000 (UTC)"
             },
             "email-address": "support@weave.works"
           }
@@ -90,7 +90,7 @@ items:
           {
             "original-request": {
               "url": "/k8s/v1.13/net.yaml",
-              "date": "Tue Mar 10 2020 11:33:37 GMT+0000 (UTC)"
+              "date": "Thu Apr 02 2020 10:42:59 GMT+0000 (UTC)"
             },
             "email-address": "support@weave.works"
           }
@@ -122,7 +122,7 @@ items:
           {
             "original-request": {
               "url": "/k8s/v1.13/net.yaml",
-              "date": "Tue Mar 10 2020 11:33:37 GMT+0000 (UTC)"
+              "date": "Thu Apr 02 2020 10:42:59 GMT+0000 (UTC)"
             },
             "email-address": "support@weave.works"
           }
@@ -146,7 +146,7 @@ items:
           {
             "original-request": {
               "url": "/k8s/v1.13/net.yaml",
-              "date": "Tue Mar 10 2020 11:33:37 GMT+0000 (UTC)"
+              "date": "Thu Apr 02 2020 10:42:59 GMT+0000 (UTC)"
             },
             "email-address": "support@weave.works"
           }
@@ -173,7 +173,9 @@ items:
                     fieldRef:
                       apiVersion: v1
                       fieldPath: spec.nodeName
-              image: 'docker.io/weaveworks/weave-kube:2.6.1'
+                - name: IPALLOC_RANGE
+                  value: "11.0.0.0/16"
+              image: 'docker.io/weaveworks/weave-kube:2.6.2'
               readinessProbe:
                 httpGet:
                   host: 127.0.0.1
@@ -206,7 +208,7 @@ items:
                     fieldRef:
                       apiVersion: v1
                       fieldPath: spec.nodeName
-              image: 'docker.io/weaveworks/weave-npc:2.6.1'
+              image: 'docker.io/weaveworks/weave-npc:2.6.2'
               resources:
                 requests:
                   cpu: 10m
