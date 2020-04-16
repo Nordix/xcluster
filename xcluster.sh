@@ -618,7 +618,10 @@ cmd_boot_vm() {
     test -r $__cdrom && kvmboot="$kvmboot -drive file=$__cdrom,if=virtio,media=cdrom"
 
 	test -n "$__mtu" || __mtu=1500
-	local n dev tap append
+	local n dev tap append tnets
+	eval tnets=\$__nets$nodeid
+	test -n "$tnets" && __nets=$tnets
+	echo "nets=[$__nets]"
 	for n in $(echo $__nets | tr , ' '); do
 
 		# Customized network setup, e.g. for ovs
