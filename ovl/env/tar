@@ -18,7 +18,7 @@ test -n "$1" || die "No out-file"
 mkdir -p $tmp
 cp -R $dir/default/* $tmp
 
-env | grep '^xcluster_' | sed -e 's,^xcluster_,,' > $tmp/etc/xcluster_env
+env | grep '^xcluster_' | sed -e 's,^xcluster_,,' | sed -e "s%=\(.*\)%='\1'%"> $tmp/etc/xcluster_env
 test -s $tmp/etc/xcluster_env || rm $tmp/etc/xcluster_env
 
 
