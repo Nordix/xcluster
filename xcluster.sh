@@ -746,7 +746,7 @@ cmd_start() {
 	test -n "$__nvm" || __nvm=4
 	__quiet=yes
 	if ! cmd_status; then
-		stop
+		cmd_stop
 		sleep 1
 	fi
 	rm -rf $XCLUSTER_TMP/screen $XCLUSTER_TMP/*.img
@@ -791,7 +791,7 @@ cmd_starts() {
 	test -n "$__nvm" || __nvm=4
 	__quiet=yes
 	if ! cmd_status; then
-		stop
+		cmd_stop
 		sleep 1
 	fi
 	rm -rf $XCLUSTER_TMP/screen $XCLUSTER_TMP/*.img
