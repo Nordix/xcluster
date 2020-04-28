@@ -1,0 +1,216 @@
+#! /bin/sh
+##
+## mtu_test --
+##
+##   Test script for mtu executed in xcluster.
+##
+## Commands;
+##
+
+prg=$(basename $0)
+dir=$(dirname $0); dir=$(readlink -f $dir)
+me=$dir/$prg
+tmp=/tmp/${prg}_$$
+
+yamld=/etc/kubernetes/mtu
+PREFIX=1000::1:
+
+die() {
+	echo "ERROR: $*" >&2
+	rm -rf $tmp
+	exit 1
+}
+help() {
+	grep '^##' $0 | cut -c3-
+	rm -rf $tmp
+	exit 0
+}
+test -n "$1" || help
+echo "$1" | grep -qi "^help\|-h" && help
+
+log() {
+	echo "$prg: $*" >&2
+}
+dbg() {
+	test -n "$__verbose" && echo "$prg: $*" >&2
+}
+
+cmd_tcase_check_namespaces() {
+	test_namespaces
+}
+cmd_tcase_check_nodes() {
+	test_nodes
+}
+
+cmd_tcase_tracepath_node() {
+	local mtu=1500
+	test -n "$1" && mtu=$1
+	tcase "Tracepath between nodes, expected mtu=$mtu"
+	tracepath 192.168.1.2 2>&1 | ogrep "Resume: pmtu $mtu " || tdie
+	tracepath 1000::1:192.168.1.2 2>&1 | ogrep "Resume: pmtu $mtu " || tdie
+}
+
+cmd_tcase_tracepath_pod() {
+	local mtu=1500
+	local l=app=mserver-daemonset
+	test -n "$1" && mtu=$1
+	tcase "Tracepath between nodes, link-mtu=$mtu"
+	local pod1=$(get_pod "$l" vm-002)
+	test -n "$pod1" -a "$pod1" != "null" || tdie "Can't find pod on vm-002"
+	local pod2=$(get_pod "$l" vm-003)
+	test -n "$pod2" -a "$pod2" != "null" || tdie "Can't find pod on vm-003"
+	local ip=$($kubectl get pod $pod2 -o json | jq -r '.status.podIPs[0].ip')
+	log "Tracepath from $pod1 on vm-002 to $ip on vm-003"
+	$kubectl exec $pod1 -- tracepath $ip | ogrep -Eq "Resume: pmtu [0-9]+ " || tdie
+	local pmtu=$($kubectl exec $pod1 -- tracepath $ip | grep -oE "Resume: pmtu [0-9]+ " | cut -d' ' -f3)
+	log "Pmtu; $pmtu"
+	# depending on tunnel-headers the pmtu may be smaller than the link mtu
+	local mtuok=$((mtu-20))
+	test $pmtu -ge $mtuok || tdie "Too small pmtu; $pmtu"
+}
+
+cmd_tcase_start_mserver() {
+	tcase "Start mserver pods"
+	$kubectl apply -f $yamld/mserver-daemonset.yaml || tdie
+	test_daemonset mserver-daemonset 180
+}
+
+cmd_tcase_xnet() {
+	tcase "Setup network for nets [$@]"
+	local i
+	hostname | grep -Eq 'vm-[0-9]+$' || tdie "Invalid hostname [$(hostname)]"
+	i=$(hostname | cut -d- -f2 | sed -re 's,^0+,,')
+
+	local net mtu
+	test -n "$1" || return 0
+	net=$(echo $1 | cut -d: -f1)
+	mtu=1500
+	echo "$1" | grep -q : && mtu=$(echo $1 | cut -d: -f2)
+	ip link set up dev eth1 mtu $mtu
+	ip addr add 192.168.$net.$i/24 dev eth1
+	ip -6 addr add 1000::1:192.168.$net.$i/120 dev eth1
+
+	test -n "$2" || return 0
+	net=$(echo $2 | cut -d: -f1)
+	mtu=1500
+	echo "$2" | grep -q : && mtu=$(echo $2 | cut -d: -f2)
+	ip link set up dev eth2 mtu $mtu
+	ip addr add 192.168.$net.$i/24 dev eth2
+	ip -6 addr add 1000::1:192.168.$net.$i/120 dev eth2
+}
+
+cmd_tcase_route() {
+	local net=$1 via=$2
+	shift
+	shift
+	tcase "Set route $net/24 via $via ($@)"
+	test "$__ipv6" = "yes" || ip ro replace $net/24 via $via $@
+	test "$__ipv4" = "yes" || ip -6 ro replace 1000::1:$net/120 via 1000::1:$via $@
+	echo 1 > /proc/sys/net/ipv4/ip_forward
+	echo 1 > /proc/sys/net/ipv6/conf/all/forwarding
+}
+
+cmd_tcase_assign_cidr() {
+	tcase "Assign CIDR address to lo [$1]"
+	ip addr add $1/24 dev lo
+	ip -6 addr add 1000::1:$1/120 dev lo
+	ip -6 ro add local 1000::1:$1/120 dev lo
+	sysctl -w net.ipv4.ip_nonlocal_bind=1
+	sysctl -w net.ipv6.ip_nonlocal_bind=1
+}
+
+cmd_tcase_ecmp_route() {
+	tcase "Setup ECMP routes to the VIP address via all workers"
+	ip route add 10.0.0.0/24 \
+		nexthop via 192.168.1.1 \
+		nexthop via 192.168.1.2 \
+		nexthop via 192.168.1.3 \
+		nexthop via 192.168.1.4
+	ip -6 route add 1000::1:10.0.0.0/120 \
+		nexthop via 1000::1:192.168.1.1 \
+		nexthop via 1000::1:192.168.1.2 \
+		nexthop via 1000::1:192.168.1.3 \
+		nexthop via 1000::1:192.168.1.4
+	echo 1 > /proc/sys/net/ipv4/fib_multipath_hash_policy
+}
+
+cmd_tcase_start_mconnect() {
+	tcase "Start an mconnect server"
+	mconnect -server -address :5001 > /var/log/mconnect.log 2>&1 &
+}
+
+cmd_tcase_mconnect() {
+	tcase "Mconnect to [$1]"
+	test -n "$1" || tdie 'No address'
+	tex do_mconnect "$1" || tdie
+}
+
+cmd_tcase_http() {
+	test -n "$__nconn" || __nconn=4
+	tcase "Http requests ($__nconn) towards [$1]"
+	test -n "$1" || tdie "No target"
+	local i src
+	for i in $(seq 1 $__nconn); do
+		if echo $1 | grep -qF '['; then
+			src=1000::1:20.0.0.$i
+		else
+			src=20.0.0.$i
+		fi
+		tlog "Source-ip; $src"
+		curl --max-time 8 -o /dev/null --interface $src $1 2>&1 || tdie
+	done
+}
+
+cmd_tcase_limit_mtu() {
+	tcase "Limit mtus"
+	ip -6 ro replace 1000::1:20.0.0.0/120 via 1000::1:192.168.1.201 mtu 1280 \
+		|| tdie
+
+	echo 1 > /proc/sys/net/ipv4/ip_no_pmtu_disc
+	echo 1 > /proc/sys/net/ipv4/tcp_mtu_probing
+	echo 1024 > /proc/sys/net/ipv4/tcp_base_mss
+}
+
+cmd_tcase_start_pmtud() {
+	tcase "Start pmtud"
+	pmtud --iface=eth1 --src-rate=1000.0 --iface-rate=1000.0 --verbose > /var/log/pmtud.log 2>&1 &
+}
+
+cmd_tcase_stop_pmtud() {
+	tcase "Stop pmtud"
+	killall pmtud
+	return 0
+}
+
+
+
+. /etc/profile
+. /usr/lib/xctest
+indent='  '
+
+
+# Get the command
+cmd=$1
+shift
+grep -q "^cmd_$cmd()" $0 || die "Invalid command [$cmd]"
+
+while echo "$1" | grep -q '^--'; do
+	if echo $1 | grep -q =; then
+		o=$(echo "$1" | cut -d= -f1 | sed -e 's,-,_,g')
+		v=$(echo "$1" | cut -d= -f2-)
+		eval "$o=\"$v\""
+	else
+		o=$(echo "$1" | sed -e 's,-,_,g')
+		eval "$o=yes"
+	fi
+	shift
+done
+unset o v
+long_opts=`set | grep '^__' | cut -d= -f1`
+
+# Execute command
+trap "die Interrupted" INT TERM
+cmd_$cmd "$@"
+status=$?
+rm -rf $tmp
+exit $status

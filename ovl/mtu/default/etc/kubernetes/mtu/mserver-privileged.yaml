@@ -1,0 +1,22 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mserver
+spec:
+  selector:
+    matchLabels:
+      app: mserver
+  replicas: 4
+  template:
+    metadata:
+      labels:
+        app: mserver
+    spec:
+      serviceAccount: default
+      containers:
+      - name: mserver
+        image: registry.nordix.org/cloud-native/mserver:v1.1
+        ports:
+        - containerPort: 5001
+        securityContext:
+          privileged: true

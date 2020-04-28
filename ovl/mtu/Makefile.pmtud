@@ -1,0 +1,18 @@
+
+S := $(GOPATH)/src/github.com/cloudflare/pmtud/src
+O := $(XCLUSTER_WORKSPACE)/pmtud
+OBJ := $(O)/main.o $(O)/bitmap.o $(O)/hashlimit.o $(O)/csiphash.o \
+	$(O)/sched.o $(O)/nflog.o $(O)/net.o $(O)/uevent.o $(O)/utils.o
+
+.PHONY: all
+
+$(O)/%.o: $(S)/%.c
+	$(CC) -c -fPIC $(CFLAGS) -o $@ $<
+
+all: $(O) $(O)/pmtud
+
+$(O)/pmtud: $(OBJ)
+	$(CC) -o $(O)/pmtud $(OBJ) -lpcap -lnetfilter_log
+
+$(O):
+	mkdir -p $(O)
