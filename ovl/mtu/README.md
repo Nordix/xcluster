@@ -9,6 +9,7 @@ Test of the [ecmp/pmdu-discovery
 problem](https://blog.cloudflare.com/path-mtu-discovery-in-practice/)
 without K8s.
 
+* https://www.redhat.com/en/blog/deep-dive-virtio-networking-and-vhost-net
 
 
 ## MTU in xcluster
@@ -101,6 +102,9 @@ based for forwarded traffic. Download the pre-built
 [bzImage-linux-5.4.35](https://artifactory.nordix.org/artifactory/cloud-native/xcluster/images/bzImage-linux-5.4.35)
 and set the `__kbin` variable to point to it.
 
+Also NIC "offload" must be disables or else you will see packets > mtu
+in your traces; `ethtool -K eth1 gro off`. This is done by the test scripts.
+
 A http request from an external source to the VIP address with a
 rather large reply is assumed to be the most realistic test. Tests are
 prepared for http without any precautions (fails) and work-arounds
@@ -138,3 +142,7 @@ tracepath -n 20.0.0.0     # Does not work!
 tracepath -n 1000::1:20.0.0.0
 ip ro replace 1000::1:20.0.0.0/120 via 1000::1:192.168.1.201 src 1000::1:10.0.0.0
 ```
+
+
+
+

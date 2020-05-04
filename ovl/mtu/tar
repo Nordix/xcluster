@@ -18,7 +18,7 @@ test -n "$1" || die "No out-file"
 mkdir -p $tmp
 cp -R $dir/default/* $tmp
 
-$XCLUSTER install_prog --dest=$tmp ping tracepath jq curl
+$XCLUSTER install_prog --dest=$tmp ping tracepath jq curl ethtool
 
 mkdir -p $tmp/bin
 f=$GOPATH/src/github.com/Nordix/mconnect/image/mconnectX

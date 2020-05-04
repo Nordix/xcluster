@@ -89,6 +89,7 @@ cmd_tcase_xnet() {
 	ip link set up dev eth1 mtu $mtu
 	ip addr add 192.168.$net.$i/24 dev eth1
 	ip -6 addr add 1000::1:192.168.$net.$i/120 dev eth1
+	ethtool -K eth1 gro off
 
 	test -n "$2" || return 0
 	net=$(echo $2 | cut -d: -f1)
@@ -97,6 +98,7 @@ cmd_tcase_xnet() {
 	ip link set up dev eth2 mtu $mtu
 	ip addr add 192.168.$net.$i/24 dev eth2
 	ip -6 addr add 1000::1:192.168.$net.$i/120 dev eth2
+	ethtool -K eth1 gro off
 }
 
 cmd_tcase_route() {
