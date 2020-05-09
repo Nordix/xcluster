@@ -101,38 +101,19 @@ test_jumbo() {
 
 test_startc() {
 	tlog "Start MTU chain without K8s"
-	if ip netns id $$ | grep -q xcluster; then
-		# We need xcbr3 and xcbr4
-		ip link show xcbr3 > /dev/null || tdie "Do [xc br_setup 3]"
-		ip link show xcbr4 > /dev/null || tdie "Do [xc br_setup 4]"
-	fi
 	cmd_env
+	export TOPOLOGY=multihop
+	. $($XCLUSTER ovld network-topology)/$TOPOLOGY/Envsettings
 	export __image=$XCLUSTER_HOME/hd.img
-	export __nrouters=3
 	export __ntesters=1
-	export __nets201=0,1,3
-	export __nets202=0,3,4
-	export __nets203=0,4,2
 	echo "$XOVLS" | grep -q private-reg && unset XOVLS
-	xcluster_start iptools mtu
+	xcluster_start network-topology iptools mtu
 
-	local i
-	for i in $(seq 1 4); do
-		otc $i "xnet 1"
-	done
-	otc 201 "xnet 1 3:1450"
-	otc 202 "xnet 3:1450 4:1400"
-	otc 203 "xnet 4:1400 2:1500"
-	otc 221 "xnet 2:1500"
-
-	for i in $(seq 1 4); do
-		otc $i "route 192.168.2.0 192.168.1.201"
-	done
-	otc 201 "route 192.168.2.0 192.168.3.202"
-	otc 202 "route 192.168.2.0 192.168.4.203"
-	otc 202 "route 192.168.1.0 192.168.3.201"
-	otc 203 "route 192.168.1.0 192.168.4.202"
-	otc 221 "route 192.168.1.0 192.168.2.203"
+	for i in $(seq 1 4); do otc $i "mtu 1500"; done
+	otc 201 "mtu 1500 1450"
+	otc 202 "mtu 1450 1400"
+	otc 203 "mtu 1400 1500"
+	otc 221 "mtu 1500"
 }
 
 test_vip_setup() {
