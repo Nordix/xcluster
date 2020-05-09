@@ -25,18 +25,18 @@ Generic;
 ```
 export TOPOLOGY=...
 . $(XCLUSTER ovld network-topology)/$TOPOLOGY/Envsettings
-xc mkcdrom network-topology ...
+xc mkcdrom iptools network-topology ...
 ```
 
 Default;
 ```
-xc mkcdrom network-topology ...
+xc mkcdrom iptools network-topology ...
 # Eqivalent to;
-xc mkcdrom xnet ...
+xc mkcdrom iptools xnet ...
 ```
 
 Usually the number of VMs and testers can be scaled by setting `__nvm`
-and `__ntesters` but most setups must have a defines number of
+and `__ntesters` but most setups must have a defined number of
 routers, so setting `__nrouters` should be avoided.
 
 
@@ -85,7 +85,7 @@ ensure all VMs are stopped.
 ```
 export TOPOLOGY=zones
 . $(XCLUSTER ovld network-topology)/$TOPOLOGY/Envsettings
-xc mkcdrom network-topology ...
+xc mkcdrom iptools network-topology ...
 xc starts
 xc scaleout 10 11 20 21
 # (do some testing...)
