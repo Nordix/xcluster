@@ -66,3 +66,29 @@ This setup is used for tests with multi-path/multi-homing e.g MPTCP or
 SCTP with multi-homing.
 
 
+## Multihop
+
+<img src="multihop.svg" alt="Multi-hop network topology" width="95%" />
+
+For [PMTU](../mtu) and traceroute tests.
+
+
+## Zones
+
+<img src="zones.svg" alt="Zones network topology" width="60%" />
+
+The VMs are distributed to different networks. Since the VMs are not
+in a consecutive sequence the VMs in the "zones" must be
+scaled-out. Further the `xc stop` must be invoked with an option to
+ensure all VMs are stopped.
+
+```
+export TOPOLOGY=zones
+. $(XCLUSTER ovld network-topology)/$TOPOLOGY/Envsettings
+xc mkcdrom network-topology ...
+xc starts
+xc scaleout 10 11 20 21
+# (do some testing...)
+xc stop --nvm=30
+```
+

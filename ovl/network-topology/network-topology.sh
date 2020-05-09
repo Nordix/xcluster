@@ -69,7 +69,7 @@ cmd_test() {
             test_$t
         done
     else
-        for t in xnet; do
+        for t in xnet dual_path multihop zones; do
             test_$t
         done
     fi      
@@ -114,11 +114,46 @@ test_dual_path() {
 	xcluster_stop
 }
 
+test_multihop() {
+	export TOPOLOGY=multihop
+	tlog "=== network-topology test: $TOPOLOGY"
+	export __ntesters=2
+	test_start
+	base_test
+	xcluster_stop
+}
+
+test_zones() {
+	export TOPOLOGY=zones
+	tlog "=== network-topology test: $TOPOLOGY"
+	export __ntesters=2
+	test_start
+	$XCLUSTER scaleout 10 11 20 21
+	base_test
+
+	otc 10 "ping 192.168.2.221"
+	otc 1 "ping 192.168.3.10"
+	otc 20 "ping 192.168.2.221"
+	otc 1 "ping 192.168.4.20"
+
+	otc 10 "nslookup www.google.se"
+	otc 10 "wget http://www.google.se"
+	otc 20 "nslookup www.google.se"
+	otc 20 "wget http://www.google.se"
+
+	export __nvm=30
+	xcluster_stop
+}
+
 base_test() {
 	otc 1 "ping 192.168.2.221"
 	otc 1 "ping 192.168.2.222"
 	otc 221 "ping 192.168.1.2"
 	otc 222 "ping 192.168.1.2"
+	otc 1 "nslookup www.google.se"
+	otc 221 "nslookup www.google.se"
+	otc 1 "wget http://www.google.se"
+	otc 221 "wget http://www.google.se"
 }
 
 . $($XCLUSTER ovld test)/default/usr/lib/xctest

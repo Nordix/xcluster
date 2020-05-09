@@ -1,2 +1,4 @@
 #! /bin/sh
-# Nothing to set only defaults are used for xnet
+# Only defaults are used for xnet
+export __mem201=128
+export __mem202=128

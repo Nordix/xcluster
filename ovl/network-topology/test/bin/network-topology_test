@@ -40,6 +40,19 @@ cmd_tcase_ping() {
 	ping -c1 -W1 $PREFIX:$1 || tdie "ping $PREFIX:$1"
 }
 
+cmd_tcase_nslookup() {
+	tcase "Nslookup $1"
+	test -n "$1" || tdie "Nothing to lookup"
+	pushv 40 20 2
+	tex "nslookup $1 | ogrep 'Name:'" || tdie
+	popv
+}
+
+cmd_tcase_wget() {
+	tcase "Wget $1"
+	test -n "$1" || tdie "Nothing to get"
+	wget -O /dev/null "$1" 2>&1 || tdie
+}
 
 . /etc/profile
 . /usr/lib/xctest
