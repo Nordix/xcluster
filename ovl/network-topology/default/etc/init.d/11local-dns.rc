@@ -1,0 +1,36 @@
+#! /bin/sh
+die() {
+	echo "$@"
+	exit 1
+}
+
+hostname | grep -Eq 'vm-[0-9]+$' || die "Invalid hostname [$(hostname)]"
+i=$(hostname | cut -d- -f2 | sed -re 's,^0+,,')
+
+
+# Setup a local coredns
+if test $i -le 200 && test -x /bin/kube-apiserver -o -x /bin/hyperkube; then
+	cat > /etc/Corefile <<EOF
+.:53 {
+    kubernetes xcluster {
+      endpoint http://192.168.1.1:8080
+    }
+    forward . 192.168.0.250:10053
+    cache 3000
+    log stdout
+}
+EOF
+else
+	cat > /etc/Corefile <<EOF
+.:53 {
+    forward . 192.168.0.250:10053
+    cache 3000
+    log stdout
+}
+EOF
+fi
+cat > /etc/resolv.conf <<EOF
+nameserver 192.168.0.$i
+options use-vc
+EOF
+coredns -conf /etc/Corefile > /var/log/coredns.log 2>&1 &
