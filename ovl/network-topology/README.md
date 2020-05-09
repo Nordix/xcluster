@@ -75,7 +75,7 @@ For [PMTU](../mtu) and traceroute tests.
 
 ## Zones
 
-<img src="zones.svg" alt="Zones network topology" width="60%" />
+<img src="zones.svg" alt="Zones network topology" width="80%" />
 
 The VMs are distributed to different networks. Since the VMs are not
 in a consecutive sequence the VMs in the "zones" must be
