@@ -95,7 +95,7 @@ cmd_env() {
 	test -n "$KERNELDIR" || KERNELDIR=$HOME/tmp/linux
 	export ARCHIVE
 
-	test -n "$__kver" || __kver=linux-5.6
+	test -n "$__kver" || __kver=linux-5.6.10
 	test -n "$__kobj" || __kobj=$XCLUSTER_HOME/obj-$__kver
 	test -n "$__kbin" || __kbin=$XCLUSTER_HOME/bzImage
 	test -n "$__kcfg" || __kcfg=$dir/config/$__kver
@@ -608,10 +608,12 @@ cmd_boot_vm() {
 	local hd=$XCLUSTER_TMP/hd-$nodeid.img
 	qemu-img create -f qcow2 -o backing_file="$__image" $hd
 
-	local tmem
-	eval tmem=\$__mem$nodeid
-	test -n "$tmem" && __mem=$tmem
-	echo "Memory: $__mem"
+	local tvar
+	eval tvar=\$__mem$nodeid
+	test -n "$tvar" && __mem=$tvar
+	eval tvar=\$__smp$nodeid
+	test -n "$tvar" && __smp=$tvar
+	echo "Memory: $__mem, smp: $__smp"
 	rm -rf $tmp
 
 	local kvmboot="-drive file=$hd,if=virtio -smp $__smp -k sv"
@@ -626,9 +628,11 @@ cmd_boot_vm() {
 
 		# Customized network setup, e.g. for ovs
 		if test -n "$__net_setup" -a -x "$__net_setup"; then
+			echo "CUSTOM NET; $__net_setup"
 			export __mtu
 			export __kvm
-			opt="$opt $($__net_setup $node $nodeid $n)" || return
+			test "$__mtu" -ne 1500 && append="$append mtu$n=$__mtu"
+			opt="$opt $($__net_setup $nodeid $n)" || return
 			continue
 		fi
 
