@@ -23,11 +23,14 @@ for s in $(echo "$SETUP" | tr ',' ' '); do
 done
 test "$setup_copied" != "yes" && test -d $dir/default && cp -R $dir/default/* $tmp
 
-wgd=$XCLUSTER_WORKSPACE/WireGuard-0.0.20181119
-f=$wgd/src/tools/wg
+wgd=$GOPATH/src/git.zx2c4.com/wireguard-tools
+f=$wgd/src/wg
 test -x $f || die "Not executable [$f]"
 mkdir -p $tmp/bin
 $XCLUSTER install_prog --dest=$tmp $f
+
+mkdir -p $tmp/etc/wireguard
+$dir/wireguard.sh generate_keys > $tmp/etc/wireguard/keys
 
 cd $tmp
 tar cf "$1" *

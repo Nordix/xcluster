@@ -1,0 +1,121 @@
+#! /bin/sh
+##
+## wireguard_test --
+##
+##   Test script for wireguard executed in xcluster.
+##
+## Commands;
+##
+
+prg=$(basename $0)
+dir=$(dirname $0); dir=$(readlink -f $dir)
+me=$dir/$prg
+tmp=/tmp/${prg}_$$
+test -n "$__cname" || __cname=xcluster
+
+PREFIX=1000::1
+
+die() {
+	echo "ERROR: $*" >&2
+	rm -rf $tmp
+	exit 1
+}
+help() {
+	grep '^##' $0 | cut -c3-
+	rm -rf $tmp
+	exit 0
+}
+test -n "$1" || help
+echo "$1" | grep -qi "^help\|-h" && help
+
+log() {
+	echo "$prg: $*" >&2
+}
+dbg() {
+	test -n "$__verbose" && echo "$prg: $*" >&2
+}
+
+cmd_tcase_wg_support() {
+	tcase "Test WireGuard kernel support"
+	tlog "linux-$(uname -r)"
+	wg show dump 2>&1 | grep "not supported" && tdie "WireGuard not supported"
+	return 0
+}
+
+cmd_mesh_config() {
+	local i=$(mynode)
+	. /etc/wireguard/keys
+	local key
+	eval "key=\$key$i"
+	cat <<EOF
+[Interface]
+PrivateKey = $key
+ListenPort = 51820
+
+EOF
+	local x
+	for x in $(seq 1 $__nvm); do
+        test $x -eq $i && continue
+		eval "key=\$key$x"
+        pub=$(echo $key | wg pubkey)
+        cat <<EOF
+[Peer]
+PublicKey = $pub
+Endpoint = 192.168.1.$x:51820
+AllowedIPs = 169.0.1.$x/32,$PREFIX:169.0.1.$x/128
+
+EOF
+	done
+}
+
+cmd_tcase_mesh() {
+	tcase "Setup all-to-all mesh"
+	ip link add dev wg0 type wireguard
+	ip addr add 169.0.1.$(mynode)/24 dev wg0
+	ip -6 addr add $PREFIX:169.0.1.$(mynode)/120 dev wg0
+	local cfg=/etc/wireguard/conf
+	cmd_mesh_config > /etc/wireguard/conf
+	wg setconf wg0 $cfg
+	ip link set up dev wg0
+}
+
+cmd_tcase_ping_all_vms() {
+	tcase "Ping all VMs ($__nvm)"
+	local i
+	for i in $(seq 1 $__nvm); do
+		ping -c1 -W1 169.0.1.$i || tdie "Failed to ping 169.0.1.$i"
+		ping -c1 -W1 $PREFIX:169.0.1.$i || tdie "Failed to ping $PREFIX:169.0.1.$i"
+	done
+	return 0
+}
+
+. /etc/profile
+. /usr/lib/xctest
+indent='  '
+
+
+# Get the command
+cmd=$1
+shift
+grep -q "^cmd_$cmd()" $0 || die "Invalid command [$cmd]"
+
+while echo "$1" | grep -q '^--'; do
+	if echo $1 | grep -q =; then
+		o=$(echo "$1" | cut -d= -f1 | sed -e 's,-,_,g')
+		v=$(echo "$1" | cut -d= -f2-)
+		eval "$o=\"$v\""
+	else
+		o=$(echo "$1" | sed -e 's,-,_,g')
+		eval "$o=yes"
+	fi
+	shift
+done
+unset o v
+long_opts=`set | grep '^__' | cut -d= -f1`
+
+# Execute command
+trap "die Interrupted" INT TERM
+cmd_$cmd "$@"
+status=$?
+rm -rf $tmp
+exit $status

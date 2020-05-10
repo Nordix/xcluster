@@ -1,10 +1,57 @@
 # Xcluster ovl - WireGuard
 
-Use [WireGuard](https://www.wireguard.com/) in `xcluster`.
+* Use [WireGuard](https://www.wireguard.com/) in `xcluster`.
 
-https://www.digitalocean.com/community/tutorials/how-to-create-a-point-to-point-vpn-with-wireguard-on-ubuntu-16-04
+WireGuard in in the kernel source-tree from `linux-5.6`;
 
-## Usage
+```
+Device Drivers > Network device support > WireGuard secure network tunnel
+```
+
+Links;
+
+* https://www.digitalocean.com/community/tutorials/how-to-create-a-point-to-point-vpn-with-wireguard-on-ubuntu-16-04
+
+## Build tools
+
+```
+mkdir -p $GOPATH/src/git.zx2c4.com
+cd $GOPATH/src/git.zx2c4.com
+git.zx2c4.com > git clone --depth 1 https://git.zx2c4.com/wireguard-tools
+cd wireguard-tools/src
+make
+man $GOPATH/src/git.zx2c4.com/wireguard-tools/src/man/wg.8
+alias wg=$GOPATH/src/git.zx2c4.com/wireguard-tools/src/wg
+```
+
+## Setups
+
+Various test setups.
+
+### Cluster mesh
+
+A cluster is setup (default 8 nodes) and `WireGuard` is configured to
+allow all-to-all access through interface `wg0` (both ipv4 and
+ipv6). Connectivity is tested with `ping`.
+
+```
+export __nvm=10
+./wireguard.sh test mesh > /dev/null
+# Manual tests;
+./wireguard.sh test start_mesh > /dev/null
+# On a vm;
+cat /etc/wireguard/conf
+# To trace encrypted and unencrypted traffic
+tcpdump -lni eth1
+tcpdump -lni wg0
+```
+
+
+## Obsolete instructions
+
+Pre kernel-merge instructions
+
+### Usage
 
 ```
 # Use base xcluster, no k8s;
@@ -28,7 +75,7 @@ ver=0.0.20181119
 man $XCLUSTER_WORKSPACE/WireGuard-$ver/src/tools/man/wg.8
 ```
 
-## Build
+### Build
 
 ```
 ver=0.0.20181119
@@ -46,7 +93,7 @@ eval $($XCLUSTER env | grep __kobj)
 make KERNELDIR=$__kobj -j$(nproc) tools
 ```
 
-## Generate keys
+### Generate keys
 
 ```
 ver=0.0.20181119
