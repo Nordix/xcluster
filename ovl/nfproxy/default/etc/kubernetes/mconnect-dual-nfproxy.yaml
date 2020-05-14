@@ -7,7 +7,7 @@ metadata:
 spec:
   ipFamily: IPv4
   selector:
-    app: mconnect
+    app: mconnect-daemonset
   ports:
   - port: 5001
   type: LoadBalancer
@@ -22,7 +22,7 @@ metadata:
 spec:
   ipFamily: IPv6
   selector:
-    app: mconnect
+    app: mconnect-daemonset
   ports:
   - port: 5001
   type: LoadBalancer

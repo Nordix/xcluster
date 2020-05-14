@@ -18,7 +18,7 @@ export API_PUBLIC_ENDPOINT="https://192.168.1.1:8080"
 
 run_nfproxy() {
 	nfproxy -kubeconfig /etc/kubernetes/kubeconfig \
-		-ipv4clustercidr 11.0.0.0/16 -ipv6clustercidr 1100::/48 \
+		-ipv4clustercidr 11.0.0.0/16 \
 		-service-proxy-name "$SERVICE_PROXY_NAME" \
 		>> /var/log/nfproxy.log 2>&1
 }

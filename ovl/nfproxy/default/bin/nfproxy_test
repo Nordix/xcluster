@@ -1,0 +1,106 @@
+#! /bin/sh
+##
+## nfproxy_test --
+##
+##   Test script for nfproxy executed in xcluster.
+##
+## Commands;
+##
+
+prg=$(basename $0)
+dir=$(dirname $0); dir=$(readlink -f $dir)
+me=$dir/$prg
+tmp=/tmp/${prg}_$$
+test -n "$__cname" || __cname=xcluster
+
+die() {
+	echo "ERROR: $*" >&2
+	rm -rf $tmp
+	exit 1
+}
+help() {
+	grep '^##' $0 | cut -c3-
+	rm -rf $tmp
+	exit 0
+}
+test -n "$1" || help
+echo "$1" | grep -qi "^help\|-h" && help
+
+log() {
+	echo "$prg: $*" >&2
+}
+dbg() {
+	test -n "$__verbose" && echo "$prg: $*" >&2
+}
+
+cmd_tcase_check_namespaces() {
+	test_namespaces
+	tlog "$(kubectl version --short=true | grep Server)"
+}
+cmd_tcase_check_nodes() {
+	test_nodes
+}
+cmd_tcase_check_metric_server() {
+	kubectl="kubectl -n kube-system"
+	test_deployment metrics-server 180
+}
+cmd_tcase_start_mconnect_single() {
+	tcase "Start mconnect (single-stack)"
+	$kubectl apply -f /etc/kubernetes/mconnect-daemonset.yaml || tdie
+	$kubectl apply -f /etc/kubernetes/mconnect-nfproxy.yaml || tdie
+	test_daemonset mconnect-daemonset 60
+}
+cmd_tcase_start_mconnect() {
+	tcase "Start mconnect (dual-stack)"
+	$kubectl apply -f /etc/kubernetes/mconnect-daemonset-dual.yaml || tdie
+	$kubectl apply -f /etc/kubernetes/mconnect-dual-nfproxy.yaml || tdie
+	test_daemonset mconnect-daemonset 60
+}
+
+cmd_tcase_internal_mconnect_single() {
+    local adr=mconnect-nfproxy.default.svc.$__cname
+	tcase "Traffic to $adr"
+    pushv 40 20 2
+    tex do_mconnect $adr || tdie
+    popv
+}
+
+cmd_tcase_internal_mconnect() {
+	tcase "Internal Traffic"
+    pushv 40 20 2
+    tex do_mconnect mconnect-nfproxy-ipv4.default.svc.$__cname || tdie
+    tex do_mconnect mconnect-nfproxy-ipv6.default.svc.$__cname || tdie
+    popv
+}
+
+
+. /etc/profile
+. /usr/lib/xctest
+indent='  '
+
+
+# Get the command
+cmd=$1
+shift
+grep -q "^cmd_$cmd()" $0 || die "Invalid command [$cmd]"
+
+while echo "$1" | grep -q '^--'; do
+	if echo $1 | grep -q =; then
+		o=$(echo "$1" | cut -d= -f1 | sed -e 's,-,_,g')
+		v=$(echo "$1" | cut -d= -f2-)
+		eval "$o=\"$v\""
+	else
+		o=$(echo "$1" | sed -e 's,-,_,g')
+		eval "$o=yes"
+	fi
+	shift
+done
+unset o v
+long_opts=`set | grep '^__' | cut -d= -f1`
+
+# Execute command
+trap "die Interrupted" INT TERM
+cmd_$cmd "$@"
+status=$?
+rm -rf $tmp
+exit $status

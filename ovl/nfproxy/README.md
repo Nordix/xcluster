@@ -1,55 +1,30 @@
 # Xcluster/ovl - nfproxy
 
-Experiments with https://github.com/sbezverk/nfproxy
+* Experiments with https://github.com/sbezverk/nfproxy
 
+## Build
 
-## Usage from scratch
+Build nfproxy and make sure the binary is in
+"$GOPATH/src/github.com/sbezverk/nfproxy/bin/nfproxy"
 
-* Install `xcluster` v3.x.x as described in the [Quick start](https://github.com/Nordix/xcluster#quick-start).
+## Test
 
-* Verify that the installation works.
-
+Test without kube-proxy;
 ```
-./xcadmin.sh k8s_test test-template basic_dual
-```
-
-* Download and install the `bzImage` from xcluster v3.0.1 as described
-  in the release note.
-
-* Clone `xcluster` and set $XCLUSTER_OVLPATH to get the latest version
-  of this ovl
-
-```
-xclusterdir=$HOME/xcluster-clone  # Change to your preference
-mkdir -p $xclusterdir
-cd $xclusterdir
-git clone --depth 1 https://github.com/Nordix/xcluster.git
-export XCLUSTER_OVLPATH=$xclusterdir/xcluster/ovl
+log=/tmp/$USER/nfproxy-test.log
+export __cni=
+export xcluster___cni=$__cni
+XXOVLS=nfproxy ./xcadmin.sh k8s_test --no-stop test-template basic_dual > $log
+XXOVLS=nfproxy ./xcadmin.sh k8s_test --no-stop test-template basic6 > $log
+XXOVLS=nfproxy ./xcadmin.sh k8s_test --no-stop test-template basic4 > $log
 ```
 
-* Build nfproxy and make sure the binary is in "$GOPATH/src/github.com/sbezverk/nfproxy/bin/nfproxy"
-
-* Verify that the nfproxy builds ok
-
+Test with kube-proxy;
 ```
 cdo nfproxy
-./tar - | tat t
-# (output;)
-bin/
-bin/nfproxy
-etc/
-etc/init.d/
-etc/init.d/32nfproxy.rc
-etc/init.d/25nfproxy-prep.rc
+log=/tmp/$USER/nfproxy-test.log
+./nfproxy.sh test > $log
 ```
-
-* Start `xcluster` with `nfproxy`
-
-
-
-
-
-
 
 ## Usage
 

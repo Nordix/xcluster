@@ -1,4 +1,5 @@
 #! /bin/sh
+. /etc/profile
 
 export PATH="/bin:/sbin:/usr/bin:/usr/sbin"
 
@@ -10,6 +11,8 @@ die() {
 hostname | grep -Eq 'vm-[0-9]+$' || die "Invalid hostname [$(hostname)]"
 i=$(hostname | cut -d- -f2 | sed -re 's,^0+,,')
 test $i -le 200 || exit 0
+test -n "$SERVICE_PROXY_NAME" && exit 0
+
 
 f=/bin/kube-proxy
 rm -f $f

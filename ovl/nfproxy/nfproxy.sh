@@ -70,7 +70,7 @@ cmd_test() {
             test_$t
         done
     else
-        for t in basic4 basic6 basic_dual; do
+        for t in basic; do
             test_$t
         done
     fi      
@@ -83,64 +83,43 @@ cmd_test() {
 test_start() {
 	test -n "$__mode" || __mode=dual-stack
 	xcluster_prep $__mode
+	export xcluster_SERVICE_PROXY_NAME=nfproxy
+	export xcluster___cni=$__cni
 	xcluster_start nfproxy
-
 	otc 1 check_namespaces
 	otc 1 check_nodes
 	otc 1 check_metric_server
-	otc 1 start_nfproxy
+	if test "$__mode" = "dual-stack"; then
+		otc 1 start_mconnect
+	else
+		otc 1 start_mconnect_single
+	fi
 }
 
-test_basic4() {
-	basic ipv4
+test_basic() {
+	tlog "==== nfproxy; Dual-stack with kept kube-router"
+	test_start
+	otc 2 internal_mconnect
+	xcluster_stop
 }
 
 test_basic6() {
-	basic ipv6
-}
-
-test_basic_dual() {
-	tlog "=== nfproxy: Basic test on dual-stack"
-	__mode=dual-stack
-	test "$__no_start" != "yes" && test_start
-
+	tlog "==== nfproxy; Ipv6-only with kept kube-router"
+	__mode=ipv6
+	test_start
+	otc 2 internal_mconnect_single
 	xcluster_stop
 }
 
-basic() {
-	tlog "=== nfproxy: Basic test on $1"
-	__mode=$1
-	test "$__no_start" != "yes" && test_start
-
+test_basic4() {
+	tlog "==== nfproxy; Ipv4-only with kept kube-router"
+	__mode=ipv4
+	test_start
+	otc 2 internal_mconnect_single
 	xcluster_stop
 }
 
 
-cmd_otc() {
-	test -n "$__vm" || __vm=2
-	otc $__vm $@
-}
-
-##   mkimage [--tag=registry.nordix.org/cloud-native/nfproxy:latest]
-##     Create the docker image and upload it to the local registry.
-##
-cmd_mkimage() {
-	cmd_env
-	local imagesd=$($XCLUSTER ovld images)
-	$imagesd/images.sh mkimage --force --upload --strip-host --tag=$__tag $dir/image
-}
-
-##   go_build
-##     Build local go program. Output to ./image/default/bin
-##
-cmd_go_build() {
-	mkdir -p $dir/image/default/bin
-	cd $dir/go
-	GO111MODULE=on CGO_ENABLED=0 GOOS=linux go build \
-		-ldflags "-extldflags '-static' -X main.version=$(date +%F:%T)" \
-		-o ../image/default/bin/list-nodes ./cmd/list-nodes/main.go
-	strip ../image/default/bin/list-nodes
-}
 
 . $($XCLUSTER ovld test)/default/usr/lib/xctest
 indent=''

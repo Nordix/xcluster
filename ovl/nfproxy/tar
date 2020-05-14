@@ -16,12 +16,11 @@ log() {
 test -n "$1" || die "No out-file"
 
 mkdir -p $tmp
+cp -R $dir/default/* $tmp
 for s in $(echo "$SETUP" | tr ',' ' '); do
-        test -d $dir/$s || continue
-        cp -R $dir/$s/* $tmp
-        setup_copied=yes
+	test -d $dir/$s || continue
+	cp -R $dir/$s/* $tmp
 done
-test "$setup_copied" != "yes" && cp -R $dir/default/* $tmp
 
 d=$GOPATH/src/github.com/sbezverk/nfproxy
 f=$d/bin/nfproxy
