@@ -18,6 +18,11 @@ test -n "$1" || die "No out-file"
 mkdir -p $tmp
 cp -R $dir/default/* $tmp
 
+# Export system dimensions
+test -n "$__nvm" && export xcluster___nvm=$__nvm
+test -n "$__nrouters" && export xcluster___nrouters=$__nrouters
+test -n "$__ntesters" && export xcluster___ntesters=$__ntesters
+
 env | grep '^xcluster_' | sed -e 's,^xcluster_,,' | sed -e "s%=\(.*\)%='\1'%"> $tmp/etc/xcluster_env
 test -s $tmp/etc/xcluster_env || rm $tmp/etc/xcluster_env
 
