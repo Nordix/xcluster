@@ -11,8 +11,9 @@ prg=$(basename $0)
 dir=$(dirname $0); dir=$(readlink -f $dir)
 me=$dir/$prg
 tmp=/tmp/${prg}_$$
-test -n "$__cname" || __cname=xcluster
-PREFIX=1000::1
+
+. ./etc/profile
+test -n "$PREFIX" || PREFIX=1000::1
 
 die() {
 	echo "ERROR: $*" >&2

@@ -19,7 +19,7 @@ vm20() {
 	ip -6 ro replace default via $PREFIX:192.168.4.201
 }
 
-router201() {
+router() {
 	fwsetup
 	ifsetup eth1 1
 	ifsetup eth2 2
@@ -46,8 +46,8 @@ case $(hostname) in
 		vm20;;
 	vm-0*)
 		vm;;
-	vm-201)
-		router201;;
+	vm-20*)
+		router;;
 	vm-22*)
 		tester;;
 esac

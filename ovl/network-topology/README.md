@@ -24,7 +24,7 @@ A local DNS server (CoreDNS) is also setup on all VMs by this ovl.
 Generic;
 ```
 export TOPOLOGY=...
-. $(XCLUSTER ovld network-topology)/$TOPOLOGY/Envsettings
+. $($XCLUSTER ovld network-topology)/$TOPOLOGY/Envsettings
 xc mkcdrom iptools network-topology ...
 ```
 

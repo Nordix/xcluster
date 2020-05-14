@@ -12,6 +12,8 @@ export __mem201=128
 export __mem202=128
 export __mem203=128
 export __mem204=128
+test -z "$__ntesters" && export __ntesters=2
+test $__ntesters -eq 0 && export __ntesters=2
 
 if ip netns id | grep -q _xcluster; then
 	# Ensure bridges for net 3-6
