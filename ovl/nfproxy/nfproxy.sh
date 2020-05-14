@@ -70,7 +70,7 @@ cmd_test() {
             test_$t
         done
     else
-        for t in basic; do
+        for t in basic basic4 basic6; do
             test_$t
         done
     fi      
@@ -100,6 +100,8 @@ test_basic() {
 	tlog "==== nfproxy; Dual-stack with kept kube-router"
 	test_start
 	otc 2 internal_mconnect
+	otc 201 vip_routes
+	otc 201 external_mconnect
 	xcluster_stop
 }
 
