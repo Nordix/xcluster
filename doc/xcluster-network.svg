@@ -10,9 +10,9 @@
    xmlns:xlink="http://www.w3.org/1999/xlink"
    xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
    xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
-   width="733.62177"
+   width="782.62177"
    height="659.76434"
-   viewBox="0 0 733.62177 659.76434"
+   viewBox="0 0 782.62177 659.76434"
    version="1.1"
    id="SVGRoot"
    inkscape:version="0.92.3 (2405546, 2018-03-11)"
@@ -25,14 +25,14 @@
      inkscape:pageopacity="0.0"
      inkscape:pageshadow="2"
      inkscape:zoom="1"
-     inkscape:cx="308.4305"
-     inkscape:cy="348.69073"
+     inkscape:cx="122.4305"
+     inkscape:cy="348.69071"
      inkscape:document-units="px"
      inkscape:current-layer="layer1"
      showgrid="false"
-     inkscape:window-width="2004"
-     inkscape:window-height="1140"
-     inkscape:window-x="2560"
+     inkscape:window-width="1920"
+     inkscape:window-height="1080"
+     inkscape:window-x="0"
      inkscape:window-y="33"
      inkscape:window-maximized="0"
      inkscape:snap-others="false"
@@ -211,7 +211,7 @@
         <dc:format>image/svg+xml</dc:format>
         <dc:type
            rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
-        <dc:title />
+        <dc:title></dc:title>
       </cc:Work>
     </rdf:RDF>
   </metadata>
@@ -425,14 +425,14 @@
     <rect
        style="opacity:1;vector-effect:none;fill:#d1d1d0;fill-opacity:1;stroke:#000000;stroke-width:1;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:3, 3;stroke-dashoffset:0;stroke-opacity:1"
        id="rect6121"
-       width="157"
-       height="85"
-       x="656"
-       y="433"
+       width="207"
+       height="72"
+       x="655"
+       y="436"
        ry="22" />
     <text
        xml:space="preserve"
-       style="font-style:normal;font-weight:normal;font-size:18.66666603px;line-height:1.25;font-family:sans-serif;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none"
+       style="font-style:normal;font-weight:normal;font-size:14.66666698px;line-height:1.25;font-family:sans-serif;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none"
        x="667"
        y="457"
        id="text6101"><tspan
@@ -442,38 +442,40 @@
          y="457">External net</tspan><tspan
          sodipodi:role="line"
          x="667"
-         y="480.33334"
+         y="475.33334"
          id="tspan6111">192.168.2.0/24</tspan><tspan
          sodipodi:role="line"
          x="667"
-         y="503.66666"
-         id="tspan6113">2000:2::/64</tspan></text>
+         y="493.66666"
+         id="tspan6113">1000::1:192.168.2.0/120</tspan></text>
     <rect
        ry="22"
        y="526"
-       x="410"
-       height="85"
-       width="157"
+       x="376"
+       height="74"
+       width="206"
        id="rect6123"
-       style="opacity:1;vector-effect:none;fill:#d1d1d0;fill-opacity:1;stroke:#000000;stroke-width:1;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:3, 3;stroke-dashoffset:0;stroke-opacity:1" />
+       style="opacity:1;vector-effect:none;fill:#d1d1d0;fill-opacity:1;stroke:#000000;stroke-width:1;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:3, 3;stroke-dashoffset:0;stroke-opacity:1"
+       inkscape:transform-center-x="-10"
+       inkscape:transform-center-y="-2" />
     <text
        xml:space="preserve"
-       style="font-style:normal;font-weight:normal;font-size:18.66666603px;line-height:1.25;font-family:sans-serif;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none"
-       x="420"
-       y="549"
+       style="font-style:normal;font-weight:normal;font-size:14.66666698px;line-height:1.25;font-family:sans-serif;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none"
+       x="388"
+       y="548"
        id="text6105"><tspan
          sodipodi:role="line"
          id="tspan6103"
-         x="420"
-         y="549">Internal net</tspan><tspan
+         x="388"
+         y="548">Maintenance net</tspan><tspan
          sodipodi:role="line"
-         x="420"
-         y="572.33331"
+         x="388"
+         y="566.33331"
          id="tspan6115">192.168.0.0/24</tspan><tspan
          sodipodi:role="line"
-         x="420"
-         y="595.66669"
-         id="tspan6117">2000::/64</tspan></text>
+         x="388"
+         y="584.66669"
+         id="tspan6117">1000::1:192.168.0.0/120</tspan></text>
     <rect
        style="opacity:1;vector-effect:none;fill:#d1d1d0;fill-opacity:1;stroke:#000000;stroke-width:1;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:3, 3;stroke-dashoffset:0;stroke-opacity:1"
        id="rect6125"

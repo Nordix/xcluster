@@ -16,7 +16,7 @@ The default network has 3 nets. The image shows the bridges;
 
 <img src="xcluster-network.svg" alt="Figure, xcluster network" width="80%" />
 
- * Internal net - Intended mainly for control functions. All VMs shall
+ * Maintenance net - Intended mainly for control functions. All VMs shall
    be reachable via this network.  The `vm` function for open a
    terminal to a VM does a `telnet` on this net.
 
@@ -29,7 +29,8 @@ The default network has 3 nets. The image shows the bridges;
    "internet".
 
 The base image only setup the Internal net on the VMs. The other
-networks are configured by overlays.
+networks are configured by overlays please see
+[ovl/network-topology](../ovl/network-topology/).
 
 The addresses are assigned from the hostname of the VM. The last digit
 in the address is the number from the hostname, e.g. 1 for

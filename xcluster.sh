@@ -62,6 +62,7 @@ dbg() {
 	test -n "$__verbose" && echo "$prg: $*" >&2
 }
 
+test -n "$xcluster_PREFIX" || xcluster_PREFIX=1000::1
 
 # This function is only here to be replaced in a $XCLUSTER_HOOK.
 # It should contain custom preparations for different commands.
@@ -192,7 +193,7 @@ cmd_nssetup() {
 	ip -6 ro add $__ipv6_prefix$ipv4_host/128 dev host$1
 	ip -6 ro add default via $__ipv6_prefix$ipv4_host
 	iptables -t nat -A POSTROUTING -s 192.168.0.0/24 -o host$1 -j MASQUERADE
-	ip6tables -t nat -A POSTROUTING -s 2000::/64 -o host$1 -j MASQUERADE
+	ip6tables -t nat -A POSTROUTING -s $xcluster_PREFIX:192.168.0.0/120 -o host$1 -j MASQUERADE
 	echo 1 > /proc/sys/net/ipv4/conf/all/forwarding
 	echo 1 > /proc/sys/net/ipv6/conf/all/forwarding
 
@@ -258,8 +259,7 @@ cmd_br_setup() {
 
 	ip link set $dev up
 	ip addr add 192.168.$i.250/24 dev $dev
-	ip -6 addr add 2000:$i::250/64 dev $dev
-	ip -6 addr add 2000:$i::192.168.$i.250/64 dev $dev
+	ip -6 addr add $xcluster_PREFIX:192.168.$i.250/120 dev $dev
 }
 
 ##  Build functions;
