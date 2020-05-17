@@ -97,6 +97,9 @@ test_basic6() {
 }
 
 test_basic_dual() {
+	test_basic $@
+}
+test_basic() {
 	tlog "=== test-template: Basic test on dual-stack"
 	__mode=dual-stack
 	test "$__no_start" != "yes" && test_start
@@ -112,7 +115,7 @@ test_basic_dual() {
 	otc 201 set_vip_routes
 	otc 201 "external_mconnect ipv4"
 	otc 201 "external_mconnect ipv6"
-
+	otc 1 outgoing_connect
 	xcluster_stop
 }
 
@@ -132,6 +135,7 @@ basic() {
 	otc 1 pod_nslookup
 	otc 201 set_vip_routes
 	otc 201 "external_mconnect $1"
+	otc 1 "outgoing_connect $1"
 
 	xcluster_stop
 }

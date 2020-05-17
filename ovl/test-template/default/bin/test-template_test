@@ -12,6 +12,7 @@ dir=$(dirname $0); dir=$(readlink -f $dir)
 me=$dir/$prg
 tmp=/tmp/${prg}_$$
 test -n "$__cname" || __cname=xcluster
+test -n "$PREFIX" || PREFIX=1000::1
 
 die() {
 	echo "ERROR: $*" >&2
@@ -85,7 +86,7 @@ cmd_tcase_internal_mconnect() {
 cmd_tcase_set_vip_routes() {
 	tcase "Set routes to the VIP address via vm-002"
 	ip ro replace 10.0.0.0/24 via 192.168.1.2 || tdie
-	ip -6 ro replace 1000::/120 via 1000::1:192.168.1.2 || tdie
+	ip -6 ro replace 1000::/120 via $PREFIX:192.168.1.2 || tdie
 }
 cmd_tcase_external_mconnect() {
 	local adr=10.0.0.0
@@ -137,6 +138,19 @@ cmd_tcase_pod_nslookup() {
 		$kubectl exec $pod -- nslookup kubernetes 2>&1 || tdie
 	done
 	test -n "$pod" || tdie "No PODs (or nodes) were found"
+}
+
+cmd_tcase_outgoing_connect() {
+	local ips="192.168.1.201 [$PREFIX:192.168.1.201]"
+	test "$1" = "ipv4" && ips="192.168.1.201"
+	test "$1" = "ipv6" && ips="[$PREFIX:192.168.1.201]"
+	tcase "Outgoing connect to; $ips"
+	local ip
+	for ip in $ips; do
+		kubectl_exec app=alpine -- ping -c1 -W1 $ip || tdie "Ping $ip"
+		kubectl_exec app=alpine -- wget -qO- http://$ip/cgi-bin/info \
+			| ogrep vm-201 || tdie "http://$ip/cgi-bin/info"
+	done
 }
 
 . /etc/profile
