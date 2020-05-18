@@ -4,6 +4,17 @@
 Kubernetes in `xcluster`. Cri-o has not yet any binary release so this
 ovl builds `cri-o` from source.
 
+## Cri-o static release bundle
+
+Cri-o have a binary release since v1.18. It can't be downloaded with
+"curl" so follow the link and store it in $ARCHIVE.
+
+```
+ver=v1.18.1
+ar=crio-$ver.tar.gz
+mv $HOME/Downloads/artifacts_$ar $ARCHIVE/$ar
+```
+
 ## Build
 
 cri-o;

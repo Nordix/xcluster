@@ -14,22 +14,32 @@ log() {
 }
 
 test -n "$1" || die "No out-file"
-
 mkdir -p $tmp/bin
-criod=$GOPATH/src/github.com/cri-o/cri-o
-for n in crio pinns crio-status; do
-	f=$criod/bin/$n
+
+ver=v1.18.1
+ar=crio-$ver.tar.gz
+if test -r $ARCHIVE/$ar; then
+	log "Using cri-o binary release $ver"
+	tar -C $tmp --strip-components=1 -xf $ARCHIVE/$ar crio-$ver/bin
+	mv $tmp/bin/crio-static $tmp/bin/crio
+	mv $tmp/bin/crio-status-static $tmp/bin/crio-status
+else
+	criod=$GOPATH/src/github.com/cri-o/cri-o
+	for n in crio pinns crio-status; do
+		f=$criod/bin/$n
+		test -x $f || die "Not executable [$f]"
+		cp $f $tmp/bin
+	done
+
+	f=$ARCHIVE/runc.amd64
+	test -x $f || die "Not executable [$f]"
+	cp $f $tmp/bin/runc
+
+	f=$GOPATH/src/github.com/containers/conmon/bin/conmon
 	test -x $f || die "Not executable [$f]"
 	cp $f $tmp/bin
-done
+fi
 
-f=$ARCHIVE/runc.amd64
-test -x $f || die "Not executable [$f]"
-cp $f $tmp/bin/runc
-
-f=$GOPATH/src/github.com/containers/conmon/bin/conmon
-test -x $f || die "Not executable [$f]"
-cp $f $tmp/bin
 ver=v1.16.1
 ar=$ARCHIVE/crictl-$ver-linux-amd64.tar.gz
 test -r $ar || die "Not readable [$ar]"
