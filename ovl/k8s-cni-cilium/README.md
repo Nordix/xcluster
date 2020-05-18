@@ -41,7 +41,7 @@ helm template cilium \
 Check http://docs.cilium.io/en/stable/gettingstarted/k8s-install-default/
 
 ```
-ver=1.7.0
+ver=1.7.4
 curl https://raw.githubusercontent.com/cilium/cilium/$ver/install/kubernetes/quick-install.yaml > quick-install-$ver.yaml
 ```
 

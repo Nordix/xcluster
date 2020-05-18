@@ -15,6 +15,9 @@ test $i -le 200 || exit 0
 
 sed -i -e "s/,SCTPSupport=true//" /etc/init.d/31kube-master.rc
 
+# Cilium does not masquerade outgoing ipv6
+ip6tables -t nat -A POSTROUTING -s 1100::/48 ! -d 1100::/48 -j MASQUERADE
+
 if test "$xcluster_disable_proxy" = "yes"; then
 	sed -i -e '/monitor run_kube_proxy/d' /etc/init.d/32kube-node.rc
 	sed -i -e 's,mode: "ipvs",mode: "cilium"'

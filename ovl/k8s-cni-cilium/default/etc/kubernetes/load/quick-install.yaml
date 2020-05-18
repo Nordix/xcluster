@@ -75,6 +75,10 @@ data:
   bpf-ct-global-tcp-max: "524288"
   bpf-ct-global-any-max: "262144"
 
+  # bpf-policy-map-max specified the maximum number of entries in endpoint
+  # policy map (per endpoint)
+  bpf-policy-map-max: "16384"
+
   # Pre-allocation of map entries allows per-packet latency to be reduced, at
   # the expense of up-front memory allocation for the entries in the maps. The
   # default value below will minimize memory usage in the default installation;
@@ -139,6 +143,10 @@ data:
   enable-host-reachable-services: "false"
   enable-external-ips: "false"
   enable-node-port: "false"
+  node-port-bind-protection: "true"
+  enable-auto-protect-node-port-range: "true"
+  # Chaining mode is set to portmap, enable health checking
+  enable-endpoint-health-checking: "true"
   enable-well-known-identities: "false"
   enable-remote-node-identity: "true"
 ---
@@ -393,7 +401,7 @@ spec:
               key: custom-cni-conf
               name: cilium-config
               optional: true
-        image: "docker.io/cilium/cilium:v1.7.1"
+        image: "docker.io/cilium/cilium:v1.7.4"
         imagePullPolicy: IfNotPresent
         lifecycle:
           postStart:
@@ -456,7 +464,7 @@ spec:
               key: wait-bpf-mount
               name: cilium-config
               optional: true
-        image: "docker.io/cilium/cilium:v1.7.1"
+        image: "docker.io/cilium/cilium:v1.7.4"
         imagePullPolicy: IfNotPresent
         name: clean-cilium-state
         securityContext:
@@ -633,7 +641,7 @@ spec:
               key: identity-allocation-mode
               name: cilium-config
               optional: true
-        image: "docker.io/cilium/operator:v1.7.1"
+        image: "docker.io/cilium/operator:v1.7.4"
         imagePullPolicy: IfNotPresent
         name: cilium-operator
         livenessProbe:
