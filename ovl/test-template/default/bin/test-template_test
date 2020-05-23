@@ -147,7 +147,7 @@ cmd_tcase_outgoing_connect() {
 	tcase "Outgoing connect to; $ips"
 	local ip
 	for ip in $ips; do
-		kubectl_exec app=alpine -- ping -c1 -W1 $ip || tdie "Ping $ip"
+		tex kubectl_exec app=alpine -- ping -c1 -W1 $ip || tdie "Ping $ip"
 		kubectl_exec app=alpine -- wget -qO- http://$ip/cgi-bin/info \
 			| ogrep vm-201 || tdie "http://$ip/cgi-bin/info"
 	done
