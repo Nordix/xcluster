@@ -23,18 +23,22 @@ fe00::0 ip6-localnet
 ff00::0 ip6-mcastprefix
 ff02::1 ip6-allnodes
 ff02::2 ip6-allrouters
+
+192.168.0.250 host
+$PREFIX:192.168.0.250 ip6-host
+
 EOF
 
 for n in $(seq 1 $__nvm); do
 	printf '192.168.1.%d vm-%03d\n' $n $n >> /etc/hosts
-	printf "$PREFIX:192.168.1.%d ip6-vm-%03d\n" $n $n >> /etc/hosts
+	printf "$PREFIX:192.168.1.%d vm-%03d\n" $n $n >> /etc/hosts
 done
 
 if test -n "$__ntesters"; then
 	last=$((220 + __ntesters))
 	for n in $(seq 221 $last); do
 		printf '192.168.2.%d vm-%03d\n' $n $n >> /etc/hosts
-		printf "$PREFIX:192.168.2.%d ip6-vm-%03d\n" $n $n >> /etc/hosts
+		printf "$PREFIX:192.168.2.%d vm-%03d\n" $n $n >> /etc/hosts
 	done
 fi
 
