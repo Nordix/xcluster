@@ -39,9 +39,11 @@ cmd_env() {
 }
 
 ##   docker_flush
-##     Remove ALL containers and images form docker.
+##     Remove ALL containers and images from docker.
 ##
 cmd_docker_flush() {
+	test "$__really" = "yes" || \
+		die "THIS WILL WIPE YOUR ENTIRE DOCKER. Invoke with --really"
 	docker rm -f $(docker ps -a -q)
 	docker rmi -f $(docker images -q)
 }
