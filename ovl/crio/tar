@@ -16,14 +16,15 @@ log() {
 test -n "$1" || die "No out-file"
 mkdir -p $tmp/bin
 
-ver=v1.18.1
-ar=crio-$ver.tar.gz
+test -n "$__criover" || __criover=crio-v1.18.1
+ar=$__criover.tar.gz
 if test -r $ARCHIVE/$ar; then
-	log "Using cri-o binary release $ver"
-	tar -C $tmp --strip-components=1 -xf $ARCHIVE/$ar crio-$ver/bin
+	log "Using cri-o binary release $__criover"
+	tar -C $tmp --strip-components=1 -xf $ARCHIVE/$ar $__criover/bin
 	mv $tmp/bin/crio-static $tmp/bin/crio
 	mv $tmp/bin/crio-status-static $tmp/bin/crio-status
 else
+	log "Using local built cri-o"
 	criod=$GOPATH/src/github.com/cri-o/cri-o
 	for n in crio pinns crio-status; do
 		f=$criod/bin/$n
