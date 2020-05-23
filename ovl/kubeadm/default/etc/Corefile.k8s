@@ -1,0 +1,9 @@
+.:53 {
+    kubernetes cluster.local {
+      endpoint https://192.168.1.1:6443
+      kubeconfig /etc/kubernetes/admin.conf kubernetes-admin@kubernetes
+    }
+    forward . 192.168.0.250:10053
+    cache 3000
+    log stdout
+}

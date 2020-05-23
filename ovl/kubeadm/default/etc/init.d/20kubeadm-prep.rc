@@ -1,0 +1,71 @@
+#! /bin/sh
+export PATH="/bin:/sbin:/usr/bin:/usr/sbin"
+
+die() {
+	echo "$@"
+	exit 1
+}
+
+hostname | grep -Eq 'vm-[0-9]+$' || die "Invalid hostname [$(hostname)]"
+i=$(hostname | cut -d- -f2 | sed -re 's,^0+,,')
+test $i -le 200 || exit 0
+
+echo "export KUBECONFIG=/etc/kubernetes/admin.conf" >> /etc/profile
+echo "export __cname=cluster.local" >> /etc/profile
+. /etc/profile
+
+# Work around for bad install of dropbear
+test -r /usr/bin/dbclient || ln /bin/dbclient /usr/bin/dbclient
+
+mount -t tmpfs tmpfs /sys/fs/cgroup
+for d in cpuset memory; do
+	mkdir /sys/fs/cgroup/$d
+	mount -t cgroup cgroup /sys/fs/cgroup/$d
+done
+mount --make-rshared /
+
+modprobe br_netfilter
+echo 1 > /proc/sys/net/ipv4/ip_forward
+mkdir -p /etc/kubernetes/manifests
+printf '35f15062-7e2b-11e9-b640-0000000100%02x\n' $i > /etc/machine-id
+
+# Disable "normal" k8s start scripts;
+for f in 31kube-master.rc; do
+	test -x /etc/init.d/$f || continue
+	chmod a-x /etc/init.d/$f
+done
+
+CRI_OPTS="--container-runtime=remote --container-runtime-endpoint=unix:///var/run/crio/crio.sock"
+
+export KUBECONFIG=/etc/kubernetes/kubelet.conf
+run_kubelet() {
+	local log=/var/log/kubelet.log
+	local bootstrap=/etc/kubernetes/bootstrap-kubelet.conf
+	if ! test -r $KUBECONFIG; then
+		if ! test -r /etc/kubernetes/bootstrap-kubelet.conf; then
+			echo "Waiting for config..." >> $log
+			return
+		fi
+	fi
+	kubelet --node-ip=192.168.1.$i $CRI_OPTS \
+		--register-node=true --kubeconfig $KUBECONFIG \
+		--network-plugin=cni --cluster-domain=cluster.local \
+		--pod-manifest-path /etc/kubernetes/manifests \
+		--cluster-dns=192.168.1.1 \
+		--bootstrap-kubeconfig /etc/kubernetes/bootstrap-kubelet.conf \
+		--runtime-cgroups=/systemd/system.slice \
+		--kubelet-cgroups=/systemd/system.slice > $log 2>&1
+}
+
+monitor() {
+	while true; do
+		logger -t K8s-monitor "STARTING: $1"
+		$1
+		logger -t K8s-monitor "DIED: $1"
+		sleep 5
+	done
+}
+
+(monitor run_kubelet) > /dev/null 2>&1 &
+
+

@@ -1,0 +1,147 @@
+#! /bin/sh
+##
+## kubeadm_test --
+##
+##   Test script for kubeadm executed in xcluster.
+##
+## Commands;
+##
+
+prg=$(basename $0)
+dir=$(dirname $0); dir=$(readlink -f $dir)
+me=$dir/$prg
+tmp=/tmp/${prg}_$$
+
+die() {
+	echo "ERROR: $*" >&2
+	rm -rf $tmp
+	exit 1
+}
+help() {
+	grep '^##' $0 | cut -c3-
+	rm -rf $tmp
+	exit 0
+}
+test -n "$1" || help
+echo "$1" | grep -qi "^help\|-h" && help
+
+log() {
+	echo "$prg: $*" >&2
+}
+dbg() {
+	test -n "$__verbose" && echo "$prg: $*" >&2
+}
+
+cmd_tcase_check_namespaces() {
+	test_namespaces
+}
+
+check_nodes() {
+	kubectl get nodes -o json | jq -r '.items[].metadata.name' | tee $tmp/out
+	local i h
+	for i in $(seq 1 $1); do
+		h=$(printf "vm-%03d" $i)
+		grep $h $tmp/out || return 1
+	done
+	return 0
+}
+cmd_tcase_check_nodes() {
+	tcase "Check nodes vms=$1"
+	test -n "$1" || tdie "Don't know numbers of vms"
+	mkdir -p $tmp
+	tex "check_nodes $1"
+}
+cmd_tcase_check_nodes_ready() {
+	test_nodes
+}
+
+cmd_tcase_pull_images() {
+	tcase "Pull k8s images"
+	test -n "$1" || tdie "No k8s version"
+	kubeadm config images pull --kubernetes-version $1 || tdie
+}
+
+cmd_tcase_init_dual_stack() {
+	tcase "Init dual-stack"
+	test -n "$1" || tdie "No k8s version"
+	sed -i -e "s,v1.17.0,$1," /etc/kubeadm-config.yaml
+	kubeadm init --config /etc/kubeadm-config.yaml 2>&1 || tdie
+}
+
+cmd_tcase_init_ipv4() {
+	tcase "Init ipv4-only"
+	test -n "$1" || tdie "No k8s version"
+	kubeadm init --token=11n1ns.vneshg4ikfoyiy09 --kubernetes-version $1 \
+		--pod-network-cidr 11.0.0.0/16 2>&1 || tdie
+}
+
+cmd_tcase_join() {
+	tcase "Join node $(hostname)"
+	kubeadm join 192.168.1.1:6443 --token 11n1ns.vneshg4ikfoyiy09 \
+		--discovery-token-unsafe-skip-ca-verification 2>&1 || tdie
+	cat > /etc/resolv.conf <<EOF
+nameserver 192.168.1.1
+options use-vc
+EOF
+	return 0
+}
+
+cmd_tcase_rm_coredns_deployment() {
+	tcase "Delete the coredns deployment"
+	kubectl delete -n kube-system deployment coredns || tdie
+	killall coredns
+	coredns -conf /etc/Corefile.k8s 2>&1 > /var/log/coredns.log &
+}
+
+cmd_tcase_coredns_k8s() {
+	tcase "Restart coredns with k8s support"
+	killall coredns
+	coredns -conf /etc/Corefile.k8s 2>&1 > /var/log/coredns.log &
+}
+
+cmd_tcase_install_cni() {
+	local cni f
+	for f in xcluster-cni.yaml calico.yaml quick-install.yaml \
+		kube-flannel.yaml weave.yaml None; do
+		cni=/etc/kubernetes/load/$f
+		test -r $cni && break
+	done
+	tcase "InstallCNI-plugin; $f"
+	test -r $cni || tdie "No CNI-plugin found"
+	kubectl apply -f $cni || tdie
+}
+cmd_tcase_untaint_master() {
+	tcase "Untaint the master"
+	kubectl taint node vm-001 node-role.kubernetes.io/master:NoSchedule- || tdie
+}
+
+. /etc/profile
+. /usr/lib/xctest
+indent='  '
+
+
+# Get the command
+cmd=$1
+shift
+grep -q "^cmd_$cmd()" $0 || die "Invalid command [$cmd]"
+
+while echo "$1" | grep -q '^--'; do
+	if echo $1 | grep -q =; then
+		o=$(echo "$1" | cut -d= -f1 | sed -e 's,-,_,g')
+		v=$(echo "$1" | cut -d= -f2-)
+		eval "$o=\"$v\""
+	else
+		o=$(echo "$1" | sed -e 's,-,_,g')
+		eval "$o=yes"
+	fi
+	shift
+done
+unset o v
+long_opts=`set | grep '^__' | cut -d= -f1`
+
+# Execute command
+trap "die Interrupted" INT TERM
+cmd_$cmd "$@"
+status=$?
+rm -rf $tmp
+exit $status

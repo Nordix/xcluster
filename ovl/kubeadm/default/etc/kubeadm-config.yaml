@@ -1,0 +1,46 @@
+apiVersion: kubeadm.k8s.io/v1beta2
+bootstrapTokens:
+- groups:
+  - system:bootstrappers:kubeadm:default-node-token
+  token: 11n1ns.vneshg4ikfoyiy09
+  ttl: 24h0m0s
+  usages:
+  - signing
+  - authentication
+kind: InitConfiguration
+localAPIEndpoint:
+  advertiseAddress: 192.168.1.1
+  bindPort: 6443
+nodeRegistration:
+  criSocket: /var/run/crio/crio.sock
+  name: vm-001
+  taints:
+  - effect: NoSchedule
+    key: node-role.kubernetes.io/master
+---
+apiServer:
+  timeoutForControlPlane: 4m0s
+apiVersion: kubeadm.k8s.io/v1beta2
+certificatesDir: /etc/kubernetes/pki
+clusterName: kubernetes
+controllerManager: {}
+dns:
+  type: CoreDNS
+etcd:
+  local:
+    dataDir: /var/lib/etcd
+featureGates:
+  IPv6DualStack: true
+imageRepository: k8s.gcr.io
+kind: ClusterConfiguration
+kubernetesVersion: %k8sver%
+networking:
+  dnsDomain: cluster.local
+  podSubnet: "11.0.0.0/16,1100::/48"
+  serviceSubnet: "12.0.0.0/16,fd00:4000::/112"
+scheduler: {}
+---
+apiVersion: kubeproxy.config.k8s.io/v1alpha1
+kind: KubeProxyConfiguration
+mode: ipvs
+nodePortAddresses: ["127.0.0.1/32","::1/128"]

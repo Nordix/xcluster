@@ -1,0 +1,62 @@
+#! /bin/sh
+# NOTE: A common pattern is to specify "-" (stdout) as out-file,
+#  so there must be NO log printouts to stdout!
+
+dir=$(dirname $0); dir=$(readlink -f $dir)
+tmp=/tmp/$USER/xcluster_$$
+die() {
+	echo "ERROR: $*" >&2
+	rm -rf $tmp
+	exit 1
+}
+log() {
+	echo "INFO: $*" >&2
+}
+
+test -n "$1" || die "No out-file"
+mkdir -p $tmp/sbin $tmp/bin
+test -d $dir/default && cp -R $dir/default/* $tmp
+
+# Some binaries can't be replaced by BusyBox applets
+f=/bin/kmod
+test -x $f || die "Not executable [$f]"
+cp $f $tmp/sbin/modprobe
+f=/usr/bin/find
+test -x $f || die "Not executable [$f]"
+cp $f $tmp/bin/find
+
+jq=$(which jq)
+test -n "$jq" && cp $jq $tmp/bin
+
+
+test -n "$KUBERNETESD" || die 'Not set [$KUBERNETESD]'
+mkdir -p $tmp/bin
+for n in kubectl kubelet kubeadm; do
+	f=$KUBERNETESD/$n
+	test -x $f || die "Not executable [$f]"
+	cp $f $tmp/bin
+done
+
+# Custom kubeadm
+test -n "$KUBEADM" -a -x "$KUBEADM" && cp $KUBEADM $tmp/bin
+
+k8sver=$($KUBERNETESD/kubeadm version -o short)
+sed -i -e "s,%k8sver%,$k8sver," $tmp/etc/kubeadm-config.yaml
+
+mkdir -p $tmp/etc/ssl/certs
+cp /etc/ssl/certs/ca-certificates.crt $tmp/etc/ssl/certs/
+
+f=$ARCHIVE/assign-lb-ip.xz
+if test -r $f; then
+	xz -dc $f > $tmp/bin/assign-lb-ip
+	chmod a+x $tmp/bin/assign-lb-ip
+else
+	log "Not readable [$f]"
+fi
+
+$XCLUSTER cplib --dest=$tmp $tmp/bin/*
+
+cd $tmp
+tar cf "$1" *
+cd - > /dev/null
+rm -rf $tmp
