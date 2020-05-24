@@ -112,6 +112,10 @@ download() {
 			ar=$n-$v.tar.bz2
 			u=$netfilter_url/$n/files/$ar;;
 	esac
+	if test "$__dryrun" = "yes"; then
+		echo $ar
+		return 0
+	fi
 	if test -r $ar; then
 		test "$__quiet" = "yes" || echo "Already downloaded [$ar]"
 	else

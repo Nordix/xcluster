@@ -37,7 +37,7 @@ dbg() {
 ##
 cmd_env() {
 	test -n "$__corednsver" || __corednsver=1.6.7
-	test -n "$__k8sver" || __k8sver=v1.17.2
+	test -n "$__k8sver" || __k8sver=v1.18.3
 	test -n "$__mconnectver" || __mconnectver=v2.0
 	test -n "$GOPATH" || export GOPATH=$HOME/go
 	test -n "$ARCHIVE" || ARCHIVE=$HOME/Downloads
@@ -232,10 +232,13 @@ cmd_build_base() {
 ##     Extend a base $XCLUSTER_WORKSPACE for use with with K8s.
 cmd_k8s_archives() {
 	cmd_env
-	echo $ARCHIVE/coredns_${__corednsver}_linux_amd64.tgz
+	echo $ARCHIVE/xcluster-cni-image.tar.xz
+	echo $ARCHIVE/cni-plugins-linux-amd64-v0.8.2.tgz
+	echo $ARCHIVE/etcd-v3.3.10-linux-amd64.tar.gz
 	echo $ARCHIVE/kubernetes-server-$__k8sver-linux-amd64.tar.gz
 	echo $ARCHIVE/mconnect-$__mconnectver.gz
 	echo $ARCHIVE/xcluster-cache.tar
+	echo $ARCHIVE/assign-lb-ip.xz
 }
 
 cmd_k8s_workspace() {
@@ -388,7 +391,7 @@ cmd_release() {
 	T=$tmp/xcluster
 	mkdir -p $T
 	cp -R $d/* $T
-	rm -rf $T/.git
+	rm -rf $T/.git $T/workspace
 
 	cmd_mkworkspace $T/workspace
 

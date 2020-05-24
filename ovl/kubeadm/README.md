@@ -227,4 +227,6 @@ Examples;
 Install and leave the cluster running;
 ```
 ./kubeadm.sh test --cni=cilium --no-stop install > $log
+# Or;
+./kubeadm.sh test --cni=weave --no-stop install_ipv4 > $log
 ```
