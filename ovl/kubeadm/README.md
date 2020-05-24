@@ -9,7 +9,7 @@ installation tool for Kubernetes.
 
 Dependencies;
 
-* Local private docker registry ([ovl/private-reg](../ovl/private-reg))
+* Local private docker registry ([ovl/private-reg](../private-reg))
 * K8s server binaries (can be found via the
   [changelog](https://github.com/kubernetes/kubernetes/tree/master/CHANGELOG))
 * Some executables are taken from the host; `kmod`, `modprobe`, `find`, `jq`
@@ -128,7 +128,7 @@ ls /opt/cni/bin/
 
 
 
-The "normal" `xcluster` CoreDNS is used but knows nothing about
+The internal `xcluster` CoreDNS is used but knows nothing about
 K8s. Delete the K8s coredns deployment and re-configure and
 re-start the local CoreDNS;
 
@@ -176,7 +176,7 @@ can join.
 ```
 vm 2
 # On vm-002
-kubeadm init --token=11n1ns.vneshg4ikfoyiy09 --kubernetes-version $__k8sver --pod-network-cidr 11.0.0.0/16
+kubeadm join 192.168.1.1:6443 --token 11n1ns.vneshg4ikfoyiy09 --discovery-token-unsafe-skip-ca-verification
 export KUBECONFIG=/etc/kubernetes/kubelet.conf
 kubectl get nodes
 killall coredns
@@ -212,7 +212,7 @@ nslookup kubernetes
 ```
 
 
-## Automatic Tests
+## Automatic Tests or installation
 
 Prepare as described above.
 
@@ -222,4 +222,9 @@ Examples;
 ./kubeadm.sh test > $log  # Default; --cni=xcluster test_template
 ./kubeadm.sh test --cni=cilium test_template > $log
 ./kubeadm.sh test --cni=weave test_template4 > $log
+```
+
+Install and leave the cluster running;
+```
+./kubeadm.sh test --cni=cilium --no-stop install > $log
 ```
