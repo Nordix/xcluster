@@ -36,7 +36,6 @@ dbg() {
 ##    Print environment.
 ##
 cmd_env() {
-
 	test -n "$__nvm" || __nvm=4
 	test -n "$__k8sver" || __k8sver=v1.18.2
 	export __k8sver
@@ -93,6 +92,7 @@ test_start() {
 	cmd_cache_images 2>&1
 	export __image=$XCLUSTER_WORKSPACE/xcluster/hd.img
 	unset BASEOVLS
+	unset XOVLS
 	xcluster_start xnet crio images iptools kubeadm private-reg k8s-cni-$__cni $@
 }
 
@@ -148,26 +148,30 @@ test_install_ipv4() {
 }
 
 test_test_template() {
-	__no_stop=yes
+	push __no_stop yes
 	test_install test-template mconnect
+	pop __no_stop
 	subtest test-template basic_dual
 }
 
 test_test_template4() {
-	__no_stop=yes
+	push __no_stop yes
 	test_install_ipv4 test-template mconnect
+	pop __no_stop
 	subtest test-template basic4
 }
 
 test_mserver() {
-	__no_stop=yes
+	push __no_stop yes
 	test_install mserver mconnect
+	pop __no_stop
 	subtest mserver basic_dual
 }
 
 test_mserver4() {
-	__no_stop=yes
+	push __no_stop yes
 	test_install_ipv4 mserver mconnect
+	pop __no_stop
 	subtest mserver basic4
 }
 
@@ -176,7 +180,7 @@ subtest() {
 	shift
 	local x=$($XCLUSTER ovld $ovl)/${ovl}.sh
 	test -x $x || tdie "Not executable [$x]"
-	$x test --cluster-domain=cluster.local --no-start $@
+	$x test --cluster-domain=cluster.local --no-start --no-stop=$__no_stop $@
 }
 
 ##   cache_images

@@ -342,6 +342,7 @@ cmd_k8s_test() {
 		export XCTEST_HOOK=$($XCLUSTER ovld k8s-xcluster)/xctest-hook
 		export __nvm=5
 		export __mem=1536
+		export __cni
 		export XOVLS="k8s-cni-$__cni private-reg $XXOVLS"
 	else
 		# Test on "normal" xcluster
