@@ -29,7 +29,7 @@ spec:
         image: registry.nordix.org/cloud-native/ncat:v0.1
         ports:
         - containerPort: 5001
-      - image: registry.nordix.org/cloud-native/mserver:v1.0
+      - image: registry.nordix.org/cloud-native/mserver:latest
         name: mserver
         env:
         - name: NO_SERVERS

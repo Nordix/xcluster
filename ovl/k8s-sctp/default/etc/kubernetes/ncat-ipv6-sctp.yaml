@@ -31,7 +31,7 @@ spec:
         ports:
         - containerPort: 5001
         command: ["/ncat", "-nkle", "/hostname", "--sctp", "5001"]
-      - image: registry.nordix.org/cloud-native/mserver:v1.0
+      - image: registry.nordix.org/cloud-native/mserver:latest
         name: mserver
         env:
         - name: NO_SERVERS

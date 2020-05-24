@@ -67,7 +67,7 @@ cmd_test() {
             test_$t
         done
     else
-        for t in basic4 basic6 basic_dual; do
+        for t in basic4 basic6 basic; do
             test_$t
         done
     fi      
@@ -85,10 +85,6 @@ test_basic6() {
 	basic46 ipv6
 }
 
-test_basic_dual() {
-	basic_dual
-}
-
 basic46() {
 	tlog "=== k8s-sctp: Basic test on $1"
 
@@ -97,7 +93,6 @@ basic46() {
 
 	otc 1 check_namespaces
 	otc 1 check_nodes
-	otc 2 check_coredns
 	otc 2 "start_ncat $1"
 	otc 2 check_ncat
 	otc 2 "nslookup ncat-$1-sctp.default.svc.xcluster"
@@ -109,7 +104,7 @@ basic46() {
 	xcluster_stop
 }
 
-basic_dual() {
+test_basic() {
 	tlog "=== k8s-sctp: Basic test on dual-stack"
 
 	xcluster_prep dual-stack
@@ -117,7 +112,6 @@ basic_dual() {
 
 	otc 1 check_namespaces
 	otc 1 check_nodes
-	otc 2 check_coredns
 	otc 2 "start_ncat dual-stack"
 	otc 2 check_ncat
 	otc 2 "nslookup ncat-ipv4-sctp.default.svc.xcluster"
