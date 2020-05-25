@@ -30,6 +30,7 @@ mount --make-rshared /
 echo "export KUBECONFIG=/etc/kubernetes/kubeconfig" >> /etc/profile
 mkdir -p /var/lib/kubelet
 
+echo 1 > /proc/sys/net/ipv4/ip_forward
 ip link add name cbr0 type bridge
 ip link set dev cbr0 up
 

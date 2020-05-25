@@ -32,6 +32,7 @@ echo 'alias images="crictl --runtime-endpoint=unix:///var/run/crio/crio.sock ima
 echo "export KUBECONFIG=/etc/kubernetes/kubeconfig" >> /etc/profile
 mkdir -p /var/lib/kubelet
 
+echo 1 > /proc/sys/net/ipv6/conf/all/forwarding
 ip link add name cbr0 type bridge
 ip link set dev cbr0 up
 rm -f /etc/cni/net.d/bridge.conf
