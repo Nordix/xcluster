@@ -330,17 +330,20 @@ cmd_k8s_build_images() {
 
 }
 
-##   k8s_test [--cni=[xcluster|calico|cilium|weave|flannel]] \
+##   k8s_test [--cni=[xcluster|calico|cilium|weave|flannel]] --k8sver=v1.18.3 \
 ##     [--list] [--no-stop] <ovl> [args]
 ##     Execute k8s test with xcluster.
 ##
 cmd_k8s_test() {
 	test -n "$1" || die "No ovl to test"
 	test -n "$XCLUSTER" || die 'Not set [$XCLUSTER]'
+	cmd_env
 	eval $($XCLUSTER env | grep XCLUSTER_HOME)
 	if test -n "$__cni"; then
 		# Test with k8s-xcluster;
-		export __image=$XCLUSTER_HOME/hd-k8s-xcluster.img
+		__image=$XCLUSTER_HOME/hd-k8s-xcluster-$__k8sver.img
+		test -r $__image || $XCLUSTER_HOME/hd-k8s-xcluster.img
+		export __image
 		test -r $__image || die "Not readable [$__image]"
 		export XCTEST_HOOK=$($XCLUSTER ovld k8s-xcluster)/xctest-hook
 		export __nvm=5
@@ -349,7 +352,9 @@ cmd_k8s_test() {
 		export XOVLS="k8s-cni-$__cni private-reg $XXOVLS"
 	else
 		# Test on "normal" xcluster
-		export __image=$XCLUSTER_HOME/hd-k8s.img
+		__image=$XCLUSTER_HOME/hd-k8s-$__k8sver.img
+		test -r $__image || __image=$XCLUSTER_HOME/hd-k8s.img
+		export __image
 		test -r $__image || die "Not readable [$__image]"
 		unset XCTEST_HOOK
 		export __nvm=4
