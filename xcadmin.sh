@@ -425,7 +425,7 @@ cmd_mkworkspace() {
 	H=$W/xcluster
 	mkdir -p $H
 	for n in bzImage cache hd.img base-libs.txt; do
-		cp -r $XCLUSTER_HOME/$n $H
+		cp -Lr $XCLUSTER_HOME/$n $H
 	done
 	chmod 444 $H/hd.img
 	cat > $H/dns-spoof.txt <<EOF

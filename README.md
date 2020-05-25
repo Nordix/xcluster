@@ -149,7 +149,7 @@ dependencies if necessary (see
 
 ```
 kvm-ok
-id     # (you must be member of the "kvm" group)
+id     # (you must be member of the "kvm" group and preferably "docker")
 sudo apt install -y xterm pxz genisoimage jq   # (if necessary)
 ```
 
@@ -158,13 +158,11 @@ To get a k8s cluster with dual-stack running do;
 XCDIR=$HOME/tmp   # Change to your preference
 mkdir -p $XCDIR
 cd $XCDIR
-ver=<latest>
+ver=<latest-xcluster-release>
 curl -L https://github.com/Nordix/xcluster/releases/download/$ver/xcluster-$ver.tar.xz | tar xJ
 cd $XCDIR/xcluster
 . ./Envsettings.k8s
-armurl=http://artifactory.nordix.org/artifactory/cloud-native
-curl -L $armurl/xcluster/images/hd-k8s.img.xz | xz -d > $__image
-xc mkcdrom k8s-dual-stack
+curl -L http://artifactory.nordix.org/artifactory/cloud-native/xcluster/images/hd-k8s.img.xz | xz -d > $__image
 xc start   # (no xterms? See below) (use "xc starts" to start without xterms)
 vm 2     # Opens a terminal on vm-002
 
@@ -172,7 +170,7 @@ vm 2     # Opens a terminal on vm-002
 kubectl get nodes  # (may take ~10 sec to appear)
 kubectl get node vm-002 -o json | jq .spec   # "podCIDRs" is dual-stack
 nslookup www.google.se   # (doesn't work? See below)
-wget -4 -O /dev/null http://www.google.se # (doesn't work? See below)
+wget -O /dev/null http://www.google.se # (doesn't work? See below)
 # Traffic test with mconnect
 kubectl apply -f /etc/kubernetes/mconnect-dual.yaml # (image is pre-pulled)
 kubectl get svc
@@ -192,13 +190,16 @@ host firewall settings. If this does not work then images can not be
 loaded from external sites (docker.io).
 
 
-Run some test-suites;
+Run a test-suite;
 ```
-cdo test-template
-./test-template.sh test > /tmp/xcluster-test.log
-cdo metallb
-./metallb.sh test basic4 basic6 > /tmp/xcluster-test.log
+log=/tmp/$USER-xcluster.log
+./xcadmin.sh k8s_test test-template basic > $log
 ```
+
+Suggested reading;
+* [ovl/private-reg](ovl/private-reg) setup a local private registry
+* [ovl/k8s-xcluster](ovl/k8s-xcluster) to use different CNI-plugins
+
 
 ## K8s test and development with xcluster
 
