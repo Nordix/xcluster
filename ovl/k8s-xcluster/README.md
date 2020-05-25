@@ -13,37 +13,48 @@ CNI-plugin ovl should be used, e.g. `k8s-cni-xcluster`.
 
 ## Usage
 
+Start using the test system (prefered);
 ```
-export __image=$XCLUSTER_WORKSPACE/xcluster/hd-k8s-xcluster.img
-export __nvm=5
-xc mkcdrom k8s-cni-bridge; xc starts
+log=/tmp/$USER-xcluster.log
+# Dual-stack with xcluster-cni;
+./xcadmin.sh k8s_test --cni=xcluster test-template start > $log
+# Ipv4;
+./xcadmin.sh k8s_test --cni=flannel --mode=ipv4 test-template start > $log
+# Ipv6;
+./xcadmin.sh k8s_test --cni=calico --mode=ipv6 test-template start > $log
 ```
 
-## Build
-
+Manual start;
 ```
-ver=v1.17.0-rc.1
-export KUBERNETESD=$ARCHIVE/kubernetes-$ver/server/bin
-export __image=$XCLUSTER_WORKSPACE/xcluster/hd-k8s-xcluster-$ver.img
-cp $XCLUSTER_WORKSPACE/xcluster/hd.img $__image
-xc ximage xnet etcd iptools k8s-xcluster mconnect images
+# Dual-stack (default);
+xc mkcdrom k8s-cni-xcluster
+xc starts --image=$XCLUSTER_WORKSPACE/xcluster/hd-k8s-xcluster.img
+# Ipv4;
+SETUP=ipv4 xc mkcdrom k8s-xcluster k8s-cni-flannel
+xc starts --image=$XCLUSTER_WORKSPACE/xcluster/hd-k8s-xcluster.img
+# Ipv6;
+SETUP=ipv6 xc mkcdrom k8s-xcluster k8s-cni-calico
+xc starts --image=$XCLUSTER_WORKSPACE/xcluster/hd-k8s-xcluster.img
 ```
 
 
 ## Test
 
 ```
-export __image=$XCLUSTER_WORKSPACE/xcluster/hd-k8s-xcluster.img
-export XCTEST_HOOK=$($XCLUSTER ovld k8s-xcluster)/xctest-hook
-export __nvm=5
-t=test-template
-XOVLS="k8s-cni-bridge" $($XCLUSTER ovld $t)/$t.sh test > $XCLUSTER_TMP/$t-test.log
-XOVLS="k8s-cni-calico private-reg" $($XCLUSTER ovld $t)/$t.sh test > $XCLUSTER_TMP/$t-test.log
+log=/tmp/$USER-xcluster.log
+./xcadmin.sh k8s_test --cni=xcluster test-template > $log
+./xcadmin.sh k8s_test --cni=weave test-template basic4 > $log
 ```
 
-## Build k8s
+## CNI-plugin and private registry
+
+If a private local registry ([ovl/private-reg](../private-reg)) is
+used (and it *really* should) you must make sure that the images
+needed by the CNI-plugin is cached in the private local registry.
 
 ```
-cd $GOPATH/src/k8s.io/kubernetes
-make WHAT=cmd/hyperkube
+images lreg_missingimages k8s-cni-calico
+# If there are missing images, cache them with;
+images lreg_cache ...
 ```
+
