@@ -26,16 +26,26 @@ log=/tmp/$USER-xcluster.log
 
 Manual start;
 ```
+export __
+eval $($XCLUSTER env | grep XCLUSTER_HOME)
 # Dual-stack (default);
 xc mkcdrom k8s-cni-xcluster
-xc starts --image=$XCLUSTER_WORKSPACE/xcluster/hd-k8s-xcluster.img
+xc starts --image=$XCLUSTER_HOME/hd-k8s-xcluster.img
 # Ipv4;
 SETUP=ipv4 xc mkcdrom k8s-xcluster k8s-cni-flannel
-xc starts --image=$XCLUSTER_WORKSPACE/xcluster/hd-k8s-xcluster.img
+xc starts --image=$XCLUSTER_HOME/hd-k8s-xcluster.img
 # Ipv6;
 SETUP=ipv6 xc mkcdrom k8s-xcluster k8s-cni-calico
-xc starts --image=$XCLUSTER_WORKSPACE/xcluster/hd-k8s-xcluster.img
+xc starts --image=$XCLUSTER_HOME/hd-k8s-xcluster.img
 ```
+
+### Use kube-proxy in iptables mode
+
+The `ipvs` mode is used by default. To use `iptables` mode do;
+```
+export xcluster_PROXY_MODE=iptables
+```
+before test or start.
 
 
 ## Test
