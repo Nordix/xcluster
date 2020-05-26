@@ -318,10 +318,36 @@ cmd_cpio_list() {
 }
 cmd_busybox_build() {
 	cmd_env
-	export DISKIM_WORKSPACE=$XCLUSTER_WORKSPACE
-	$DISKIM busybox_build --bbver=$__bbver --bbcfg=$dir/config/$__bbver \
-		--menuconfig=$__menuconfig \
-		|| die "BusyBox build failed [$__bbver]"
+
+	local ar=$ARCHIVE/$__bbver.tar.bz2
+	if ! test -r $ar; then
+		local url=http://busybox.net/downloads/$__bbver.tar.bz2
+		curl -L $url > $ar || die "Could not download [$url]"
+	fi
+
+	local d=$XCLUSTER_WORKSPACE/$__bbver
+	test "$__clean" = "yes" && rm -rf $d
+	if ! test -d $d; then
+		tar -C $XCLUSTER_WORKSPACE -xf $ar || die "Failed to unpack [$ar]"
+		patch -d $d -p1 < $dir/config/busybox.patch
+	fi
+
+	local bbcfg=$dir/config/$__bbver
+	if test -r $bbcfg; then
+		cp $bbcfg $d/.config
+	else
+		make -C $d allnoconfig
+		__menuconfig=yes
+	fi
+
+	if test "$__menuconfig" = "yes"; then
+		make -C $d menuconfig
+		cp $d/.config $bbcfg
+	else
+		make -C $d oldconfig
+	fi
+
+	make -C $d -j$(nproc)
 }
 cmd_iproute2_build() {
 	cmd_env
