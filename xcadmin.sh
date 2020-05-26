@@ -382,11 +382,12 @@ cmd_k8s_test() {
 
 
 
-##   release --version=ver
+##   release --version=ver [--dest=/tmp]
 ##     Create a release tar archive.
 ##
 cmd_release() {
 	test -n "$__version" || die 'No version'
+	test -n "$__dest" || __dest=/tmp
 	test -n "$XCLUSTER" || die 'Not set [$XCLUSTER]'
 	eval $($XCLUSTER env)
 	local d T ar
@@ -401,7 +402,7 @@ cmd_release() {
 	cmd_mkworkspace $T/workspace
 
 	cd $tmp
-	ar=/tmp/xcluster-$__version.tar
+	ar=$__dest/xcluster-$__version.tar
 	tar --group=0 --owner=0 -cf $ar xcluster
 	cd
 	log "Created [$ar]"
