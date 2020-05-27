@@ -92,3 +92,10 @@ xc scaleout 10 11 20 21
 xc stop --nvm=30
 ```
 
+## Backend
+
+<img src="backend.svg" alt="Backend network" width="80%" />
+
+The cluster has a "backend" network for internal communication. All
+communication with the outside world goes through a "frontend"
+network.

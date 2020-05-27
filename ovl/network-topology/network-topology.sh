@@ -145,6 +145,22 @@ test_zones() {
 	xcluster_stop
 }
 
+test_backend() {
+	export TOPOLOGY=backend
+	tlog "=== network-topology test: $TOPOLOGY"
+	export __ntesters=2
+	test_start
+	otc 1 "ping 192.168.2.221"
+	otc 1 "ping 192.168.2.222"
+	otc 221 "ping 192.168.3.2"
+	otc 222 "ping 192.168.3.2"
+	otc 1 "nslookup www.google.se"
+	otc 221 "nslookup www.google.se"
+	otc 1 "wget http://www.google.se"
+	otc 221 "wget http://www.google.se"
+	xcluster_stop
+}
+
 base_test() {
 	otc 1 "ping 192.168.2.221"
 	otc 1 "ping 192.168.2.222"

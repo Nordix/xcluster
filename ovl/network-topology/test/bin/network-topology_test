@@ -12,7 +12,7 @@ dir=$(dirname $0); dir=$(readlink -f $dir)
 me=$dir/$prg
 tmp=/tmp/${prg}_$$
 
-. ./etc/profile
+. /etc/profile
 test -n "$PREFIX" || PREFIX=1000::1
 
 die() {
