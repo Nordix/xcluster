@@ -46,22 +46,15 @@ eth1      Link encap:Ethernet  HWaddr 00:00:00:01:01:03
 
 
 
-## K8s usage
+## Tests with K8s
 
 Note that mtu tests shall be performed with a CNI-plugin so
 `k8s-xcluster` shall be used.
 
 Run test;
 ```
-./xcadmin.sh k8s_test --cni=xcluster mtu > /dev/null
-# Or manually;
-cdo mtu
-export __image=$XCLUSTER_WORKSPACE/xcluster/hd-k8s-xcluster.img
-export __nvm=5
-export __mem=1536
-export XCTEST_HOOK=$($XCLUSTER ovld k8s-xcluster)/xctest-hook
-export XOVLS="k8s-cni-xcluster private-reg"
-./mtu.sh test
+log=/tmp/$USER-xcluster.jog
+./xcadmin.sh k8s_test --cni=xcluster mtu > $log
 ```
 
 Manual;
@@ -84,6 +77,64 @@ tracepath -n 1000::1:192.168.1.2
 tcpdump -eni eth1 icmp or icmp6
 ```
 
+### Pmtu inside PODs
+
+The POD network may have a larger MTU than the path to an external
+peer, e.g when jumbo-frames are used internally. When a service is
+accessed from an external client via a service the server will try to
+respond with a too-big packet and it is essential that the ICMP
+packets really is routed back to the POD. To test this the "backend"
+network topology is used.
+
+<img src="../network-topology/backend.svg" alt="Backend topology" width="80%" />
+
+Jumbo-frames are not used but the "frontend" network is configured
+with mtu=1400. A POD will send a packet with it's max mtu which is >1400
+but the outgoing path have mtu=1400.
+
+Test;
+```
+log=/tmp/$USER-xcluster.jog
+xcluster_PROXY_MODE=iptables ./xcadmin.sh k8s_test --cni=calico mtu backend_http > $log
+```
+
+That work. So to test manually for some "tcpdump" do;
+```
+xcluster_PROXY_MODE=iptables ./xcadmin.sh k8s_test --cni=calico mtu backend_start_limit_mtu > /dev/null
+# (the cluster is left running)
+kubectl get pods
+kubectl exec -it mserver-daemonset-... -- sh
+# In the pod;
+tcpdump -lni eth0
+# On vm-221
+wget -O /dev/null http://10.0.0.2  # (may have to be repeated some times)
+```
+
+Trace example;
+```
+15:22:09.790403 ARP, Request who-has 11.0.40.65 tell 192.168.0.5, length 28
+15:22:09.790433 ARP, Reply 11.0.40.65 is-at 22:21:7a:8d:bd:d8, length 28
+15:22:09.790437 IP 192.168.2.221.57200 > 11.0.40.65.80: Flags [S], seq 1568849216, win 64240, options [mss 1460,sackOK,TS val 3813805410 ecr 0,nop,wscale 7], length 0
+15:22:09.790450 ARP, Request who-has 169.254.1.1 tell 11.0.40.65, length 28
+15:22:09.790454 ARP, Reply 169.254.1.1 is-at ee:ee:ee:ee:ee:ee, length 28
+15:22:09.790455 IP 11.0.40.65.80 > 192.168.2.221.57200: Flags [S.], seq 1597526885, ack 1568849217, win 65236, options [mss 1400,sackOK,TS val 2682440094 ecr 3813805410,nop,wscale 7], length 0
+15:22:09.790905 IP 192.168.2.221.57200 > 11.0.40.65.80: Flags [.], ack 1, win 502, options [nop,nop,TS val 3813805411 ecr 2682440094], length 0
+15:22:09.790934 IP 192.168.2.221.57200 > 11.0.40.65.80: Flags [P.], seq 1:72, ack 1, win 502, options [nop,nop,TS val 3813805411 ecr 2682440094], length 71: HTTP: GET / HTTP/1.1
+15:22:09.790944 IP 11.0.40.65.80 > 192.168.2.221.57200: Flags [.], ack 72, win 510, options [nop,nop,TS val 2682440094 ecr 3813805411], length 0
+15:22:09.792331 IP 11.0.40.65.80 > 192.168.2.221.57200: Flags [P.], seq 1:191, ack 72, win 510, options [nop,nop,TS val 2682440096 ecr 3813805411], length 190: HTTP: HTTP/1.0 200 OK
+15:22:09.792445 IP 11.0.40.65.80 > 192.168.2.221.57200: Flags [.], seq 191:1579, ack 72, win 510, options [nop,nop,TS val 2682440096 ecr 3813805411], length 1388: HTTP
+15:22:09.792449 IP 11.0.40.65.80 > 192.168.2.221.57200: Flags [P.], seq 1579:2967, ack 72, win 510, options [nop,nop,TS val 2682440096 ecr 3813805411], length 1388: HTTP
+15:22:09.792474 IP 192.168.0.5 > 11.0.40.65: ICMP 192.168.2.221 unreachable - need to frag (mtu 1400), length 556
+15:22:09.792478 IP 192.168.0.5 > 11.0.40.65: ICMP 192.168.2.221 unreachable - need to frag (mtu 1400), length 556
+15:22:09.792489 IP 11.0.40.65.80 > 192.168.2.221.57200: Flags [.], seq 191:1539, ack 72, win 510, options [nop,nop,TS val 2682440096 ecr 3813805411], length 1348: HTTP
+15:22:09.792490 IP 11.0.40.65.80 > 192.168.2.221.57200: Flags [.], seq 1539:2887, ack 72, win 510, options [nop,nop,TS val 2682440096 ecr 3813805411], length 1348: HTTP
+15:22:09.792491 IP 11.0.40.65.80 > 192.168.2.221.57200: Flags [P.], seq 2887:2967, ack 72, win 510, options [nop,nop,TS val 2682440096 ecr 3813805411], length 80: HTTP
+15:22:09.792709 IP 11.0.40.65.80 > 192.168.2.221.57200: Flags [FP.], seq 2967:3689, ack 72, win 510, options [nop,nop,TS val 2682440096 ecr 3813805411], length 722: HTTP
+15:22:09.792935 IP 192.168.2.221.57200 > 11.0.40.65.80: Flags [.], ack 191, win 501, options [nop,nop,TS val 3813805413 ecr 2682440096], length 0
+15:22:09.792961 IP 192.168.2.221.57200 > 11.0.40.65.80: Flags [.], ack 2967, win 480, options [nop,nop,TS val 3813805413 ecr 2682440096], length 0
+15:22:09.793494 IP 192.168.2.221.57200 > 11.0.40.65.80: Flags [F.], seq 72, ack 3690, win 501, options [nop,nop,TS val 3813805413 ecr 2682440096], length 0
+15:22:09.793529 IP 11.0.40.65.80 > 192.168.2.221.57200: Flags [.], ack 73, win 510, options [nop,nop,TS val 2682440097 ecr 3813805413], length 0
+```
 
 ## Test without K8s
 
@@ -95,7 +146,7 @@ There is a problem with pmtu discovery with ECMP described in depth here;
 
 Test setup;
 
-<img src="mtu-ladder.svg" alt="Test setup" width="80%" />
+<img src="../network-topology/multihop.svg" alt="Test setup" width="80%" />
 
 **WARNING**: Linux > linux-5.4.x have a bug that makes ecmp packet
 based for forwarded traffic. Download the pre-built
@@ -103,7 +154,11 @@ based for forwarded traffic. Download the pre-built
 and set the `__kbin` variable to point to it.
 
 Also NIC "offload" must be disables or else you will see packets > mtu
-in your traces; `ethtool -K eth1 gro off`. This is done by the test scripts.
+in your traces. This is done by the test scripts;
+
+```
+ethtool -K eth1 gro off gso off tso off
+```
 
 A http request from an external source to the VIP address with a
 rather large reply is assumed to be the most realistic test. Tests are

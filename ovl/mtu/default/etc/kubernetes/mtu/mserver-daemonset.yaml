@@ -15,10 +15,15 @@ spec:
       containers:
       - name: mserver
         image: registry.nordix.org/cloud-native/mserver:latest
-        ports:
-        - containerPort: 5001
         securityContext:
           privileged: true
+        volumeMounts:
+          - mountPath: /pod-init
+            name: pod-init
+      volumes:
+        - name: pod-init
+          configMap:
+            name: mserver-init
 ---
 apiVersion: v1
 kind: Service
@@ -30,4 +35,14 @@ spec:
   ports:
   - port: 5001
   type: LoadBalancer
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mserver-init
+data:
+  pod-init: |
+    echo "Turn off offload"
+    ethtool -K eth0 gro off gso off tso off
+
 

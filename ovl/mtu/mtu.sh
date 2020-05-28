@@ -203,6 +203,64 @@ test_http_pmtud() {
 	xcluster_stop
 }
 
+test_backend_start() {
+	tlog "Start K8s with TOPOLOGY=backend"
+	cmd_env
+	export TOPOLOGY=backend
+	. $($XCLUSTER ovld network-topology)/$TOPOLOGY/Envsettings
+	export __ntesters=1
+	export __nrouters=1
+	xcluster_start network-topology iptools mtu
+
+	otc 1 check_namespaces
+	otc 1 check_nodes
+}
+
+test_backend_start_limit_mtu() {
+	tlog "Start K8s with TOPOLOGY=backend"
+	cmd_env
+	export TOPOLOGY=backend
+	. $($XCLUSTER ovld network-topology)/$TOPOLOGY/Envsettings
+	export __ntesters=1
+	export __nrouters=1
+	xcluster_start network-topology iptools mtu
+
+	otc 1 check_namespaces
+	otc 1 check_nodes
+	otc 1 start_mserver
+	otc 1 http_svc
+	otc 201 backend_vip_route
+
+	if test "$xcluster_FIRST_WORKER" = "2"; then
+		for i in $(seq 2 5); do otc $i "mtu 1500 1400"; done
+	else
+		for i in $(seq 1 4); do otc $i "mtu 1500 1400"; done
+	fi
+	otc 201 "mtu 1400 1500"
+}
+
+test_backend_http() {
+	tlog "==== Http to POD via frontend network with mtu=1400"
+	test_backend_start
+
+	otc 1 start_mserver
+	otc 1 http_svc
+	otc 201 backend_vip_route
+
+	if test "$xcluster_FIRST_WORKER" = "2"; then
+		for i in $(seq 2 5); do otc $i "mtu 1500 1400"; done
+	else
+		for i in $(seq 1 4); do otc $i "mtu 1500 1400"; done
+	fi
+	otc 201 "mtu 1400 1500"
+
+	otc 201 backend_http
+	otc 221 backend_http
+
+	xcluster_stop
+}
+
+
 cmd_otc() {
 	test -n "$__vm" || __vm=2
 	otc $__vm $@
