@@ -249,7 +249,7 @@ cmd_k8s_workspace() {
 	done
 
 	cmd_bin_add $GOPATH/bin
-	cmd_build_iptools
+	cmd_build_iptools || die "FAILED: build_iptools"
 	cmd_cache_refresh
 }
 cmd_build_iptools() {
@@ -350,6 +350,7 @@ cmd_k8s_test() {
 		export __mem=1536
 		export __cni
 		export XOVLS="k8s-cni-$__cni private-reg $XXOVLS"
+		export xcluster_FIRST_WORKER=2
 	else
 		# Test on "normal" xcluster
 		__image=$XCLUSTER_HOME/hd-k8s-$__k8sver.img
