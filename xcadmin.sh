@@ -270,6 +270,7 @@ cmd_cache_refresh() {
 		rm -rf $__cached
 		mkdir -p  $__cached
 		tar -C $__cached -xf $ar || die
+		$XCLUSTER cache iptools
 		return 0
 	fi
 	$XCLUSTER cache --clear
