@@ -80,8 +80,8 @@ tcpdump -eni eth1 icmp or icmp6
 ### Pmtu inside PODs
 
 The POD network may have a larger MTU than the path to an external
-peer, e.g when jumbo-frames are used internally. When a service is
-accessed from an external client via a service the server will try to
+peer, e.g when jumbo-frames are used internally. When a POD is
+accessed from an external client via a service the POD will try to
 respond with a too-big packet and it is essential that the ICMP
 packets really is routed back to the POD. To test this the "backend"
 network topology is used.
