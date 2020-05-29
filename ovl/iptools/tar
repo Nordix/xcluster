@@ -25,12 +25,7 @@ EOF
 fi
 
 mkdir -p $tmp
-for s in $(echo "$SETUP" | tr ',' ' '); do
-	if ! test -d $dir/$s; then
-		continue
-	fi
-	cp -R $dir/$s/* $tmp
-done
+cp -r $dir/default/* $tmp
 
 mkdir -p $tmp/usr/sbin $tmp/usr/lib
 cp -R $sysd/usr/sbin $tmp/usr
