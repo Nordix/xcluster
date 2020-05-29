@@ -41,16 +41,12 @@ cp $f $tmp/bin/find
 
 test -n "$KUBERNETESD" || KUBERNETESD=$GOPATH/src/k8s.io/kubernetes/_output/bin
 test -d "$KUBERNETESD" || die "Not a directory [$KUBERNETESD]"
-f=$KUBERNETESD/hyperkube
-if test -x $f; then
-	cp $f $tmp/bin
-else
-	for n in kube-controller-manager kube-scheduler kube-apiserver \
-		kube-proxy kubectl kubelet; do
-		test -x $KUBERNETESD/$n || die "Not executable [$KUBERNETESD/$n]"
-		cp $KUBERNETESD/$n $tmp/bin
-	done
-fi
+for n in kube-controller-manager kube-scheduler kube-apiserver \
+	kube-proxy kubectl kubelet; do
+	test -x $KUBERNETESD/$n || die "Not executable [$KUBERNETESD/$n]"
+	cp $KUBERNETESD/$n $tmp/bin
+done
+
 mkdir -p $tmp/etc/kubernetes
 $KUBERNETESD/kubectl version --client --short > $tmp/etc/kubernetes/version
 
