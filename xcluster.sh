@@ -436,7 +436,7 @@ cmd_cache() {
 		test -x $d/tar || die "Not executable [$d/tar]"
 		$d/tar "$dest/$n.tar"
 		rm -f "$dest/$n.tar.xz"
-		xz "$dest/$n.tar"
+		xz -T0 "$dest/$n.tar"
 	done
 }
 cmd_cached_tar() {
