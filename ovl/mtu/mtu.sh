@@ -108,24 +108,25 @@ test_startc() {
 	export __ntesters=1
 	echo "$XOVLS" | grep -q private-reg && unset XOVLS
 	xcluster_start network-topology iptools mtu
+	mtu_narrow
+}
 
-	for i in $(seq 1 4); do otc $i "mtu 1500"; done
-	otc 201 "mtu 1500 1450"
-	otc 202 "mtu 1450 1400"
-	otc 203 "mtu 1400 1500"
+mtu_narrow() {
+	tlog "Narrow the mtu path"
+	otcw "mtu 1500"
+	otc 201 "mtu 1500 1400"
+	otc 202 "mtu 1400 1300"
+	otc 203 "mtu 1300 1500"
 	otc 221 "mtu 1500"
 }
 
 test_vip_setup() {
 	test_startc
-	
-	local i
-	for i in $(seq 1 4); do otc $i "assign_cidr 10.0.0.0"; done
-	for i in $(seq 1 4); do otc $i start_mconnect; done
+	otcw "assign_cidr 10.0.0.0"
+	otcw start_mconnect
 	otc 201 ecmp_route
 	otc 202 "route 10.0.0.0 192.168.3.201"
 	otc 203 "route 10.0.0.0 192.168.4.202"
-	otc 221 "route 10.0.0.0 192.168.2.203"
 
 	otc 221 "assign_cidr 20.0.0.0"
 	for i in $(seq 1 4); do
@@ -164,8 +165,7 @@ test_http_limit_mtu() {
 	test_vip_setup
 	sleep 1
 
-	local i
-	for i in $(seq 1 4); do otc $i limit_mtu; done
+	otcw limit_mtu
 
 	otc 221 "http http://[1000::1:10.0.0.0]/"
 	otc 221 "http http://10.0.0.0/"
@@ -177,22 +177,31 @@ test_http_pmtud() {
 	tlog "==== Http test with pmtud"
 	test_vip_setup
 
-	local i
-	for i in $(seq 1 4); do otc $i start_pmtud; done
+	otcw start_pmtud
 	sleep 1
 
 	otc 221 "http http://[1000::1:10.0.0.0]/"
 	otc 221 "http http://10.0.0.0/"
 
-	for i in $(seq 1 4); do otc $i stop_pmtud; done
+	otcw stop_pmtud
 	sleep 1
 
-	# Collect pmtud logs
+	cmd_collect_pmtu_logs
+
+	xcluster_stop
+}
+cmd_collect_pmtu_logs() {
 	local f=/tmp/pmtu.log
 	rm -f $f
-	for i in $(seq 1 4); do
-		rsh $i cat /var/log/pmtud.log >> $f
-	done
+	if test "$xcluster_FIRST_WORKER" = "2"; then
+		for i in $(seq 2 5); do
+			rsh $i cat /var/log/pmtud.log >> $f
+		done
+	else
+		for i in $(seq 1 4); do
+			rsh $i cat /var/log/pmtud.log >> $f
+		done
+	fi
 	cat $f
 	local n
 	n=$(grep '^192.168.' $f | wc -l)
@@ -200,7 +209,6 @@ test_http_pmtud() {
 	n=$(grep '^1000::1:' $f | wc -l)
 	tlog "Re-sent ipv6 packets; $n"
 	
-	xcluster_stop
 }
 
 test_backend_start() {
@@ -230,12 +238,7 @@ test_backend_start_limit_mtu() {
 	otc 1 start_mserver
 	otc 1 http_svc
 	otc 201 backend_vip_route
-
-	if test "$xcluster_FIRST_WORKER" = "2"; then
-		for i in $(seq 2 5); do otc $i "mtu 1500 1400"; done
-	else
-		for i in $(seq 1 4); do otc $i "mtu 1500 1400"; done
-	fi
+	otcw "mtu 1500 1400"
 	otc 201 "mtu 1400 1500"
 }
 
@@ -246,12 +249,7 @@ test_backend_http() {
 	otc 1 start_mserver
 	otc 1 http_svc
 	otc 201 backend_vip_route
-
-	if test "$xcluster_FIRST_WORKER" = "2"; then
-		for i in $(seq 2 5); do otc $i "mtu 1500 1400"; done
-	else
-		for i in $(seq 1 4); do otc $i "mtu 1500 1400"; done
-	fi
+	otcw "mtu 1500 1400"
 	otc 201 "mtu 1400 1500"
 
 	otc 201 backend_http
@@ -260,10 +258,81 @@ test_backend_http() {
 	xcluster_stop
 }
 
+test_multihop_start() {
+	tlog "Start K8s with TOPOLOGY=multihop"
+	cmd_env
+	export TOPOLOGY=multihop
+	. $($XCLUSTER ovld network-topology)/$TOPOLOGY/Envsettings
+	export __ntesters=1
+	xcluster_start network-topology iptools mtu
+	otc 1 check_namespaces
+	otc 1 check_nodes
+	otc 202 "route 10.0.0.0 192.168.3.201"
+	otc 203 "route 10.0.0.0 192.168.4.202"
+	if test "$__no_ecmp" = "yes"; then
+		otc 201 "route 10.0.0.0 192.168.1.3"
+	else
+		otc 201 ecmp_route
+	fi
+	test "$__narrow" = "no" || mtu_narrow
+	otc 1 start_mserver
+	otc 1 http_svc
+	otc 1 mconnect_svc
+}
 
+test_multihop_vanilla() {
+	tlog "==== Http with narrow pmtu (no precaution)"
+	test_multihop_start
+
+	otc 201 backend_http
+	otc 221 "backend_http --count=40"
+
+	xcluster_stop
+}
+
+test_multihop_pmtud() {
+	tlog "==== Http with narrow pmtu (with pmtud)"
+	test_multihop_start
+
+	otcw start_pmtud
+	sleep 1
+
+	otc 201 backend_http
+	otc 221 "test_http --count=10"
+
+	otcw stop_pmtud
+	sleep 1
+	cmd_collect_pmtu_logs
+
+	xcluster_stop
+}
+test_multihop_limit_mtu() {
+	tlog "==== Http with narrow pmtu (limit mtu on workers)"
+	test_multihop_start
+
+	mtu_narrow
+	otcw limit_mtu
+
+	otc 201 backend_http
+	otc 221 "backend_http --count=40"
+
+	xcluster_stop
+}
+
+otcw() {
+	local i
+	if test "$xcluster_FIRST_WORKER" = "2"; then
+		for i in $(seq 2 5); do otc $i "$1"; done
+	else
+		for i in $(seq 1 4); do otc $i "$1"; done
+	fi
+}
 cmd_otc() {
 	test -n "$__vm" || __vm=2
 	otc $__vm $@
+}
+cmd_otcw() {
+	otcw $@
 }
 
 . $($XCLUSTER ovld test)/default/usr/lib/xctest
