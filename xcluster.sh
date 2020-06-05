@@ -114,7 +114,7 @@ cmd_env() {
 	test -n "$__nets_router" || __nets_router=0,1,2
 	test -n "$__base_libs" || __base_libs=$XCLUSTER_HOME/base-libs.txt
 
-	__ipver=4.19.0
+	__ipver=5.7.0
 	__dropbearver=2016.74
 	__diskimver=v0.4.0
 	test -n "$DISKIM" || DISKIM=$XCLUSTER_WORKSPACE/diskim-$__diskimver/diskim.sh
