@@ -35,17 +35,11 @@ cp $f $tmp/bin/find
 
 test -n "$KUBERNETESD" || KUBERNETESD=$GOPATH/src/k8s.io/kubernetes/_output/bin
 test -d "$KUBERNETESD" || die "Not a directory [$KUBERNETESD]"
-f=$KUBERNETESD/hyperkube
-if test -x $f; then
-	log $(readlink -f $f)
-	cp $f $tmp/bin
-else
-	for n in kube-controller-manager kube-scheduler kube-apiserver \
-		kube-proxy kubectl kubelet; do
-		test -x $KUBERNETESD/$n || die "Not executable [$KUBERNETESD/$n]"
-		cp $KUBERNETESD/$n $tmp/bin
-	done
-fi
+for n in kube-controller-manager kube-scheduler kube-apiserver \
+	kube-proxy kubectl kubelet; do
+	test -x $KUBERNETESD/$n || die "Not executable [$KUBERNETESD/$n]"
+	cp $KUBERNETESD/$n $tmp/bin
+done
 
 # Install CNI plugins;
 d=$GOPATH/src/github.com/containernetworking/plugins/bin

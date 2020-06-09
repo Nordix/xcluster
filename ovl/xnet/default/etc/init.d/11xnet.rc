@@ -59,7 +59,7 @@ tester() {
 
 local_dns() {
 	# Setup a local coredns
-	if test $i -le 200 && test -x /bin/kube-apiserver -o -x /bin/hyperkube; then
+	if test $i -le 200 && test -x /bin/kube-apiserver; then
 		cat > /etc/Corefile <<EOF
 .:53 {
     kubernetes xcluster {
