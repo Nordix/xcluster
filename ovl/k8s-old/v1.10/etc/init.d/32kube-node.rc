@@ -1,0 +1,50 @@
+#! /bin/sh
+
+export PATH="/bin:/sbin:/usr/bin:/usr/sbin"
+
+die() {
+	echo "$@"
+	exit 1
+}
+
+hostname | grep -Eq 'vm-[0-9]+$' || die "Invalid hostname [$(hostname)]"
+i=$(hostname | cut -d- -f2 | sed -re 's,^0+,,')
+test $i -le 200 || exit 0
+
+. /etc/profile
+
+# Cri-o *requires* a default route to start.
+ip route add default via 192.168.1.201
+crio -log-level debug > /var/log/crio.log 2>&1 &
+sleep 0.2
+
+run_kubelet() {
+	kubelet --container-runtime=remote --node-ip=192.168.1.$i \
+		--container-runtime-endpoint=unix:///var/run/crio/crio.sock \
+		--image-service-endpoint=unix:///var/run/crio/crio.sock \
+		--register-node=true --kubeconfig $KUBECONFIG \
+		--network-plugin=cni \
+		--cluster-dns=192.168.1.$i --cluster-domain=xcluster \
+		--runtime-cgroups=/systemd/system.slice \
+		--kubelet-cgroups=/systemd/system.slice >> /var/log/kubelet.log 2>&1
+}
+
+run_kube_proxy() {
+	kube-proxy --config /etc/kubernetes/kube-proxy.config \
+		>> /var/log/kube-proxy.log 2>&1
+}
+
+monitor() {
+	while true; do
+		logger -t K8s-monitor "STARTING: $1"
+		$1
+		logger -t K8s-monitor "DIED: $1"
+		sleep 2
+	done
+}
+
+(monitor run_kubelet) > /dev/null 2>&1 &
+(monitor run_kube_proxy) > /dev/null 2>&1 &
+
+# NOTE: For --proxy-mode=iptables you *must* uncomment this line!
+#ip route add 12.0.0.0/16 via 127.0.0.1

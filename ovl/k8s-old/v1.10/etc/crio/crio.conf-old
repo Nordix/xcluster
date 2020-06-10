@@ -2,12 +2,6 @@
 # The "crio" table contains all of the server options.
 [crio]
 
-# CRI-O reads its storage defaults from the containers/storage configuration
-# file, /etc/containers/storage.conf. Modify storage.conf if you want to
-# change default storage for all tools that use containers/storage.  If you
-# want to modify just crio, you can change the storage configuration in this
-# file.
-
 # root is a path to the "root directory". CRIO stores all of its data,
 # including container images, in this directory.
 #root = "/var/lib/containers/storage"
@@ -35,22 +29,6 @@ stream_address = ""
 
 # stream_port is the port on which the stream server will listen
 stream_port = "10010"
-
-# stream_enable_tls enables encrypted tls transport of the stream server
-stream_enable_tls = false
-
-# stream_tls_cert is the x509 certificate file path used to serve the encrypted stream.
-# This file can change, and CRIO will automatically pick up the changes within 5 minutes.
-stream_tls_cert = ""
-
-# stream_tls_key is the key file path used to serve the encrypted stream.
-# This file can change, and CRIO will automatically pick up the changes within 5 minutes.
-stream_tls_key = ""
-
-# stream_tls_ca is the x509 CA(s) file used to verify and authenticate client
-# communication with the tls encrypted stream.
-# This file can change, and CRIO will automatically pick up the changes within 5 minutes.
-stream_tls_ca = ""
 
 # file_locking is whether file-based locking will be used instead of
 # in-memory locking
@@ -117,46 +95,12 @@ apparmor_profile = "crio-default"
 # for the runtime.
 cgroup_manager = "cgroupfs"
 
-# default_capabilities is the list of capabilities to add and can be modified here.
-# If capabilities below is commented out, the default list of capabilities defined in the
-# spec will be added.
-# If capabilities is empty below, only the capabilities defined in the container json
-# file by the user/kube will be added.
-default_capabilities = [
-	"CHOWN", 
-	"DAC_OVERRIDE", 
-	"FSETID", 
-	"FOWNER", 
-	"NET_RAW", 
-	"SETGID", 
-	"SETUID", 
-	"SETPCAP", 
-	"NET_BIND_SERVICE", 
-	"SYS_CHROOT", 
-	"KILL", 
-]
-
 # hooks_dir_path is the oci hooks directory for automatically executed hooks
 hooks_dir_path = "/usr/share/containers/oci/hooks.d"
 
 # default_mounts is the mounts list to be mounted for the container when created
-# deprecated, will be taken out in future versions, add default mounts to either
-# /usr/share/containers/mounts.conf or /etc/containers/mounts.conf
 default_mounts = [
 ]
-
-# CRI-O reads its default mounts from the following two files:
-# 1) /etc/containers/mounts.conf - this is the override file, where users can
-# either add in their own default mounts, or override the default mounts shipped
-# with the package.
-# 2) /usr/share/containers/mounts.conf - this is the default file read for mounts.
-# If you want CRI-O to read from a different, specific mounts file, you can change
-# the default_mounts_file path right below. Note, if this is done, CRI-O will only add
-# mounts it finds in this file.
-
-# default_mounts_file is the file path holding the default mounts to be mounted for the
-# container when created.
-# default_mounts_file = ""
 
 # pids_limit is the number of processes allowed in a container
 pids_limit = 1024
@@ -165,22 +109,12 @@ pids_limit = 1024
 # Negative values indicate that no limit is imposed.
 log_size_max = -1
 
-# read-only indicates whether all containers will run in read-only mode
-read_only = false
+# log_level changes the verbosity of the logs printed.
+# Options are: error (default), fatal, panic, warn, info, and debug
+log_level = "error"
 
 # The "crio.image" table contains settings pertaining to the
 # management of OCI images.
-
-# uid_mappings specifies the UID mappings to have in the user namespace.
-# A range is specified in the form containerUID:HostUID:Size.  Multiple
-# ranges are separed by comma.
-uid_mappings = ""
-
-# gid_mappings specifies the GID mappings to have in the user namespace.
-# A range is specified in the form containerGID:HostGID:Size.  Multiple
-# ranges are separed by comma.
-gid_mappings = ""
-
 [crio.image]
 
 # default_transport is the prefix we try prepending to an image name if the
@@ -205,20 +139,17 @@ signature_policy = ""
 # The valid values are mkdir and ignore.
 image_volumes = "mkdir"
 
-# CRI-O reads its configured registries defaults from the containers/image configuration
-# file, /etc/containers/registries.conf. Modify registries.conf if you want to
-# change default registries for all tools that use containers/image.  If you
-# want to modify just crio, you can change the registies configuration in this
-# file.
-
 # insecure_registries is used to skip TLS verification when pulling images.
-# insecure_registries = [
-# ]
+insecure_registries = [
+	"172.17.0.2/16",
+	"192.168.0.0/24",
+]
 
 # registries is used to specify a comma separated list of registries to be used
 # when pulling an unqualified image (e.g. fedora:rawhide).
 registries = [
- "docker.io"
+	"example.com:5000",
+	"docker.io",
 ]
 
 # The "crio.network" table contains settings pertaining to the

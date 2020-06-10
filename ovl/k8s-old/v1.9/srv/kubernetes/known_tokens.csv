@@ -1,8 +1,0 @@
-kallekula,root,root
-X4o3adoGo5Yx6oi4LUo2JB2GO8b0CatJ,kubelet,kubelet
-tHDwA7KmaQ0jTLSKcPV2p3LrMhXP2e3m,kube_proxy,kube_proxy
-cBvKaWGjXE5TnOsOW7juaO0JsXiNsxN1,system:scheduler,system:scheduler
-2gxkVhMhQvMKydr7RwYYS66vXEJxy47s,system:controller_manager,system:controller_manager
-isb1TVpwRYzGfshMVfTfSEDvwx2txvQt,system:logging,system:logging
-JF5hfsUcDPg1JrTzlw9T6aKAQwn2BGn8,system:monitoring,system:monitoring
-lXjgo4cUaiyjyCHcrn0OnonOxme6G4AV,system:dns,system:dns

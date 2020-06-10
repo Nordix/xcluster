@@ -1,50 +1,37 @@
-# Xcluster ovl - Older Kubernetes
+# ovl/k8s-old - Older Kubernetes
 
-Use older versions (<v1.12) of Kubernetes in `xcluster`.
+Use older versions of Kubernetes in `xcluster`.
 
-
-## Usage
-
-```
-eval $($XCLUSTER env | grep XCLUSTER_HOME=)
-export __image=$XCLUSTER_HOME/hd-k8s-v1.9.img
-xc mkimage
-images make coredns nordixorg/mconnect:v1.2
-# MAKE SURE cri-o HAS CORRECT VERSION!!
-SETUP=v1.9 xc ximage systemd etcd iptools k8s-old coredns mconnect images
-xc mkcdrom externalip; xc starts
-# On cluster;
-kubectl apply -f /etc/kubernetes/mconnect.yaml
-mconnect -address mconnect.default.svc.xcluster:5001 -nconn=400
-# On router;
-mconnect -address 10.0.0.2:5001 -nconn 400
-```
-
-### v1.12
+## Build images
 
 ```
-eval $($XCLUSTER env | grep XCLUSTER_HOME=)
-export __image=$XCLUSTER_HOME/hd-k8s-v1.12.img
-xc mkimage
-images make coredns nordixorg/mconnect:v1.2
-export KUBERNETESD=$ARCHIVE/kubernetes-1.12.0/server/bin
-xc ximage systemd etcd iptools kubernetes coredns mconnect images
-
+export __k8sver=v1.10.13
+export __criover=1.14   # Pre-requisite; this version of cri-o must be built
+./xcadmin.sh k8s_build_images
+#k8s build_images --version=$__k8sver
+eval $($XCLUSTER env | grep XCLUSTER_HOME)
+export __image=$XCLUSTER_HOME/hd-k8s-$__k8sver.img
+rm -f $XCLUSTER_HOME/hd-k8s-xcluster-$__k8sver.img
+ls -lh $__image
+# Test
+xc mkcdrom test test-template k8s-old; xc starts
+$($XCLUSTER ovld test-template)/test-template.sh test --no-start basic4 > $log
+# Extend the image
+chmod u+w $__image
+xc ximage k8s-old
+xc mkcdrom test test-template; xc starts
+$($XCLUSTER ovld test-template)/test-template.sh test --no-start basic4 > $log
+# Upload;
+cp $__image /tmp/tmp
+xz -T0  /tmp/tmp/hd-k8s-$__k8sver.img
+ls -lh /tmp/tmp/hd-k8s-$__k8sver.img.xz
+arm_upload_image /tmp/tmp/hd-k8s-$__k8sver.img.xz
+rm -f /tmp/tmp/hd-k8s-$__k8sver.img.xz
 ```
+
 
 ### Cri-o
 
-
 ```
-sudo apt install libseccomp-dev
-cd $GOPATH/src/github.com/kubernetes-incubator/cri-tools
-git checkout release-1.9
-go install ./cmd/crictl
-cd $GOPATH/src/github.com/kubernetes-incubator/cri-o
-git checkout release-1.9
-make install.tools
-make
-git status --ignored
-strip bin/*
+./k8s-old.sh --criover=1.14
 ```
-

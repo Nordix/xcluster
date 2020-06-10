@@ -1,10 +1,6 @@
 #! /bin/sh
 ##
-## 90k8s-hook.rc
-##
-##   Called on start of an xcluster with Kubernetes. This script will
-##   monitor the k8s start and initiate things when Kubernetes has
-##   started.
+## k8s-old.sh --
 ##
 ##
 ## Commands;
@@ -12,8 +8,7 @@
 
 prg=$(basename $0)
 dir=$(dirname $0); dir=$(readlink -f $dir)
-me=$dir/$prg
-tmp=/tmp/$USER/${prg}_$$
+tmp=/tmp/${prg}_$$
 
 die() {
     echo "ERROR: $*" >&2
@@ -29,40 +24,38 @@ test -n "$1" || help
 echo "$1" | grep -qi "^help\|-h" && help
 
 log() {
-	echo "$(date +%T): $*" >&2
+	echo "$prg: $*" >&2
 }
 dbg() {
 	test -n "$__verbose" && echo "$prg: $*" >&2
 }
 
-##   start
-##   stop
+##  env
+##    Print environment.
 ##
-cmd_start() {
-	hostname | grep -q vm-0 || return 0
-	# Restart myself in background
-	test -n "$__log" || __log=/var/log/$prg
-	($me waitfor_k8s > $__log < /dev/null 2>&1) &
-}
-cmd_stop() {
-	return 0
+cmd_env() {
+	if test "$cmd" = "env"; then
+		set | grep -E '^(__.*|ARCHIVE)='
+		return 0
+	fi
+	test -n "$__k8sver" || die 'Not set [$__k8sver]'
 }
 
-cmd_waitfor_k8s() {
-	log "Waiting for k8s..."
-	. /etc/profile
-	sleep 5
-	while ! kubectl version; do
-		sleep 3
-	done
-	iptables -t nat -I POSTROUTING 1 -s 11.0.0.0/16 ! -d 11.0.0.0/16 -j MASQUERADE
-	for f in $(find /etc/kubernetes/init.d -maxdepth 1 -type f | sort); do
-		log "Process [$f]..."
-		test -x $f && $f start
-	done
-	log "Quitting..."
+##  build_crio [--criover=]
+cmd_build_crio() {
+	cmd_env
+	test -n "$__criover" || __criover=$(echo $__k8sver | cut -f-2 -d. | cut -c2-)
+	local criod=$GOPATH/src/github.com/cri-o/cri-o-$__criover
+	if ! test -d $criod; then
+		cd $(dirname $criod)
+		git clone -b release-$__criover --depth 1 https://github.com/cri-o/cri-o.git cri-o-$__criover
+	fi
+	rm -f $GOPATH/src/github.com/cri-o/cri-o
+	ln -s cri-o-$__criover $GOPATH/src/github.com/cri-o/cri-o
+	cd $GOPATH/src/github.com/cri-o/cri-o
+	make clean
+	make -j$(nproc) binaries || die make
 }
-
 
 # Get the command
 cmd=$1
