@@ -121,6 +121,15 @@ cmd_tcase_backend_http() {
 	done
 }
 
+cmd_tcase_http_attempt() {
+	local adr=10.0.0.2
+	test -n "$1" && adr=$1
+	test -n "$__count" || __count=1
+	tcase "One http attempt to $adr"
+	curl -s --max-time 8 -o /dev/null http://$adr/ || log FAILED
+	return 0
+}
+
 cmd_tcase_test_http() {
 	local adr=10.0.0.2
 	test -n "$1" && adr=$1
@@ -238,7 +247,16 @@ cmd_tcase_stop_pmtud() {
 	return 0
 }
 
-
+cmd_tcase_start_tcpdump() {
+	test -n "$__interface" || __interface=eth1
+	tcase "Start tcpdump on $__interface"
+	tcpdump -ni $__interface -w /tmp/$__interface.pcap $@ > /dev/null 2>&1 &
+}
+cmd_tcase_stop_tcpdump() {
+	tcase "Stop tcpdump"
+	killall tcpdump || tlog "Huh?"
+	return 0
+}
 
 . /etc/profile
 . /usr/lib/xctest

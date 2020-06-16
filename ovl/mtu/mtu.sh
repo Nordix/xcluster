@@ -278,6 +278,10 @@ test_multihop_start() {
 	otc 1 start_mserver
 	otc 1 http_svc
 	otc 1 mconnect_svc
+	if test "$__pmtud" = "yes"; then
+		otcw start_pmtud
+		sleep 1
+	fi
 }
 
 test_multihop_vanilla() {
@@ -292,10 +296,8 @@ test_multihop_vanilla() {
 
 test_multihop_pmtud() {
 	tlog "==== Http with narrow pmtu (with pmtud)"
+	__pmtud=yes
 	test_multihop_start
-
-	otcw start_pmtud
-	sleep 1
 
 	otc 201 backend_http
 	otc 221 "test_http --count=10"
@@ -310,13 +312,74 @@ test_multihop_limit_mtu() {
 	tlog "==== Http with narrow pmtu (limit mtu on workers)"
 	test_multihop_start
 
-	mtu_narrow
 	otcw limit_mtu
 
 	otc 201 backend_http
 	otc 221 "backend_http --count=40"
 
 	xcluster_stop
+}
+
+test_multihop_capture() {
+	tlog "==== Multihop http with tcpdump capture"
+	rm -rf /tmp/$USER/pcap
+	test_multihop_start
+
+	cmd_start_tcpdump
+	otc 201 start_tcpdump
+	otcw start_tcpdump
+	sleep 2
+
+	otc 221 http_attempt
+
+	sleep 2
+	cmd_stop_tcpdump  # Must be first!
+	otc 201 stop_tcpdump
+	otcw stop_tcpdump
+
+	sleep 2
+	cmd_collect_tcpdump_pod_logs
+	for i in 1 2 3 4 201; do
+		cmd_collect_tcpdump_log $i
+	done
+
+	xcluster_stop
+}
+
+cmd_start_tcpdump() {
+	tcase "Start tcpdump capture in all mserver-pods"
+	local pod
+	for pod in $($kubectl get pods -l app=mserver-daemonset -o name); do
+		kubectl exec $pod -- sh -c \
+			"tcpdump -ni eth0 -w /tmp/pcap > /dev/null 2>&1 &" || tdie
+	done
+}
+
+cmd_stop_tcpdump() {
+	tcase "Stop tcpdump in all mserver-pods"
+	local pod
+	for pod in $($kubectl get pods -l app=mserver-daemonset -o name); do
+		kubectl exec $pod -- killall tcpdump || tdie
+	done
+}
+
+cmd_collect_tcpdump_pod_logs() {
+	tcase "Collect tcpdump logs from all mserver-pods"
+	local dst=/tmp/$USER/pcap
+	mkdir -p $dst
+	local pod node
+	for pod in $($kubectl get pods -l app=mserver-daemonset -o name); do
+		node=$(kubectl get $pod -o json | jq -r .spec.nodeName)
+		kubectl cp $(basename $pod):tmp/pcap $dst/mserver-$node
+	done
+}
+
+cmd_collect_tcpdump_log() {
+	local dst=/tmp/$USER/pcap
+	test -n "$__interface" || __interface=eth1
+	local vm=$(printf "vm-%03d" $1)
+	sshopt="-o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no"
+	scp $sshopt root@192.168.0.$1:/tmp/$__interface.pcap $dst/$vm-$__interface
 }
 
 otcw() {

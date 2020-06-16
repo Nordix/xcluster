@@ -53,7 +53,7 @@ Note that mtu tests shall be performed with a CNI-plugin so
 
 Run test;
 ```
-log=/tmp/$USER-xcluster.jog
+log=/tmp/$USER-xcluster.log
 ./xcadmin.sh k8s_test --cni=xcluster mtu > $log
 ```
 
