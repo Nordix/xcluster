@@ -46,7 +46,7 @@ eth1      Link encap:Ethernet  HWaddr 00:00:00:01:01:03
 
 
 
-## Tests with K8s
+## Jumbo frames with K8s
 
 Note that mtu tests shall be performed with a CNI-plugin so
 `k8s-xcluster` shall be used.
@@ -54,7 +54,7 @@ Note that mtu tests shall be performed with a CNI-plugin so
 Run test;
 ```
 log=/tmp/$USER-xcluster.log
-./xcadmin.sh k8s_test --cni=xcluster mtu > $log
+__k8sver=v1.18.3 ./xcadmin.sh k8s_test --cni=xcluster mtu > $log
 ```
 
 Manual;
@@ -136,7 +136,7 @@ Trace example;
 15:22:09.793529 IP 11.0.40.65.80 > 192.168.2.221.57200: Flags [.], ack 73, win 510, options [nop,nop,TS val 2682440097 ecr 3813805413], length 0
 ```
 
-## Test without K8s
+## Pmtu discovery with ECMP without K8s
 
 There is a problem with pmtu discovery with ECMP described in depth here;
 
@@ -144,9 +144,18 @@ There is a problem with pmtu discovery with ECMP described in depth here;
 * https://blog.cloudflare.com/increasing-ipv6-mtu/
 
 
-Test setup;
+<img src="ecmp-pmtu-problem.svg" alt="ecmp-pmtu-problem.svg" width="80%" />
 
-<img src="../network-topology/multihop.svg" alt="Test setup" width="80%" />
+In short; the packet-too-big ICMP packet is routed to a random VM by
+ECMP.
+
+
+#### Test setup
+
+A variation on the `multihop` [network-topology](../network-topology)
+with smaller MTUs in the router networks is used;
+
+<img src="mtu-ladder.svg" alt="Test setup" width="80%" />
 
 **WARNING**: Linux > linux-5.4.x have a bug that makes ecmp packet
 based for forwarded traffic. Download the pre-built
@@ -160,20 +169,29 @@ in your traces. This is done by the test scripts;
 ethtool -K eth1 gro off gso off tso off
 ```
 
+**NOTE**; NIC offload does not work with user-space networking so use a netns.
+
 A http request from an external source to the VIP address with a
 rather large reply is assumed to be the most realistic test. Tests are
 prepared for http without any precautions (fails) and work-arounds
-with limited mtu and `pmtud`. It is *not* necessary to execute these
-tests in a "netns", user-space networking is fine.
+with limited-mtu and `pmtud`.
 
-Prerequisite; build `pmtud`;
+Traces with `tcpdump` is done in strategic places. The capture on the
+router vm-201 captures just about everything including the `pmtud`
+broadcastes ICMP mtu-too-big packets.
+
+
+#### Prerequisite
+
+Build `pmtud`;
 ```
 sudo apt install -y libpcap-dev libnetfilter-log-dev
 # Clone to $GOPATH/src/github.com/cloudflare/pmtud
 make -j$(nproc) -f Makefile.pmtud
 ```
 
-Run tests;
+#### Run tests
+
 ```
 cdo mtu
 ./mtu.sh test http_vanilla > /dev/null  # (fails)
@@ -198,6 +216,32 @@ tracepath -n 1000::1:20.0.0.0
 ip ro replace 1000::1:20.0.0.0/120 via 1000::1:192.168.1.201 src 1000::1:10.0.0.0
 ```
 
+Great, we have two work-arounds, but...
 
 
+## Pmtu discovery with ECMP with K8s
+
+Unfortunately neither the limited-mtu nor the pmtud work-arounds work
+with K8s.
+
+#### Test without ECMP
+
+Just to see how it should work. The route to the VIP address is setup
+only to `vm-003` (no ECMP).
+
+```
+# (in a netns)
+log=/tmp/$USER/xcluster-test.log
+__no_ecmp=yes ./mtu.sh test multihop_capture > $log
+# Pcap captures in /tmp/$USER/pcap
+```
+
+Pcap captures;
+
+* [Router, vm-201](pcap/no-ecmp/vm-201-eth1.pcap)
+* [vm-003](pcap/no-ecmp/vm-003-eth1.pcap)
+* [In the POD on vm-003](pcap/no-ecmp/mserver-vm-003.pcap)
+
+"Fragmentation Needed" packets from vm-201 (mtu=1400) and from vm-202
+(mtu=1300) are correctly forwarded all the way to the POD.
 

@@ -238,6 +238,7 @@ cmd_tcase_limit_mtu() {
 
 cmd_tcase_start_pmtud() {
 	tcase "Start pmtud"
+	echo 0 > /proc/sys/net/netfilter/nf_conntrack_checksum
 	pmtud --iface=eth1 --src-rate=1000.0 --iface-rate=1000.0 --verbose > /var/log/pmtud.log 2>&1 &
 }
 
