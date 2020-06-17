@@ -224,10 +224,12 @@ Great, we have two work-arounds, but...
 Unfortunately neither the limited-mtu nor the pmtud work-arounds work
 with K8s.
 
+<img src="mtu-ladder.svg" alt="Test setup" width="80%" />
+
 #### Test without ECMP
 
-Just to see how it should work. The route to the VIP address is setup
-only to `vm-003` (no ECMP).
+Just to see how it should work. The route to the VIP address on vm-201
+is setup only to `vm-003` (no ECMP).
 
 ```
 # (in a netns)
@@ -244,4 +246,21 @@ Pcap captures;
 
 "Fragmentation Needed" packets from vm-201 (mtu=1400) and from vm-202
 (mtu=1300) are correctly forwarded all the way to the POD.
+
+#### Test with ECMP
+
+```
+log=/tmp/$USER/xcluster-test.log
+./mtu.sh test multihop_capture > $log
+```
+
+In this particular run the ECMP picked vm-003 for the request but the
+"Fragmentation Needed" from vm-202 packet is ECMP'ed to vm-002.
+
+Pcap captures;
+
+* [Router, vm-201](pcap/ecmp/vm-201-eth1.pcap)
+* [vm-003](pcap/ecmp/vm-003-eth1.pcap)
+* [vm-002](pcap/ecmp/vm-002-eth1.pcap)
+* [In the POD on vm-003](pcap/ecmp/mserver-vm-003.pcap)
 
