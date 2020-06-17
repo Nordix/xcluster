@@ -6,10 +6,7 @@ Test jumbo frames in the K8s network with different CNI-plugins
 (currently only [xcluster-cni](https://github.com/Nordix/xcluster-cni)).
 
 Test of the [ecmp/pmdu-discovery
-problem](https://blog.cloudflare.com/path-mtu-discovery-in-practice/)
-without K8s.
-
-* https://www.redhat.com/en/blog/deep-dive-virtio-networking-and-vhost-net
+problem](https://blog.cloudflare.com/path-mtu-discovery-in-practice/).
 
 
 ## MTU in xcluster
@@ -149,21 +146,23 @@ There is a problem with pmtu discovery with ECMP described in depth here;
 In short; the packet-too-big ICMP packet is routed to a random VM by
 ECMP.
 
+#### The pmtu work-around
+
+<img src="ecmp-pmtud.svg" alt="ecmp-pmtud.svg" width="80%" />
+
+The `pmtud` catches the "fragmentation-needed" packets and broadcast
+them to all nodes.
+
 
 #### Test setup
 
-A variation on the `multihop` [network-topology](../network-topology)
+A variation of the `multihop` [network-topology](../network-topology)
 with smaller MTUs in the router networks is used;
 
 <img src="mtu-ladder.svg" alt="Test setup" width="80%" />
 
-**WARNING**: Linux > linux-5.4.x have a bug that makes ecmp packet
-based for forwarded traffic. Download the pre-built
-[bzImage-linux-5.4.35](https://artifactory.nordix.org/artifactory/cloud-native/xcluster/images/bzImage-linux-5.4.35)
-and set the `__kbin` variable to point to it.
-
-Also NIC "offload" must be disables or else you will see packets > mtu
-in your traces. This is done by the test scripts;
+NIC "offload" must be disabled or else you will see packets > mtu in
+your traces. This is done by the test scripts;
 
 ```
 ethtool -K eth1 gro off gso off tso off
@@ -174,11 +173,11 @@ ethtool -K eth1 gro off gso off tso off
 A http request from an external source to the VIP address with a
 rather large reply is assumed to be the most realistic test. Tests are
 prepared for http without any precautions (fails) and work-arounds
-with limited-mtu and `pmtud`.
+with `limited-mtu` and `pmtud`.
 
 Traces with `tcpdump` is done in strategic places. The capture on the
-router vm-201 captures just about everything including the `pmtud`
-broadcastes ICMP mtu-too-big packets.
+router vm-201 captures just about everything, including the `pmtud`
+broadcasted packets.
 
 
 #### Prerequisite
