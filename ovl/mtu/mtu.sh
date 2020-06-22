@@ -42,6 +42,7 @@ cmd_env() {
 		retrun 0
 	fi
 
+	test -n "$xcluster_FIRST_WORKER" || export xcluster_FIRST_WORKER=1
 	test -n "$XCLUSTER" || die 'Not set [$XCLUSTER]'
 	test -x "$XCLUSTER" || die "Not executable [$XCLUSTER]"
 	eval $($XCLUSTER env)
@@ -321,16 +322,18 @@ test_multihop_limit_mtu() {
 }
 
 test_multihop_capture() {
+	cmd_env
 	tlog "==== Multihop http with tcpdump capture"
 	rm -rf /tmp/$USER/pcap
 	test_multihop_start
+	test "$__limit_mtu" = "yes" && otcw limit_mtu_2
 
 	cmd_start_tcpdump
 	otc 201 start_tcpdump
 	otcw start_tcpdump
 	sleep 2
 
-	otc 221 http_attempt
+	otc 221 "http_attempt $__vip"
 
 	sleep 2
 	cmd_stop_tcpdump  # Must be first!
@@ -339,9 +342,49 @@ test_multihop_capture() {
 
 	sleep 2
 	cmd_collect_tcpdump_pod_logs
-	for i in 1 2 3 4 201; do
+	local lastw=$((xcluster_FIRST_WORKER + 3))
+	for i in $(seq $xcluster_FIRST_WORKER $lastw) 201; do
 		cmd_collect_tcpdump_log $i
 	done
+
+	xcluster_stop
+}
+
+test_multihop_capture_vm() {
+	cmd_env
+	test -n "$__vip" || __vip=10.0.0.2
+	tlog "==== Multihop http to VM with tcpdump capture ($__vip)"
+	rm -rf /tmp/$USER/pcap
+	test_vip_setup
+	sleep 1
+
+	if test "$__pmtud" = "yes"; then
+		otcw start_pmtud
+		sleep 1
+	fi
+	test "$__limit_mtu" = "yes" && otcw limit_mtu_2
+
+	otc 201 start_tcpdump
+	otcw start_tcpdump
+	sleep 2
+
+	otc 221 "http_attempt $__vip"
+
+	sleep 2
+	otc 201 stop_tcpdump
+	otcw stop_tcpdump
+
+	sleep 2
+	local lastw=$((xcluster_FIRST_WORKER + 3))
+	for i in $(seq $xcluster_FIRST_WORKER $lastw) 201; do
+		cmd_collect_tcpdump_log $i
+	done
+
+	if test "$__pmtud" = "yes"; then
+		otcw stop_pmtud
+		sleep 1
+		cmd_collect_pmtu_logs
+	fi
 
 	xcluster_stop
 }
@@ -376,13 +419,16 @@ cmd_collect_tcpdump_pod_logs() {
 
 cmd_collect_tcpdump_log() {
 	local dst=/tmp/$USER/pcap
+	mkdir -p $dst
 	test -n "$__interface" || __interface=eth1
 	local vm=$(printf "vm-%03d" $1)
+	tlog "Collect tcpdump logs from $vm ($__interface)"
 	sshopt="-o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no"
-	scp $sshopt root@192.168.0.$1:/tmp/$__interface.pcap $dst/$vm-$__interface
+	scp $sshopt root@192.168.0.$1:/tmp/$__interface.pcap $dst/$vm-$__interface 2>&1
 }
 
 otcw() {
+	cmd_env
 	local i
 	if test "$xcluster_FIRST_WORKER" = "2"; then
 		for i in $(seq 2 5); do otc $i "$1"; done

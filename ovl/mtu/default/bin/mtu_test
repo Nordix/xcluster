@@ -126,7 +126,7 @@ cmd_tcase_http_attempt() {
 	test -n "$1" && adr=$1
 	test -n "$__count" || __count=1
 	tcase "One http attempt to $adr"
-	curl -s --max-time 8 -o /dev/null http://$adr/ || log FAILED
+	curl -s --max-time 8 -o /dev/null http://$adr/ || tlog FAILED
 	return 0
 }
 
@@ -234,6 +234,13 @@ cmd_tcase_limit_mtu() {
 	echo 1 > /proc/sys/net/ipv4/ip_no_pmtu_disc
 	echo 1 > /proc/sys/net/ipv4/tcp_mtu_probing
 	echo 1024 > /proc/sys/net/ipv4/tcp_base_mss
+}
+
+cmd_tcase_limit_mtu_2() {
+	tcase "Limit mtus to net 192.168.2.0"
+	ip -6 ro replace 1000::1:192.168.2.0/120 via 1000::1:192.168.1.201 mtu 1280 \
+		|| tdie
+	ip ro replace 192.168.2.0/24 via 192.168.1.201 mtu 1280 || tdie
 }
 
 cmd_tcase_start_pmtud() {
