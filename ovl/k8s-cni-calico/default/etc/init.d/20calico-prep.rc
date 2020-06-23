@@ -1,5 +1,5 @@
 #! /bin/sh
-
+. /etc/profile
 export PATH="/bin:/sbin:/usr/bin:/usr/sbin"
 
 die() {
@@ -14,3 +14,6 @@ echo 1 > /proc/sys/net/ipv6/conf/all/forwarding
 echo 1 > /proc/sys/net/ipv4/ip_forward
 ip6tables -t nat -I POSTROUTING 1 -s 1100::/16 ! -d 1100::/16 -j MASQUERADE
 
+if test -n "$CNI_MTU"; then
+	sed -i -e "s,1440,$CNI_MTU," /etc/kubernetes/load/calico.yaml
+fi
