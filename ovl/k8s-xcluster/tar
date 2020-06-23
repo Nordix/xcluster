@@ -45,6 +45,7 @@ for n in kube-controller-manager kube-scheduler kube-apiserver \
 	kube-proxy kubectl kubelet; do
 	test -x $KUBERNETESD/$n || die "Not executable [$KUBERNETESD/$n]"
 	cp $KUBERNETESD/$n $tmp/bin
+	strip $tmp/bin/$n
 done
 
 mkdir -p $tmp/etc/kubernetes
