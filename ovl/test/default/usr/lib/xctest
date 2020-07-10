@@ -375,6 +375,12 @@ cni_plugin_info() {
 		return 0
 	fi
 
+	f=$d/kuberouter.yaml
+	if test -r $f; then
+		grep '  image:' $f | grep -Eo "kube-router:?.*" | uniq
+		return 0
+	fi
+
 	echo "xcluster internal"
 }
 

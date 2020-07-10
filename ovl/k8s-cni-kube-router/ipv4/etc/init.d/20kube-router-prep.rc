@@ -1,0 +1,26 @@
+#! /bin/sh
+. /etc/profile
+export PATH="/bin:/sbin:/usr/bin:/usr/sbin"
+
+die() {
+	echo "$@"
+	exit 1
+}
+
+hostname | grep -Eq 'vm-[0-9]+$' || die "Invalid hostname [$(hostname)]"
+i=$(hostname | cut -d- -f2 | sed -re 's,^0+,,')
+
+# Not on on vm-001
+test $i -gt 200 -o $i -le 1 && exit 0
+
+mv /bin/kube-proxy /bin/kube-proxy.orig
+
+cat > /bin/kube-proxy <<EOF
+#! /bin/sh
+while true; do
+  echo "Kube-proxy disabled"
+  sleep 300
+done
+EOF
+chmod a+x /bin/kube-proxy
+
