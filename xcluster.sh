@@ -96,7 +96,7 @@ cmd_env() {
 	test -n "$KERNELDIR" || KERNELDIR=$HOME/tmp/linux
 	export ARCHIVE
 
-	test -n "$__kver" || __kver=linux-5.7.6
+	test -n "$__kver" || __kver=linux-5.7.10
 	test -n "$__kobj" || __kobj=$XCLUSTER_HOME/obj-$__kver
 	test -n "$__kbin" || __kbin=$XCLUSTER_HOME/bzImage
 	test -n "$__kcfg" || __kcfg=$dir/config/$__kver
