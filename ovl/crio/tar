@@ -16,7 +16,7 @@ log() {
 test -n "$1" || die "No out-file"
 mkdir -p $tmp/bin
 
-test -n "$__criover" || __criover=crio-v1.18.1
+test -n "$__criover" || __criover=crio-v1.18.3
 ar=$__criover.tar.gz
 if test -r $ARCHIVE/$ar; then
 	log "Using cri-o binary release $__criover"

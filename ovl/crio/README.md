@@ -10,9 +10,9 @@ Cri-o have a binary release since v1.18. It can't be downloaded with
 "curl" so follow the link and store it in $ARCHIVE.
 
 ```
-ver=v1.18.1
+ver=v1.18.3
 ar=crio-$ver.tar.gz
-mv $HOME/Downloads/artifacts_$ar $ARCHIVE/$ar
+mv $HOME/Downloads/$ar $ARCHIVE/$ar
 ```
 
 ## Build
