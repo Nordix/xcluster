@@ -98,7 +98,10 @@ cmd_env() {
 
 	test -n "$__kver" || __kver=linux-5.7.10
 	test -n "$__kobj" || __kobj=$XCLUSTER_HOME/obj-$__kver
-	test -n "$__kbin" || __kbin=$XCLUSTER_HOME/bzImage
+	if test -z "$__kbin"; then
+		__kbin=$XCLUSTER_HOME/bzImage-$__kver
+		test -r $__kbin || __kbin=$XCLUSTER_HOME/bzImage
+	fi
 	test -n "$__kcfg" || __kcfg=$dir/config/$__kver
 	test -n "$__bbver" || __bbver=busybox-1.30.1
 	test -n "$__kvm" || __kvm=kvm
@@ -271,6 +274,7 @@ cmd_br_setup() {
 ##
 cmd_kernel_build() {
 	cmd_env
+	test "$__kbin" = "$XCLUSTER_HOME/bzImage" && __kbin="$__kbin-$__kver"
 	$DISKIM kernel_download --kver=$__kver
 	mkdir -p $KERNELDIR $__kobj
 	cmd_cpio_list $dir/image/initfs > $__kobj/cpio_list
