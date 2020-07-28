@@ -427,7 +427,8 @@ cmd_mkworkspace() {
 
 	H=$W/xcluster
 	mkdir -p $H
-	for n in bzImage cache hd.img base-libs.txt; do
+	cp $__kbin $H
+	for n in cache hd.img base-libs.txt; do
 		cp -Lr $XCLUSTER_HOME/$n $H
 	done
 	chmod 444 $H/hd.img
