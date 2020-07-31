@@ -1,6 +1,6 @@
 # Xcluster ovl - Skopeo
 
-Add the [skopeo](https://github.com/containers/skopeo) inage utility.
+Add the [skopeo](https://github.com/containers/skopeo) image utility.
 
 Prerequisite; `skopeo` is installed on the host.
 
@@ -31,7 +31,6 @@ sudo apt install libgpgme-dev libassuan-dev btrfs-progs \
   libdevmapper-dev libostree-dev
 git clone https://github.com/containers/skopeo $GOPATH/src/github.com/containers/skopeo
 cd $GOPATH/src/github.com/containers/skopeo
-make binary-local
-mv ./skopeo $GOPATH/bin
+make bin/skopeo
+mv ./bin/skopeo $GOPATH/bin
 ```
-

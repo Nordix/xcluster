@@ -15,20 +15,18 @@ log() {
 
 test -n "$1" || die "No out-file"
 
-mkdir -p $tmp
-for s in $(echo "$SETUP" | tr ',' ' '); do
-	test -d $dir/$s || continue
-	cp -R $dir/$s/* $tmp
-	setup_copied=yes
-done
-test "$setup_copied" != "yes" && test -d $dir/default && cp -R $dir/default/* $tmp
-
-x=$GOPATH/bin/skopeo
-test -x $x || x=$(which skopeo)
-test -n "$x" -a -x "$x" || die 'Skopeo not found'
+skopeo=$ARCHIVE/skopeo
+test -x $skopeo || skopeo=$GOPATH/bin/skopeo
+test -x $skopeo || skopeo=$GOPATH/src/github.com/containers/skopeo/bin/skopeo
+if ! test -x $skopeo; then
+	which skopeo > /dev/null || die "Skopeo not found"
+	skopeo=$(which skopeo)
+fi
+$skopeo -v >&2 || die "Skopeo not executable"
 mkdir -p $tmp/bin
-cp $x $tmp/bin
-$XCLUSTER cplib --dest=$tmp $tmp/bin/skopeo
+$XCLUSTER install_prog --dest=$tmp $skopeo
+
+
 
 cd $tmp
 tar cf "$1" *

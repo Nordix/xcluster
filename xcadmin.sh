@@ -305,6 +305,8 @@ cmd_k8s_build_images() {
 	$ovl/tar - > /dev/null || die "kubernetes/tar failed"
 	ovl="$($XCLUSTER ovld k8s-xcluster)"
 	$ovl/tar - > /dev/null || die "k8s-xcluster/tar failed"
+	ovl="$($XCLUSTER ovld skopeo)"
+	$ovl/tar - > /dev/null 2>&1 || die "skopeo/tar failed"
 
 	# Build the k8s-xcluster image;
 	local image
@@ -312,7 +314,7 @@ cmd_k8s_build_images() {
 	rm -rf $image
 	cp $__image $image
 	chmod +w $image
-	$XCLUSTER ximage --image=$image xnet etcd iptools crio k8s-xcluster mconnect images || die "ximage failed"
+	$XCLUSTER ximage --image=$image xnet etcd iptools crio skopeo k8s-xcluster mconnect images || die "ximage failed"
 	chmod -w $image
 	test -e $XCLUSTER_HOME/hd-k8s-xcluster.img || \
 		ln -s $(basename $image)  $XCLUSTER_HOME/hd-k8s-xcluster.img
@@ -323,7 +325,7 @@ cmd_k8s_build_images() {
 	rm -rf $image
 	cp $__image $image
 	chmod +w $image
-	$XCLUSTER ximage --image=$image xnet etcd iptools crio kubernetes mconnect images || die "ximage failed"
+	$XCLUSTER ximage --image=$image xnet etcd iptools crio skopeo kubernetes mconnect images || die "ximage failed"
 	chmod -w $image
 	test -e $XCLUSTER_HOME/hd-k8s.img || \
 		ln -s $(basename $image)  $XCLUSTER_HOME/hd-k8s.img
