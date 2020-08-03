@@ -15,9 +15,9 @@ log() {
 
 test -n "$1" || die "No out-file"
 
-skopeo=$ARCHIVE/skopeo
+skopeo=$GOPATH/src/github.com/containers/skopeo/bin/skopeo
 test -x $skopeo || skopeo=$GOPATH/bin/skopeo
-test -x $skopeo || skopeo=$GOPATH/src/github.com/containers/skopeo/bin/skopeo
+test -x $skopeo || skopeo=$ARCHIVE/skopeo
 if ! test -x $skopeo; then
 	which skopeo > /dev/null || die "Skopeo not found"
 	skopeo=$(which skopeo)
@@ -26,7 +26,12 @@ $skopeo -v >&2 || die "Skopeo not executable"
 mkdir -p $tmp/bin
 $XCLUSTER install_prog --dest=$tmp $skopeo
 
+cp -R $dir/default/* $tmp
 
+if test -n "$BASE_IMAGES" -a -r "$BASE_IMAGES"; then
+	mkdir -p $tmp/var/lib/pre-loaded-images
+	cp $BASE_IMAGES $tmp/var/lib/pre-loaded-images
+fi
 
 cd $tmp
 tar cf "$1" *
