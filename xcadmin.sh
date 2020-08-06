@@ -213,6 +213,14 @@ cmd_build_base() {
 	$XCLUSTER kernel_build || die "Failed to build kernel"
 	cmd_mark "Kernel built"
 
+	if test -n "$__xkernels"; then
+		for __kver in $__xkernels; do
+			export __kver
+			$XCLUSTER kernel_build || die "Failed to build kernel $__kver"
+			cmd_mark "Kernel built $__kver"
+		done
+	fi
+
 	$XCLUSTER busybox_build || die "Failed to build busybox"
 	cmd_mark "Busybox built"
 
