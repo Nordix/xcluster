@@ -24,7 +24,7 @@ Downloaded archives should be in the `$ARCHIVE` directory.
 
 Set the K8s version and unpack the K8s server binary;
 ```
-export __k8sver=v1.18.2
+export __k8sver=v1.18.8
 export KUBERNETESD=$HOME/tmp/kubernetes/kubernetes-$__k8sver/server/bin
 # (make sure the K8s server binary are unpacked at $KUBERNETESD)
 alias kubeadm="$KUBERNETESD/kubeadm"
@@ -69,6 +69,29 @@ docker.io/calico/cni:v3.14.0
 images lreg_cache docker.io/calico/cni:v3.14.0
 ...
 ```
+
+
+## Automatic Tests or installation
+
+Prepare as described above.
+
+Examples;
+```
+export __k8sver=v1.18.8
+./kubeadm.sh test --list
+./kubeadm.sh test > $log  # Default; --cni=xcluster test_template
+./kubeadm.sh test --cni=cilium test_template > $log
+./kubeadm.sh test --cni=weave test_template4 > $log
+```
+
+Install and leave the cluster running;
+```
+./kubeadm.sh test --cni=cilium --no-stop install > $log
+# Or;
+./kubeadm.sh test --cni=weave --no-stop install_ipv4 > $log
+```
+
+
 
 ## Manual Installation
 
@@ -212,21 +235,3 @@ nslookup kubernetes
 ```
 
 
-## Automatic Tests or installation
-
-Prepare as described above.
-
-Examples;
-```
-./kubeadm.sh test --list
-./kubeadm.sh test > $log  # Default; --cni=xcluster test_template
-./kubeadm.sh test --cni=cilium test_template > $log
-./kubeadm.sh test --cni=weave test_template4 > $log
-```
-
-Install and leave the cluster running;
-```
-./kubeadm.sh test --cni=cilium --no-stop install > $log
-# Or;
-./kubeadm.sh test --cni=weave --no-stop install_ipv4 > $log
-```
