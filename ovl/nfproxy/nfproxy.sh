@@ -11,6 +11,7 @@ prg=$(basename $0)
 dir=$(dirname $0); dir=$(readlink -f $dir)
 me=$dir/$prg
 tmp=/tmp/${prg}_$$
+. /etc/profile
 
 die() {
     echo "ERROR: $*" >&2
@@ -44,7 +45,6 @@ cmd_env() {
 		retrun 0
 	fi
 
-	test -n "$__cluster_domain" || __cluster_domain=xcluster
 	test -n "$XCLUSTER" || die 'Not set [$XCLUSTER]'
 	test -x "$XCLUSTER" || die "Not executable [$XCLUSTER]"
 	eval $($XCLUSTER env)

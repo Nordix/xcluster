@@ -13,6 +13,7 @@ i=$(hostname | cut -d- -f2 | sed -re 's,^0+,,')
 test $i -le 200 || exit 0
 
 . /etc/profile
+test -n "$DOMAIN" || DOMAIN=xcluster
 
 crio -log-level debug > /var/log/crio.log 2>&1 &
 sleep 0.2
@@ -33,7 +34,7 @@ run_kubelet() {
 		--feature-gates IPv6DualStack=true \
 		--network-plugin=cni \
 		--cluster-dns=${IPV6_PREFIX}192.168.1.$i \
-		--cluster-domain=xcluster \
+		--cluster-domain=$DOMAIN \
 		--runtime-cgroups=/systemd/system.slice \
 		--kubelet-cgroups=/systemd/system.slice >> /var/log/kubelet.log 2>&1
 }

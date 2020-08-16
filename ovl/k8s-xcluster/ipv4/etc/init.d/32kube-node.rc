@@ -13,6 +13,7 @@ test $i -le 200 || exit 0
 test $i -eq 1 && exit 0
 
 . /etc/profile
+test -n "$DOMAIN" || DOMAIN=xcluster
 
 # Read $CRI_OPTS;
 test -r /etc/cri-plugin.rc && . /etc/cri-plugin.rc
@@ -21,7 +22,7 @@ run_kubelet() {
 	kubelet --node-ip=192.168.1.$i $CRI_OPTS \
 		--register-node=true --kubeconfig $KUBECONFIG \
 		--network-plugin=cni \
-		--cluster-dns=192.168.1.$i --cluster-domain=xcluster \
+		--cluster-dns=192.168.1.$i --cluster-domain=$DOMAIN \
 		--runtime-cgroups=/systemd/system.slice \
         --kubelet-cgroups=/systemd/system.slice > /var/log/kubelet.log 2>&1
 }

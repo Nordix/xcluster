@@ -7,11 +7,14 @@ die() {
 hostname | grep -Eq 'vm-[0-9]+$' || die "Invalid hostname [$(hostname)]"
 i=$(hostname | cut -d- -f2 | sed -re 's,^0+,,')
 
+. /etc/profile
+test -n "$DOMAIN" || DOMAIN=xcluster
+
 local_dns() {
 	killall coredns
 	cat > /etc/Corefile <<EOF
 .:53 {
-    kubernetes xcluster {
+    kubernetes $DOMAIN {
       endpoint http://[1000::1:192.168.1.1]:8080
     }
     forward . 192.168.0.250:10053

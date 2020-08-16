@@ -42,7 +42,7 @@ cmd_env() {
 		retrun 0
 	fi
 
-	test -n "$__cluster_domain" || __cluster_domain=xcluster
+	test -n "$xcluster_DOMAIN" || xcluster_DOMAIN=xcluster
 	test -n "$XCLUSTER" || die 'Not set [$XCLUSTER]'
 	test -x "$XCLUSTER" || die "Not executable [$XCLUSTER]"
 	eval $($XCLUSTER env)
@@ -108,7 +108,7 @@ test_basic() {
 	otc 1 "start_mconnect $__mode"
 	otc 1 check_alpine
 	otc 1 "check_pod_addresses $__mode"
-	otc 2 "nslookup mconnect-ipv6.default.svc.$__cluster_domain"
+	otc 2 "nslookup mconnect-ipv6.default.svc.$xcluster_DOMAIN"
 	otc 3 "internal_mconnect $__mode"
 	otc 3 "nslookup www.google.se"
 	otc 1 pod_nslookup
@@ -129,7 +129,7 @@ basic() {
 	otc 1 "start_mconnect $1"
 	otc 1 check_alpine
 	otc 1 "check_pod_addresses $1"
-	otc 2 "nslookup mconnect.default.svc.$__cluster_domain"
+	otc 2 "nslookup mconnect.default.svc.$xcluster_DOMAIN"
 	otc 3 "internal_mconnect $1"
 	otc 3 "nslookup www.google.se"
 	otc 1 pod_nslookup

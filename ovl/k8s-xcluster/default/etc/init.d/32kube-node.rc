@@ -12,6 +12,7 @@ hostname | grep -Eq 'vm-[0-9]+$' || die "Invalid hostname [$(hostname)]"
 i=$(hostname | cut -d- -f2 | sed -re 's,^0+,,')
 test $i -le 200 || exit 0
 test $i -eq 1 && exit 0
+test -n "$DOMAIN" || DOMAIN=xcluster
 
 ANY_ADDR=0.0.0.0
 if test -n "$IPV6_PREFIX"; then
@@ -30,7 +31,7 @@ run_kubelet() {
 		--feature-gates IPv6DualStack=true \
 		--register-node=true --kubeconfig $KUBECONFIG \
 		--network-plugin=cni \
-		--cluster-dns=${IPV6_PREFIX}192.168.1.$i --cluster-domain=xcluster \
+		--cluster-dns=${IPV6_PREFIX}192.168.1.$i --cluster-domain=$DOMAIN \
 		--runtime-cgroups=/systemd/system.slice \
 		--kubelet-cgroups=/systemd/system.slice > /var/log/kubelet.log 2>&1
 }

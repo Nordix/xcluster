@@ -11,6 +11,8 @@ die() {
 
 hostname | grep -Eq 'vm-[0-9]+$' || die "Invalid hostname [$(hostname)]"
 i=$(hostname | cut -d- -f2 | sed -re 's,^0+,,')
+. /etc/profile
+test -n "$DOMAIN" || DOMAIN=xcluster
 
 # Ipv6 prefix; 1000::/64
 # All nodes, pod's and external VIP's shall have this prefix.

@@ -13,7 +13,7 @@ me=$dir/$prg
 tmp=/tmp/${prg}_$$
 . /etc/profile
 
-test -n "$__cname" || __cname=xcluster
+test -n "$DOMAIN" || DOMAIN=xcluster
 test -n "$PREFIX" || PREFIX=1000::1
 test -n "$__nvm" || __nvm=4
 
@@ -64,7 +64,7 @@ cmd_tcase_start_mconnect() {
 }
 
 cmd_tcase_internal_mconnect_single() {
-    local adr=mconnect-nfproxy.default.svc.$__cname
+    local adr=mconnect-nfproxy.default.svc.$DOMAIN
 	tcase "Traffic to $adr"
     pushv 40 20 2
     tex do_mconnect $adr || tdie
@@ -74,8 +74,8 @@ cmd_tcase_internal_mconnect_single() {
 cmd_tcase_internal_mconnect() {
 	tcase "Internal Traffic"
     pushv 40 20 2
-    tex do_mconnect mconnect-nfproxy-ipv4.default.svc.$__cname || tdie
-    tex do_mconnect mconnect-nfproxy-ipv6.default.svc.$__cname || tdie
+    tex do_mconnect mconnect-nfproxy-ipv4.default.svc.$DOMAIN || tdie
+    tex do_mconnect mconnect-nfproxy-ipv6.default.svc.$DOMAIN || tdie
     popv
 }
 

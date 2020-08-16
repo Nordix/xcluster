@@ -42,7 +42,6 @@ cmd_env() {
 	test -n "$__cni" || __cni=xcluster
 	export __mem1=2048
 	export __mem=1536
-	export __cluster_domain=cluster.local
 	export xcluster_DOMAIN=cluster.local
 	if test "$cmd" = "env"; then
 		set | grep -E '^(__.*|xcluster_.*)='

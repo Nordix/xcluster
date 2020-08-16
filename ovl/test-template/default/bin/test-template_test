@@ -11,7 +11,8 @@ prg=$(basename $0)
 dir=$(dirname $0); dir=$(readlink -f $dir)
 me=$dir/$prg
 tmp=/tmp/${prg}_$$
-test -n "$__cname" || __cname=xcluster
+. /etc/profile
+test -n "$DOMAIN" || DOMAIN=xcluster
 test -n "$PREFIX" || PREFIX=1000::1
 
 die() {
@@ -70,14 +71,14 @@ cmd_tcase_internal_mconnect() {
 	local adr
 	pushv 40 20 2
 	if test "$1" = "dual-stack"; then
-		adr=mconnect-ipv4.default.svc.$__cname
+		adr=mconnect-ipv4.default.svc.$DOMAIN
 		tcase "Traffic to $adr"
 		tex "do_mconnect $adr" || tdie
-		adr=mconnect-ipv6.default.svc.$__cname
+		adr=mconnect-ipv6.default.svc.$DOMAIN
 		tcase "Traffic to $adr"
 		tex "do_mconnect $adr" || tdie
 	else
-		local adr=mconnect.default.svc.$__cname
+		local adr=mconnect.default.svc.$DOMAIN
 		tcase "Traffic to $adr"
 		tex do_mconnect $adr || tdie
 	fi
@@ -153,7 +154,6 @@ cmd_tcase_outgoing_connect() {
 	done
 }
 
-. /etc/profile
 . /usr/lib/xctest
 indent='  '
 

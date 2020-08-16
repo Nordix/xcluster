@@ -11,7 +11,8 @@ prg=$(basename $0)
 dir=$(dirname $0); dir=$(readlink -f $dir)
 me=$dir/$prg
 tmp=/tmp/${prg}_$$
-test -n "$__cname" || __cname=xcluster
+
+. /etc/profile
 
 die() {
 	echo "ERROR: $*" >&2
@@ -41,7 +42,6 @@ cmd_tcase_nslookup() {
 	popv
 }
 
-. /etc/profile
 . /usr/lib/xctest
 indent='  '
 

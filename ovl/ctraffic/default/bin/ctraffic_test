@@ -11,7 +11,7 @@ prg=$(basename $0)
 dir=$(dirname $0); dir=$(readlink -f $dir)
 me=$dir/$prg
 tmp=/tmp/${prg}_$$
-test -n "$__cname" || __cname=xcluster
+test -n "$DOMAIN" || DOMAIN=xcluster
 
 die() {
 	echo "ERROR: $*" >&2
@@ -55,11 +55,11 @@ cmd_tcase_start_ctraffic() {
 
 cmd_tcase_internal_traffic_ipv4() {
 	tcase "Internal IPv4 traffic"
-	traffic_test ctraffic-ipv4.default.svc.xcluster
+	traffic_test ctraffic-ipv4.default.svc.$DOMAIN
 }
 cmd_tcase_internal_traffic_ipv6() {
 	tcase "Internal IPv6 traffic"
-	traffic_test ctraffic-ipv6.default.svc.xcluster
+	traffic_test ctraffic-ipv6.default.svc.$DOMAIN
 }
 cmd_tcase_external_traffic_ipv4() {
 	tcase "External IPv4 traffic"

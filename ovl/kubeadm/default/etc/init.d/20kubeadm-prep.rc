@@ -11,7 +11,7 @@ i=$(hostname | cut -d- -f2 | sed -re 's,^0+,,')
 test $i -le 200 || exit 0
 
 echo "export KUBECONFIG=/etc/kubernetes/admin.conf" >> /etc/profile
-echo "export __cname=cluster.local" >> /etc/profile
+echo "export DOMAIN=cluster.local" >> /etc/profile
 . /etc/profile
 
 # Work around for bad install of dropbear

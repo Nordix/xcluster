@@ -13,6 +13,7 @@ test $i -le 200 || exit 0
 test $i -eq 1 && exit 0
 
 . /etc/profile
+test -n "$DOMAIN" || DOMAIN=xcluster
 
 ip -6 route add default \
 	nexthop via 1000::1:192.168.1.201 nexthop via 1000::1:192.168.1.202
@@ -24,7 +25,7 @@ run_kubelet() {
 	kubelet --address=:: --node-ip=1000::1:192.168.1.$i $CRI_OPTS \
 		--register-node=true --kubeconfig $KUBECONFIG \
 		--network-plugin=cni \
-		--cluster-dns=1000::1:192.168.1.$i --cluster-domain=xcluster \
+		--cluster-dns=1000::1:192.168.1.$i --cluster-domain=$DOMAIN \
 		--runtime-cgroups=/systemd/system.slice \
 		--kubelet-cgroups=/systemd/system.slice > /var/log/kubelet.log 2>&1
 }
