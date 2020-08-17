@@ -19,7 +19,8 @@ mkdir -p $tmp
 cp -R $dir/default/* $tmp
 
 mkdir -p $tmp/bin
-f=$GOPATH/bin/mconnect
+f=$GOPATH/src/github.com/Nordix/mconnect/image/mconnect
+test -x $f || f=$GOPATH/bin/mconnect
 test -x $f || f=$XCLUSTER_WORKSPACE/bin/mconnect
 test -x $f || die "Not executable [$f]"
 strip $f

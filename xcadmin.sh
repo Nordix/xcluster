@@ -38,7 +38,6 @@ dbg() {
 cmd_env() {
 	test -n "$__corednsver" || __corednsver=1.6.7
 	test -n "$__k8sver" || __k8sver=v1.18.3
-	test -n "$__mconnectver" || __mconnectver=v2.0
 	test -n "$GOPATH" || export GOPATH=$HOME/go
 	test -n "$ARCHIVE" || ARCHIVE=$HOME/Downloads
 	test "$cmd" = "env" && set | grep -E '^(__.*|ARCHIVE)='
@@ -77,8 +76,8 @@ cmd_bin_add() {
 
 	f=$bindir/mconnect
 	if ! test -x $f; then
-		ar=$(cmd_find_ar mconnect-$__mconnectver.gz) || return 1
-		gzip -d -c $ar > $f
+		ar=$(cmd_find_ar mconnect.xz) || return 1
+		xz -d -c $ar > $f
 		chmod a+x $f
 	fi
 
@@ -96,8 +95,8 @@ cmd_bin_add() {
 ##     Create a "$ARCHIVE/xcluster-cache.tar" file. This requires "sudo"!!
 ##
 cmd_prepulled_images() {
-	echo docker.io/library/alpine:3.8
-	echo docker.io/nordixorg/mconnect:v1.2
+	echo docker.io/library/alpine:latest
+	echo registry.nordix.org/cloud-native/mconnect:latest
 	echo k8s.gcr.io/metrics-server-amd64:v0.3.6
 	echo k8s.gcr.io/pause:3.1
 }
@@ -244,7 +243,7 @@ cmd_k8s_archives() {
 	echo $ARCHIVE/cni-plugins-linux-amd64-v0.8.2.tgz
 	echo $ARCHIVE/etcd-v3.3.10-linux-amd64.tar.gz
 	echo $ARCHIVE/kubernetes-server-$__k8sver-linux-amd64.tar.gz
-	echo $ARCHIVE/mconnect-$__mconnectver.gz
+	echo $ARCHIVE/mconnect.xz
 	echo $ARCHIVE/xcluster-cache.tar
 	echo $ARCHIVE/assign-lb-ip.xz
 }
