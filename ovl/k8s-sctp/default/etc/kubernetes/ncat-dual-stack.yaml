@@ -44,6 +44,7 @@ spec:
         ports:
         - containerPort: 5001
       - image: registry.nordix.org/cloud-native/mserver:latest
+        imagePullPolicy: IfNotPresent
         name: mserver
         env:
         - name: NO_SERVERS

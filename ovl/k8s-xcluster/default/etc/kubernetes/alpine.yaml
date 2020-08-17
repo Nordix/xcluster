@@ -15,6 +15,7 @@ spec:
       containers:
       - name: alpine
         image: library/alpine:latest
+        imagePullPolicy: IfNotPresent
         command:
           - "/usr/bin/nc"
           - "-lk"

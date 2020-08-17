@@ -20,6 +20,7 @@ spec:
       containers:
       - name: multus-alpine
         image: library/alpine:latest
+        imagePullPolicy: IfNotPresent
         command:
           - /bin/sh
           - "-c"

@@ -15,6 +15,7 @@ spec:
       containers:
       - name: metallb
         image: metallb/controller:latest
+        imagePullPolicy: IfNotPresent
         securityContext:
           privileged: true
 

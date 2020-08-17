@@ -15,6 +15,7 @@ spec:
       containers:
       - name: alpine
         image: library/alpine:latest
+        imagePullPolicy: IfNotPresent
         command: ["sh", "-f", "/pod-init/pod-init"]
         env:
           - name: MY_NODE_NAME

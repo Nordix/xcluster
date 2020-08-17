@@ -63,6 +63,7 @@ spec:
       containers:
       - name: xcluster-cni
         image: registry.nordix.org/cloud-native/xcluster-cni:latest
+        imagePullPolicy: IfNotPresent
         lifecycle:
           preStop:
            exec:

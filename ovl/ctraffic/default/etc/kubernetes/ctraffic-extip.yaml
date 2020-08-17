@@ -32,5 +32,6 @@ spec:
       containers:
       - name: ctraffic
         image: registry.nordix.org/cloud-native/ctraffic:latest
+        imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 5003

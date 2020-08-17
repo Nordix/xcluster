@@ -15,6 +15,7 @@ spec:
       containers:
       - name: mserver
         image: registry.nordix.org/cloud-native/mserver:latest
+        imagePullPolicy: IfNotPresent
         securityContext:
           privileged: true
         volumeMounts:
