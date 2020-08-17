@@ -37,6 +37,6 @@ spec:
     spec:
       containers:
       - name: mconnect
-        image: nordixorg/mconnect:v1.2
+        image: registry.nordix.org/cloud-native/mconnect:latest
         ports:
         - containerPort: 5001
