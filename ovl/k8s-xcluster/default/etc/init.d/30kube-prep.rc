@@ -8,6 +8,8 @@ die() {
 	exit 1
 }
 
+test -n "$FIRST_WORKER" || echo "FIRST_WORKER=2" >> /etc/profile
+
 hostname | grep -Eq 'vm-[0-9]+$' || die "Invalid hostname [$(hostname)]"
 i=$(hostname | cut -d- -f2 | sed -re 's,^0+,,')
 test $i -le 200 || exit 0
