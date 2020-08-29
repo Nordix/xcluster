@@ -17,7 +17,7 @@ SETUP=ipv4 xc mkcdrom k8s-cni-cilium private-reg; xc starts
 
 Pre-load private registry;
 ```
-ver=v1.7.0
+ver=v1.7.8
 images lreg_cache docker.io/cilium/cilium:$ver
 images lreg_cache docker.io/cilium/operator:$ver
 ```
@@ -41,7 +41,7 @@ helm template cilium \
 Check http://docs.cilium.io/en/stable/gettingstarted/k8s-install-default/
 
 ```
-ver=1.7.4
+ver=1.7.8
 curl https://raw.githubusercontent.com/cilium/cilium/$ver/install/kubernetes/quick-install.yaml > quick-install-$ver.yaml
 ```
 
