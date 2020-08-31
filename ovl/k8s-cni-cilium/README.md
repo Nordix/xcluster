@@ -23,8 +23,9 @@ images lreg_cache docker.io/cilium/operator:$ver
 ```
 
 ```
-cd $GOPATH/src/github.com/cilium/cilium
-git pull
+mkdir -p $GOPATH/src/github.com/cilium
+cd $GOPATH/src/github.com/cilium
+git clone --depth 1 https://github.com/cilium/cilium.git
 cd $GOPATH/src/github.com/cilium/cilium/install/kubernetes
 helm template cilium \
   --namespace kube-system \
@@ -35,6 +36,9 @@ helm template cilium \
   --set global.masquerade=true \
   --set global.installIptablesRules=false \
   --set global.autoDirectNodeRoutes=true \
+  --set global.kubeProxyReplacement=strict \
+  --set global.k8sServiceHost=192.168.1.1 \
+  --set global.k8sServicePort=6443 \
   > cilium.yaml
 ```
 
@@ -71,7 +75,12 @@ kubectl get pods   # All shall become ready
 
 Use the "cilium" program inside a POD;
 ```
-kubectl exec -it cilium-jv7w2 bash
+#kubectl exec -it cilium-jv7w2 -- bash
+kubectl exec -it -n kube-system \
+ $(kubectl get pod -n kube-system -l k8s-app=cilium -o name | head -1) -- bash
+pod=$(kubectl get pod -n kube-system -l k8s-app=cilium -o name | head -1)
+kubectl exec -it -n kube-system $pod -- bash
+kubectl logs $pod
 # In the POD;
 cilium --help
 cilium endpoint list
@@ -99,3 +108,5 @@ ls /lib/modules/5.1.7/kernel/net/netfilter/
 iptables -t mangle -A PREROUTING -p tcp -j TPROXY --tproxy-mark 0x1/0x1 --on-port 5000
 xc cache iptools
 ```
+
+kubeadm init phase certs all --apiserver-advertise-address=0.0.0.0 --apiserver-cert-extra-sans=192.168.1.1
