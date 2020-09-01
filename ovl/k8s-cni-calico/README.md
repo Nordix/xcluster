@@ -6,7 +6,7 @@ Use [project calico](https://www.projectcalico.org/) in `xcluster`.
 
 Pre-load the local registry;
 ```
-ver=v3.10.0
+ver=v3.16.0
 images lreg_cache docker.io/calico/cni:$ver
 images lreg_cache docker.io/calico/node:$ver
 images lreg_cache docker.io/calico/kube-controllers:$ver
@@ -32,11 +32,31 @@ export __nvm=5
 t=test-template
 XOVLS="k8s-cni-calico private-reg" $($XCLUSTER ovld $t)/$t.sh test > $XCLUSTER_TMP/$t-test.log
 ```
+
+## Upgrade
+
+```
+cdo k8s-cni-calico
+curl https://docs.projectcalico.org/manifests/calico.yaml -O
+# Check the xcluster specific config.
+meld calico-orig.yaml default/etc/kubernetes/load/calico.yaml &
+# Make the corresponding in the new "calico.yaml"
+cp calico.yaml calico-new.yaml
+ec calico-new.yaml
+mv -f calico-new.yaml default/etc/kubernetes/load/calico.yaml
+images lreg_missingimages default
+# Cache images
+# Test!
+mv -f calico.yaml calico-orig.yaml
+# Commit updates
+```
+
+
 ## Build
 
 Build an image with dual-stack and calico pre-pulled;
 ```
-ver=v3.10.0
+ver=v3.16.0
 docker pull calico/cni:$ver
 docker pull calico/node:$ver
 docker pull calico/kube-controllers:$ver
@@ -57,7 +77,7 @@ $($XCLUSTER ovld $t)/$t.sh test basic_dual > /dev/null
 ### Install calicoctl
 
 ```
-ver=v3.10.0
+ver=v3.16.0
 curl -L \
  https://github.com/projectcalico/calicoctl/releases/download/$ver/calicoctl \
  > $GOPATH/bin/calicoctl
