@@ -15,11 +15,15 @@ SETUP=ipv4 xc mkcdrom k8s-cni-cilium private-reg; xc starts
 
 ## Build
 
-Pre-load private registry;
+Upgrade
 ```
-ver=v1.7.8
-images lreg_cache docker.io/cilium/cilium:$ver
-images lreg_cache docker.io/cilium/operator:$ver
+ver=1.8.2
+curl https://raw.githubusercontent.com/cilium/cilium/$ver/install/kubernetes/quick-install.yaml > quick-install-$ver.yaml
+meld quick-install.yaml default/etc/kubernetes/load/quick-install.yaml &
+cp quick-install-1.8.2.yaml default/etc/kubernetes/load/quick-install.yaml
+# Modify quick-install.yaml
+images lreg_missingimages default
+# Update local-reg
 ```
 
 ```
@@ -30,7 +34,6 @@ cd $GOPATH/src/github.com/cilium/cilium/install/kubernetes
 helm template cilium \
   --namespace kube-system \
   --set global.containerRuntime.integration=crio \
-  --set global.datapathMode=ipvlan \
   --set global.ipvlan.masterDevice=eth1 \
   --set global.tunnel=disabled \
   --set global.masquerade=true \
@@ -39,15 +42,13 @@ helm template cilium \
   --set global.kubeProxyReplacement=strict \
   --set global.k8sServiceHost=192.168.1.1 \
   --set global.k8sServicePort=6443 \
+  --set global.device=eth1 \
+  --set config.ipam=kubernetes \
   > cilium.yaml
+#  --set global.datapathMode=ipvlan \
 ```
 
 Check http://docs.cilium.io/en/stable/gettingstarted/k8s-install-default/
-
-```
-ver=1.7.8
-curl https://raw.githubusercontent.com/cilium/cilium/$ver/install/kubernetes/quick-install.yaml > quick-install-$ver.yaml
-```
 
 
 
@@ -108,5 +109,3 @@ ls /lib/modules/5.1.7/kernel/net/netfilter/
 iptables -t mangle -A PREROUTING -p tcp -j TPROXY --tproxy-mark 0x1/0x1 --on-port 5000
 xc cache iptools
 ```
-
-kubeadm init phase certs all --apiserver-advertise-address=0.0.0.0 --apiserver-cert-extra-sans=192.168.1.1

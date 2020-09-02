@@ -149,6 +149,7 @@ data:
   enable-endpoint-health-checking: "true"
   enable-well-known-identities: "false"
   enable-remote-node-identity: "true"
+  device: "eth1"
 ---
 # Source: cilium/charts/agent/templates/clusterrole.yaml
 apiVersion: rbac.authorization.k8s.io/v1
@@ -428,10 +429,10 @@ spec:
               key: custom-cni-conf
               name: cilium-config
               optional: true
-#        - name: KUBERNETES_SERVICE_HOST
-#          value: "192.168.1.1"
-#        - name: KUBERNETES_SERVICE_PORT
-#          value: "6443"
+        - name: KUBERNETES_SERVICE_HOST
+          value: "192.168.1.1"
+        - name: KUBERNETES_SERVICE_PORT
+          value: "6443"
         image: "docker.io/cilium/cilium:v1.7.8"
         imagePullPolicy: IfNotPresent
         lifecycle:
