@@ -325,7 +325,13 @@ check_mconnect_result() {
 do_mconnect() {
 	mkdir -p $tmp
 	local out=$tmp/out
-	if ! mconnect -address $1:5001 -nconn 100 -output json > $out; then
+	local adr=$1
+	if echo $adr | grep -qF ']' ; then
+		echo $adr | grep -qF ']:' || adr=$adr:5001
+	else
+		echo $adr | grep -qF ':' || adr=$adr:5001
+	fi
+	if ! mconnect -address $adr -nconn 100 -output json > $out; then
 		cat $out | jq .
 		return 1
 	fi
