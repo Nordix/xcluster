@@ -400,7 +400,6 @@ cmd_dropbear_build() {
 ##   libs [--base-libs=file]
 ##   cploader --dest=dir
 ##   ovld ovl
-##
 cmd_mkimage() {
 	cmd_env
 	test -r $__kbin || die "Kernel not built [$__kbin]"
@@ -615,6 +614,27 @@ cmd_ovld() {
 	done
 	die "Ovl not found [$1]"
 }
+
+##   inject [--sudo=sudo] [--key=file] --addr=root@... [ovl...]
+##     Install ovl's on a running target. The target does not have to be a
+##     xcluster VM. Example inject on an AWS instance;
+##
+##       xc inject --sudo=sudo --key=$HOME/.ssh/aws-key.pem \
+##         --addr=ubuntu@ec2-.....compute.amazonaws.com etcd
+##
+cmd_inject() {
+	local ovl ovld
+	local sshopt="-o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no"
+	if test -n "$__key"; then
+		test -r "$__key" || die "Not readable [$__key]"
+		sshopt="$sshopt -i $__key"
+	fi
+	for ovl in $@; do
+		ovld=$(cmd_ovld $ovl)
+		$ovld/tar - | ssh $sshopt $__addr $__sudo tar -C / -x
+	done
+}
+
 
 ##  Cluster commands;
 ##   start [--nvm=4] [--nrouters=2] [--ntesters=0]
