@@ -303,6 +303,7 @@ cmd_k8s_build_images() {
 		tar -C $XCLUSTER_WORKSPACE -xf $ar
 		mv $XCLUSTER_WORKSPACE/kubernetes $XCLUSTER_WORKSPACE/kubernetes-$__k8sver
 	fi
+	echo "K8s binaries from [$KUBERNETESD/]"
 
 	# Pre checks
 	local ovl="$($XCLUSTER ovld etcd)"
