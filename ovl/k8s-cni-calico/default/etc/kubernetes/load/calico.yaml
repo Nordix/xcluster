@@ -3652,8 +3652,6 @@ spec:
             - name: CALICO_IPV4POOL_VXLAN
               value: "Never"
             # Xcluster config
-            - name: CALICO_IPV6POOL_IPIP
-              value: "Always"
             - name: CALICO_IPV6POOL_NAT_OUTGOING
               value: "true"
             - name: IP_AUTODETECTION_METHOD
