@@ -98,7 +98,7 @@ cmd_prepulled_images() {
 	echo docker.io/library/alpine:latest
 	echo registry.nordix.org/cloud-native/mconnect:latest
 	echo k8s.gcr.io/metrics-server-amd64:v0.3.6
-	echo k8s.gcr.io/pause:3.1
+	echo k8s.gcr.io/pause:3.2
 }
 cmd_mkcache_ar() {
 	test -n "$XCLUSTER" || die 'Not set [$XCLUSTER]'

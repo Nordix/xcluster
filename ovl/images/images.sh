@@ -12,7 +12,7 @@ dir=$(dirname $0); dir=$(readlink -f $dir)
 me=$dir/$prg
 tmp=/tmp/${prg}_$$
 
-pause="k8s.gcr.io/pause:3.1"
+pause="k8s.gcr.io/pause:3.2"
 
 die() {
     echo "ERROR: $*" >&2
