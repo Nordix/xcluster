@@ -14,9 +14,7 @@ test $i -le 200 || exit 0
 
 . /etc/profile
 test -n "$DOMAIN" || DOMAIN=xcluster
-
-crio -log-level debug > /var/log/crio.log 2>&1 &
-sleep 0.2
+. /etc/cri-plugin.rc
 
 ANY_ADDR=0.0.0.0
 if test -n "$IPV6_PREFIX"; then
@@ -26,10 +24,8 @@ if test -n "$IPV6_PREFIX"; then
 fi
 
 run_kubelet() {
-	kubelet --container-runtime=remote --address=$ANY_ADDR \
+	kubelet --address=$ANY_ADDR $CRI_OPTS \
 		--node-ip=${IPV6_PREFIX}192.168.1.$i \
-		--container-runtime-endpoint=unix:///var/run/crio/crio.sock \
-		--image-service-endpoint=unix:///var/run/crio/crio.sock \
 		--register-node=true --kubeconfig $KUBECONFIG \
 		--feature-gates IPv6DualStack=true \
 		--network-plugin=cni \
