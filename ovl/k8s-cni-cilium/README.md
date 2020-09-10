@@ -20,10 +20,12 @@ Upgrade
 ver=1.8.2
 curl https://raw.githubusercontent.com/cilium/cilium/$ver/install/kubernetes/quick-install.yaml > quick-install-$ver.yaml
 meld quick-install.yaml default/etc/kubernetes/load/quick-install.yaml &
-cp quick-install-1.8.2.yaml default/etc/kubernetes/load/quick-install.yaml
-# Modify quick-install.yaml
+cp quick-install-$ver.yaml quick-install-$ver-mod.yaml
+# Modify quick-install-$ver-mod.yaml
+cp quick-install-$ver-mod.yaml default/etc/kubernetes/load/quick-install.yaml
 images lreg_missingimages default
 # Update local-reg
+# TEST!
 ```
 
 ```
