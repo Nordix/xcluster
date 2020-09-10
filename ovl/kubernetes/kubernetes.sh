@@ -28,7 +28,6 @@ echo "$1" | grep -qi "^help\|-h" && help
 
 ##   ca
 ##     Generate cerificates
-##
 cmd_ca() {
 	mkdir -p $tmp
 	cd $tmp
@@ -47,7 +46,31 @@ cmd_ca() {
 	local d=$dir/default/srv/kubernetes
 	cp apiserver.pem $d/server.crt
 	cp apiserver-key.pem $d/server.key
-	cp ca.pem $d
+	cp ca.pem $d/ca.crt
+}
+
+##   kubeconfig_sec
+##     Generate secure kubeconfig's
+##
+cmd_kubeconfig_sec() {
+	local cfg=$dir/default/etc/kubernetes/kubeconfig
+
+	export KUBECONFIG=$cfg.token
+	cp $cfg $KUBECONFIG
+	kubectl config set-cluster xcluster --server=https://192.168.1.1:6443
+	kubectl config set-cluster xcluster --insecure-skip-tls-verify=true
+	kubectl config set-credentials root --token=kallekula
+
+	# This doesn't work but is kept as reference
+	# Unable to connect to the server: x509: certificate signed by unknown authority
+	local certd=$dir/default/srv/kubernetes
+	export KUBECONFIG=$cfg.sec
+	cp $cfg $KUBECONFIG
+	kubectl config set-cluster xcluster --server=https://192.168.1.1:6443
+	kubectl config set-cluster xcluster --embed-certs=true \
+		--certificate-authority=$certd/server.crt
+	kubectl config set-credentials root --embed-certs=true \
+		--client-certificate=$certd/server.crt --client-key=$certd/server.key
 }
 
 ##   runc_download
