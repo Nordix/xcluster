@@ -10,7 +10,7 @@ i=$(hostname | cut -d- -f2 | sed -re 's,^0+,,')
 test -n "$DOMAIN" || DOMAIN=xcluster
 
 # Setup a local coredns
-if test $i -le 200 && test -x /bin/kube-apiserver; then
+if test $i -le 200 && test -x /bin/kube-apiserver -o -x /bin/kubelet; then
 	cat > /etc/Corefile <<EOF
 .:53 {
     kubernetes $DOMAIN {
