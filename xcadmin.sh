@@ -320,7 +320,7 @@ cmd_k8s_build_images() {
 	rm -rf $image
 	cp $__image $image
 	chmod +w $image
-	$XCLUSTER ximage --image=$image xnet etcd iptools crio k8s-xcluster mconnect images || die "ximage failed"
+	$XCLUSTER ximage --image=$image env xnet etcd iptools crio k8s-xcluster mconnect images || die "ximage failed"
 	chmod -w $image
 	test -e $XCLUSTER_HOME/hd-k8s-xcluster.img || \
 		ln -s $(basename $image)  $XCLUSTER_HOME/hd-k8s-xcluster.img
@@ -331,7 +331,7 @@ cmd_k8s_build_images() {
 	rm -rf $image
 	cp $__image $image
 	chmod +w $image
-	$XCLUSTER ximage --image=$image xnet etcd iptools crio kubernetes mconnect images || die "ximage failed"
+	$XCLUSTER ximage --image=$image env xnet etcd iptools crio kubernetes mconnect images || die "ximage failed"
 	chmod -w $image
 	test -e $XCLUSTER_HOME/hd-k8s.img || \
 		ln -s $(basename $image)  $XCLUSTER_HOME/hd-k8s.img
