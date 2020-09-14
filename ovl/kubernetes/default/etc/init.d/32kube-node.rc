@@ -12,7 +12,6 @@ hostname | grep -Eq 'vm-[0-9]+$' || die "Invalid hostname [$(hostname)]"
 i=$(hostname | cut -d- -f2 | sed -re 's,^0+,,')
 test $i -le 200 || exit 0
 
-. /etc/profile
 test -n "$DOMAIN" || DOMAIN=xcluster
 . /etc/cri-plugin.rc
 

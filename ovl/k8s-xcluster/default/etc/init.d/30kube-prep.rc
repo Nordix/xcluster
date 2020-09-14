@@ -21,8 +21,9 @@ if test -n "$PROXY_MODE" -a "$PROXY_MODE" != "ipvs"; then
    ip6tables -t nat -N KUBE-MARK-DROP
 fi
 
+# The tailing ':' makes sure this doesn't match an ipv6 address
 test -n "$IPV6_PREFIX" && \
-	sed -i -e "s,192.168.1.1,[${IPV6_PREFIX}192.168.1.1]," \
+	sed -i -e "s,192.168.1.1:,[${IPV6_PREFIX}192.168.1.1]:," \
 	/etc/kubernetes/kubeconfig
 
 # Work around for bad install of dropbear
