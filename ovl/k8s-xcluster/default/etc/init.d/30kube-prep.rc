@@ -9,6 +9,9 @@ die() {
 }
 
 test -n "$FIRST_WORKER" || echo "FIRST_WORKER=2" >> /etc/profile
+grep -q KUBECONFIG /etc/profile || \
+	echo "KUBECONFIG=/etc/kubernetes/kubeconfig" >> /etc/profile
+echo "export KUBECONFIG" >> /etc/profile
 
 hostname | grep -Eq 'vm-[0-9]+$' || die "Invalid hostname [$(hostname)]"
 i=$(hostname | cut -d- -f2 | sed -re 's,^0+,,')
@@ -38,8 +41,6 @@ mount --make-rshared /
 
 echo 1 > /proc/sys/net/ipv6/conf/all/forwarding
 echo 1 > /proc/sys/net/ipv4/ip_forward
-
-echo "export KUBECONFIG=/etc/kubernetes/kubeconfig" >> /etc/profile
 
 if test $i -eq 1; then
 	ip ro replace 11.0.0.0/16 via 192.168.1.2

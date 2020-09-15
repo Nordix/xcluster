@@ -8,6 +8,10 @@ die() {
 	exit 1
 }
 
+grep -q KUBECONFIG /etc/profile || \
+	echo "KUBECONFIG=/etc/kubernetes/kubeconfig" >> /etc/profile
+echo "export KUBECONFIG" >> /etc/profile
+
 hostname | grep -Eq 'vm-[0-9]+$' || die "Invalid hostname [$(hostname)]"
 i=$(hostname | cut -d- -f2 | sed -re 's,^0+,,')
 test $i -le 200 || exit 0
@@ -33,7 +37,6 @@ for d in cpuset memory; do
 done
 mount --make-rshared /
 
-echo "export KUBECONFIG=/etc/kubernetes/kubeconfig" >> /etc/profile
 mkdir -p /var/lib/kubelet
 
 echo 1 > /proc/sys/net/ipv6/conf/all/forwarding
