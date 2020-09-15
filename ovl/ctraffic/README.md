@@ -5,33 +5,22 @@ traffic test program.
 
 ## Usage
 
-Basic usage;
+Start;
 ```
-xc mkcdrom private-reg externalip ctraffic; xc starts
-# On a router;
-kubectl apply -f /etc/kubernetes/ctraffic-extip.yaml
-ctraffic -address 10.0.0.2:5003 -nconn 400 -rate 100 -monitor | jq .
-```
-
-With loadBalancerIP;
-```
-xc mkcdrom private-reg metallb gobgp ctraffic; xc starts
-# On cluster;
-kubectl apply -f https://raw.githubusercontent.com/google/metallb/v0.7.3/manifests/metallb.yaml
-kubectl apply -f /etc/kubernetes/metallb-config.yaml
-kubectl get pods -n metallb-system
-kubectl apply -f https://github.com/Nordix/ctraffic/raw/master/ctraffic.yaml
-# On a router;
-ctraffic -address 10.0.0.0:5003 -nconn 400 -rate 100 -monitor_interval 1s | jq .
+log=/tmp/$USER/xcluster/test.log  # $log is assumed to be set from now on
+./ctraffic.sh test start > $log
+# Variations; single-stack and dual-stack with IPv6 as "main"
+./ctraffic.sh test --mode=ipv4 start > $log
+./ctraffic.sh test --mode=ipv6 start > $log
+xcluster_IPV6_PREFIX=1000::1: ./ctraffic.sh test start > $log
 ```
 
-Copy the image to the private registry;
+Test;
 ```
-ver=0.1      # (or whatever...)
-skopeo copy --dest-tls-verify=false \
-  docker-daemon:nordixorg/ctraffic:$ver \
-  docker://172.17.0.2:5000/nordixorg/ctraffic:$ver
-skopeo delete --tls-verify=false docker://172.17.0.2:5000/nordixorg/ctraffic:$oldver
+./ctraffic.sh test > $log
+# Get stats;
+./ctraffic.sh test get_stats > $log
+jq . < /tmp/ctraffic.out
 ```
 
 ## ECMP test
@@ -40,12 +29,9 @@ Remove and re-add an ECMP target and investigate the impact on
 traffic.
 
 ```
-xc mkcdrom private-reg externalip ctraffic; xc starts
-# On cluster;
-kubectl apply -f /etc/kubernetes/ctraffic-extip.yaml
-kubectl get pods   # Check that the ctraffic are Running
+./ctraffic.sh test start > $log
 # On a router;
-ctraffic -timeout 30s -address 10.0.0.2:5003 -nconn 400 -rate 400 -monitor | jq .
+ctraffic -timeout 1m -address 10.0.0.0:5003 -nconn 400 -rate 400 -monitor | jq .
 # On the same router but in another terminal;
 ip route change 10.0.0.0/24 \
   nexthop via 192.168.1.2 \
@@ -72,11 +58,10 @@ implies that Linux uses
 Iptables is used to simulate a shaky network;
 
 ```
-xc mkcdrom private-reg externalip ctraffic; xc starts
+log=/tmp/$USER/xcluster/test.log
+./ctraffic.sh test start > $log
 # On a router;
-kubectl apply -f /etc/kubernetes/ctraffic-extip.yaml
-kubectl get pods   # Check that the ctraffic are Running
-ctraffic -timeout 30s -address 10.0.0.2:5003 -nconn 40 -rate 500 -monitor \
+ctraffic -timeout 30s -address 10.0.0.0:5003 -nconn 40 -rate 500 -monitor \
   -stats=all > /tmp/packet-loss.json
 # In another terminal
 iptables -A INPUT -i eth1 -m statistic --mode random --probability 0.05 -j DROP
@@ -98,7 +83,7 @@ used. Start by copying the existing `ctraffic` image to the private
 registry but with a new tag;
 
 ```
-skopeo copy --dest-tls-verify=false docker-daemon:nordixorg/ctraffic:v0.2 docker://172.17.0.2:5000/nordixorg/ctraffic:v99.0
+skopeo copy --dest-tls-verify=false docker-daemon:nordixorg/ctraffic:latest docker://172.17.0.2:5000/nordixorg/ctraffic:v99.0
 ```
 
 The "strategy" is configured like this;
@@ -130,16 +115,15 @@ interresting to monitor the replica-sets with `kubectl get rs` during
 the upgrade;
 
 ```
-xc mkcdrom private-reg externalip ctraffic; xc starts
+log=/tmp/$USER/xcluster/test.log
+./ctraffic.sh test start > $log
 # On a router;
-kubectl apply -f /etc/kubernetes/ctraffic-extip.yaml
-kubectl get pods   # Check that the ctraffic are Running
-ctraffic -timeout 15s -address 10.0.0.2:5003 -nconn 120 -rate 500 -monitor \
+ctraffic -timeout 15s -address 10.0.0.0:5003 -nconn 120 -rate 500 -monitor \
   -stats=all > /tmp/upgrade.json
 
 # On the cluster;
-vi /etc/kubernetes/ctraffic-extip.yaml  # image -> v99.0
-kubectl apply -f /etc/kubernetes/ctraffic-extip.yaml
+vi /etc/kubernetes/ctraffic.yaml  # image -> v99.0
+kubectl apply -f /etc/kubernetes/ctraffic.yaml
 
 # In another shell
 watch kubectl get rs

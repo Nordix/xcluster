@@ -37,8 +37,6 @@ dbg() {
 ##
 cmd_env() {
 
-	test -n "$__tag" || __tag="registry.nordix.org/cloud-native/ctraffic:latest"
-
 	if test "$cmd" = "env"; then
 		set | grep -E '^(__.*)='
 		retrun 0
@@ -69,9 +67,13 @@ cmd_test() {
             test_$t
         done
     else
-        for t in basic; do
-            test_$t
-        done
+		test_start
+		push __no_stop yes
+		__no_start=yes
+		test_basic
+		test_lossy
+		pop __no_stop
+		xcluster_stop
     fi      
 
     now=$(date +%s)
@@ -86,54 +88,63 @@ test_start() {
 
 	otc 1 check_namespaces
 	otc 1 check_nodes
-	otc 1 check_metric_server
+	otc 201 routes
+	otc 1 start_ctraffic
 }
 
 
 test_basic() {
 	tlog "=== ctraffic: Basic test"
-	test "$__no_start" != "yes" && test_start
+	export __nrouters=1
+	test_start
 
-	otc 1 start_ctraffic
-	otc 2 internal_traffic_ipv4
-	otc 2 internal_traffic_ipv6
-
-	otc 1 assign_lb_ip
-	otc 201 routes
-	otc 201 external_traffic_ipv4
-	otc 201 external_traffic_ipv6	
-
-	otc 201 lossy_traffic_ipv4
+	otc 2 internal_traffic
+	otc 201 external_traffic
 
 	xcluster_stop
 }
 
+test_get_stats() {
+	tlog "=== ctraffic: Get statistics"
+	export __nrouters=1
+	test_start
+
+	otc 201 collect_stats
+	rcp 201 /tmp/ctraffic.out /tmp/ctraffic.out
+
+	xcluster_stop
+}
+
+test_lossy() {
+	tlog "=== ctraffic: Lossy traffic"
+	export __nrouters=1
+	test_start
+
+	otc 201 "start_traffic -nconn 40 -rate 500 -timeout 30s"
+	sleep 10
+	otc 201 "inject_packet_loss 0.10"
+	sleep 10
+	otc 201 remove_packet_loss
+	otc 201 "wait --timeout=20"
+	rcp 201 /tmp/ctraffic.out /tmp/ctraffic.out
+	local drop=$(cat /tmp/ctraffic.out | jq .Dropped)
+	local retrans=$(cat /tmp/ctraffic.out | jq .Retransmits)
+	tlog "Retransmits=$retrans, Dropped=$drop"
+
+	xcluster_stop
+
+	local plot=$GOPATH/src/github.com/Nordix/ctraffic/scripts/plot.sh
+	if test -x $plot; then
+		$plot throughput < /tmp/ctraffic.out > /tmp/ctraffic.svg
+		tlog "Plot in /tmp/ctraffic.svg"
+	fi
+}
 
 cmd_otc() {
 	test -n "$__vm" || __vm=2
 	otc $__vm $@
 }
 
-##   mkimage [--tag=registry.nordix.org/cloud-native/ctraffic:latest]
-##     Create the docker image and upload it to the local registry.
-##
-cmd_mkimage() {
-	cmd_env
-	local imagesd=$($XCLUSTER ovld images)
-	$imagesd/images.sh mkimage --force --upload --strip-host --tag=$__tag $dir/image
-}
-
-##   go_build
-##     Build local go program. Output to ./image/default/bin
-##
-cmd_go_build() {
-	mkdir -p $dir/image/default/bin
-	cd $dir/go
-	GO111MODULE=on CGO_ENABLED=0 GOOS=linux go build \
-		-ldflags "-extldflags '-static' -X main.version=$(date +%F:%T)" \
-		-o ../image/default/bin/list-nodes ./cmd/list-nodes/main.go
-	strip ../image/default/bin/list-nodes
-}
 
 . $($XCLUSTER ovld test)/default/usr/lib/xctest
 indent=''

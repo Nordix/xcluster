@@ -17,13 +17,13 @@ test -n "$1" || die "No out-file"
 
 mkdir -p $tmp/sbin
 cp -R $dir/default/* $tmp
-cp $GOPATH/src/github.com/Nordix/ctraffic/*.yaml $tmp/etc/kubernetes
+src=$GOPATH/src/github.com/Nordix/ctraffic
+cp $src/*.yaml $tmp/etc/kubernetes
 
-for n in ctraffic assign-lb-ip; do
-	f=$GOPATH/bin/$n
-	test -x $f || die "Not executable [$f]"
-	cp $f $tmp/sbin
-done
+f=$src/image/ctraffic
+test -x $f || f=$GOPATH/bin/ctraffic
+test -x $f || die "Not executable [$f]"
+cp $f $tmp/sbin
 
 cd $tmp
 tar cf "$1" *
