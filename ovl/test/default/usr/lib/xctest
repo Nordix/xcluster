@@ -15,6 +15,7 @@ __interval=1
 begin=$(date +%s)
 indent="  "
 kubectl=kubectl
+sshopt="-o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no"
 
 ##  tlog message...
 ##    Logs to stderr with time stamp.
@@ -389,6 +390,44 @@ cni_plugin_info() {
 
 	echo "xcluster internal"
 }
+##  isDual3
+##    Returns true if K8s dual-stack phase.3 is used ("ipFamilies" array).
+##
+isDual3() {
+	test "$(kubectl get svc -o json kubernetes | jq -r .spec.clusterIPs)" != "null"
+}
+
+##  ipv6base
+##    Returns true if the "main" cluster family is ipv6
+##
+ipv6base() {
+	kubectl get svc -o json kubernetes | jq -r .spec.clusterIP | grep -q :
+}
+
+##  apply_k8s <manifest-dir>
+##    Applies k8s manifests in the passed dir. If $__mode=dual-stack
+##    manifest-dir/dual or manifest-dir/dual-old are also applied
+##    depending on "isDual3"
+##
+apply_k8s() {
+	tlog "Applying manifests from [$1]"
+	test -n "$1" || tdie "No dir"
+	test -d "$1" || tdie "Not a directory [$1]"
+	local yamld=$1
+	$kubectl apply -f $yamld || tdie
+	if test "$__mode" = "dual-stack"; then
+		if isDual3; then
+			if test -d $yamld/dual; then
+				$kubectl apply -f $yamld/dual || tdie
+			fi
+		else
+			if test -d $yamld/dual-old; then
+				$kubectl apply -f $yamld/dual-old || tdie
+			fi
+		fi
+	fi
+	return 0
+}
 
 ## On-host Functions
 ## -----------------
@@ -401,13 +440,26 @@ cni_plugin_info() {
 rsh() {
 	local vm=$1
 	shift
-	local sshopt="-o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no"
 	if ip link show xcbr1 > /dev/null 2>&1; then
 		ssh -q $sshopt root@192.168.0.$vm $@
 	else
 		ssh -q $sshopt -p $((12300+vm)) root@127.0.0.1 $@
 	fi
 }
+
+##  rcp <vm> <remote-file> <local-file>
+##    Get a file from a VM.
+##
+rcp() {
+	local vm=$1
+	shift
+	if ip link show xcbr1 > /dev/null 2>&1; then
+		scp -q $sshopt root@192.168.0.$vm:$1 $2
+	else
+		ssh -q $sshopt -p $((12300+vm)) root@127.0.0.1:$1 $2
+	fi
+}
+
 
 ##  check_vm [vms...]
 ##    NOTE: Called from host (not within the cluster).
@@ -444,9 +496,8 @@ otc() {
 ##  xcluster_start <ovls...>
 ##    Build a system (mkcdrom) and start xcluster.
 ##
-##    VM start is verified. Use $EXPECTED_VMS for custome verification
-##
 xcluster_start() {
+	test "$__no_start" = "yes" && return 0
 	if test -n "$SETUP"; then
 		tcase "Build cluster SETUP=$SETUP [env $BASEOVLS $@ $XOVLS test]"
 		SETUP=$SETUP $XCLUSTER mkcdrom env $BASEOVLS $@ $XOVLS test || tdie
@@ -458,8 +509,13 @@ xcluster_start() {
 	tcase "Cluster start ($(basename $__image))"
 	$XCLUSTER $start || tdie
 	sleep 2
-	tcase "VM connectivity"
+	local lastvm=4 lastrouter=202 lasttester=0
+	test -n "$__nvm" && lastvm=$__nvm
+	test -n "$__nrouters" && lastrouter=$((200 + __nrouters))
+	test -n "$__ntesters" && lasttester=$((220 + __ntesters))
+	local EXPECTED_VMS="$(seq -s' ' 1 $lastvm) $(seq -s' ' 201 $lastrouter) $(seq -s' ' 221 $lasttester)"
 	pushv 60 30 2
+	tcase "VM connectivity; $EXPECTED_VMS"
 	tex check_vm $EXPECTED_VMS || tdie
 	popv
 	xcluster_unprep
@@ -484,6 +540,11 @@ xcluster_prep() {
 		*)
 		;;
 	esac
+	export xcluster___mode=$1
+	test -n "$xcluster_DOMAIN" || xcluster_DOMAIN=xcluster
+	export xcluster_DOMAIN
+	test -n "$xcluster_KUBECONFIG" || xcluster_KUBECONFIG=/etc/kubernetes/kubeconfig
+	export xcluster_KUBECONFIG
 }
 xcluster_unprep() {
 	unset SETUP BASEOVLS 
@@ -496,43 +557,5 @@ xcluster_stop() {
 }
 
 test -n "$XCTEST_HOOK" -a -r "$XCTEST_HOOK" && . "$XCTEST_HOOK"
-
-
-if test "$selftest" = "yes"; then
-	tmp=/tmp/xtest_selftest_$$
-
-	tcase "Push/Pop"
-	push __timeout 20
-	test $__timeout -eq 20 || tdie
-	push __timeout 30
-	test $__timeout -eq 30 || tdie
-	pop __timeout
-	test $__timeout -eq 20 || tdie
-	pop __timeout
-	test $__timeout -eq 10 || tdie
-
-	tcase "Pushv/Popv"
-	pushv 22 33 44
-	test $__timeout -eq 22 || tdie
-	test $__retries -eq 33 || tdie
-	test $__interval -eq 44 || tdie
-	popv
-	test $__timeout -eq 10 || tdie
-	test $__retries -eq 10 || tdie
-	test $__interval -eq 1 || tdie
-
-	tcase "Retry"
-	__retries=1
-	tex false && tdie
-	tcase "Timeout"
-	__retries=3
-	__timeout=3
-	tex false && tdie
-
-	tcase "ogrep"
-	echo 'Kalle Kula' | ogrep -i 'kalle kula' || tdie
-	rm -rf $tmp
-	tlog SUCCESS
-fi
 
 test "$1" = "help" && grep '^##' $0 | cut -c3-
