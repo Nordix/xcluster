@@ -80,11 +80,15 @@ cmd_test() {
 
 test_start() {
 	test -n "$__mode" || __mode=dual-stack
+	export xcluster___mode=$__mode
 	xcluster_prep $__mode
 	xcluster_start test-template
 
 	otc 1 check_namespaces
 	otc 1 check_nodes
+	otc 1 start_alpine
+	otc 1 "start_mconnect $__mode"
+	otc 1 check_alpine
 	otc 1 check_metric_server
 }
 
@@ -102,11 +106,8 @@ test_basic_dual() {
 test_basic() {
 	tlog "=== test-template: Basic test on dual-stack"
 	__mode=dual-stack
-	test "$__no_start" != "yes" && test_start
+	test_start
 
-	otc 1 start_alpine
-	otc 1 "start_mconnect $__mode"
-	otc 1 check_alpine
 	otc 1 "check_pod_addresses $__mode"
 	otc 2 "nslookup mconnect-ipv6.default.svc.$xcluster_DOMAIN"
 	otc 3 "internal_mconnect $__mode"
@@ -123,11 +124,8 @@ basic() {
 	tlog "=== test-template: Basic test on $1"
 
 	__mode=$1
-	test "$__no_start" != "yes" && test_start
+	test_start
 
-	otc 1 start_alpine
-	otc 1 "start_mconnect $1"
-	otc 1 check_alpine
 	otc 1 "check_pod_addresses $1"
 	otc 2 "nslookup mconnect.default.svc.$xcluster_DOMAIN"
 	otc 3 "internal_mconnect $1"

@@ -50,7 +50,13 @@ cmd_tcase_check_metric_server() {
 }
 cmd_tcase_start_mconnect() {
 	if test "$1" = "dual-stack"; then
-		start_mconnect /etc/kubernetes/mconnect-dual.yaml || tdie
+		if isDual3; then
+			tlog "Dual-stack phase.3"
+			start_mconnect /etc/kubernetes/mconnect-dual3.yaml || tdie
+		else
+			tlog "Dual-stack phase.2"
+			start_mconnect /etc/kubernetes/mconnect-dual.yaml || tdie
+		fi
 		assign-lb-ip -svc mconnect-ipv4 || tdie
 		assign-lb-ip -svc mconnect-ipv6 || tdie
 	else
