@@ -348,6 +348,15 @@ log_version() {
 	tlog "$(uname -s -r -v)"
 	tlog "CNI-plugin; $(cni_plugin_info)"
 	tlog "Proxy-$(grep mode /etc/kubernetes/kube-proxy.config)"
+	local baseFamily=IPv4
+	ipv6base && baseFamily=IPv6
+	local dualMode="old dual-stack API"
+	isDual3 && dualMode="phase.3 dual-stack API"
+	if test "$__mode" = "dual-stack"; then
+		tlog "Dual-stack cluster. BaseFamily=$baseFamily, $dualMode"
+	else
+		tlog "Single-stack cluster. BaseFamily=$baseFamily, $dualMode"
+	fi
 }
 cni_plugin_info() {
 	local f d=/etc/kubernetes/load
@@ -544,6 +553,8 @@ xcluster_start() {
 ##    Set SETUP and BASEOVLS variables for some pre-set configurations.
 ##
 xcluster_prep() {
+	# NOTE!!!!!
+	# Update ovl/k8s-xcluster/xctest-hook when this function is updated!!
 	case $1 in
 		ipv4)
 			SETUP="ipv4,$XSETUP"
@@ -557,7 +568,8 @@ xcluster_prep() {
 			SETUP=$XSETUP
 			;;
 		*)
-		;;
+			die "Invalid mode [$1]"
+			;;
 	esac
 	export xcluster___mode=$1
 	test -n "$xcluster_DOMAIN" || xcluster_DOMAIN=xcluster

@@ -12,6 +12,13 @@ xcluster_prep() {
 		dual-stack)
 			SETUP=$XSETUP
 			;;
-		*) ;;
+		*) 
+			die "Invalid mode [$1]"
+			;;
 	esac
+	export xcluster___mode=$1
+	test -n "$xcluster_DOMAIN" || xcluster_DOMAIN=xcluster
+	export xcluster_DOMAIN
+	test -n "$xcluster_KUBECONFIG" || xcluster_KUBECONFIG=/etc/kubernetes/kubeconfig
+	export xcluster_KUBECONFIG
 }
