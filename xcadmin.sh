@@ -97,7 +97,7 @@ cmd_bin_add() {
 cmd_prepulled_images() {
 	echo docker.io/library/alpine:latest
 	echo registry.nordix.org/cloud-native/mconnect:latest
-	echo k8s.gcr.io/metrics-server-amd64:v0.3.6
+	echo k8s.gcr.io/metrics-server/metrics-server:v0.3.7
 	echo k8s.gcr.io/pause:3.2
 }
 cmd_mkcache_ar() {

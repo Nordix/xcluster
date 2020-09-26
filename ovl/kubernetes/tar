@@ -81,7 +81,8 @@ test -x $n && cp $n $tmp/bin
 
 $XCLUSTER install_prog --dest=$tmp jq base64
 
-f=$GOPATH/bin/assign-lb-ip
+f=$GOPATH/src/github.com/Nordix/assign-lb-ip/assign-lb-ip
+test -x $f || f=$GOPATH/bin/assign-lb-ip
 test -x $f && cp $f $tmp/bin
 
 # Install libraries
