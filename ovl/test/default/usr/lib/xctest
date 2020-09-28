@@ -434,6 +434,10 @@ apply_k8s() {
 				$kubectl apply -f $yamld/dual-old || tdie
 			fi
 		fi
+	else
+		if isDual3 && test -d $yamld/single; then
+			$kubectl apply -f $yamld/single || tdie
+		fi
 	fi
 	return 0
 }

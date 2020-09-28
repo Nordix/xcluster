@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: mconnect-preferdual
+spec:
+  ipFamilyPolicy: PreferDualStack
+  selector:
+    app: mconnect
+  ports:
+  - port: 5001
+    name: mconnect
+  type: LoadBalancer

@@ -14,6 +14,7 @@ tmp=/tmp/${prg}_$$
 . /etc/profile
 test -n "$DOMAIN" || DOMAIN=xcluster
 test -n "$PREFIX" || PREFIX=1000::1
+yamld=/etc/kubernetes/test-template
 
 die() {
 	echo "ERROR: $*" >&2
@@ -48,24 +49,41 @@ cmd_tcase_check_metric_server() {
 	kubectl="kubectl -n kube-system"
 	test_deployment metrics-server 180
 }
-cmd_tcase_start_mconnect() {
-	if test "$1" = "dual-stack"; then
-		if isDual3; then
-			tlog "Dual-stack phase.3"
-			start_mconnect /etc/kubernetes/mconnect-dual3.yaml || tdie
-		else
-			tlog "Dual-stack phase.2"
-			start_mconnect /etc/kubernetes/mconnect-dual.yaml || tdie
-		fi
-		assign-lb-ip -svc mconnect-ipv4 || tdie
-		assign-lb-ip -svc mconnect-ipv6 || tdie
+cmd_tcase_start_servers() {
+	$kubectl apply -f /etc/kubernetes/alpine.yaml || tdie
+	apply_k8s /etc/kubernetes/mconnect
+	if ipv6base; then
+		assign-lb-ip -svc mconnect-lb -ip 1000::
 	else
-		start_mconnect /etc/kubernetes/mconnect.yaml || tdie
-		local adr=10.0.0.0
-		test "$1" = "ipv6" && adr=1000::
-		assign-lb-ip -svc mconnect -ip $adr || tdie
+		assign-lb-ip -svc mconnect-lb -ip 10.0.0.0
 	fi
+	if test "$__mode" != "dual-stack"; then
+		if isDual3; then
+			if ipv6base; then
+				assign-lb-ip -svc mconnect-preferdual -ip 1000::2
+			else
+				assign-lb-ip -svc mconnect-preferdual -ip 10.0.0.2
+			fi
+		fi
+		return 0
+	fi
+
+	# Dual-stack;
+
+	assign-lb-ip -svc mconnect-ipv4 || tdie
+	assign-lb-ip -svc mconnect-ipv6 || tdie
+
+	isDual3 || return 0
+
+	# Dual-stack phase.3
+	assign-lb-ip -svc mconnect-preferdual -ip 1000::2,10.0.0.2
 }
+cmd_tcase_check_servers() {
+	test_deployment alpine-deployment 120
+	test_daemonset mconnect 120
+	test_deployment mconnect-deployment 120
+}
+
 cmd_tcase_nslookup() {
 	tcase "Nslookup $1"
 	test -n "$1" || tdie "Nothing to lookup"
@@ -73,41 +91,62 @@ cmd_tcase_nslookup() {
 	tex "nslookup $1 | ogrep 'Name:'" || tdie
 	popv
 }
-cmd_tcase_internal_mconnect() {
-	local adr
-	pushv 40 20 2
-	if test "$1" = "dual-stack"; then
-		adr=mconnect-ipv4.default.svc.$DOMAIN
-		tcase "Traffic to $adr"
-		tex "do_mconnect $adr" || tdie
-		adr=mconnect-ipv6.default.svc.$DOMAIN
-		tcase "Traffic to $adr"
-		tex "do_mconnect $adr" || tdie
-	else
-		local adr=mconnect.default.svc.$DOMAIN
-		tcase "Traffic to $adr"
-		tex do_mconnect $adr || tdie
-	fi
-	popv
+mconnect_to() {
+	tlog "Traffic to $1"
+	tex do_mconnect $1 || tdie
 }
 cmd_tcase_set_vip_routes() {
-	tcase "Set routes to the VIP address via vm-002"
-	ip ro replace 10.0.0.0/24 via 192.168.1.2 || tdie
-	ip -6 ro replace 1000::/120 via $PREFIX:192.168.1.2 || tdie
+	tcase "Set routes to the VIP (ECMP)"
+	vip_route
+}
+cmd_tcase_internal_mconnect() {
+	tcase "Internal connect"
+
+	mconnect_to mconnect.default.svc.$DOMAIN:5001
+
+	if test "$__mode" != "dual-stack"; then
+		if isDual3; then
+			mconnect_to mconnect-preferdual.default.svc.$DOMAIN:5001
+		fi
+		return 0
+	fi
+
+	# Dual-stack
+	mconnect_to mconnect-ipv4.default.svc.$DOMAIN
+	mconnect_to mconnect-ipv6.default.svc.$DOMAIN
+
+	if isDual3; then
+		mconnect_to mconnect-preferdual.default.svc.$DOMAIN:5001
+	fi
 }
 cmd_tcase_external_mconnect() {
-	local adr=10.0.0.0
-	test "$1" = "ipv6" && adr='[1000::]'
-	tcase "External traffic to $adr"
-	tex "do_mconnect $adr" || tdie
-}
+	tcase "External connect"
+	if ipv6base; then
+		mconnect_to "[1000::]:5001"
+	else
+		mconnect_to "10.0.0.0:5001"
+	fi
 
-cmd_tcase_start_alpine() {
-	tcase "Start alpine pods"
-	$kubectl apply -f /etc/kubernetes/alpine.yaml || tdie
-}
-cmd_tcase_check_alpine() {
-	test_deployment alpine-deployment 40
+	if test "$__mode" != "dual-stack"; then
+		if isDual3; then
+			if ipv6base; then
+				mconnect_to "[1000::2]:5001"
+			else
+				mconnect_to "10.0.0.2:5001"
+			fi
+		fi
+		return 0
+	fi
+
+	# Dual-stack
+	mconnect_to "[1000::1]:5001"
+	mconnect_to "10.0.0.1:5001"
+
+	isDual3 || return 0
+
+	# Dual-stack phase.3
+	mconnect_to "[1000::2]:5001"
+	mconnect_to "10.0.0.2:5001"
 }
 
 get_global_addresses() {
@@ -115,7 +154,7 @@ get_global_addresses() {
 }
 
 cmd_tcase_check_pod_addresses() {
-	tcase "Check POD addresses for; $1"
+	tcase "Check POD addresses for; $__mode"
 	local adr found=0
 	local pod=$(get_pod alpine)
 	test -n "$pod" || tdie "Can't find an alpine POD"
@@ -128,11 +167,19 @@ cmd_tcase_check_pod_addresses() {
 			found=$((found+1))
 		fi
 	done
-	case $1 in
-		ipv4) test $found -eq 1 || tdie "Invalid adr for $1; $adrs";;
-		ipv6) test $found -eq 100 || tdie "Invalid adr for $1; $adrs";;
-		*) test $found -eq 101 || tdie "Invalid adr for $1; $adrs";;
+	case $__mode in
+		ipv4) test $found -eq 1 || tdie "Invalid adr for $__mode; $adrs";;
+		ipv6) test $found -eq 100 || tdie "Invalid adr for $__mode; $adrs";;
+		*) test $found -eq 101 || tdie "Invalid adr for $_mode; $adrs";;
 	esac
+
+	adr=$($kubectl get pod $pod -o json | jq -r .status.podIP)
+	if ipv6base; then
+		echo $adr | grep -q : || tdie "podIP has wrong family [$adr]"
+	else
+		echo $adr | grep -q : && tdie "podIP has wrong family [$adr]"
+	fi
+	return 0
 }
 
 cmd_tcase_pod_nslookup() {
@@ -149,8 +196,8 @@ cmd_tcase_pod_nslookup() {
 
 cmd_tcase_outgoing_connect() {
 	local ips="192.168.1.201 [$PREFIX:192.168.1.201]"
-	test "$1" = "ipv4" && ips="192.168.1.201"
-	test "$1" = "ipv6" && ips="[$PREFIX:192.168.1.201]"
+	test "$__mode" = "ipv4" && ips="192.168.1.201"
+	test "$__mode" = "ipv6" && ips="[$PREFIX:192.168.1.201]"
 	tcase "Outgoing connect to; $ips"
 	local ip
 	for ip in $ips; do

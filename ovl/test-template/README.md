@@ -2,8 +2,16 @@
 
 Template for test program using `ovl/test` script-based testing.
 
-This tamplate builds clusters for ipv4 and ipv6 and performs start-up
-tests.
+
+## Run tests
+
+```
+log=/tmp/$USER/xcluster-test.log
+./test-template test basic > $log
+./test-template test basic6 > $log
+./test-template test basic4 > $log
+```
+
 
 ## Usage
 

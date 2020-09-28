@@ -1,0 +1,73 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mconnect-deployment
+spec:
+  selector:
+    matchLabels:
+      app: mconnect-deployment
+  replicas: 4
+  template:
+    metadata:
+      labels:
+        app: mconnect-deployment
+    spec:
+      containers:
+      - name: mconnect
+        image: registry.nordix.org/cloud-native/mconnect:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 5001
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: mconnect
+spec:
+  selector:
+    matchLabels:
+      app: mconnect
+  template:
+    metadata:
+      labels:
+        app: mconnect
+    spec:
+      containers:
+      - name: mconnect
+        image: registry.nordix.org/cloud-native/mconnect:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 5001
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mconnect
+spec:
+  selector:
+    app: mconnect
+  ports:
+  - port: 5001
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mconnect-lb
+spec:
+  selector:
+    app: mconnect
+  ports:
+  - port: 5001
+  type: LoadBalancer
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mconnect-headless
+spec:
+  clusterIP: None
+  selector:
+    app: mconnect
+  ports:
+  - port: 5001

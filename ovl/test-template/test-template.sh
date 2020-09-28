@@ -80,61 +80,40 @@ cmd_test() {
 
 test_start() {
 	test -n "$__mode" || __mode=dual-stack
-	export xcluster___mode=$__mode
 	xcluster_prep $__mode
 	xcluster_start test-template
 
 	otc 1 check_namespaces
 	otc 1 check_nodes
-	otc 1 start_alpine
-	otc 1 "start_mconnect $__mode"
-	otc 1 check_alpine
+	otc 201 set_vip_routes
+	otc 202 set_vip_routes
+	otc 1 start_servers
+	otc 1 check_servers
 	otc 1 check_metric_server
 }
 
 test_basic4() {
-	basic ipv4
+	__mode=ipv4
+	test_basic
 }
 
 test_basic6() {
-	basic ipv6
-}
-
-test_basic_dual() {
-	test_basic $@
+	__mode=ipv6
+	test_basic
 }
 test_basic() {
-	tlog "=== test-template: Basic test on dual-stack"
-	__mode=dual-stack
+	test -n "$__mode" || __mode=dual-stack
+	tlog "=== test-template: Basic test on $__mode"
 	test_start
 
-	otc 1 "check_pod_addresses $__mode"
-	otc 2 "nslookup mconnect-ipv6.default.svc.$xcluster_DOMAIN"
-	otc 3 "internal_mconnect $__mode"
+	otc 1 check_pod_addresses
 	otc 3 "nslookup www.google.se"
-	otc 1 pod_nslookup
-	otc 201 set_vip_routes
-	otc 201 "external_mconnect ipv4"
-	otc 201 "external_mconnect ipv6"
-	otc 1 outgoing_connect
-	xcluster_stop
-}
-
-basic() {
-	tlog "=== test-template: Basic test on $1"
-
-	__mode=$1
-	test_start
-
-	otc 1 "check_pod_addresses $1"
 	otc 2 "nslookup mconnect.default.svc.$xcluster_DOMAIN"
-	otc 3 "internal_mconnect $1"
-	otc 3 "nslookup www.google.se"
 	otc 1 pod_nslookup
-	otc 201 set_vip_routes
-	otc 201 "external_mconnect $1"
-	otc 1 "outgoing_connect $1"
 
+	otc 3 internal_mconnect
+	otc 201 external_mconnect
+	otc 1 outgoing_connect
 	xcluster_stop
 }
 
