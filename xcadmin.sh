@@ -435,7 +435,9 @@ cmd_mkworkspace() {
 
 	H=$W/xcluster
 	mkdir -p $H
-	cp $XCLUSTER_HOME/bzImage-* $H
+	for n in $__kver $__xkernels; do
+		cp $XCLUSTER_HOME/bzImage-$n $H
+	done
 	for n in cache hd.img base-libs.txt; do
 		cp -Lr $XCLUSTER_HOME/$n $H
 	done
