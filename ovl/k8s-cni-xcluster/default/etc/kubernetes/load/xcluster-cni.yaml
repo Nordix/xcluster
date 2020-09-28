@@ -75,10 +75,10 @@ spec:
                 fieldPath: spec.nodeName
           # TUNNEL_MODE=None|sit
           - name: TUNNEL_MODE
-            value: "sit"
+            value: "None"
           # Include all :'s, example; "1000:2::" -> 1000:2::192.169.1.2
           - name: IPV6_PREFIX
-            value: ""
+            value: "1000::1:"
         securityContext:
           privileged: true
         volumeMounts:
