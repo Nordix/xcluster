@@ -37,7 +37,7 @@ dbg() {
 ##
 cmd_env() {
 	test -n "$__nvm" || __nvm=4
-	test -n "$__k8sver" || __k8sver=v1.18.2
+	test -n "$__k8sver" || __k8sver=v1.19.2
 	export __k8sver
 	test -n "$__cni" || __cni=xcluster
 	export __mem1=2048
@@ -92,7 +92,7 @@ test_start() {
 	export __image=$XCLUSTER_WORKSPACE/xcluster/hd.img
 	unset BASEOVLS
 	unset XOVLS
-	xcluster_start xnet crio images iptools kubeadm private-reg k8s-cni-$__cni $@
+	xcluster_start xnet env test crio images iptools kubeadm private-reg k8s-cni-$__cni $@
 }
 
 test_start_ipv4() {
@@ -102,6 +102,7 @@ test_start_ipv4() {
 
 test_install() {
 	tlog "=== kubeadm: Install k8s $__k8sver"
+	export xcluster___mode=dual-stack
 	test_start $@
 
 	otc 1 "pull_images $__k8sver"

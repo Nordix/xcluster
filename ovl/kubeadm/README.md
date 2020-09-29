@@ -24,7 +24,7 @@ Downloaded archives should be in the `$ARCHIVE` directory.
 
 Set the K8s version and unpack the K8s server binary;
 ```
-export __k8sver=v1.18.8
+export __k8sver=v1.19.2
 export KUBERNETESD=$HOME/tmp/kubernetes/kubernetes-$__k8sver/server/bin
 # (make sure the K8s server binary are unpacked at $KUBERNETESD)
 alias kubeadm="$KUBERNETESD/kubeadm"
