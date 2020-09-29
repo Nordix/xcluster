@@ -1,2 +1,7 @@
 #! /bin/sh
+. /etc/profile
+export KUBERNETES_SERVICE_HOST=$IPV6_PREFIX
+export K8S_NODE=$(hostname)
+export TUNNEL_MODE=None
+export IPV6_PREFIX=1000::1:
 /xcluster-cni.sh start > /var/log/xcluster-cni.log 2>&1 &
