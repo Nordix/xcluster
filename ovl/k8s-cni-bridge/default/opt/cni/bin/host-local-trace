@@ -1,0 +1,3 @@
+#! /bin/sh
+hostlocal=/opt/cni/bin/host-local
+tee -a /tmp/host-local.in | $hostlocal | tee -a /tmp/host-local.out
