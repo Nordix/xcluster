@@ -2,6 +2,10 @@
 
 * Experiments with https://github.com/sbezverk/nfproxy
 
+Comments about `service.kubernetes.io/service-proxy-name`:
+https://github.com/kubernetes/kubernetes/issues/92369#issuecomment-650034563
+[KEP](https://github.com/kubernetes/enhancements/blob/master/keps/sig-network/0031-20181017-kube-proxy-services-optional.md)
+
 ## Build
 
 Build nfproxy and make sure the binary is in
