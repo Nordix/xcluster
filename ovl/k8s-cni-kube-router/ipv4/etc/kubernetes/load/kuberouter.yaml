@@ -75,6 +75,7 @@ spec:
         - "--run-service-proxy=true"
         - "--bgp-graceful-restart=true"
         - "--kubeconfig=/var/lib/kube-router/kubeconfig"
+        - "--hairpin-mode=true"
         env:
         - name: NODE_NAME
           valueFrom:

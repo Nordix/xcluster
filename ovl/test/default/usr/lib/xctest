@@ -359,6 +359,11 @@ log_version() {
 	fi
 }
 cni_plugin_info() {
+	if test -n "$CNI_INFO"; then
+		echo $CNI_INFO
+		return 0
+	fi
+
 	local f d=/etc/kubernetes/load
 
 	f=$d/quick-install.yaml
@@ -397,7 +402,12 @@ cni_plugin_info() {
 		return 0
 	fi
 
-	echo "xcluster internal"
+	if test -r /opt/cni/bin/node-local; then
+		echo "xcluster internal"
+		return 0
+	fi
+
+	echo "Unknown CNI-plugin"
 }
 ##  isDual3
 ##    Returns true if K8s dual-stack phase.3 is used ("ipFamilies" array).
