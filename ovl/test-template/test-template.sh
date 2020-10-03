@@ -54,27 +54,28 @@ cmd_env() {
 ##
 cmd_test() {
 	if test "$__list" = "yes"; then
-        grep '^test_' $me | cut -d'(' -f1 | sed -e 's,test_,,'
-        return 0
-    fi
+		grep '^test_' $me | cut -d'(' -f1 | sed -e 's,test_,,'
+		return 0
+	fi
 
 	cmd_env
-    start=starts
-    test "$__xterm" = "yes" && start=start
-    rm -f $XCLUSTER_TMP/cdrom.iso
+	start=starts
+	test "$__xterm" = "yes" && start=start
+	rm -f $XCLUSTER_TMP/cdrom.iso
 
-    if test -n "$1"; then
-        for t in $@; do
-            test_$t
-        done
-    else
-        for t in basic4 basic6 basic_dual; do
-            test_$t
-        done
-    fi      
+	if test -n "$1"; then
+		for t in $@; do
+			test_$t
+		done
+	else
+		for t in basic4 basic6 basic; do
+			unset __mode
+			test_$t
+		done
+	fi		
 
-    now=$(date +%s)
-    tlog "Xcluster test ended. Total time $((now-begin)) sec"
+	now=$(date +%s)
+	tlog "Xcluster test ended. Total time $((now-begin)) sec"
 
 }
 
