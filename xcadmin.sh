@@ -355,10 +355,11 @@ cmd_k8s_test() {
 		export __image
 		test -r $__image || die "Not readable [$__image]"
 		export XCTEST_HOOK=$($XCLUSTER ovld k8s-xcluster)/xctest-hook
-		export __nvm=5
+		test -n "$__nvm" || __nvm=5
+		export __nvm
 		export __mem=1536
 		export __cni
-		export XOVLS="k8s-cni-$__cni private-reg $XXOVLS"
+		test "$__cni" != "None" && export XOVLS="k8s-cni-$__cni private-reg $XXOVLS"
 		export xcluster_FIRST_WORKER=2
 	else
 		# Test on "normal" xcluster
