@@ -83,12 +83,11 @@ build_ipvsadm() {
 	cmd_env
 	local ar d libs
 	d=$XCLUSTER_WORKSPACE/$1
-	rm -r $d
-	ar=$1.tar.gz
+	rm -fr $d
+	ar=$1.tar.xz
 	tar -C $XCLUSTER_WORKSPACE -xf $ARCHIVE/$ar
 	cd $d
-	libs="$(pkg-config --libs libnl-1)"
-    make INCLUDE=-I$sysd/usr/include LIBS="$libs -lpopt" || die "Make failed"
+	make || die make
 	cp $d/ipvsadm $sysd/usr/sbin
 	echo "Built at [$d]"
 }
@@ -100,11 +99,8 @@ download() {
 	test "$n" = "conntrack_tools" && n=conntrack-tools
 	case $n in
 		ipvsadm)
-			ar=$n-$v.tar.gz
-			u=http://www.linuxvirtualserver.org/software/kernel-2.6/$ar;;
-		libnl)
-			ar=$n-$v.tar.gz
-			u=https://www.infradead.org/~tgr/libnl/files/$ar;;
+			ar=$n-$v.tar.xz
+			u=https://mirrors.edge.kernel.org/pub/linux/utils/kernel/ipvsadm/$ar;;
 		ipset)
 			ar=$n-$v.tar.bz2
 			u=http://ipset.netfilter.org/$ar;;
@@ -119,7 +115,7 @@ download() {
 	if test -r $ar; then
 		test "$__quiet" = "yes" || echo "Already downloaded [$ar]"
 	else
-		curl $u > $ar || die "Failed to download [$u]"
+		curl -L $u > $ar || die "Failed to download [$u]"
 		echo "Downloaded [$ar]"
 	fi
 }
@@ -135,8 +131,7 @@ libnetfilter_conntrack_ver=1.0.7
 libnetfilter_cthelper_ver=1.0.0
 libnetfilter_queue_ver=1.0.3
 conntrack_tools_ver=1.4.5
-libnl_ver=1.1.4
-ipvsadm_ver=1.26
+ipvsadm_ver=1.31
 ipset_ver=6.38
 ver() {
 	eval "echo \$${1}_ver"
