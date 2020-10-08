@@ -13,6 +13,7 @@ i=$(hostname | cut -d- -f2 | sed -re 's,^0+,,')
 test $i -le 200 || exit 0
 
 test -n "$DOMAIN" || DOMAIN=xcluster
+test -n "$FEATURE_GATES" || FEATURE_GATES=IPv6DualStack=true,SCTPSupport=true
 . /etc/cri-plugin.rc
 
 ANY_ADDR=0.0.0.0
@@ -26,7 +27,7 @@ run_kubelet() {
 	kubelet --address=$ANY_ADDR $CRI_OPTS \
 		--node-ip=${IPV6_PREFIX}192.168.1.$i \
 		--register-node=true --kubeconfig $KUBECONFIG \
-		--feature-gates IPv6DualStack=true \
+		--feature-gates $FEATURE_GATES \
 		--network-plugin=cni \
 		--cluster-dns=${IPV6_PREFIX}192.168.1.$i \
 		--cluster-domain=$DOMAIN \
@@ -35,6 +36,18 @@ run_kubelet() {
 }
 
 run_kube_proxy() {
+	local i g v
+	for i in $(echo $FEATURE_GATES | tr , ' '); do
+		g=$(echo $i | cut -d= -f1)
+		v=$(echo $i | cut -d= -f2)
+		sed -i -e "s,$g:.*,$g: $v," /etc/kubernetes/kube-proxy.config
+	done
+	CLUSTER_CIDR=11.0.0.0/16,1100::/48
+	if echo "$FEATURE_GATES" | grep -q "IPv6DualStack=false"; then
+		CLUSTER_CIDR=11.0.0.0/16
+		test -n "$IPV6_PREFIX" && CLUSTER_CIDR=1100::/48
+	fi
+	sed -i -e "s,clusterCIDR:.*,clusterCIDR: \"$CLUSTER_CIDR\"," /etc/kubernetes/kube-proxy.config
 	kube-proxy --config /etc/kubernetes/kube-proxy.config --v 7 \
 		>> /var/log/kube-proxy.log 2>&1
 }
@@ -45,6 +58,7 @@ monitor() {
 		$1
 		logger -t K8s-monitor "DIED: $1"
 		sleep 2
+		. /etc/profile
 	done
 }
 
