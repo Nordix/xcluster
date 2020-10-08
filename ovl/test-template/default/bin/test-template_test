@@ -168,8 +168,10 @@ cmd_tcase_check_pod_addresses() {
 		fi
 	done
 	case $__mode in
-		ipv4) test $found -eq 1 || tdie "Invalid adr for $__mode; $adrs";;
-		ipv6) test $found -eq 100 || tdie "Invalid adr for $__mode; $adrs";;
+		ipv4) test $found -eq 1 -o $found -eq 101 \
+			|| tdie "Invalid adr for $__mode; $adrs";;
+		ipv6) test $found -eq 100 -o $found -eq 101 \
+			|| tdie "Invalid adr for $__mode; $adrs";;
 		*) test $found -eq 101 || tdie "Invalid adr for $_mode; $adrs";;
 	esac
 
