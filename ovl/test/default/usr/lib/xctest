@@ -353,7 +353,12 @@ log_version() {
 	local dualMode="old dual-stack API"
 	isDual3 && dualMode="phase.3 dual-stack API"
 	if test "$__mode" = "dual-stack"; then
-		tlog "Dual-stack cluster. BaseFamily=$baseFamily, $dualMode"
+		if echo "$FEATURE_GATES" | grep -q "IPv6DualStack=false"; then
+			tlog "WARNING: __mode=dual-stack but IPv6DualStack=false"
+			tlog "Single-stack cluster. BaseFamily=$baseFamily, $dualMode"
+		else
+			tlog "Dual-stack cluster. BaseFamily=$baseFamily, $dualMode"
+		fi
 	else
 		tlog "Single-stack cluster. BaseFamily=$baseFamily, $dualMode"
 	fi
@@ -409,6 +414,16 @@ cni_plugin_info() {
 
 	echo "Unknown CNI-plugin"
 }
+
+##  isDual
+##    Returns true if K8s is dual-stack
+##
+isDual() {
+	echo "$FEATURE_GATES" | grep -q "IPv6DualStack=false" && return 1
+	echo "$xcluster_FEATURE_GATES" | grep -q "IPv6DualStack=false" && return 1
+	test "$__mode" = "dual-stack"
+}
+	
 ##  isDual3
 ##    Returns true if K8s dual-stack phase.3 is used ("ipFamilies" array).
 ##
@@ -434,7 +449,8 @@ apply_k8s() {
 	test -d "$1" || tdie "Not a directory [$1]"
 	local yamld=$1
 	$kubectl apply -f $yamld || tdie
-	if test "$__mode" = "dual-stack"; then
+
+	if isDual; then
 		if isDual3; then
 			if test -d $yamld/dual; then
 				$kubectl apply -f $yamld/dual || tdie
