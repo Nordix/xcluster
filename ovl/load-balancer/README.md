@@ -51,35 +51,77 @@ linux-5.5.x and above sprays packets regardless of hash so
 
 
 
-https://home.regit.org/netfilter-en/using-nfqueue-and-libnetfilter_queue/
-http://www.netfilter.org/projects/libnetfilter_queue/doxygen/html/index.html
-https://static.googleusercontent.com/media/research.google.com/en//pubs/archive/44824.pdf
-https://github.com/kkdai/maglev/blob/master/maglev.go
-
-
-
 ## NFQUEUE
 
-https://home.regit.org/netfilter-en/using-nfqueue-and-libnetfilter_queue/
 
+Test;
 ```
 ./load-balancer.sh test nfqueue > $log
+# Or start with one lb for manual tests;
+__nrouters=1 ./load-balancer.sh test start_nfqueue > $log
 ```
 
+The `-j NFQUEUE` iptables target directs packets to a user-space
+program. The program can analyze the packet, set `fwmark` and place a
+"verdict".
+
+<img src="nfqueue.svg" alt="NFQUEUQE packet path" width="60%" />
 
 
-Manual test with `nf-queue`
+Refs;
+
+* https://home.regit.org/netfilter-en/using-nfqueue-and-libnetfilter_queue/
+* http://www.netfilter.org/projects/libnetfilter_queue/doxygen/html/index.html
+
+
+### Maglev hashing and the lb program
+
+Maglev is the Google load-balancer;
+
+* https://static.googleusercontent.com/media/research.google.com/en/pubs/archive/44824.pdf
+
+The NFQUEUE example uses "maglev hashing". The hash state is stored in
+"shared memory" so it is accessible from the program listening to the
+nfqueue as well as from programs performing various configurations;
+
+```c
+#define MAX_M 10000
+#define MAX_N 100
+struct MagData {
+        unsigned M, N;
+        int lookup[MAX_M];
+        unsigned permutation[MAX_N][MAX_M];
+        unsigned active[MAX_N];
+};
 ```
-__nrouters=1 ./load-balancer.sh test start > $log
-# On vm-201
-iptables -t mangle -A PREROUTING -s 50.0.0.0/16 -j NFQUEUE --queue-num 2
-ip6tables -t mangle -A PREROUTING -s 2000::/112 -j NFQUEUE --queue-num 2
-ip rule add fwmark 5 table 101
-ip route add default via 192.168.1.1 table 101
-ip -6 route add default via 1000::1:192.168.1.1 table 101
-lb 2
-# On vm-221
-ping -c1 -W1 -I 50.0.0.1 192.168.1.1
-ping -I 2000::1 -c1 1000::1:192.168.1.1
+
+The `lb` program when listening on nfqueue ("lb run") creates a hash
+on src/dest addresses and gets a "fwmark" from MagData.lookup.
+
+The `lb` program is also used to create and configure the MagData in
+shared memory. It can be built and executed on your laptop;
+
+```
+gcc -o /tmp/lb src/lb.c src/maglev.c -lmnl -lnetfilter_queue -lrt
+/tmp/lb create
+/tmp/lb show
+/tmp/lb deactivate 1
+/tmp/lb show
+/tmp/lb activate 6 7 8
+/tmp/lb show
+/tmp/lb clean
+```
+
+The `maglev.c` has a stand-alone test which is rather crude but can be
+extended (by you);
+
+```
+gcc -DSATEST -o /tmp/maglev src/maglev.c
+/tmp/maglev  # The example from p6 in the maglev doc
+# /tmp/maglev M N seed -- Shows permutation, lookup and a scale in/out;
+/tmp/maglev 20 5 1
+# /tmp/maglev M N seed loops -- Test scale in/out and print % loss
+/tmp/maglev 20 5 1 10
+/tmp/maglev 10000 10 1 10  # Larger M comes nearer to the ideal (10%)
 ```
 
