@@ -33,7 +33,8 @@ cp $f $tmp/bin
 f=$XCLUSTER_WORKSPACE/libnetfilter_queue-1.0.3/examples/.libs/nf-queue
 test -x $f && $XCLUSTER install_prog --dest=$tmp $f
 
-gcc -o $tmp/bin/lb $dir/src/lb.c $dir/src/maglev.c -lmnl -lnetfilter_queue -lrt
+echo $SETUP | grep -q nfqueue && \
+	gcc -o $tmp/bin/lb $dir/src/lb.c $dir/src/maglev.c -lmnl -lnetfilter_queue -lrt
 
 $XCLUSTER install_prog --dest=$tmp jq
 

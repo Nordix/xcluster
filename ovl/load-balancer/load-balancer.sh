@@ -106,8 +106,8 @@ test_ecmp() {
 	test "$__scale_lb" = "yes" && scale_lb
 	xcluster_stop
 	if test "$__view" = "yes"; then
-		test "$__scale" = "yes" && inkview /tmp/tmp/scale.svg
-		test "$__scale_lb" = "yes" && inkview /tmp/tmp/scale_lb.svg
+		test "$__scale" = "yes" && inkview /tmp/scale.svg
+		test "$__scale_lb" = "yes" && inkview /tmp/scale_lb.svg
 	fi
 }
 ecmp_scale() {
@@ -118,8 +118,8 @@ ecmp_scale() {
 	sleep 10
 	otcr "ecmp_scale"
 	otc 221 "ctraffic_wait --timeout=30"
-	rcp 221 /tmp/ctraffic.out /tmp/tmp/scale.out
-	$plot connections --stats=/tmp/tmp/scale.out > /tmp/tmp/scale.svg
+	rcp 221 /tmp/ctraffic.out /tmp/scale.out
+	$plot connections --stats=/tmp/scale.out > /tmp/scale.svg
 }
 
 test_start_nfqueue() {
@@ -134,7 +134,7 @@ test_nfqueue() {
 	test "$__scale_lb" = "yes" && scale_lb
 	xcluster_stop
 	if test "$__view" = "yes"; then
-		test "$__scale_lb" = "yes" && inkview /tmp/tmp/scale_lb.svg
+		test "$__scale_lb" = "yes" && inkview /tmp/scale_lb.svg
 	fi
 }
 
@@ -149,10 +149,10 @@ test_nfqueue_scale() {
 	sleep 10
 	otcr "nfqueue_scale_out $__scale"
 	otc 221 "ctraffic_wait --timeout=30"
-	rcp 221 /tmp/ctraffic.out /tmp/tmp/scale.out
-	$plot connections --stats=/tmp/tmp/scale.out > /tmp/tmp/scale.svg
+	rcp 221 /tmp/ctraffic.out /tmp/scale.out
+	$plot connections --stats=/tmp/scale.out > /tmp/scale.svg
 	xcluster_stop
-	test "$__view" = "yes" && inkview /tmp/tmp/scale.svg
+	test "$__view" = "yes" && inkview /tmp/scale.svg
 }
 
 scale_lb() {
@@ -165,8 +165,8 @@ scale_lb() {
 	otc 221 "scale_lb"
 	otcw "scale_lb"
 	otc 221 "ctraffic_wait --timeout=30"
-	rcp 221 /tmp/ctraffic.out /tmp/tmp/scale_lb.out
-	$plot connections --stats=/tmp/tmp/scale_lb.out > /tmp/tmp/scale_lb.svg
+	rcp 221 /tmp/ctraffic.out /tmp/scale_lb.out
+	$plot connections --stats=/tmp/scale_lb.out > /tmp/scale_lb.svg
 }
 
 otcr() {

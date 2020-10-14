@@ -11,6 +11,12 @@ The routers (vm-201--vm-220) are used as load-balancing machines.
 Only one tester is used (vm-221). The number of server VMs and
 load-balancer VMs can be varied.
 
+Ecmp does not work with linux > 5.4.x so download;
+```
+curl https://artifactory.nordix.org/artifactory/cloud-native/xcluster/images/bzImage-linux-5.4.35 > \
+  $XCLUSTER_WORKSPACE/xcluster/bzImage-linux-5.4.35
+```
+
 Simplest is to start using the `load-balancer.sh` script;
 ```
 LB=ecmp
@@ -24,7 +30,8 @@ LB=ecmp
 You can start manually;
 ```
 LB=ecmp
-SETUP=$LB xc mkcdrom env network-topology iptoolsload-balancer; xc starts
+SETUP=$LB xc mkcdrom env network-topology iptools load-balancer
+__kver=linux-5.4.35 xc starts --ntesters=1 --nrouters=1
 ```
 However some additional settings may be needed for some load-balancers.
 
@@ -68,6 +75,7 @@ Refs;
 
 Scaling test;
 ```
+#sudo apt install -y libnl-3-dev libnl-genl-3-dev libnetfilter-queue1
 __nvm=10 __nrouters=1 ./load-balancer.sh test --view --scale="1 2" nfqueue_scale > $log
 ```
 
