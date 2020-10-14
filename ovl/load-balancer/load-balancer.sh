@@ -1,0 +1,210 @@
+#! /bin/sh
+##
+## load-balancer.sh --
+##
+##   Help script for the xcluster ovl/load-balancer.
+##
+## Commands;
+##
+
+prg=$(basename $0)
+dir=$(dirname $0); dir=$(readlink -f $dir)
+me=$dir/$prg
+tmp=/tmp/${prg}_$$
+
+die() {
+    echo "ERROR: $*" >&2
+    rm -rf $tmp
+    exit 1
+}
+help() {
+    grep '^##' $0 | cut -c3-
+    rm -rf $tmp
+    exit 0
+}
+test -n "$1" || help
+echo "$1" | grep -qi "^help\|-h" && help
+
+log() {
+	echo "$prg: $*" >&2
+}
+dbg() {
+	test -n "$__verbose" && echo "$prg: $*" >&2
+}
+
+##  env
+##    Print environment.
+##
+cmd_env() {
+
+	if test "$cmd" = "env"; then
+		set | grep -E '^(__.*)='
+		retrun 0
+	fi
+
+	test -n "$XCLUSTER" || die 'Not set [$XCLUSTER]'
+	test -x "$XCLUSTER" || die "Not executable [$XCLUSTER]"
+	eval $($XCLUSTER env)
+	test -n "$__nrouters" || __nrouters=2
+	test -n "$__nvm" || __nvm=4
+	plot=$GOPATH/src/github.com/Nordix/ctraffic/scripts/plot.sh
+}
+
+##   test --list
+##   test [--xterm] [test...] > logfile
+##     Exec tests
+##
+cmd_test() {
+	if test "$__list" = "yes"; then
+        grep '^test_' $me | cut -d'(' -f1 | sed -e 's,test_,,'
+        return 0
+    fi
+
+	cmd_env
+    start=starts
+    test "$__xterm" = "yes" && start=start
+    rm -f $XCLUSTER_TMP/cdrom.iso
+
+    if test -n "$1"; then
+        for t in $@; do
+            test_$t
+        done
+    else
+        for t in basic; do
+            test_$t
+        done
+    fi      
+
+    now=$(date +%s)
+    tlog "Xcluster test ended. Total time $((now-begin)) sec"
+
+}
+
+test_start() {
+	export xcluster___nrouters=$__nrouters
+	export xcluster___nvm=$__nvm
+	export __image=$XCLUSTER_HOME/hd.img
+	export __ntesters=1
+	export __kver=linux-5.4.35
+	echo "$XOVLS" | grep -q private-reg && unset XOVLS
+	test -n "$TOPOLOGY" && \
+		. $($XCLUSTER ovld network-topology)/$TOPOLOGY/Envsettings
+	xcluster_start env network-topology iptools load-balancer
+}
+
+test_start_ecmp() {
+	export SETUP=ecmp
+	test_start
+}
+
+test_ecmp() {
+	tlog "=== load-balancer: ECMP test"
+	test_start_ecmp
+	otc 221 "mconnect 10.0.0.0:5001"
+	otc 221 "mconnect [1000::]:5001"
+	test "$__scale" = "yes" && ecmp_scale
+	test "$__scale_lb" = "yes" && scale_lb
+	xcluster_stop
+	if test "$__view" = "yes"; then
+		test "$__scale" = "yes" && inkview /tmp/tmp/scale.svg
+		test "$__scale_lb" = "yes" && inkview /tmp/tmp/scale_lb.svg
+	fi
+}
+ecmp_scale() {
+	tlog "Scale VMs"
+	otc 221 "ctraffic_start -address 10.0.0.0:5003 -nconn 40 -rate 100 -srccidr 50.0.0.0/16 -timeout 20s"
+	sleep 5
+	otcr "ecmp_scale 1"
+	sleep 10
+	otcr "ecmp_scale"
+	otc 221 "ctraffic_wait --timeout=30"
+	rcp 221 /tmp/ctraffic.out /tmp/tmp/scale.out
+	$plot connections --stats=/tmp/tmp/scale.out > /tmp/tmp/scale.svg
+}
+
+test_start_nfqueue() {
+	export SETUP=nfqueue
+	test_start
+}
+test_nfqueue() {
+	tlog "=== load-balancer: NFQUEUE test"
+	test_start_nfqueue
+	otc 221 "mconnect 10.0.0.0:5001"
+	otc 221 "mconnect [1000::]:5001"
+	test "$__scale_lb" = "yes" && scale_lb
+	xcluster_stop
+	if test "$__view" = "yes"; then
+		test "$__scale_lb" = "yes" && inkview /tmp/tmp/scale_lb.svg
+	fi
+}
+
+
+scale_lb() {
+	tlog "Scale Load-balancer"
+	otc 221 "ctraffic_start -address 10.0.0.0:5003 -nconn 40 -rate 100 -srccidr 50.0.0.0/16 -timeout 20s"
+	sleep 5
+	otc 221 "scale_lb 201"
+	otcw "scale_lb 201"
+	sleep 10
+	otc 221 "scale_lb"
+	otcw "scale_lb"
+	otc 221 "ctraffic_wait --timeout=30"
+	rcp 221 /tmp/ctraffic.out /tmp/tmp/scale_lb.out
+	$plot connections --stats=/tmp/tmp/scale_lb.out > /tmp/tmp/scale_lb.svg
+}
+
+otcr() {
+	local x last_router
+	last_router=$((200 + __nrouters))
+	for x in $(seq 201 $last_router); do
+		otc $x "$@"
+	done
+}
+otcw() {
+	local x
+	for x in $(seq 1 $__nvm); do
+		otc $x "$@"
+	done
+}
+
+##  src_build
+cmd_src_build() {
+	cmd_env
+	local d=$XCLUSTER_WORKSPACE/libnetfilter_queue-1.0.3
+	local f=$d/examples/.libs/nf-queue
+	if test -x $f; then
+		log "Already built; nf-queue"
+		return 0
+	fi
+	make -C $d/examples nf-queue
+	gcc src/lb.c -o /dev/null -lmnl -lnetfilter_queue
+}
+
+. $($XCLUSTER ovld test)/default/usr/lib/xctest
+indent=''
+
+# Get the command
+cmd=$1
+shift
+grep -q "^cmd_$cmd()" $0 $hook || die "Invalid command [$cmd]"
+
+while echo "$1" | grep -q '^--'; do
+    if echo $1 | grep -q =; then
+	o=$(echo "$1" | cut -d= -f1 | sed -e 's,-,_,g')
+	v=$(echo "$1" | cut -d= -f2-)
+	eval "$o=\"$v\""
+    else
+	o=$(echo "$1" | sed -e 's,-,_,g')
+	eval "$o=yes"
+    fi
+    shift
+done
+unset o v
+long_opts=`set | grep '^__' | cut -d= -f1`
+
+# Execute command
+trap "die Interrupted" INT TERM
+cmd_$cmd "$@"
+status=$?
+rm -rf $tmp
+exit $status

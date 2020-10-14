@@ -1,0 +1,49 @@
+#! /bin/sh
+
+export PATH="/bin:/sbin:/usr/bin:/usr/sbin"
+. /etc/profile
+
+die() {
+    echo "$@"
+    exit 1
+}
+
+hostname | grep -Eq 'vm-[0-9]+$' || die "Invalid hostname [$(hostname)]"
+i=$(hostname | cut -d- -f2 | sed -re 's,^0+,,')
+
+vm() {
+	echo 0 > /proc/sys/net/ipv4/fib_multipath_hash_policy
+	echo 0 > /proc/sys/net/ipv6/fib_multipath_hash_policy
+}
+
+router() {
+	test -n "$__nvm" || __nvm=4
+	local i targets
+	for i in $(seq 1 $__nvm); do
+		targets="$targets nexthop via 192.168.1.$i"
+	done
+	ip ro replace 10.0.0.0/24 $targets
+	targets=''
+	for i in $(seq 1 $__nvm); do
+		targets="$targets nexthop via 1000::1:192.168.1.$i"
+	done
+	ip ro replace 1000::/120 $targets
+
+	echo 0 > /proc/sys/net/ipv4/fib_multipath_hash_policy
+	echo 0 > /proc/sys/net/ipv6/fib_multipath_hash_policy
+	sysctl -w net.ipv4.conf.all.rp_filter=2
+}
+
+tester() {
+	echo 0 > /proc/sys/net/ipv4/fib_multipath_hash_policy
+	echo 0 > /proc/sys/net/ipv6/fib_multipath_hash_policy
+}
+
+case $(hostname) in
+	vm-0*)
+		vm;;
+	vm-20*)
+		router;;
+	vm-22*)
+		tester;;
+esac

@@ -1,0 +1,47 @@
+#! /bin/sh
+
+export PATH="/bin:/sbin:/usr/bin:/usr/sbin"
+. /etc/profile
+
+die() {
+    echo "$@"
+    exit 1
+}
+
+hostname | grep -Eq 'vm-[0-9]+$' || die "Invalid hostname [$(hostname)]"
+i=$(hostname | cut -d- -f2 | sed -re 's,^0+,,')
+
+vm() {
+	return 0
+}
+
+router() {
+	test -n "$__nvm" || __nvm=4
+	local i t
+	for i in $(seq 1 $__nvm); do
+		t=$i
+		ip rule add fwmark $i table $t
+		ip -6 rule add fwmark $i table $t
+		ip route add default via 192.168.1.$i table $t
+		ip -6 route add default via 1000::1:192.168.1.$i table $t
+	done
+
+	iptables -t mangle -A PREROUTING -i eth2 -d 10.0.0.0/24 -j NFQUEUE --queue-num 2
+	ip6tables -t mangle -A PREROUTING -i eth2 -d 1000::/112 -j NFQUEUE --queue-num 2
+
+	lb create
+	lb run > /var/log/lb.log 2>&1 &
+}
+
+tester() {
+	return 0
+}
+
+case $(hostname) in
+	vm-0*)
+		vm;;
+	vm-20*)
+		router;;
+	vm-22*)
+		tester;;
+esac
