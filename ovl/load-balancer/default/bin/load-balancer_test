@@ -117,6 +117,32 @@ cmd_tcase_ecmp_scale() {
 	ip -6 ro change 1000::/120 $targets
 }
 
+# ----------------------------------------------------------------------
+# nfqueue
+
+cmd_tcase_nfqueue_activate_all() {
+	local vms="$(seq 1 $__nvm | tr '\n' ' ')"
+	tcase "nfqueue activate all [$vms]"
+	lb activate $vms
+}
+
+cmd_tcase_nfqueue_scale_in() {
+	tcase "nfqueue scale-in [$@]"
+	if test -z "$1"; then
+		tlog "Nothing to scale"
+		return 0
+	fi
+	lb deactivate $@
+}
+
+cmd_tcase_nfqueue_scale_out() {
+	tcase "nfqueue scale-out [$@]"
+	if test -z "$1"; then
+		tlog "Nothing to scale"
+		return 0
+	fi
+	lb activate $@
+}
 
 
 

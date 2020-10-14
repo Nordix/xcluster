@@ -138,6 +138,22 @@ test_nfqueue() {
 	fi
 }
 
+test_nfqueue_scale() {
+	test -n "$__scale" || __scale=1
+	tlog "=== load-balancer: NFQUEUE scale test [$__scale]"
+	test_start_nfqueue
+	otcr nfqueue_activate_all
+	otc 221 "ctraffic_start -address 10.0.0.0:5003 -nconn 100 -rate 100 -srccidr 50.0.0.0/16 -timeout 20s"
+	sleep 5
+	otcr "nfqueue_scale_in $__scale"
+	sleep 10
+	otcr "nfqueue_scale_out $__scale"
+	otc 221 "ctraffic_wait --timeout=30"
+	rcp 221 /tmp/ctraffic.out /tmp/tmp/scale.out
+	$plot connections --stats=/tmp/tmp/scale.out > /tmp/tmp/scale.svg
+	xcluster_stop
+	test "$__view" = "yes" && inkview /tmp/tmp/scale.svg
+}
 
 scale_lb() {
 	tlog "Scale Load-balancer"

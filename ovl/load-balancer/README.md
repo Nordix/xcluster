@@ -53,14 +53,6 @@ linux-5.5.x and above sprays packets regardless of hash so
 
 ## NFQUEUE
 
-
-Test;
-```
-./load-balancer.sh test nfqueue > $log
-# Or start with one lb for manual tests;
-__nrouters=1 ./load-balancer.sh test start_nfqueue > $log
-```
-
 The `-j NFQUEUE` iptables target directs packets to a user-space
 program. The program can analyze the packet, set `fwmark` and place a
 "verdict".
@@ -72,6 +64,24 @@ Refs;
 
 * https://home.regit.org/netfilter-en/using-nfqueue-and-libnetfilter_queue/
 * http://www.netfilter.org/projects/libnetfilter_queue/doxygen/html/index.html
+
+
+Scaling test;
+```
+__nvm=10 __nrouters=1 ./load-balancer.sh test --view --scale="1 2" nfqueue_scale > $log
+```
+
+In this test the maximum vms are used (10) and just one load-balancer
+(for no good reason). VMs 1 and 2 are scaled out and scaled in again
+and a graph is presented. Example;
+
+<img src="scale.svg" alt="Scale graph" width="50%" />
+
+The ideal loss when 2 of 10 backends are scaled out is 20%, we lost
+26% which is very good. When the backends comes back we lose a lot
+fewer connections. This because the lookup table has 997 entries and
+we have just 100 connections so it's a fair chance that existing
+connections are preserved.
 
 
 ### Maglev hashing and the lb program
@@ -125,3 +135,15 @@ gcc -DSATEST -o /tmp/maglev src/maglev.c
 /tmp/maglev 10000 10 1 10  # Larger M comes nearer to the ideal (10%)
 ```
 
+### Manual tests
+
+```
+__nrouters=1 ./load-balancer.sh test start_nfqueue > $log
+# On vm-221;
+mconnect -address 10.0.0.0:5001 -nconn 100 -srccidr 50.0.0.0/16
+ctraffic -address 10.0.0.0:5003 -nconn 100 -srccidr 50.0.0.0/16 -timeout 1m -monitor -rate 100
+# On vm-201
+lb show
+lb deactivate 1
+# ...
+```
