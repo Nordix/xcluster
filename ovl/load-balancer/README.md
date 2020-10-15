@@ -39,9 +39,9 @@ Manual tests on the tester (vm-221);
 ```
 mconnect -address 10.0.0.0:5001 -nconn 100 -srccidr 50.0.0.0/16
 mconnect -address [1000::]:5001 -nconn 100 -srccidr 2000::/112
-ctraffic -address 10.0.0.0:5003 -nconn 40 -rate 100 -monitor -timeout 10s \
+ctraffic -address 10.0.0.0:5003 -nconn 100 -rate 100 -monitor -timeout 10s \
   -stats all -srccidr 50.0.0.0/16 | jq .
-ctraffic -address [1000::]:5003 -nconn 40 -rate 100 -monitor -timeout 10s \
+ctraffic -address [1000::]:5003 -nconn 100 -rate 100 -monitor -timeout 10s \
   -stats all -srccidr 2000::/112 | jq .
 ```
 
@@ -54,6 +54,7 @@ linux-5.5.x and above sprays packets regardless of hash so
 
 ```
 ./load-balancer.sh test ecmp > $log
+__nvm=10 ./load-balancer.sh test --view ecmp_scale > $log
 ```
 
 ## IPVS

@@ -48,6 +48,7 @@ cmd_env() {
 	test -n "$__nrouters" || __nrouters=2
 	test -n "$__nvm" || __nvm=4
 	plot=$GOPATH/src/github.com/Nordix/ctraffic/scripts/plot.sh
+	ctraffic=$GOPATH/src/github.com/Nordix/ctraffic/image/ctraffic
 }
 
 ##   test --list
@@ -120,24 +121,28 @@ test_ecmp() {
 	test_start_ecmp
 	otc 221 "mconnect 10.0.0.0:5001"
 	otc 221 "mconnect [1000::]:5001"
-	test "$__scale" = "yes" && ecmp_scale
 	test "$__scale_lb" = "yes" && scale_lb
 	xcluster_stop
 	if test "$__view" = "yes"; then
-		test "$__scale" = "yes" && inkview /tmp/scale.svg
 		test "$__scale_lb" = "yes" && inkview /tmp/scale_lb.svg
 	fi
 }
-ecmp_scale() {
-	tlog "Scale VMs"
-	otc 221 "ctraffic_start -address 10.0.0.0:5003 -nconn 40 -rate 100 -srccidr 50.0.0.0/16 -timeout 20s"
+test_ecmp_scale() {
+	test -n "$__scale" || __scale=1
+	tlog "=== load-balancer: ECMP scale test [$__scale]"
+	test_start_ecmp
+	otc 221 "ctraffic_start -address 10.0.0.0:5003 -nconn 100 -rate 100 -srccidr 50.0.0.0/16 -timeout 20s"
 	sleep 5
-	otcr "ecmp_scale 1"
+	otcr "ecmp_scale $__scale"
 	sleep 10
 	otcr "ecmp_scale"
 	otc 221 "ctraffic_wait --timeout=30"
 	rcp 221 /tmp/ctraffic.out /tmp/scale.out
+	xcluster_stop
+
 	$plot connections --stats=/tmp/scale.out > /tmp/scale.svg
+	$ctraffic -analyze hosts -stat_file /tmp/scale.out >&2
+	test "$__view" = "yes" && inkview /tmp/scale.svg	
 }
 
 # nfqueue ----------------------------------------------------------------
@@ -172,22 +177,24 @@ test_nfqueue_scale() {
 	rcp 221 /tmp/ctraffic.out /tmp/scale.out
 	$plot connections --stats=/tmp/scale.out > /tmp/scale.svg
 	xcluster_stop
+	$ctraffic -analyze hosts -stat_file /tmp/scale.out >&2
 	test "$__view" = "yes" && inkview /tmp/scale.svg
 }
 
 test_nfqueue_scale_to_10() {
-	test -n "$__scale" || __scale="5 6"
+	test -n "$__scale" || __scale="6 7 8 9 10"
 	tlog "=== load-balancer: NFQUEUE scale up to 10 backends"
 	export __nvm=10
 	test_start_nfqueue
-	otcr "nfqueue_scale_out $__scale"
+	otcr "nfqueue_scale_in $__scale"
 	otc 221 "ctraffic_start -address 10.0.0.0:5003 -nconn 100 -rate 100 -srccidr 50.0.0.0/16 -timeout 10s"
 	sleep 4
-	otcr "nfqueue_scale_out 5 6 7 8 9 10"
+	otcr nfqueue_activate_all
 	otc 221 "ctraffic_wait --timeout=30"
 	rcp 221 /tmp/ctraffic.out /tmp/scale.out
 	$plot connections --stats=/tmp/scale.out > /tmp/scale.svg
 	xcluster_stop
+	$ctraffic -analyze hosts -stat_file /tmp/scale.out >&2
 	test "$__view" = "yes" && inkview /tmp/scale.svg	
 }
 
@@ -221,6 +228,7 @@ test_ipvs_scale() {
 	rcp 221 /tmp/ctraffic.out /tmp/scale.out
 	$plot connections --stats=/tmp/scale.out > /tmp/scale.svg
 	xcluster_stop
+	$ctraffic -analyze hosts -stat_file /tmp/scale.out >&2
 	test "$__view" = "yes" && inkview /tmp/scale.svg
 }
 
