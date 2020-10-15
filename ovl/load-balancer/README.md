@@ -56,6 +56,16 @@ linux-5.5.x and above sprays packets regardless of hash so
 ./load-balancer.sh test ecmp > $log
 ```
 
+## IPVS
+
+The in-kernel load-balancer.
+
+```
+# "dsr" or "masq"
+export xcluster_IPVS_SETUP=dsr
+./load-balancer.sh test ipvs > $log
+__nvm=10 ./load-balancer.sh test --view ipvs_scale > $log
+```
 
 
 ## NFQUEUE

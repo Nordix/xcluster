@@ -144,6 +144,38 @@ cmd_tcase_nfqueue_scale_out() {
 	lb activate $@
 }
 
+# ----------------------------------------------------------------------
+# ipvs
+
+cmd_tcase_ipvs_scale_in() {
+	tcase "ipvs scale-in [$@]"
+	if test -z "$1"; then
+		tlog "Nothing to scale"
+		return 0
+	fi
+	local x
+	for x in $@; do
+		ipvsadm -d -t 10.0.0.0:5001 -r 192.168.1.$x:5001
+		ipvsadm -d -t [1000::]:5001 -r [1000::1:192.168.1.$x]:5001
+		ipvsadm -d -t 10.0.0.0:5003 -r 192.168.1.$x:5003
+		ipvsadm -d -t [1000::]:5003 -r [1000::1:192.168.1.$x]:5003
+	done
+}
+
+cmd_tcase_ipvs_scale_out() {
+	tcase "ipvs scale-out [$@]"
+	if test -z "$1"; then
+		tlog "Nothing to scale"
+		return 0
+	fi
+	for x in $@; do
+		ipvsadm -a -t 10.0.0.0:5001 -r 192.168.1.$x:5001
+		ipvsadm -a -t [1000::]:5001 -r [1000::1:192.168.1.$x]:5001
+		ipvsadm -a -t 10.0.0.0:5003 -r 192.168.1.$x:5003
+		ipvsadm -a -t [1000::]:5003 -r [1000::1:192.168.1.$x]:5003
+	done
+}
+
 
 
 . /etc/profile

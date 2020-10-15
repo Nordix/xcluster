@@ -86,12 +86,30 @@ test_start() {
 	export __image=$XCLUSTER_HOME/hd.img
 	export __ntesters=1
 	export __kver=linux-5.4.35
+	unset __mem1 __mem201 __mem202
+	export __mem=256
 	echo "$XOVLS" | grep -q private-reg && unset XOVLS
 	test -n "$TOPOLOGY" && \
 		. $($XCLUSTER ovld network-topology)/$TOPOLOGY/Envsettings
-	xcluster_start env network-topology iptools load-balancer
+	xcluster_start network-topology iptools load-balancer
 }
 
+
+scale_lb() {
+	tlog "Scale Load-balancer"
+	otc 221 "ctraffic_start -address 10.0.0.0:5003 -nconn 40 -rate 100 -srccidr 50.0.0.0/16 -timeout 20s"
+	sleep 5
+	otc 221 "scale_lb 201"
+	otcw "scale_lb 201"
+	sleep 10
+	otc 221 "scale_lb"
+	otcw "scale_lb"
+	otc 221 "ctraffic_wait --timeout=30"
+	rcp 221 /tmp/ctraffic.out /tmp/scale_lb.out
+	$plot connections --stats=/tmp/scale_lb.out > /tmp/scale_lb.svg
+}
+
+# ecmp ----------------------------------------------------------------
 test_start_ecmp() {
 	export SETUP=ecmp
 	test_start
@@ -121,6 +139,8 @@ ecmp_scale() {
 	rcp 221 /tmp/ctraffic.out /tmp/scale.out
 	$plot connections --stats=/tmp/scale.out > /tmp/scale.svg
 }
+
+# nfqueue ----------------------------------------------------------------
 
 test_start_nfqueue() {
 	export SETUP=nfqueue
@@ -155,18 +175,53 @@ test_nfqueue_scale() {
 	test "$__view" = "yes" && inkview /tmp/scale.svg
 }
 
-scale_lb() {
-	tlog "Scale Load-balancer"
-	otc 221 "ctraffic_start -address 10.0.0.0:5003 -nconn 40 -rate 100 -srccidr 50.0.0.0/16 -timeout 20s"
-	sleep 5
-	otc 221 "scale_lb 201"
-	otcw "scale_lb 201"
-	sleep 10
-	otc 221 "scale_lb"
-	otcw "scale_lb"
+test_nfqueue_scale_to_10() {
+	test -n "$__scale" || __scale="5 6"
+	tlog "=== load-balancer: NFQUEUE scale up to 10 backends"
+	export __nvm=10
+	test_start_nfqueue
+	otcr "nfqueue_scale_out $__scale"
+	otc 221 "ctraffic_start -address 10.0.0.0:5003 -nconn 100 -rate 100 -srccidr 50.0.0.0/16 -timeout 10s"
+	sleep 4
+	otcr "nfqueue_scale_out 5 6 7 8 9 10"
 	otc 221 "ctraffic_wait --timeout=30"
-	rcp 221 /tmp/ctraffic.out /tmp/scale_lb.out
-	$plot connections --stats=/tmp/scale_lb.out > /tmp/scale_lb.svg
+	rcp 221 /tmp/ctraffic.out /tmp/scale.out
+	$plot connections --stats=/tmp/scale.out > /tmp/scale.svg
+	xcluster_stop
+	test "$__view" = "yes" && inkview /tmp/scale.svg	
+}
+
+# ipvs ----------------------------------------------------------------
+
+test_start_ipvs() {
+	export SETUP=ipvs
+	test -n "$xcluster_IPVS_SETUP" || xcluster_IPVS_SETUP=dsr
+	test_start
+}
+
+test_ipvs() {
+	test -n "$xcluster_IPVS_SETUP" || xcluster_IPVS_SETUP=dsr
+	tlog "=== load-balancer: IPVS test mode=$xcluster_IPVS_SETUP"
+	test_start_ipvs
+	otc 221 "mconnect 10.0.0.0:5001"
+	otc 221 "mconnect [1000::]:5001"
+	xcluster_stop
+}
+
+test_ipvs_scale() {
+	test -n "$__scale" || __scale=1
+	tlog "=== load-balancer: IPVS scale test [$__scale]"
+	test_start_ipvs
+	otc 221 "ctraffic_start -address 10.0.0.0:5003 -nconn 100 -rate 100 -srccidr 50.0.0.0/16 -timeout 20s"
+	sleep 5
+	otcr "ipvs_scale_in $__scale"
+	sleep 10
+	otcr "ipvs_scale_out $__scale"
+	otc 221 "ctraffic_wait --timeout=30"
+	rcp 221 /tmp/ctraffic.out /tmp/scale.out
+	$plot connections --stats=/tmp/scale.out > /tmp/scale.svg
+	xcluster_stop
+	test "$__view" = "yes" && inkview /tmp/scale.svg
 }
 
 otcr() {
