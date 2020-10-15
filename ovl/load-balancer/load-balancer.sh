@@ -129,13 +129,46 @@ test_ecmp() {
 }
 test_ecmp_scale() {
 	test -n "$__scale" || __scale=1
-	tlog "=== load-balancer: ECMP scale test [$__scale]"
+	tlog "=== load-balancer: ECMP scale in/out [$__scale]"
 	test_start_ecmp
 	otc 221 "ctraffic_start -address 10.0.0.0:5003 -nconn 100 -rate 100 -srccidr 50.0.0.0/16 -timeout 20s"
 	sleep 5
 	otcr "ecmp_scale $__scale"
 	sleep 10
 	otcr "ecmp_scale"
+	otc 221 "ctraffic_wait --timeout=30"
+	rcp 221 /tmp/ctraffic.out /tmp/scale.out
+	xcluster_stop
+
+	$plot connections --stats=/tmp/scale.out > /tmp/scale.svg
+	$ctraffic -analyze hosts -stat_file /tmp/scale.out >&2
+	test "$__view" = "yes" && inkview /tmp/scale.svg	
+}
+
+test_ecmp_scale_out() {
+	test -n "$__scale" || __scale=1
+	tlog "=== load-balancer: ECMP scale out [$__scale]"
+	test_start_ecmp
+	otcr "ecmp_scale $__scale"
+	otc 221 "ctraffic_start -address 10.0.0.0:5003 -nconn 100 -rate 100 -srccidr 50.0.0.0/16 -timeout 10s"
+	sleep 4
+	otcr "ecmp_scale"
+	otc 221 "ctraffic_wait --timeout=30"
+	rcp 221 /tmp/ctraffic.out /tmp/scale.out
+	xcluster_stop
+
+	$plot connections --stats=/tmp/scale.out > /tmp/scale.svg
+	$ctraffic -analyze hosts -stat_file /tmp/scale.out >&2
+	test "$__view" = "yes" && inkview /tmp/scale.svg	
+}
+
+test_ecmp_scale_in() {
+	test -n "$__scale" || __scale=1
+	tlog "=== load-balancer: ECMP scale in [$__scale]"
+	test_start_ecmp
+	otc 221 "ctraffic_start -address 10.0.0.0:5003 -nconn 100 -rate 100 -srccidr 50.0.0.0/16 -timeout 10s"
+	sleep 4
+	otcr "ecmp_scale $__scale"
 	otc 221 "ctraffic_wait --timeout=30"
 	rcp 221 /tmp/ctraffic.out /tmp/scale.out
 	xcluster_stop
@@ -166,7 +199,7 @@ test_nfqueue() {
 
 test_nfqueue_scale() {
 	test -n "$__scale" || __scale=1
-	tlog "=== load-balancer: NFQUEUE scale test [$__scale]"
+	tlog "=== load-balancer: NFQUEUE scale in/out [$__scale]"
 	test_start_nfqueue
 	otc 221 "ctraffic_start -address 10.0.0.0:5003 -nconn 100 -rate 100 -srccidr 50.0.0.0/16 -timeout 20s"
 	sleep 5
@@ -181,15 +214,29 @@ test_nfqueue_scale() {
 	test "$__view" = "yes" && inkview /tmp/scale.svg
 }
 
-test_nfqueue_scale_to_10() {
-	test -n "$__scale" || __scale="6 7 8 9 10"
-	tlog "=== load-balancer: NFQUEUE scale up to 10 backends"
-	export __nvm=10
+test_nfqueue_scale_out() {
+	test -n "$__scale" || __scale="1"
+	tlog "=== load-balancer: NFQUEUE scale out [$__scale]"
 	test_start_nfqueue
 	otcr "nfqueue_scale_in $__scale"
 	otc 221 "ctraffic_start -address 10.0.0.0:5003 -nconn 100 -rate 100 -srccidr 50.0.0.0/16 -timeout 10s"
 	sleep 4
 	otcr nfqueue_activate_all
+	otc 221 "ctraffic_wait --timeout=30"
+	rcp 221 /tmp/ctraffic.out /tmp/scale.out
+	$plot connections --stats=/tmp/scale.out > /tmp/scale.svg
+	xcluster_stop
+	$ctraffic -analyze hosts -stat_file /tmp/scale.out >&2
+	test "$__view" = "yes" && inkview /tmp/scale.svg	
+}
+
+test_nfqueue_scale_in() {
+	test -n "$__scale" || __scale="1"
+	tlog "=== load-balancer: NFQUEUE scale in [$__scale]"
+	test_start_nfqueue
+	otc 221 "ctraffic_start -address 10.0.0.0:5003 -nconn 100 -rate 100 -srccidr 50.0.0.0/16 -timeout 10s"
+	sleep 4
+	otcr "nfqueue_scale_in $__scale"
 	otc 221 "ctraffic_wait --timeout=30"
 	rcp 221 /tmp/ctraffic.out /tmp/scale.out
 	$plot connections --stats=/tmp/scale.out > /tmp/scale.svg
@@ -217,7 +264,7 @@ test_ipvs() {
 
 test_ipvs_scale() {
 	test -n "$__scale" || __scale=1
-	tlog "=== load-balancer: IPVS scale test [$__scale]"
+	tlog "=== load-balancer: IPVS scale in/out [$__scale]"
 	test_start_ipvs
 	otc 221 "ctraffic_start -address 10.0.0.0:5003 -nconn 100 -rate 100 -srccidr 50.0.0.0/16 -timeout 20s"
 	sleep 5
@@ -231,6 +278,9 @@ test_ipvs_scale() {
 	$ctraffic -analyze hosts -stat_file /tmp/scale.out >&2
 	test "$__view" = "yes" && inkview /tmp/scale.svg
 }
+
+
+
 
 otcr() {
 	local x last_router

@@ -17,11 +17,19 @@ curl https://artifactory.nordix.org/artifactory/cloud-native/xcluster/images/bzI
   $XCLUSTER_WORKSPACE/xcluster/bzImage-linux-5.4.35
 ```
 
-Simplest is to start using the `load-balancer.sh` script;
+Scaling tests and show a graph;
+```
+LB=nfqueue
+__nvm=10 ./load-balancer.sh test --view ${LB}_scale > $log
+__nvm=10 ./load-balancer.sh test --view ${LB}_scale_in > $log
+__nvm=10 ./load-balancer.sh test --view ${LB}_scale_out > $log
+__nvm=10 ./load-balancer.sh test --view --scale="1 2 3" ${LB}_scale_in > $log
+```
+
+Start using the `load-balancer.sh` script;
 ```
 LB=ecmp
-./load-balancer.sh test $LB > $log
-# Or to leave the cluster running;
+# Basic test and leave the cluster running;
 ./load-balancer.sh test --no-stop $LB > $log
 # Or to just start;
 ./load-balancer.sh test start_$LB > $log
@@ -54,7 +62,7 @@ linux-5.5.x and above sprays packets regardless of hash so
 
 ```
 ./load-balancer.sh test ecmp > $log
-__nvm=10 ./load-balancer.sh test --view ecmp_scale > $log
+__nvm=10 ./load-balancer.sh test --view ecmp_scale_in > $log
 ```
 
 ## IPVS
@@ -67,6 +75,10 @@ export xcluster_IPVS_SETUP=dsr
 ./load-balancer.sh test ipvs > $log
 __nvm=10 ./load-balancer.sh test --view ipvs_scale > $log
 ```
+
+There are no individual scale_out and scale_in tests for ipvs since it
+is steteful so scale_out will not affect established connection and a
+scale in will only affect the connections on the scaled backends.
 
 
 ## NFQUEUE

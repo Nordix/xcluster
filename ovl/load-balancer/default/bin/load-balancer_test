@@ -97,21 +97,22 @@ cmd_tcase_scale_lb() {
 # Ecmp
 
 cmd_tcase_ecmp_scale() {
+	local exclude=":$(echo $@ | tr ' ' :):"
 	if test -n "$1"; then
-		tcase "Ecmp; scale in [$1]"
+		tcase "Ecmp; scale in [$exclude]"
 	else
 		tcase "Ecmp; scale out"
 	fi
-
+	
 	local i targets
 	for i in $(seq 1 $__nvm); do
-		test "$i" = "$1" && continue
+		echo $exclude | grep -q ":$i:" && continue
 		targets="$targets nexthop via 192.168.1.$i"
 	done
 	ip ro change 10.0.0.0/24 $targets
 	targets=''
 	for i in $(seq 1 $__nvm); do
-		test "$i" = "$1" && continue
+		echo $exclude | grep -q ":$i:" && continue
 		targets="$targets nexthop via 1000::1:192.168.1.$i"
 	done
 	ip -6 ro change 1000::/120 $targets
