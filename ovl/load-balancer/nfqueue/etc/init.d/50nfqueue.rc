@@ -29,7 +29,7 @@ router() {
 	iptables -t mangle -A PREROUTING -i eth2 -d 10.0.0.0/24 -j NFQUEUE --queue-num 2
 	ip6tables -t mangle -A PREROUTING -i eth2 -d 1000::/112 -j NFQUEUE --queue-num 2
 
-	lb create
+	lb create 2000 20
 	lb run > /var/log/lb.log 2>&1 &
 }
 

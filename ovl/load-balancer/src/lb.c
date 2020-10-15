@@ -251,6 +251,31 @@ static void die(char const* msg)
 	exit(EXIT_FAILURE);
 }
 
+// Prime numbers < 100
+static unsigned primes100[25] = {
+	2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97
+};
+
+static int isPrime(unsigned n)
+{
+	for (int i = 0; i < 25; i++) {
+		if (n <= primes100[i]) return 1;
+		if ((n % primes100[i]) == 0) return 0;
+	}
+	return 1;
+}
+
+static unsigned primeBelow(unsigned n)
+{
+	if (isPrime(n)) return n;
+	if (n % 2 == 0) n--;
+	while (n > 1) {
+		if (isPrime(n)) break;
+		n -= 2;
+	}
+	return n;
+}
+
 static struct MagData* magd;
 static uint32_t get_maglev_mark(uint32_t hash)
 {
@@ -283,7 +308,19 @@ static int cmdCreate(int argc, char* argv[])
 	int fd = shm_open("maglev", O_RDWR|O_CREAT, 0600);
 	if (fd < 0) die("shm_open");
 	struct MagData m;
-	initMagData(&m, 997, 10);
+	unsigned M=997, N=10;
+	if (argc > 0) {
+		M = atoi(argv[0]);
+		if (M < 20) M = 19;
+		if (M > MAX_M) M = MAX_M;
+		M = primeBelow(M);
+	}
+	if (argc > 1) {
+		N = atoi(argv[1]);
+		if (N < 4) N = 4;
+		if (N > MAX_N) N = MAX_N;
+	}
+	initMagData(&m, M, N);
 	for (int i = 0; i < 4; i++)
 		m.active[i] = 1;
 	populate(&m);

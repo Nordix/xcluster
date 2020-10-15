@@ -145,6 +145,7 @@ ecmp_scale() {
 test_start_nfqueue() {
 	export SETUP=nfqueue
 	test_start
+	otcr nfqueue_activate_all
 }
 test_nfqueue() {
 	tlog "=== load-balancer: NFQUEUE test"
@@ -162,7 +163,6 @@ test_nfqueue_scale() {
 	test -n "$__scale" || __scale=1
 	tlog "=== load-balancer: NFQUEUE scale test [$__scale]"
 	test_start_nfqueue
-	otcr nfqueue_activate_all
 	otc 221 "ctraffic_start -address 10.0.0.0:5003 -nconn 100 -rate 100 -srccidr 50.0.0.0/16 -timeout 20s"
 	sleep 5
 	otcr "nfqueue_scale_in $__scale"
