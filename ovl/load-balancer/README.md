@@ -2,8 +2,9 @@
 
 * Test setup for load-balancers
 
-This ovl provides a setup for testing different load-balancers. The
-default xcluster network-topology is used when possible (always);
+This ovl provides a setup for testing different load-balancers
+(without K8s). The default xcluster network-topology is used when
+possible (always);
 
 <img src="../network-topology/xnet.svg" alt="Default network topology" width="60%" />
 
@@ -21,9 +22,9 @@ Scaling tests and show a graph;
 ```
 LB=nfqueue
 __nvm=10 ./load-balancer.sh test --view ${LB}_scale > $log
-__nvm=10 ./load-balancer.sh test --view ${LB}_scale_in > $log
-__nvm=10 ./load-balancer.sh test --view ${LB}_scale_out > $log
-__nvm=10 ./load-balancer.sh test --view --scale="1 2 3" ${LB}_scale_in > $log
+__nvm=10 ./load-balancer.sh test ${LB}_scale_in > $log
+__nvm=10 ./load-balancer.sh test ${LB}_scale_out > $log
+__nvm=10 ./load-balancer.sh test --scale="1 2 3" ${LB}_scale_in > $log
 ```
 
 Start using the `load-balancer.sh` script;
@@ -53,7 +54,6 @@ ctraffic -address [1000::]:5003 -nconn 100 -rate 100 -monitor -timeout 10s \
   -stats all -srccidr 2000::/112 | jq .
 ```
 
-
 ## ECMP load-balancer
 
 This is the simplest form of load-balancer. Due to some kernel bug
@@ -61,9 +61,16 @@ linux-5.5.x and above sprays packets regardless of hash so
 `linux-5.4.35` is used in tests.
 
 ```
-./load-balancer.sh test ecmp > $log
-__nvm=10 ./load-balancer.sh test --view ecmp_scale_in > $log
+./load-balancer.sh test --view ecmp > $log
+__nrouters=1 __nvm=10 ./load-balancer.sh test --scale=1 ecmp_scale_in > $log
+__nrouters=1 __nvm=10 ./load-balancer.sh test --scale=5 ecmp_scale_in > $log
 ```
+
+The scaling tests shows the Hash-Threshold used by the Linux kernel
+([rfc2992](https://tools.ietf.org/html/rfc2992)). When scaling an
+"edge" target ~50% traffic is lost but only ~25% when a "middle"
+target is scaled.
+
 
 ## IPVS
 

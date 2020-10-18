@@ -97,17 +97,20 @@ test_start() {
 
 
 scale_lb() {
-	tlog "Scale Load-balancer"
-	otc 221 "ctraffic_start -address 10.0.0.0:5003 -nconn 40 -rate 100 -srccidr 50.0.0.0/16 -timeout 20s"
+	test -n "$__scale" || die "__scale not set"
+	otc 221 "ctraffic_start -address 10.0.0.0:5003 -nconn 100 -rate 100 -srccidr 50.0.0.0/16 -timeout 20s"
 	sleep 5
-	otc 221 "scale_lb 201"
-	otcw "scale_lb 201"
+	otc 221 "scale_lb $__scale"
+	otcw "scale_lb $__scale"
 	sleep 10
 	otc 221 "scale_lb"
 	otcw "scale_lb"
 	otc 221 "ctraffic_wait --timeout=30"
 	rcp 221 /tmp/ctraffic.out /tmp/scale_lb.out
+	xcluster_stop
 	$plot connections --stats=/tmp/scale_lb.out > /tmp/scale_lb.svg
+	$ctraffic -analyze hosts -stat_file /tmp/scale_lb.out >&2
+	test "$__view" = "yes" && inkview /tmp/scale.svg
 }
 
 # ecmp ----------------------------------------------------------------
@@ -121,11 +124,13 @@ test_ecmp() {
 	test_start_ecmp
 	otc 221 "mconnect 10.0.0.0:5001"
 	otc 221 "mconnect [1000::]:5001"
-	test "$__scale_lb" = "yes" && scale_lb
 	xcluster_stop
-	if test "$__view" = "yes"; then
-		test "$__scale_lb" = "yes" && inkview /tmp/scale_lb.svg
-	fi
+}
+test_ecmp_scale_lb() {
+	test -n "$__scale" || __scale=201
+	tlog "=== load-balancer: ECMP scale LBs [$__scale]"
+	test_start_ecmp
+	scale_lb
 }
 test_ecmp_scale() {
 	test -n "$__scale" || __scale=1
@@ -195,6 +200,12 @@ test_nfqueue() {
 	if test "$__view" = "yes"; then
 		test "$__scale_lb" = "yes" && inkview /tmp/scale_lb.svg
 	fi
+}
+test_nfqueue_scale_lb() {
+	test -n "$__scale" || __scale=201
+	tlog "=== load-balancer: NFQUEUE scale LBs [$__scale]"
+	test_start_nfqueue
+	scale_lb
 }
 
 test_nfqueue_scale() {
