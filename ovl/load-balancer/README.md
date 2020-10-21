@@ -151,7 +151,7 @@ shared memory. It can be built and executed on your laptop;
 
 ```
 gcc -o /tmp/lb src/lb.c src/maglev.c -lmnl -lnetfilter_queue -lrt
-/tmp/lb create
+/tmp/lb create 100 10
 /tmp/lb show
 /tmp/lb deactivate 1
 /tmp/lb show

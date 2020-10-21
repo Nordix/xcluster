@@ -18,24 +18,185 @@
 /* only for NFQA_CT, not needed otherwise: */
 #include <linux/netfilter/nfnetlink_conntrack.h>
 
-static uint32_t (*get_mark)(uint32_t hash);
-static void initHash(int argc, char* argv[]);
 static int cmdCreate(int argc, char* argv[]);
 static int cmdShow(int argc, char* argv[]);
 static int cmdClean(int argc, char* argv[]);
 static int cmdActivate(int argc, char* argv[]);
 static int cmdDeactivate(int argc, char* argv[]);
-static struct Cmd {
-	char const* const name;
-	int (*fn)(int argc, char* argv[]);
-} cmd[] = {
-	{"create", cmdCreate},
-	{"show", cmdShow},
-	{"clean", cmdClean},
-	{"activate", cmdActivate},
-	{"deactivate", cmdDeactivate},
-	{"run", NULL}
+static int cmdRun(int argc, char* argv[]);
+
+int main(int argc, char *argv[])
+{
+	static struct Cmd {
+		char const* const name;
+		int (*fn)(int argc, char* argv[]);
+	} cmd[] = {
+		{"create", cmdCreate},
+		{"show", cmdShow},
+		{"clean", cmdClean},
+		{"activate", cmdActivate},
+		{"deactivate", cmdDeactivate},
+		{"run", cmdRun},
+		{NULL, NULL}
+	};
+
+	if (argc < 2) {
+		printf("Usage: %s <command> [opt...]\n", argv[0]);
+		exit(EXIT_FAILURE);
+	}
+
+	argc--;
+	argv++;
+	for (struct Cmd* c = cmd; c->fn != NULL; c++) {
+		if (strcmp(*argv, c->name) == 0)
+			return c->fn(argc, argv);
+	}
+
+	return 0;
+}
+
+/* ---------------------------------------------------------------------- */
+#include "maglev.h"
+#include <sys/mman.h>
+#include <fcntl.h>
+
+static void die(char const* msg)
+{
+	perror(msg);
+	exit(EXIT_FAILURE);
+}
+
+// Prime numbers < 100
+static unsigned primes100[25] = {
+	2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97
 };
+
+static int isPrime(unsigned n)
+{
+	for (int i = 0; i < 25; i++) {
+		if (n <= primes100[i]) return 1;
+		if ((n % primes100[i]) == 0) return 0;
+	}
+	return 1;
+}
+
+static unsigned primeBelow(unsigned n)
+{
+	if (isPrime(n)) return n;
+	if (n % 2 == 0) n--;
+	while (n > 1) {
+		if (isPrime(n)) break;
+		n -= 2;
+	}
+	return n;
+}
+
+static struct MagData* magd;
+static uint32_t get_maglev_mark(uint32_t hash)
+{
+	return magd->lookup[hash % magd->M] + 1;
+}
+
+static struct MagData* mapMagData(int mode)
+{
+	int fd = shm_open("maglev", mode, (mode == O_RDONLY)?0400:0600);
+	if (fd < 0) die("shm_open");
+	struct MagData* m = mmap(
+		NULL, sizeof(struct MagData),
+		(mode == O_RDONLY)?PROT_READ:PROT_READ|PROT_WRITE, MAP_SHARED, fd, 0);
+	if (m == MAP_FAILED) die("mmap");
+	return m;
+}
+
+static int cmdCreate(int argc, char* argv[])
+{
+	int fd = shm_open("maglev", O_RDWR|O_CREAT, 0600);
+	if (fd < 0) die("shm_open");
+	struct MagData m;
+	unsigned M=997, N=10;
+	if (argc > 1) {
+		M = atoi(argv[1]);
+		if (M < 20) M = 19;
+		if (M > MAX_M) M = MAX_M;
+		M = primeBelow(M);
+	}
+	if (argc > 2) {
+		N = atoi(argv[2]);
+		if (N < 4) N = 4;
+		if (N > MAX_N) N = MAX_N;
+	}
+	initMagData(&m, M, N);
+	for (int i = 0; i < 4; i++)
+		m.active[i] = 1;
+	populate(&m);
+	write(fd, &m, sizeof(m));
+	return 0;
+}
+static int cmdShow(int argc, char* argv[])
+{
+	struct MagData* m = mapMagData(O_RDONLY);
+	printf("M=%u, N=%u\n", m->M, m->N);
+	printf("Active;\n");
+	for (int i = 0; i < m->N; i++)
+		printf(" %u", m->active[i]);
+	puts("");
+	printf("Lookup;\n");
+	for (int i = 0; i < 25; i++)
+		printf(" %d", m->lookup[i]);
+	puts(" ...");
+	return 0;
+}
+static int cmdClean(int argc, char* argv[])
+{
+	if (shm_unlink("maglev") != 0) die("shm_unlink");
+	return 0;
+}
+
+static void setActivate(unsigned v, int argc, char *argv[])
+{
+	struct MagData* m = mapMagData(O_RDWR);
+	argc--;
+	argv++;
+	while (argc-- > 0) {
+		int i = atoi(*argv++) - 1;
+		if (i >= 0 && i < m->N) m->active[i] = v;
+	}
+	printf("Active;\n");
+	for (int i = 0; i < m->N; i++)
+		printf(" %u", m->active[i]);
+	puts("");
+	populate(m);
+}
+static int cmdActivate(int argc, char* argv[])
+{
+	setActivate(1, argc, argv);
+	return 0;
+}
+static int cmdDeactivate(int argc, char* argv[])
+{
+	setActivate(0, argc, argv);
+	return 0;
+}
+
+
+/* ----------------------------------------------------------------------
+   The NFQUEUE code is taken from the example in;
+   libnetfilter_queue-1.0.3/examples/nf-queue.c
+*/
+
+static uint32_t (*get_mark)(uint32_t hash);
+
+static void initMaglevHash(int argc, char* argv[])
+{
+	int fd = shm_open("maglev", O_RDONLY, 0400);
+	if (fd < 0) die("shm_open");
+	magd = mmap(
+		NULL, sizeof(struct MagData), PROT_READ, MAP_SHARED, fd, 0);
+	if (magd == MAP_FAILED) die("mmap");
+	get_mark = get_maglev_mark;
+}
+
+
 static uint32_t
 djb2_hash(uint8_t* c, uint32_t len)
 {
@@ -89,6 +250,8 @@ nfq_send_verdict(int queue_num, uint32_t id, uint32_t mark)
 	}
 }
 
+static unsigned portlen = 0;
+
 static int queue_cb(const struct nlmsghdr *nlh, void *data)
 {
 	struct nfqnl_msg_packet_hdr *ph = NULL;
@@ -118,14 +281,16 @@ static int queue_cb(const struct nlmsghdr *nlh, void *data)
 	  Addresses;
 	  ipv4; payload[12], len 8
 	  ipv6; payload[8], len 32
-	  TODO; For ICMP "packet too big" compute hash for the "inner" address.
+	  TODO: Handle ipv6 next-header and ipv4 options.
+	  TODO; For ICMP "packet too big" amd others compute hash for
+	  the "inner" address.
 	 */
 	uint8_t *payload = mnl_attr_get_payload(attr[NFQA_PAYLOAD]);
 	uint32_t hash;
 	if (ntohs(ph->hw_protocol) == 0x0800) {
-		hash = djb2_hash(payload + 12, 8);
+		hash = djb2_hash(payload + 12, 8 + portlen);
 	} else if (ntohs(ph->hw_protocol) == 0x86dd) {
-		hash = djb2_hash(payload + 8, 32);
+		hash = djb2_hash(payload + 8, 32 + portlen);
 	}
 	
 #if 0
@@ -137,9 +302,7 @@ static int queue_cb(const struct nlmsghdr *nlh, void *data)
 	return MNL_CB_OK;
 }
 
-static int config(int argc, char *argv[]);
-
-int main(int argc, char *argv[])
+static int cmdRun(int argc, char* argv[])
 {
 	char *buf;
 	/* largest possible packet payload, plus netlink data overhead: */
@@ -148,17 +311,23 @@ int main(int argc, char *argv[])
 	int ret;
 	unsigned int portid, queue_num = 2;
 
-	if (argc < 2) {
-		printf("Usage: %s <command> [opt...]\n", argv[0]);
-		exit(EXIT_FAILURE);
+	static char const* const opt = "q:ph";
+	int c;
+	for (c = getopt(argc, argv, opt); c > 0; c = getopt(argc, argv, opt)) {
+		switch (c) {
+		case 'q':
+			queue_num = atoi(optarg);
+			break;
+		case 'p':
+			portlen = 4;
+			break;
+		default:
+			fprintf(stderr, "Unknown option [%c]", c);
+			exit(EXIT_FAILURE);
+		}
 	}
-	for (struct Cmd* c = cmd; c->fn != NULL; c++) {
-		if (strcmp(argv[1], c->name) == 0)
-			return c->fn(argc - 2, argv + 2);
-	}
-
-	if (argc > 2) queue_num = atoi(argv[2]);
-	initHash(argc - 2, argv + 2);
+	
+	initMaglevHash(argc, argv);
 
 	nl = mnl_socket_open(NETLINK_NETFILTER);
 	if (nl == NULL) {
@@ -236,139 +405,6 @@ int main(int argc, char *argv[])
 	}
 
 	mnl_socket_close(nl);
-
 	return 0;
 }
-
-/* ---------------------------------------------------------------------- */
-#include "maglev.h"
-#include <sys/mman.h>
-#include <fcntl.h>
-
-static void die(char const* msg)
-{
-	perror(msg);
-	exit(EXIT_FAILURE);
-}
-
-// Prime numbers < 100
-static unsigned primes100[25] = {
-	2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97
-};
-
-static int isPrime(unsigned n)
-{
-	for (int i = 0; i < 25; i++) {
-		if (n <= primes100[i]) return 1;
-		if ((n % primes100[i]) == 0) return 0;
-	}
-	return 1;
-}
-
-static unsigned primeBelow(unsigned n)
-{
-	if (isPrime(n)) return n;
-	if (n % 2 == 0) n--;
-	while (n > 1) {
-		if (isPrime(n)) break;
-		n -= 2;
-	}
-	return n;
-}
-
-static struct MagData* magd;
-static uint32_t get_maglev_mark(uint32_t hash)
-{
-	return magd->lookup[hash % magd->M] + 1;
-}
-
-static void initHash(int argc, char* argv[])
-{
-	int fd = shm_open("maglev", O_RDONLY, 0400);
-	if (fd < 0) die("shm_open");
-	magd = mmap(
-		NULL, sizeof(struct MagData), PROT_READ, MAP_SHARED, fd, 0);
-	if (magd == MAP_FAILED) die("mmap");
-	get_mark = get_maglev_mark;
-}
-
-static struct MagData* mapMagData(int mode)
-{
-	int fd = shm_open("maglev", mode, (mode == O_RDONLY)?0400:0600);
-	if (fd < 0) die("shm_open");
-	struct MagData* m = mmap(
-		NULL, sizeof(struct MagData),
-		(mode == O_RDONLY)?PROT_READ:PROT_READ|PROT_WRITE, MAP_SHARED, fd, 0);
-	if (m == MAP_FAILED) die("mmap");
-	return m;
-}
-
-static int cmdCreate(int argc, char* argv[])
-{
-	int fd = shm_open("maglev", O_RDWR|O_CREAT, 0600);
-	if (fd < 0) die("shm_open");
-	struct MagData m;
-	unsigned M=997, N=10;
-	if (argc > 0) {
-		M = atoi(argv[0]);
-		if (M < 20) M = 19;
-		if (M > MAX_M) M = MAX_M;
-		M = primeBelow(M);
-	}
-	if (argc > 1) {
-		N = atoi(argv[1]);
-		if (N < 4) N = 4;
-		if (N > MAX_N) N = MAX_N;
-	}
-	initMagData(&m, M, N);
-	for (int i = 0; i < 4; i++)
-		m.active[i] = 1;
-	populate(&m);
-	write(fd, &m, sizeof(m));
-	return 0;
-}
-static int cmdShow(int argc, char* argv[])
-{
-	struct MagData* m = mapMagData(O_RDONLY);
-	printf("M=%u, N=%u\n", m->M, m->N);
-	printf("Active;\n");
-	for (int i = 0; i < m->N; i++)
-		printf(" %u", m->active[i]);
-	puts("");
-	printf("Lookup;\n");
-	for (int i = 0; i < 25; i++)
-		printf(" %d", m->lookup[i]);
-	puts(" ...");
-	return 0;
-}
-static int cmdClean(int argc, char* argv[])
-{
-	if (shm_unlink("maglev") != 0) die("shm_unlink");
-	return 0;
-}
-
-static void setActivate(unsigned v, int argc, char *argv[])
-{
-	struct MagData* m = mapMagData(O_RDWR);
-	while (argc-- > 0) {
-		int i = atoi(*argv++) - 1;
-		if (i >= 0 && i < m->N) m->active[i] = v;
-	}
-	printf("Active;\n");
-	for (int i = 0; i < m->N; i++)
-		printf(" %u", m->active[i]);
-	puts("");
-	populate(m);
-}
-static int cmdActivate(int argc, char* argv[])
-{
-	setActivate(1, argc, argv);
-	return 0;
-}
-static int cmdDeactivate(int argc, char* argv[])
-{
-	setActivate(0, argc, argv);
-	return 0;
-}
-
 

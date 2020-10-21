@@ -30,7 +30,7 @@ router() {
 	ip6tables -t mangle -A PREROUTING -i eth2 -d 1000::/112 -j NFQUEUE --queue-num 2
 
 	lb create 2000 20
-	lb run > /var/log/lb.log 2>&1 &
+	lb run $LB_OPTIONS > /var/log/lb.log 2>&1 &
 }
 
 tester() {
