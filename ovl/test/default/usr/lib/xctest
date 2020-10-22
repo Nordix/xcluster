@@ -540,6 +540,12 @@ check_vm() {
 ##  otc <vm> <tcase...>
 ##    Execute a test on a VM.
 ##    Prerequisite; "otcprog" set to the command on the cluster.
+##  otcw <tcase...>
+##    Execute a test on all worker vms.
+##  otcr <tcase...>
+##    Execute a test on all routers.
+##  otcr <tcase...>
+##    Execute a test on all testers.
 ##
 otc() {
 	test -n "$otcprog" || otcprog=$(basename $dir)_test
@@ -548,6 +554,26 @@ otc() {
 	shift
 	for tc in "$@"; do
 		rsh $vm $otcprog tcase_$tc || tdie
+	done
+}
+otcw() {
+	local x
+	for x in $(seq 1 $__nvm); do
+		otc $x "$@"
+	done
+}
+otcr() {
+	local x last
+	last=$((200 + __nrouters))
+	for x in $(seq 201 $last); do
+		otc $x "$@"
+	done
+}
+otct() {
+	local x last
+	last=$((220 + __ntesters))
+	for x in $(seq 201 $last); do
+		otc $x "$@"
 	done
 }
 
