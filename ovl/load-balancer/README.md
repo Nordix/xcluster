@@ -126,16 +126,16 @@ variable;
 
 ```
 # -p includes ports in the hash (fragments not handled)
-# -m maglev|modulo defines the hash algorithm
+# -m maglev|modulo defines the hash algorithm, default=maglev
 export xcluster_LB_OPTIONS="-p -m modulo"
 ```
 
 
-### Maglev hashing and the lb program
+## Maglev hashing and the lb program
 
 Maglev is the Google load-balancer;
 
-* https://static.googleusercontent.com/media/research.google.com/en/pubs/archive/44824.pdf
+* https://static.googleusercontent.com/media/research.google.com/en//pubs/archive/44824.pdf
 
 The NFQUEUE example uses "maglev hashing". The hash state is stored in
 "shared memory" so it is accessible from the program listening to the
@@ -194,3 +194,24 @@ lb show
 lb deactivate 1
 # ...
 ```
+
+### Fragment handling
+
+Described in section 4.3 p8 in the maglev document. 
+
+> Each Maglev is configured with a special backend pool consisting of
+> all Maglevs within the cluster.
+
+When a fragment is received a 3-tuple hash is performent and the
+packet is forwarded to a backend in this pool, i.e another
+maglev. This maglev will get all fragments and maintain a state to
+ensure all fragments are sent to the same backend.
+
+We can do the same in `xcluster` fairly easy.
+
+> We use the GRE recursion control field to ensure that fragments are
+> only redirected once.
+
+Since `xcluster` does not use GRE tunnels the `ownFwmark` can be
+checked. If a fragment would be forwarded to our selves we handle the
+packet.
