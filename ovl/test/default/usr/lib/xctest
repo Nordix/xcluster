@@ -563,15 +563,16 @@ xcluster_start() {
 		tcase "Build cluster [env $BASEOVLS $@ $XOVLS test]"
 		$XCLUSTER mkcdrom env $BASEOVLS $@ $XOVLS test || tdie
 	fi
-
+	test -n "$__nvm" || __nvm=4
+	test -n "$__nrouters" || __nrouters=2
+	test -n "$__ntesters" || __ntesters=0
+	export __nvm __nrouters __ntesters
 	tcase "Cluster start ($(basename $__image))"
 	$XCLUSTER $start || tdie
 	sleep 2
-	local lastvm=4 lastrouter=202 lasttester=0
-	test -n "$__nvm" && lastvm=$__nvm
-	test -n "$__nrouters" && lastrouter=$((200 + __nrouters))
-	test -n "$__ntesters" && lasttester=$((220 + __ntesters))
-	local EXPECTED_VMS="$(seq -s' ' 1 $lastvm) $(seq -s' ' 201 $lastrouter) $(seq -s' ' 221 $lasttester)"
+	local lastrouter=$((200 + __nrouters))
+	local lasttester=$((220 + __ntesters))
+	local EXPECTED_VMS="$(seq -s' ' 1 $__nvm) $(seq -s' ' 201 $lastrouter) $(seq -s' ' 221 $lasttester)"
 	pushv 60 30 2
 	tcase "VM connectivity; $EXPECTED_VMS"
 	tex check_vm $EXPECTED_VMS || tdie
