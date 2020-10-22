@@ -5,18 +5,7 @@
 #include <string.h>
 #include <time.h>
 #include <arpa/inet.h>
-
-#include <libmnl/libmnl.h>
-#include <linux/netfilter.h>
-#include <linux/netfilter/nfnetlink.h>
-
 #include <linux/types.h>
-#include <linux/netfilter/nfnetlink_queue.h>
-
-#include <libnetfilter_queue/libnetfilter_queue.h>
-
-/* only for NFQA_CT, not needed otherwise: */
-#include <linux/netfilter/nfnetlink_conntrack.h>
 
 static int cmdCreate(int argc, char* argv[]);
 static int cmdShow(int argc, char* argv[]);
@@ -56,7 +45,7 @@ int main(int argc, char *argv[])
 }
 
 /* ---------------------------------------------------------------------- */
-#include "maglev.h"
+#include "nfqueue-lb.h"
 #include <sys/mman.h>
 #include <fcntl.h>
 
@@ -64,6 +53,27 @@ static void die(char const* msg)
 {
 	perror(msg);
 	exit(EXIT_FAILURE);
+}
+
+static char const* const memName = MEM_NAME;
+
+static void createSharedData(struct SharedData* sh)
+{
+	int fd = shm_open(memName, O_RDWR|O_CREAT, 0600);
+	if (fd < 0) die("shm_open");
+	write(fd, sh, sizeof(*sh));
+	close(fd);
+}
+
+static struct SharedData* mapSharedData(int mode)
+{
+	int fd = shm_open(memName, mode, (mode == O_RDONLY)?0400:0600);
+	if (fd < 0) die("shm_open");
+	struct SharedData* m = mmap(
+		NULL, sizeof(struct SharedData),
+		(mode == O_RDONLY)?PROT_READ:PROT_READ|PROT_WRITE, MAP_SHARED, fd, 0);
+	if (m == MAP_FAILED) die("mmap");
+	return m;
 }
 
 // Prime numbers < 100
@@ -91,50 +101,63 @@ static unsigned primeBelow(unsigned n)
 	return n;
 }
 
-static struct MagData* magd;
-static uint32_t get_maglev_mark(uint32_t hash)
+static void updateModulo(struct SharedData* sh)
 {
-	return magd->lookup[hash % magd->M] + 1;
-}
-
-static struct MagData* mapMagData(int mode)
-{
-	int fd = shm_open("maglev", mode, (mode == O_RDONLY)?0400:0600);
-	if (fd < 0) die("shm_open");
-	struct MagData* m = mmap(
-		NULL, sizeof(struct MagData),
-		(mode == O_RDONLY)?PROT_READ:PROT_READ|PROT_WRITE, MAP_SHARED, fd, 0);
-	if (m == MAP_FAILED) die("mmap");
-	return m;
+	sh->modulo.nActive = 0;
+	for (int i = 0; i < MAX_N; i++) {
+		if (sh->magd.active[i]) {
+			sh->modulo.lookup[sh->modulo.nActive] = i;
+			sh->modulo.nActive++;
+		}
+	}
 }
 
 static int cmdCreate(int argc, char* argv[])
 {
-	int fd = shm_open("maglev", O_RDWR|O_CREAT, 0600);
-	if (fd < 0) die("shm_open");
-	struct MagData m;
+	static char const* const opt = "i:";
+	int c, i=-1;
+	for (c = getopt(argc, argv, opt); c > 0; c = getopt(argc, argv, opt)) {
+		switch (c) {
+		case 'i':
+			i = atoi(optarg);
+			break;
+		default:
+			fprintf(stderr, "Unknown option [%c]", c);
+			exit(EXIT_FAILURE);
+		}
+	}
+	argc -= optind;
+	argv += optind;
+
+	struct SharedData sh;
+	sh.ownFwmark = i;
 	unsigned M=997, N=10;
-	if (argc > 1) {
-		M = atoi(argv[1]);
+	if (argc > 0) {
+		M = atoi(argv[0]);
 		if (M < 20) M = 19;
 		if (M > MAX_M) M = MAX_M;
 		M = primeBelow(M);
 	}
-	if (argc > 2) {
-		N = atoi(argv[2]);
+	if (argc > 1) {
+		N = atoi(argv[1]);
 		if (N < 4) N = 4;
 		if (N > MAX_N) N = MAX_N;
 	}
-	initMagData(&m, M, N);
+	initMagData(&sh.magd, M, N);
 	for (int i = 0; i < 4; i++)
-		m.active[i] = 1;
-	populate(&m);
-	write(fd, &m, sizeof(m));
+	   sh.magd.active[i] = 1;
+	populate(&sh.magd);
+	updateModulo(&sh);
+
+	createSharedData(&sh);
 	return 0;
 }
 static int cmdShow(int argc, char* argv[])
 {
-	struct MagData* m = mapMagData(O_RDONLY);
+	struct SharedData* sh = mapSharedData(O_RDONLY);
+	struct MagData* m = &sh->magd;
+	printf("Own fwmark: %d\n", sh->ownFwmark);
+	printf("=== Maglev hashing;\n");
 	printf("M=%u, N=%u\n", m->M, m->N);
 	printf("Active;\n");
 	for (int i = 0; i < m->N; i++)
@@ -144,28 +167,32 @@ static int cmdShow(int argc, char* argv[])
 	for (int i = 0; i < 25; i++)
 		printf(" %d", m->lookup[i]);
 	puts(" ...");
+	printf("=== Modulo hashing;\n");
+	printf("nActive=%d\n", sh->modulo.nActive);
+	printf("Lookup;\n");
+	for (int i = 0; i < sh->modulo.nActive; i++)
+		printf(" %d", sh->modulo.lookup[i]);
+	puts("");
 	return 0;
 }
 static int cmdClean(int argc, char* argv[])
 {
-	if (shm_unlink("maglev") != 0) die("shm_unlink");
+	if (shm_unlink(memName) != 0) die("shm_unlink");
 	return 0;
 }
 
 static void setActivate(unsigned v, int argc, char *argv[])
 {
-	struct MagData* m = mapMagData(O_RDWR);
+	struct SharedData* sh = mapSharedData(O_RDWR);
+	struct MagData* m = &sh->magd;
 	argc--;
 	argv++;
 	while (argc-- > 0) {
 		int i = atoi(*argv++) - 1;
 		if (i >= 0 && i < m->N) m->active[i] = v;
 	}
-	printf("Active;\n");
-	for (int i = 0; i < m->N; i++)
-		printf(" %u", m->active[i]);
-	puts("");
 	populate(m);
+	updateModulo(sh);
 }
 static int cmdActivate(int argc, char* argv[])
 {
@@ -184,18 +211,26 @@ static int cmdDeactivate(int argc, char* argv[])
    libnetfilter_queue-1.0.3/examples/nf-queue.c
 */
 
-static uint32_t (*get_mark)(uint32_t hash);
+#include <libmnl/libmnl.h>
+#include <linux/netfilter.h>
+#include <linux/netfilter/nfnetlink.h>
+#include <linux/netfilter/nfnetlink_queue.h>
+#include <libnetfilter_queue/libnetfilter_queue.h>
+/* only for NFQA_CT, not needed otherwise: */
+#include <linux/netfilter/nfnetlink_conntrack.h>
 
-static void initMaglevHash(int argc, char* argv[])
+static uint32_t (*get_mark)(uint32_t hash);
+static struct SharedData* shData;
+
+static uint32_t get_maglev_mark(uint32_t hash)
 {
-	int fd = shm_open("maglev", O_RDONLY, 0400);
-	if (fd < 0) die("shm_open");
-	magd = mmap(
-		NULL, sizeof(struct MagData), PROT_READ, MAP_SHARED, fd, 0);
-	if (magd == MAP_FAILED) die("mmap");
-	get_mark = get_maglev_mark;
+	return shData->magd.lookup[hash % shData->magd.M] + 1;
 }
 
+static uint32_t get_modulo_mark(uint32_t hash)
+{
+	return shData->modulo.lookup[hash % shData->modulo.nActive] + 1;
+}
 
 static uint32_t
 djb2_hash(uint8_t* c, uint32_t len)
@@ -310,8 +345,9 @@ static int cmdRun(int argc, char* argv[])
 	struct nlmsghdr *nlh;
 	int ret;
 	unsigned int portid, queue_num = 2;
+	char const* mode = "maglev";
 
-	static char const* const opt = "q:ph";
+	static char const* const opt = "q:pm:h";
 	int c;
 	for (c = getopt(argc, argv, opt); c > 0; c = getopt(argc, argv, opt)) {
 		switch (c) {
@@ -321,13 +357,26 @@ static int cmdRun(int argc, char* argv[])
 		case 'p':
 			portlen = 4;
 			break;
+		case 'm':
+			mode = optarg;
+			break;
 		default:
 			fprintf(stderr, "Unknown option [%c]", c);
 			exit(EXIT_FAILURE);
 		}
 	}
 	
-	initMaglevHash(argc, argv);
+	int fd = shm_open(memName, O_RDONLY, 0400);
+	if (fd < 0) die("shm_open");
+	shData = mmap(
+		NULL, sizeof(struct MagData), PROT_READ, MAP_SHARED, fd, 0);
+	if (shData == MAP_FAILED) die("mmap");
+
+	if (strcmp(mode, "modulo") == 0) {
+		get_mark = get_modulo_mark;
+	} else {
+		get_mark = get_maglev_mark;
+	}
 
 	nl = mnl_socket_open(NETLINK_NETFILTER);
 	if (nl == NULL) {

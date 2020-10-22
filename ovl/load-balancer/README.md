@@ -121,6 +121,15 @@ fewer connections. This because the lookup table has 997 entries and
 we have just 100 connections so it's a fair chance that existing
 connections are preserved.
 
+The hash algorithm can be controlled with the `xcluster_LB_OPTIONS`
+variable;
+
+```
+# -p includes ports in the hash (fragments not handled)
+# -m maglev|modulo defines the hash algorithm
+export xcluster_LB_OPTIONS="-p -m modulo"
+```
+
 
 ### Maglev hashing and the lb program
 
@@ -151,7 +160,7 @@ shared memory. It can be built and executed on your laptop;
 
 ```
 gcc -o /tmp/lb src/lb.c src/maglev.c -lmnl -lnetfilter_queue -lrt
-/tmp/lb create 100 10
+/tmp/lb create -i 5 100 10
 /tmp/lb show
 /tmp/lb deactivate 1
 /tmp/lb show
