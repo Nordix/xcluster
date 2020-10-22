@@ -1,11 +1,20 @@
 #! /bin/sh
 . /usr/lib/network-topology.sh
 
+test -n "$__nrouters" || __nrouters=2
+
 vm() {
 	ifsetup eth1 1
-	ip ro replace default nexthop via 192.168.1.201 nexthop via 192.168.1.202
-	ip -6 ro replace default \
-		nexthop via $PREFIX:192.168.1.201 nexthop via $PREFIX:192.168.1.202
+	local i targets lastrouter=$((200 + __nrouters))
+	for i in $(seq 201 $lastrouter); do
+		targets="$targets nexthop via 192.168.1.$i"
+	done
+	ip ro replace default $targets
+	targets=''
+	for i in $(seq 201 $lastrouter); do
+		targets="$targets nexthop via 1000::1:192.168.1.$i"
+	done
+	ip -6 ro replace default $targets
 }
 
 router() {
@@ -20,9 +29,16 @@ router() {
 
 tester() {
 	ifsetup eth1 2
-	ip ro replace default nexthop via 192.168.2.201 nexthop via 192.168.2.202
-	ip -6 ro replace default \
-		nexthop via $PREFIX:192.168.2.201 nexthop via $PREFIX:192.168.2.202
+	local i targets lastrouter=$((200 + __nrouters))
+	for i in $(seq 201 $lastrouter); do
+		targets="$targets nexthop via 192.168.2.$i"
+	done
+	ip ro replace default $targets
+	targets=''
+	for i in $(seq 201 $lastrouter); do
+		targets="$targets nexthop via 1000::1:192.168.2.$i"
+	done
+	ip -6 ro replace default $targets
 }
 
 
