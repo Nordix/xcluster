@@ -19,20 +19,9 @@ vm() {
 	sysctl -w net.ipv4.conf.all.proxy_arp=0
 	ip addr add 10.0.0.0/24 dev lo
 	ip -6 addr add 1000::/120 dev lo
+	ip -6 ro add local 1000::/120 dev lo
 	mconnect -address [::]:5001 -server > /var/log/mconnect.log 2>&1 &
 	ctraffic -address [::]:5003 -server > /var/log/ctraffic.log 2>&1 &
-
-	local last_router=$((200 + __nrouters))
-	local x targets
-	for x in $(seq 201 $last_router); do
-		targets="$targets nexthop via 192.168.1.$x"
-	done
-	ip ro replace default $targets
-	targets=''
-	for x in $(seq 201 $last_router); do
-		targets="$targets nexthop via 1000::1:192.168.1.$x"
-	done
-	ip -6 ro replace default $targets
 }
 
 router() {
@@ -59,18 +48,6 @@ tester() {
 	ip -6 ro add local 2000::/112 dev lo
 	sysctl -w net.ipv4.ip_nonlocal_bind=1
 	sysctl -w net.ipv6.ip_nonlocal_bind=1
-
-	local last_router=$((200 + __nrouters))
-	local x targets
-	for x in $(seq 201 $last_router); do
-		targets="$targets nexthop via 192.168.2.$x"
-	done
-	ip ro replace default $targets
-	targets=''
-	for x in $(seq 201 $last_router); do
-		targets="$targets nexthop via 1000::1:192.168.2.$x"
-	done
-	ip -6 ro replace default $targets
 }
 
 echo 0 > /proc/sys/net/ipv4/fib_multipath_hash_policy

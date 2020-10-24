@@ -55,11 +55,15 @@ static void die(char const* msg)
 	exit(EXIT_FAILURE);
 }
 
-static char const* const memName = MEM_NAME;
-
+static char const* memName(void)
+{
+	char const* name = getenv(MEM_VAR);
+	if (name == NULL) return MEM_NAME;
+	return name;
+}
 static void createSharedData(struct SharedData* sh)
 {
-	int fd = shm_open(memName, O_RDWR|O_CREAT, 0600);
+	int fd = shm_open(memName(), O_RDWR|O_CREAT, 0600);
 	if (fd < 0) die("shm_open");
 	write(fd, sh, sizeof(*sh));
 	close(fd);
@@ -67,7 +71,7 @@ static void createSharedData(struct SharedData* sh)
 
 static struct SharedData* mapSharedData(int mode)
 {
-	int fd = shm_open(memName, mode, (mode == O_RDONLY)?0400:0600);
+	int fd = shm_open(memName(), mode, (mode == O_RDONLY)?0400:0600);
 	if (fd < 0) die("shm_open");
 	struct SharedData* m = mmap(
 		NULL, sizeof(struct SharedData),
@@ -114,12 +118,15 @@ static void updateModulo(struct SharedData* sh)
 
 static int cmdCreate(int argc, char* argv[])
 {
-	static char const* const opt = "i:";
-	int c, i=-1;
+	static char const* const opt = "i:o:";
+	int c, i=-1, fwOffset=1;
 	for (c = getopt(argc, argv, opt); c > 0; c = getopt(argc, argv, opt)) {
 		switch (c) {
 		case 'i':
 			i = atoi(optarg);
+			break;
+		case 'o':
+			fwOffset = atoi(optarg);
 			break;
 		default:
 			fprintf(stderr, "Unknown option [%c]", c);
@@ -131,6 +138,7 @@ static int cmdCreate(int argc, char* argv[])
 
 	struct SharedData sh;
 	sh.ownFwmark = i;
+	sh.fwOffset = fwOffset;
 	unsigned M=997, N=10;
 	if (argc > 0) {
 		M = atoi(argv[0]);
@@ -157,6 +165,7 @@ static int cmdShow(int argc, char* argv[])
 	struct SharedData* sh = mapSharedData(O_RDONLY);
 	struct MagData* m = &sh->magd;
 	printf("Own fwmark: %d\n", sh->ownFwmark);
+	printf("Fwmark offset: %d\n", sh->fwOffset);
 	printf("=== Maglev hashing;\n");
 	printf("M=%u, N=%u\n", m->M, m->N);
 	printf("Active;\n");
@@ -177,7 +186,7 @@ static int cmdShow(int argc, char* argv[])
 }
 static int cmdClean(int argc, char* argv[])
 {
-	if (shm_unlink(memName) != 0) die("shm_unlink");
+	if (shm_unlink(memName()) != 0) die("shm_unlink");
 	return 0;
 }
 
@@ -188,7 +197,7 @@ static void setActivate(unsigned v, int argc, char *argv[])
 	argc--;
 	argv++;
 	while (argc-- > 0) {
-		int i = atoi(*argv++) - 1;
+		int i = atoi(*argv++) - sh->fwOffset;
 		if (i >= 0 && i < m->N) m->active[i] = v;
 	}
 	populate(m);
@@ -205,6 +214,88 @@ static int cmdDeactivate(int argc, char* argv[])
 	return 0;
 }
 
+/* ----------------------------------------------------------------------
+   Packet handling. The outcome is a fwmark.
+*/
+#include <netinet/if_ether.h>
+#include <netinet/ip.h>
+#include <netinet/ip6.h>
+#include <netinet/ip_icmp.h>
+
+/* These variables are set in cmdRun() */
+static uint32_t (*get_mark)(uint32_t hash);
+static struct SharedData* shData;
+static unsigned portlen = 0;
+
+static uint32_t get_maglev_mark(uint32_t hash)
+{
+	return shData->magd.lookup[hash % shData->magd.M] + shData->fwOffset;
+}
+
+static uint32_t get_modulo_mark(uint32_t hash)
+{
+	return shData->modulo.lookup[hash % shData->modulo.nActive] + shData->fwOffset;
+}
+
+static uint32_t
+djb2_hash(uint8_t const* c, uint32_t len)
+{
+	uint32_t hash = 5381;
+	while (len--)
+		hash = ((hash << 5) + hash) + *c++; /* hash * 33 + c */
+	return hash;
+}
+
+/*
+  return: fwmark
+ */
+static uint32_t handlePacket(
+	uint16_t protocol, uint8_t const* payload, uint16_t plen)
+{
+#if 0
+	printf("packet received hw=0x%04x payload len %u\n", protocol, plen);
+#endif
+	/*
+	  Addresses;
+	  ipv4; payload[12], len 8
+	  ipv6; payload[8], len 32
+	  TODO: Handle ipv6 next-header and ipv4 options.
+	  TODO; For ICMP "packet too big" amd others compute hash for
+	  the "inner" address.
+	 */
+	switch (protocol) {
+	case ETH_P_IP: {
+		struct iphdr const* hdr = (struct iphdr const*)payload;
+		if (hdr->ihl > 5) return 0; // Can't handle options
+		uint16_t frag = ntohs(hdr->frag_off);
+		if ((frag & (IP_OFFMASK|IP_MF)) != 0) return 0; // Can't handle fragments
+		if (hdr->protocol == IPPROTO_TCP) {
+			return get_mark(djb2_hash(payload + 12, 8 + portlen));
+		} else if (hdr->protocol == IPPROTO_ICMP) {
+			struct icmphdr const* hdr = (struct icmphdr const*)(payload+20);
+			if (hdr->type == ICMP_DEST_UNREACH) {
+				// Get the inner headed switch src<->dst and hash
+				return 0;		/* NYI */
+			}
+		}
+	}
+	case ETH_P_IPV6: {
+		struct ip6_hdr const* hdr = (struct ip6_hdr const*)payload;
+		if (hdr->ip6_nxt == IPPROTO_TCP) {
+			return get_mark(djb2_hash(payload + 8, 32 + portlen));
+		} else if (hdr->ip6_nxt == IPPROTO_ICMP) {
+			struct icmphdr const* hdr = (struct icmphdr const*)(payload+20);
+			if (hdr->type == ICMP_DEST_UNREACH) {
+				// Get the inner headed switch src<->dst and hash
+				return 0;		/* NYI */
+			}
+		}
+	}
+	default:;
+	}
+	
+	return 0;
+}
 
 /* ----------------------------------------------------------------------
    The NFQUEUE code is taken from the example in;
@@ -219,27 +310,6 @@ static int cmdDeactivate(int argc, char* argv[])
 /* only for NFQA_CT, not needed otherwise: */
 #include <linux/netfilter/nfnetlink_conntrack.h>
 
-static uint32_t (*get_mark)(uint32_t hash);
-static struct SharedData* shData;
-
-static uint32_t get_maglev_mark(uint32_t hash)
-{
-	return shData->magd.lookup[hash % shData->magd.M] + 1;
-}
-
-static uint32_t get_modulo_mark(uint32_t hash)
-{
-	return shData->modulo.lookup[hash % shData->modulo.nActive] + 1;
-}
-
-static uint32_t
-djb2_hash(uint8_t* c, uint32_t len)
-{
-	uint32_t hash = 5381;
-	while (len--)
-		hash = ((hash << 5) + hash) + *c++; /* hash * 33 + c */
-	return hash;
-}
 
 static struct mnl_socket *nl;
 
@@ -285,13 +355,11 @@ nfq_send_verdict(int queue_num, uint32_t id, uint32_t mark)
 	}
 }
 
-static unsigned portlen = 0;
-
 static int queue_cb(const struct nlmsghdr *nlh, void *data)
 {
 	struct nfqnl_msg_packet_hdr *ph = NULL;
 	struct nlattr *attr[NFQA_MAX+1] = {};
-	uint32_t id = 0, skbinfo;
+	uint32_t id = 0;
 	struct nfgenmsg *nfg;
 	uint16_t plen;
 
@@ -312,27 +380,9 @@ static int queue_cb(const struct nlmsghdr *nlh, void *data)
 	plen = mnl_attr_get_payload_len(attr[NFQA_PAYLOAD]);
 	id = ntohl(ph->packet_id);
 
-	/*
-	  Addresses;
-	  ipv4; payload[12], len 8
-	  ipv6; payload[8], len 32
-	  TODO: Handle ipv6 next-header and ipv4 options.
-	  TODO; For ICMP "packet too big" amd others compute hash for
-	  the "inner" address.
-	 */
 	uint8_t *payload = mnl_attr_get_payload(attr[NFQA_PAYLOAD]);
-	uint32_t hash;
-	if (ntohs(ph->hw_protocol) == 0x0800) {
-		hash = djb2_hash(payload + 12, 8 + portlen);
-	} else if (ntohs(ph->hw_protocol) == 0x86dd) {
-		hash = djb2_hash(payload + 8, 32 + portlen);
-	}
-	
-#if 0
-	printf("packet received id=%u hw=0x%04x payload len %u, mark=%u\n",
-		id, ntohs(ph->hw_protocol), plen, mark);
-#endif
-	nfq_send_verdict(ntohs(nfg->res_id), id, get_mark(hash));
+	nfq_send_verdict(
+		ntohs(nfg->res_id), id, handlePacket(ntohs(ph->hw_protocol), payload, plen));
 
 	return MNL_CB_OK;
 }
@@ -366,7 +416,7 @@ static int cmdRun(int argc, char* argv[])
 		}
 	}
 	
-	int fd = shm_open(memName, O_RDONLY, 0400);
+	int fd = shm_open(memName(), O_RDONLY, 0400);
 	if (fd < 0) die("shm_open");
 	shData = mmap(
 		NULL, sizeof(struct MagData), PROT_READ, MAP_SHARED, fd, 0);

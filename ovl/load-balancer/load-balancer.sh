@@ -82,16 +82,11 @@ cmd_test() {
 }
 
 test_start() {
-	export xcluster___nrouters=$__nrouters
-	export xcluster___nvm=$__nvm
 	export __image=$XCLUSTER_HOME/hd.img
 	export __ntesters=1
-	export __kver=linux-5.4.35
-	unset __mem1 __mem201 __mem202
+	unset __mem1 __mem201 __mem202 __mem203
 	export __mem=256
 	echo "$XOVLS" | grep -q private-reg && unset XOVLS
-	test -n "$TOPOLOGY" && \
-		. $($XCLUSTER ovld network-topology)/$TOPOLOGY/Envsettings
 	xcluster_start network-topology iptools load-balancer
 }
 
@@ -116,6 +111,7 @@ scale_lb() {
 # ecmp ----------------------------------------------------------------
 test_start_ecmp() {
 	export SETUP=ecmp
+	export __kver=linux-5.4.35
 	test_start
 }
 
