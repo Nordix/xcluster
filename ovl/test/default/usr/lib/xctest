@@ -582,6 +582,10 @@ otct() {
 ##
 xcluster_start() {
 	test "$__no_start" = "yes" && return 0
+	test -n "$__nvm" || __nvm=4
+	test -n "$__nrouters" || __nrouters=2
+	test -n "$__ntesters" || __ntesters=0
+	export __nvm __nrouters __ntesters	
 	if test -n "$SETUP"; then
 		tcase "Build cluster SETUP=$SETUP [env $BASEOVLS $@ $XOVLS test]"
 		SETUP=$SETUP $XCLUSTER mkcdrom env $BASEOVLS $@ $XOVLS test || tdie
@@ -589,10 +593,6 @@ xcluster_start() {
 		tcase "Build cluster [env $BASEOVLS $@ $XOVLS test]"
 		$XCLUSTER mkcdrom env $BASEOVLS $@ $XOVLS test || tdie
 	fi
-	test -n "$__nvm" || __nvm=4
-	test -n "$__nrouters" || __nrouters=2
-	test -n "$__ntesters" || __ntesters=0
-	export __nvm __nrouters __ntesters
 	tcase "Cluster start ($(basename $__image))"
 	$XCLUSTER $start || tdie
 	sleep 2
