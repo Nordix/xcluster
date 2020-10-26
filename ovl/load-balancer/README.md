@@ -202,7 +202,7 @@ Described in section 4.3 p8 in the maglev document.
 > Each Maglev is configured with a special backend pool consisting of
 > all Maglevs within the cluster.
 
-When a fragment is received a 3-tuple hash is performent and the
+When a fragment is received a 3-tuple hash is performend and the
 packet is forwarded to a backend in this pool, i.e another
 maglev. This maglev will get all fragments and maintain a state to
 ensure all fragments are sent to the same backend.
@@ -215,3 +215,17 @@ We can do the same in `xcluster` fairly easy.
 Since `xcluster` does not use GRE tunnels the `ownFwmark` can be
 checked. If a fragment would be forwarded to our selves we handle the
 packet.
+
+Fragments can arrive in wrong order;
+
+<img src="fragments.svg" alt="Wrong-order fragments" width="50%" />
+
+Only the firsts packet contain the ports.
+
+This is likely the hardest case to handle. The fragments arriving
+before the first fragment must be stored temporarily and re-sent when
+the first fragment arrives. They can not be simply dropped since a
+re-sent packet is likely to arrive in the same order.
+
+The NFQUEUE does not support stored packets to be re-injected, so some
+other mechanism must be used, e.g. a raw socket or a tap device.
