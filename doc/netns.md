@@ -16,6 +16,8 @@ netns for more advanced network testing. To setup do;
 
 ```
 sudo setcap cap_net_admin,cap_sys_admin+ep /bin/ip   # (once)
+# On Ubuntu 20 setcap does not work, instead;
+sudo chmod a+s /bin/ip
 xc nsadd 1    # Requires "sudo"
 xc nsenter 1
 . ./Envsettings
@@ -29,4 +31,8 @@ reachable from the netns. Also traffic from the ["External
 net"](networking.md) in the xcluster is masqueraded to allow the nodes
 in the xcluster to access the internet via the router VMs.
 
+### Setcap on Ubuntu 20
+
+`setcap` does not work in Ubuntu 20. This has been reported but will
+not be fixed; https://bugs.launchpad.net/ubuntu/eoan/+source/iproute2/+bug/1856045
 

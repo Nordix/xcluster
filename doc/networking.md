@@ -9,7 +9,7 @@ The `xcluster` networkin uses 2 setups;
 * Linux bridges and tap devices. This is used when `xcluster` is
   executed in it's own netns. This requires a network setup using
   sudo/root which is done with `xc nsadd`. Execution requires that the
-  `ip` program can run as non-root (using "setcap"). This setup is
+  `ip` program can run as non-root (using "setcap" or suid). This setup is
   much faster and closer to the real thing than user-space networking.
 
 The default network has 3 nets. The image shows the bridges;
