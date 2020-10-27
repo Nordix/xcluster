@@ -31,8 +31,14 @@ cmd_env() {
 	sysd=$XCLUSTER_WORKSPACE/sys
 	export PKG_CONFIG_PATH=$sysd/usr/lib/pkgconfig	
 	pkg_config_fix
+	kernel_fix
 }
-
+kernel_fix() {
+	echo $__kver | grep -q linux-5.9 || return 0
+	local f=$KERNELDIR/$__kver/include/linux/compiler.h
+	test -r $f || return 0
+	sed -i -e '/rwonce.h/d' $f
+}
 pkg_config_fix() {
 	local n
 	for n in $(find $PKG_CONFIG_PATH -name '*.pc'); do
