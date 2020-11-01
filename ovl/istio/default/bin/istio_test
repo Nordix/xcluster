@@ -1,0 +1,117 @@
+#! /bin/sh
+##
+## istio_test --
+##
+##   Test script for istio executed in xcluster.
+##
+## Commands;
+##
+
+prg=$(basename $0)
+dir=$(dirname $0); dir=$(readlink -f $dir)
+me=$dir/$prg
+tmp=/tmp/${prg}_$$
+test -n "$DOMAIN" || DOMAIN=xcluster
+yamld=/etc/kubernetes/istio
+
+die() {
+	echo "ERROR: $*" >&2
+	rm -rf $tmp
+	exit 1
+}
+help() {
+	grep '^##' $0 | cut -c3-
+	rm -rf $tmp
+	exit 0
+}
+test -n "$1" || help
+echo "$1" | grep -qi "^help\|-h" && help
+
+log() {
+	echo "$prg: $*" >&2
+}
+dbg() {
+	test -n "$__verbose" && echo "$prg: $*" >&2
+}
+
+cmd_tcase_check_namespaces() {
+	test_namespaces
+	tlog "$(kubectl version --short=true | grep Server)"
+}
+cmd_tcase_check_nodes() {
+	test_nodes
+}
+cmd_tcase_check_metric_server() {
+	kubectl="kubectl -n kube-system"
+	test_deployment metrics-server 180
+}
+cmd_tcase_vip_route() {
+	tcase "Set VIP routes (ECMP)"
+	vip_route
+}
+cmd_tcase_start_istio() {
+	tcase "Start istio"
+	apply_k8s $yamld
+	if ipv6base; then
+		assign-lb-ip -svc istio -ip 1000::
+	else
+		assign-lb-ip -svc istio -ip 10.0.0.0
+	fi
+	if test "$__mode" = "dual-stack"; then
+		assign-lb-ip -svc istio-ipv4 -ip 10.0.0.1
+		assign-lb-ip -svc istio-ipv6 -ip 1000::1
+		isDual3 && assign-lb-ip -svc istio-dual -ip 1000::2,10.0.0.2
+	fi
+	test_daemonset istio 180
+}
+cmd_tcase_external_traffic() {
+	tcase "External traffic"
+	if ipv6base; then
+		external_traffic [1000::]:5001
+	else
+		external_traffic 10.0.0.0:5001
+	fi
+	if test "$__mode" = "dual-stack"; then
+		external_traffic 10.0.0.1:5001
+		external_traffic [1000::1]:5001
+		if isDual3; then
+			external_traffic 10.0.0.2:5001
+			external_traffic [1000::2]:5001
+		fi
+	fi
+}
+external_traffic() {
+	tlog "Traffic to; $1"
+	do_mconnect $1 || tdie "mconnect to; $1"
+}
+
+. /etc/profile
+. /usr/lib/xctest
+indent='  '
+
+
+# Get the command
+cmd=$1
+shift
+grep -q "^cmd_$cmd()" $0 || die "Invalid command [$cmd]"
+
+while echo "$1" | grep -q '^--'; do
+	if echo $1 | grep -q =; then
+		o=$(echo "$1" | cut -d= -f1 | sed -e 's,-,_,g')
+		v=$(echo "$1" | cut -d= -f2-)
+		eval "$o=\"$v\""
+	else
+		o=$(echo "$1" | sed -e 's,-,_,g')
+		eval "$o=yes"
+	fi
+	shift
+done
+unset o v
+long_opts=`set | grep '^__' | cut -d= -f1`
+
+# Execute command
+trap "die Interrupted" INT TERM
+cmd_$cmd "$@"
+status=$?
+rm -rf $tmp
+exit $status

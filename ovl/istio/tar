@@ -1,0 +1,36 @@
+#! /bin/sh
+# NOTE: A common pattern is to specify "-" (stdout) as out-file,
+#  so there must be NO log printouts to stdout!
+
+dir=$(dirname $0); dir=$(readlink -f $dir)
+tmp=/tmp/$USER/xcluster_$$
+die() {
+	echo "ERROR: $*" >&2
+	rm -rf $tmp
+	exit 1
+}
+log() {
+	echo "INFO: $*" >&2
+}
+
+test -n "$1" || die "No out-file"
+
+mkdir -p $tmp
+cp -R $dir/default/* $tmp
+for s in $(echo "$SETUP" | tr ',' ' '); do
+	test -d $dir/$s || continue
+	cp -R $dir/$s/* $tmp
+done
+ISTIO_VERSION="$(curl -sL https://github.com/istio/istio/releases | \
+  grep -o 'releases/[0-9]*.[0-9]*.[0-9]*/' | sort --version-sort | \
+  tail -1 | awk -F'/' '{ print $2}')"
+log "ISTIO_VERSION=$ISTIO_VERSION"
+ar=$ARCHIVE/istio-$ISTIO_VERSION-linux-amd64.tar.gz
+test -r $ar || die "Not readable [$ar]"
+cp $ar $tmp/root
+echo $ISTIO_VERSION > $tmp/root/ISTIO_VERSION
+
+cd $tmp
+tar cf "$1" *
+cd - > /dev/null
+rm -rf $tmp
