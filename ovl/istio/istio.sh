@@ -85,10 +85,11 @@ cmd_test() {
 test_start() {
 	test -n "$__mode" || __mode=dual-stack
 	export xcluster___mode=$__mode
+	export xcluster_DOMAIN=cluster.local
 	export __mem1=2048
 	export __mem=1536
 	xcluster_prep $__mode
-	xcluster_start istio
+	xcluster_start k8s-test istio
 
 	otc 1 check_namespaces
 	otc 1 check_nodes

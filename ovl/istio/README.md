@@ -22,13 +22,16 @@ for n in examples-bookinfo-details-v1 examples-bookinfo-ratings-v1 \
 done
 ```
 
-
+Start and install;
 ```
 cdo istio
 ./istio.sh test start > $log
 # Or;
 alias xcadmin=$(dirname $XCLUSTER)/xcadmin.sh
-__k8sver=v1.19.3 xcadmin k8s_test istio start > $log
+#export xcluster_IPV6_PREFIX=1000::1:
+export __k8sver=v1.19.3
+xcadmin k8s_test istio start > $log
+xcadmin k8s_test --mode=ipv6 istio start > $log
 # On vm-001
 export ISTIO_VERSION=$(cat ISTIO_VERSION)
 tar xzf istio-$ISTIO_VERSION-linux-amd64.tar.gz
@@ -47,9 +50,21 @@ kubectl -n istio-system get service istio-ingressgateway -o json | \
   jq '.spec.ports[]|select(.name == "http2")|.nodePort'
 export INGRESS_PORT=$(kubectl -n istio-system get service istio-ingressgateway -o jsonpath='{.spec.ports[?(@.name=="http2")].nodePort}')
 echo "http://192.168.0.1:$INGRESS_PORT/productpage"
+#echo "http://[1000::1:192.168.0.1]:$INGRESS_PORT/productpage"
 firefox -no-remote -P netns &
 # Check the URL...
 ```
+
+## Local testing
+
+```
+# Start as above, then;
+# On vm-001
+kubectl label namespace default istio-injection=enabled --overwrite
+log=/tmp/test.log
+k8s-test_test tcase_start_servers > $log
+```
+
 
 ## Trouble-shooting
 
