@@ -1,0 +1,33 @@
+#! /bin/sh
+. /usr/lib/network-topology.sh
+die() {
+    echo "$@"
+    exit 1
+}
+
+hostname | grep -Eq 'vm-[0-9]+$' || die "Invalid hostname [$(hostname)]"
+i=$(hostname | cut -d- -f2 | sed -re 's,^0+,,')
+
+vm() {
+	return 0
+}
+
+router() {
+	#local d=/mnt/huge
+	local d=/dev/hugepages
+	mkdir -p $d
+	mount -t hugetlbfs nodev $d
+}
+
+tester() {
+	return 0
+}
+
+case $(hostname) in
+	vm-0*)
+		vm;;
+	vm-20*)
+		router;;
+	vm-22*)
+		tester;;
+esac

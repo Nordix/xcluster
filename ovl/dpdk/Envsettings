@@ -1,0 +1,5 @@
+export __kver=linux-5.8.1
+
+# Dpdk uses extended instructions. Don't know which so turn on all;
+export __kvm_opt='-object rng-random,filename=/dev/urandom,id=rng0 -device virtio-rng-pci,rng=rng0,max-bytes=1024,period=80000 -cpu host'
+

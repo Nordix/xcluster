@@ -1,0 +1,35 @@
+#! /bin/sh
+# NOTE: A common pattern is to specify "-" (stdout) as out-file,
+#  so there must be NO log printouts to stdout!
+
+dir=$(dirname $0); dir=$(readlink -f $dir)
+tmp=/tmp/$USER/xcluster_$$
+die() {
+	echo "ERROR: $*" >&2
+	rm -rf $tmp
+	exit 1
+}
+log() {
+	echo "INFO: $*" >&2
+}
+
+test -n "$1" || die "No out-file"
+
+mkdir -p $tmp/bin
+cp -R $dir/default/* $tmp
+$XCLUSTER install_prog --dest=$tmp lshw jq hugeadm
+
+eval $($dir/dpdk.sh env)
+cp $(find $__dpdk_src/build/app/ -maxdepth 1 -name 'dpdk-*' -type f) $tmp/bin
+$XCLUSTER cplib --dest=$tmp $tmp/bin/dpdk-*
+cp $__dpdk_src/usertools/dpdk-setup.sh $tmp/bin
+
+eval $($XCLUSTER env | grep __kver)
+dst=$tmp/lib/modules/$(echo $__kver | cut -d'-' -f2-)/extra/dpdk
+mkdir -p $dst
+cp $(find $__dpdk_src/build/kernel/linux -name '*.ko') $dst
+
+cd $tmp
+tar cf "$1" *
+cd - > /dev/null
+rm -rf $tmp
