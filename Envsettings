@@ -38,6 +38,7 @@ cdo() {
 
 export XCLUSTER="$(readlink -f .)/xcluster.sh"
 alias xc=$XCLUSTER
+alias xcadmin="$(readlink -f .)/xcadmin.sh"
 
 eval $($XCLUSTER env | grep -i DISKIM)
 export DISKIM
