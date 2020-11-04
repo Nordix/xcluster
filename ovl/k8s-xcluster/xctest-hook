@@ -19,6 +19,6 @@ xcluster_prep() {
 	export xcluster___mode=$1
 	test -n "$xcluster_DOMAIN" || xcluster_DOMAIN=xcluster
 	export xcluster_DOMAIN
-	test -n "$xcluster_KUBECONFIG" || xcluster_KUBECONFIG=/etc/kubernetes/kubeconfig
+	test -n "$xcluster_KUBECONFIG" || xcluster_KUBECONFIG=/etc/kubernetes/kubeconfig.token
 	export xcluster_KUBECONFIG
 }

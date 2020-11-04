@@ -1,2 +1,2 @@
-export KUBECONFIG=/etc/kubernetes/kubeconfig
+. /etc/profile
 

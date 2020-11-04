@@ -10,7 +10,7 @@ die() {
 }
 
 grep -q KUBECONFIG /etc/profile || \
-	echo "KUBECONFIG=/etc/kubernetes/kubeconfig" >> /etc/profile
+	echo "KUBECONFIG=/etc/kubernetes/kubeconfig.token" >> /etc/profile
 echo "export KUBECONFIG" >> /etc/profile
 
 hostname | grep -Eq 'vm-[0-9]+$' || die "Invalid hostname [$(hostname)]"
