@@ -7,11 +7,26 @@ die() {
 hostname | grep -Eq 'vm-[0-9]+$' || die "Invalid hostname [$(hostname)]"
 i=$(hostname | cut -d- -f2 | sed -re 's,^0+,,')
 . /etc/profile
-test -n "$DOMAIN" || DOMAIN=xcluster
 
 # Setup a local coredns
 if test $i -le 200 && test -x /bin/kube-apiserver -o -x /bin/kubelet; then
-	cat > /etc/Corefile <<EOF
+	test -n "$DOMAIN" || DOMAIN=xcluster
+	if grep -q 'token:' $KUBECONFIG; then
+		sed -i -e "s,/etc/kubernetes/kubeconfig,$KUBECONFIG," \
+			/etc/kubernetes/kube-proxy.config
+		cat > /etc/Corefile <<EOF
+.:53 {
+    kubernetes $DOMAIN {
+      endpoint http://192.168.1.1:6443
+      kubeconfig $KUBECONFIG xcluster
+    }
+    forward . 192.168.0.250:10053
+    cache 3000
+    log stdout
+}
+EOF
+	else
+		cat > /etc/Corefile <<EOF
 .:53 {
     kubernetes $DOMAIN {
       endpoint http://192.168.1.1:8080
@@ -21,6 +36,7 @@ if test $i -le 200 && test -x /bin/kube-apiserver -o -x /bin/kubelet; then
     log stdout
 }
 EOF
+	fi
 else
 	cat > /etc/Corefile <<EOF
 .:53 {

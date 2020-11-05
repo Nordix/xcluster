@@ -34,9 +34,9 @@ test -n "$__dns_spoof" || export __dns_spoof=$(readlink -f .)/config/dns-spoof.t
 mynetns=$(ip netns id)
 if test -z "$KUBECONFIG"; then
 	if test -n "$mynetns"; then
-		export KUBECONFIG=$(readlink -f .)/config/kubeconfig.netns
+		export KUBECONFIG=$(readlink -f .)/config/kubeconfig.netns.token
 	else
-		export KUBECONFIG=$(readlink -f .)/config/kubeconfig.user-space
+		export KUBECONFIG=$(readlink -f .)/config/kubeconfig.user-space.token
 	fi
 fi
 unset mynetns
