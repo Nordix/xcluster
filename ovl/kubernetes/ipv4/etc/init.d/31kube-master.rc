@@ -19,8 +19,8 @@ apiserver() {
 	local log=/var/log/kube-apiserver.log
 	logger -s -t K8s "STARTED: kube-apiserver at $(date)" >> log 2>&1
 	kube-apiserver --token-auth-file=/srv/kubernetes/known_tokens.csv \
-		--allow-privileged=true \
-		--feature-gates=SCTPSupport=true \
+		--allow-privileged=true $API_FLAGS \
+		--feature-gates=$FEATURE_GATES \
 		--insecure-bind-address=0.0.0.0 --advertise-address=$MASTER_IP \
 		--authorization-mode=AlwaysAllow \
 		--etcd-servers=http://localhost:2379 --anonymous-auth=false \
@@ -35,7 +35,7 @@ apiserver() {
 controller() {
 	local log=/var/log/kube-controller-manager.log
 	logger -s -t K8s "STARTED: kube-controller-manager at $(date)" >> log 2>&1
-	kube-controller-manager --kubeconfig $KUBECONFIG \
+	kube-controller-manager --kubeconfig $KUBECONFIG $CONTROLLER_FLAGS \
 		--allocate-node-cidrs=true --cluster-cidr=11.0.0.0/16 \
 		--controllers="*,serviceaccount,serviceaccount-token" \
 		--service-account-private-key-file=/srv/kubernetes/server.key \
@@ -47,7 +47,7 @@ scheduler() {
 	local log=/var/log/kube-scheduler.log
 	logger -s -t K8s "STARTED: kube-scheduler at $(date)" >> log 2>&1
 	kube-scheduler --kubeconfig $KUBECONFIG --leader-elect=false \
-		>> $log 2>&1
+		$SCHEDULER_FLAGS >> $log 2>&1
 }
 
 monitor() {
@@ -56,6 +56,7 @@ monitor() {
 		$1
 		logger -t K8s-monitor "DIED: $1"
 		sleep 2
+		. /etc/profile
 	done
 }
 
