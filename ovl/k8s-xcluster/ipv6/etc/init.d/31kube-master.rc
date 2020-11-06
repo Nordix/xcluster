@@ -1,6 +1,7 @@
 #! /bin/sh
 
 export PATH="/bin:/sbin:/usr/bin:/usr/sbin"
+. /etc/profile
 
 die() {
         echo "$@"
@@ -12,7 +13,7 @@ i=$(hostname | cut -d- -f2 | sed -re 's,^0+,,')
 
 test $i -eq 1 || exit 0
 
-. /etc/profile
+test -n "$FEATURE_GATES" || FEATURE_GATES=SCTPSupport=true
 
 CLUSTER_CIDR=1000::2:11.0.0.0/112
 MASTER_IP=1000::1:192.168.1.1
@@ -21,10 +22,10 @@ apiserver() {
 	local log=/var/log/kube-apiserver.log
 	logger -s -t K8s "STARTED: kube-apiserver at $(date)" >> log 2>&1
 	kube-apiserver --token-auth-file=/srv/kubernetes/known_tokens.csv \
-		--allow-privileged=true \
+		$API_FLAGS --allow-privileged=true \
 		--insecure-bind-address=$MASTER_IP --advertise-address=$MASTER_IP \
 		--authorization-mode=AlwaysAllow \
-		--feature-gates SCTPSupport=true \
+		--feature-gates $FEATURE_GATES \
 		--etcd-servers=http://127.0.0.1:2379 --anonymous-auth=false \
 		--service-cluster-ip-range=$SERVICE_CIDR \
 		--enable-admission-plugins=ServiceAccount,AlwaysAdmit \
@@ -37,10 +38,11 @@ apiserver() {
 controller() {
 	local log=/var/log/kube-controller-manager.log
 	logger -s -t K8s "STARTED: kube-controller-manager at $(date)" >> log 2>&1
-	kube-controller-manager --kubeconfig $KUBECONFIG \
+	kube-controller-manager --kubeconfig $KUBECONFIG $CONTROLLER_FLAGS \
 		--allocate-node-cidrs=true --cluster-cidr=$CLUSTER_CIDR \
 		--node-cidr-mask-size=120 \
 		--controllers="*,serviceaccount,serviceaccount-token" \
+		--feature-gates $FEATURE_GATES \
 		--service-account-private-key-file=/srv/kubernetes/server.key \
 		--root-ca-file=/srv/kubernetes/server.crt --leader-elect=false \
 		>> $log 2>&1
@@ -50,6 +52,7 @@ scheduler() {
 	local log=/var/log/kube-scheduler.log
 	logger -s -t K8s "STARTED: kube-scheduler at $(date)" >> log 2>&1
 	kube-scheduler --kubeconfig $KUBECONFIG --leader-elect=false \
+		$SCHEDULER_FLAGS --feature-gates $FEATURE_GATES \
 		>> $log 2>&1
 }
 
@@ -59,6 +62,7 @@ monitor() {
 		$1
 		logger -t K8s-monitor "DIED: $1"
 		sleep 2
+		. /etc/profile
 	done
 }
 

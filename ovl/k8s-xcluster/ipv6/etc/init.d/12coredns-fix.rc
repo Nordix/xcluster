@@ -9,23 +9,8 @@ i=$(hostname | cut -d- -f2 | sed -re 's,^0+,,')
 
 . /etc/profile
 test -n "$DOMAIN" || DOMAIN=xcluster
+test -n "$IPV6_PREFIX" || IPV6_PREFIX=1000::1:
 
-local_dns() {
-	killall coredns
-	cat > /etc/Corefile <<EOF
-.:53 {
-    kubernetes $DOMAIN {
-      endpoint http://[1000::1:192.168.1.1]:8080
-    }
-    forward . 192.168.0.250:10053
-    cache 3000
-    log stdout
-}
-EOF
-	cat > /etc/resolv.conf <<EOF
-nameserver 1000::1:192.168.1.$i
-options use-vc
-EOF
-	coredns -conf /etc/Corefile > /var/log/coredns.log 2>&1 &
-}
-local_dns
+killall coredns
+sed -i -e "s,192.168.1.1,[${IPV6_PREFIX}192.168.1.1]," /etc/Corefile
+coredns -conf /etc/Corefile > /var/log/coredns.log 2>&1 &
