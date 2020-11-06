@@ -3,4 +3,5 @@ export TZ=`cat /etc/TZ`
 alias ls='ls --color=never -F'
 alias ll='ls --color=never -Fl'
 alias ssh='dbclient -y -y'
+alias ldd='LD_TRACE_LOADED_OBJECTS=1'
 PS1='\h \w \$ '
