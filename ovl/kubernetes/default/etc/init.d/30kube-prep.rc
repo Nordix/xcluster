@@ -23,8 +23,9 @@ if test -n "$PROXY_MODE" -a "$PROXY_MODE" != "ipvs"; then
    ip6tables -t nat -N KUBE-MARK-DROP
 fi
 
+# The tailing ':' makes sure this doesn't match an ipv6 address
 test -n "$IPV6_PREFIX" && \
-	sed -i -e "s,192.168.1.1,[${IPV6_PREFIX}192.168.1.1]," \
+	sed -i -e "s,192.168.1.1:,[${IPV6_PREFIX}192.168.1.1]:," \
 	/etc/kubernetes/kubeconfig
 
 # Work around for bad install of dropbear
@@ -56,3 +57,10 @@ fi
 # https://github.com/kubernetes/kubernetes/issues/87426
 modprobe br-netfilter
 sysctl -w net.bridge.bridge-nf-call-iptables=1
+
+if kubectl version --short --client | grep -q v1.2; then
+	# Many new security updates in v1.20
+	key=/srv/kubernetes/server.key
+	grep -q API_FLAGS /etc/profile || \
+		echo "API_FLAGS='--service-account-signing-key-file=$key --service-account-issuer=Nemo --service-account-key-file=$key'" >> /etc/profile
+fi

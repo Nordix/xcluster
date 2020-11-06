@@ -40,8 +40,9 @@ apiserver() {
 	local log=/var/log/kube-apiserver.log
 	logger -s -t K8s "STARTED: kube-apiserver at $(date)" >> log 2>&1
 	kube-apiserver --token-auth-file=/srv/kubernetes/known_tokens.csv \
-		--allow-privileged=true \
-		--insecure-bind-address=$ANY_ADDR --advertise-address=$MASTER_IP \
+		$API_FLAGS --allow-privileged=true \
+		--insecure-bind-address=$ANY_ADDR \
+		--advertise-address=$MASTER_IP \
 		--authorization-mode=AlwaysAllow \
 		--feature-gates $FEATURE_GATES \
 		--etcd-servers=http://127.0.0.1:2379 --anonymous-auth=false \
@@ -56,7 +57,7 @@ apiserver() {
 controller() {
 	local log=/var/log/kube-controller-manager.log
 	logger -s -t K8s "STARTED: kube-controller-manager at $(date)" >> log 2>&1
-	kube-controller-manager --kubeconfig $KUBECONFIG \
+	kube-controller-manager --kubeconfig $KUBECONFIG $CONTROLLER_FLAGS \
 		--allocate-node-cidrs=true --cluster-cidr=$CLUSTER_CIDR \
 		--controllers="*,serviceaccount,serviceaccount-token" \
 		--feature-gates $FEATURE_GATES \
@@ -69,7 +70,7 @@ scheduler() {
 	local log=/var/log/kube-scheduler.log
 	logger -s -t K8s "STARTED: kube-scheduler at $(date)" >> log 2>&1
 	kube-scheduler --kubeconfig $KUBECONFIG --leader-elect=false \
-		--feature-gates $FEATURE_GATES \
+		$SCHEDULER_FLAGS --feature-gates $FEATURE_GATES \
 		>> $log 2>&1
 }
 
