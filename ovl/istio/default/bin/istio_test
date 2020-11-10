@@ -49,40 +49,44 @@ cmd_tcase_vip_route() {
 	tcase "Set VIP routes (ECMP)"
 	vip_route
 }
-cmd_tcase_start_istio() {
-	tcase "Start istio"
-	apply_k8s $yamld
-	if ipv6base; then
-		assign-lb-ip -svc istio -ip 1000::
-	else
-		assign-lb-ip -svc istio -ip 10.0.0.0
-	fi
-	if test "$__mode" = "dual-stack"; then
-		assign-lb-ip -svc istio-ipv4 -ip 10.0.0.1
-		assign-lb-ip -svc istio-ipv6 -ip 1000::1
-		isDual3 && assign-lb-ip -svc istio-dual -ip 1000::2,10.0.0.2
-	fi
-	test_daemonset istio 180
+
+cmd_tcase_install_local() {
+	cd /root
+	export ISTIO_VERSION=$(cat ISTIO_VERSION)
+	tcase "Install istio $ISTIO_VERSION"
+	tar xzf istio-$ISTIO_VERSION-linux-amd64.tar.gz || tdie Unpack
+	local istioctl=$PWD/istio-$ISTIO_VERSION/bin/istioctl
+	$istioctl install --set profile=demo --set tag=uablrek \
+		--set hub=registry.nordix.org/cloud-native || tdie Install
+	$kubectl label namespace default istio-injection=enabled --overwrite
 }
-cmd_tcase_external_traffic() {
-	tcase "External traffic"
-	if ipv6base; then
-		external_traffic [1000::]:5001
-	else
-		external_traffic 10.0.0.0:5001
-	fi
-	if test "$__mode" = "dual-stack"; then
-		external_traffic 10.0.0.1:5001
-		external_traffic [1000::1]:5001
-		if isDual3; then
-			external_traffic 10.0.0.2:5001
-			external_traffic [1000::2]:5001
-		fi
-	fi
+
+cmd_tcase_prometheus() {
+	tcase "Start Prometheus"
+	$kubectl apply -f /root/prometheus.yaml || tdie
+	kubectl="kubectl -n istio-system"
+	test_deployment prometheus 180
 }
-external_traffic() {
+
+cmd_tcase_external_http() {
+	tcase "External http traffic"
+	if ipv6base; then
+		kahttp_to http://[1000::80]
+	else
+		kahttp_to http://10.0.0.80
+	fi
+
+	isDual || return 0
+
+	kahttp_to http://10.0.0.81
+	kahttp_to http://[1000::81]
+}
+kahttp_to() {
 	tlog "Traffic to; $1"
-	do_mconnect $1 || tdie "mconnect to; $1"
+	mkdir -p $tmp
+	curl -s --http1.1 -D - $1 > $tmp/out || tdie "$1"
+	grep -q "200 OK" $tmp/out || tdie "Not OK"
+	tlog "Src; $(grep -F 'RemoteAddr:' $tmp/out)"
 }
 
 . /etc/profile

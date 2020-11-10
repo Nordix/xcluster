@@ -3,6 +3,7 @@
 ## Getting started
 
 * https://istio.io/latest/docs/setup/getting-started/
+* https://istio.io/latest/docs/ops/integrations/prometheus/
 
 Prepare;
 ```
@@ -27,7 +28,6 @@ Start and install;
 cdo istio
 ./istio.sh test start > $log
 # Or;
-alias xcadmin=$(dirname $XCLUSTER)/xcadmin.sh
 #export xcluster_IPV6_PREFIX=1000::1:
 export __k8sver=v1.19.3
 xcadmin k8s_test istio start > $log
@@ -36,7 +36,7 @@ xcadmin k8s_test --mode=ipv6 istio start > $log
 export ISTIO_VERSION=$(cat ISTIO_VERSION)
 tar xzf istio-$ISTIO_VERSION-linux-amd64.tar.gz
 alias istioctl=$PWD/istio-1.7.4/bin/istioctl
-istioctl install --set profile=demo
+istioctl install --set profile=demo --set tag=$ISTIO_VERSION
 kubectl label namespace default istio-injection=enabled --overwrite
 assign-lb-ip -n istio-system -svc istio-ingressgateway -ip 10.0.0.1
 

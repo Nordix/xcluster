@@ -96,11 +96,21 @@ test_start() {
 	otc 201 vip_route
 }
 
-test_basic() {
+test_basic_local() {
 	test -n "$__mode" || __mode=dual-stack
-	tlog "=== istio: Basic test on $__mode"
+	tlog "=== istio: Basic test with local images on $__mode"
 	test_start
-	otc 201 external_traffic
+
+	otc 1 install_local
+	otc 1 prometheus
+
+	# Call test-cases from ovl/k8s-test
+	otcprog=k8s-test_test
+	otc 1 start_servers
+
+	unset otcprog
+	otc 201 external_http
+
 	xcluster_stop
 }
 test_ipv4() {
