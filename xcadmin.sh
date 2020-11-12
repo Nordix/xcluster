@@ -240,7 +240,7 @@ cmd_build_base() {
 cmd_k8s_archives() {
 	cmd_env
 	echo $ARCHIVE/xcluster-cni-image.tar.xz
-	echo $ARCHIVE/cni-plugins-linux-amd64-v0.8.2.tgz
+	echo $ARCHIVE/cni-plugins-linux-amd64-v0.8.7.tgz
 	echo $ARCHIVE/etcd-v3.3.10-linux-amd64.tar.gz
 	echo $ARCHIVE/kubernetes-server-$__k8sver-linux-amd64.tar.gz
 	echo $ARCHIVE/mconnect.xz
@@ -331,7 +331,7 @@ cmd_k8s_build_images() {
 	rm -rf $image
 	cp $__image $image
 	chmod +w $image
-	$XCLUSTER ximage --image=$image env xnet etcd iptools crio kubernetes mconnect images || die "ximage failed"
+	$XCLUSTER ximage --image=$image env xnet etcd iptools crio kubernetes mconnect images k8s-cni-bridge || die "ximage failed"
 	chmod -w $image
 	test -e $XCLUSTER_HOME/hd-k8s.img || \
 		ln -s $(basename $image)  $XCLUSTER_HOME/hd-k8s.img

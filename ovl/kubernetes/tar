@@ -42,35 +42,6 @@ for n in kube-controller-manager kube-scheduler kube-apiserver \
 	strip $tmp/bin/$n
 done
 
-# Install CNI plugins;
-d=$GOPATH/src/github.com/containernetworking/plugins/bin
-mkdir -p $tmp/opt/cni/bin
-if test -x $d/bridge; then
-	log "Using locally built CNI-plugins"
-	for n in bridge host-local loopback; do
-		test -x $d/$n || die "Not executable [$d/$n]"
-		cp $d/$n $tmp/opt/cni/bin
-	done
-else
-	ver=v0.8.2
-	log "Using CNI-plugins ver $ver"
-	ar=$ARCHIVE/cni-plugins-linux-amd64-$ver.tgz
-	test -r "$ar" || die "Not readable [$ar]"
-	tar -C $tmp/opt/cni/bin -xf $ar ./bridge ./host-local ./loopback
-fi
-
-d=$GOPATH/src/github.com/Nordix/xcluster-cni/image
-if test -d $d; then
-	log "Using local xcluster-cni"
-	rm -f $d/build-date $d/opt/cni/bin/podCIDR
-	test -x $d/bin/list-nodes || die "Not executable [$d/bin/list-nodes]"
-	cp -r $d/* $tmp
-else
-	ar=$ARCHIVE/xcluster-cni-image.tar.xz
-	test -r "$ar" || die "Not readable [$ar]"
-	tar -C $tmp -xf $ar
-fi
-
 # Certificates are required for image pull
 mkdir -p $tmp/etc/ssl/certs
 cp /etc/ssl/certs/ca-certificates.crt $tmp/etc/ssl/certs/
