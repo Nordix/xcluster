@@ -65,3 +65,6 @@ done
 
 iptables -t nat -I POSTROUTING 1 -s 11.0.0.0/16 ! -d 11.0.0.0/16 -j MASQUERADE
 ip6tables -t nat -I POSTROUTING 1 -s 1100::/16 ! -d 1100::/16 -j MASQUERADE
+
+/opt/cni/bin/cni-bridge.sh monitor < /dev/null > /var/log/bridge.log 2>&1 &
+
