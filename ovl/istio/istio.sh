@@ -96,12 +96,32 @@ test_start() {
 	otc 201 vip_route
 }
 
+test_basic() {
+	test -n "$__mode" || __mode=dual-stack
+	tlog "=== istio: Basic test on $__mode"
+	test_start
+
+	otc 1 install
+	otc 1 ingress_gw
+	otc 1 prometheus
+
+	# Call test-cases from ovl/k8s-test
+	otcprog=k8s-test_test
+	otc 1 start_servers
+
+	unset otcprog
+	otc 201 external_http
+
+	xcluster_stop
+}
+
 test_basic_local() {
 	test -n "$__mode" || __mode=dual-stack
 	tlog "=== istio: Basic test with local images on $__mode"
 	test_start
 
 	otc 1 install_local
+	otc 1 ingress_gw
 	otc 1 prometheus
 
 	# Call test-cases from ovl/k8s-test
@@ -122,30 +142,22 @@ test_ipv6() {
 	test_basic
 }
 
-cmd_otc() {
-	test -n "$__vm" || __vm=2
-	otc $__vm $@
+##  config_dump
+cmd_config_dump() {
+	test -n "$__config_dump" || __config_dump=/tmp/config_dump.json
+	local pod=$(kubectl get pod -n istio-system -l istio=ingressgateway -o json | jq -r .items[0].metadata.name)
+	kubectl exec -n istio-system $pod -- curl --silent http://localhost:15000/config_dump > $__config_dump	
 }
-
-##   mkimage [--tag=registry.nordix.org/cloud-native/istio:latest]
-##     Create the docker image and upload it to the local registry.
-##
-cmd_mkimage() {
-	cmd_env
-	local imagesd=$($XCLUSTER ovld images)
-	$imagesd/images.sh mkimage --force --upload --strip-host --tag=$__tag $dir/image
+##  config_types
+cmd_config_types() {
+	test -n "$__config_dump" || __config_dump=/tmp/config_dump.json
+	cat $__config_dump | jq -r '.configs[]."@type"'
 }
-
-##   go_build
-##     Build local go program. Output to ./image/default/bin
-##
-cmd_go_build() {
-	mkdir -p $dir/image/default/bin
-	cd $dir/go
-	GO111MODULE=on CGO_ENABLED=0 GOOS=linux go build \
-		-ldflags "-extldflags '-static' -X main.version=$(date +%F:%T)" \
-		-o ../image/default/bin/list-nodes ./cmd/list-nodes/main.go
-	strip ../image/default/bin/list-nodes
+##  config_type <type>
+cmd_config_type() {
+	test -n "$1" || die "No type"
+	test -n "$__config_dump" || __config_dump=/tmp/config_dump.json
+	cat $__config_dump | jq -r ".configs[]|select(.\"@type\" == \"$1\")"
 }
 
 . $($XCLUSTER ovld test)/default/usr/lib/xctest

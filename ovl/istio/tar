@@ -30,6 +30,11 @@ test -r $ar || die "Not readable [$ar]"
 cp $ar $tmp/root
 echo $ISTIO_VERSION > $tmp/root/ISTIO_VERSION
 
+f=$ARCHIVE/kahttp.xz
+test -r $f || die "Not readable [$f]"
+xz -dc $f > $tmp/bin/kahttp
+chmod a+x $tmp/bin/kahttp
+
 cd $tmp
 tar cf "$1" *
 cd - > /dev/null

@@ -41,10 +41,6 @@ cmd_tcase_check_namespaces() {
 cmd_tcase_check_nodes() {
 	test_nodes
 }
-cmd_tcase_check_metric_server() {
-	kubectl="kubectl -n kube-system"
-	test_deployment metrics-server 180
-}
 cmd_tcase_vip_route() {
 	tcase "Set VIP routes (ECMP)"
 	vip_route
@@ -53,12 +49,34 @@ cmd_tcase_vip_route() {
 cmd_tcase_install_local() {
 	cd /root
 	export ISTIO_VERSION=$(cat ISTIO_VERSION)
-	tcase "Install istio $ISTIO_VERSION"
+	tcase "Install local built istio"
 	tar xzf istio-$ISTIO_VERSION-linux-amd64.tar.gz || tdie Unpack
 	local istioctl=$PWD/istio-$ISTIO_VERSION/bin/istioctl
 	$istioctl install --set profile=demo --set tag=uablrek \
 		--set hub=registry.nordix.org/cloud-native || tdie Install
 	$kubectl label namespace default istio-injection=enabled --overwrite
+}
+
+cmd_tcase_install() {
+	cd /root
+	export ISTIO_VERSION=$(cat ISTIO_VERSION)
+	tcase "Install istio $ISTIO_VERSION"
+	tar xzf istio-$ISTIO_VERSION-linux-amd64.tar.gz || tdie Unpack
+	local istioctl=$PWD/istio-$ISTIO_VERSION/bin/istioctl
+	$istioctl install --set profile=demo || tdie Install
+	$kubectl label namespace default istio-injection=enabled --overwrite
+}
+
+cmd_tcase_ingress_gw() {
+	tcase "Configure the ingress gateway"
+	if ipv6base; then
+		assign-lb-ip -n istio-system -svc istio-ingressgateway -ip 1000::10
+		echo "1000::10 kahttp.external" >> /etc/hosts
+	else
+		assign-lb-ip -n istio-system -svc istio-ingressgateway -ip 10.0.0.10
+		echo "10.0.0.10 kahttp.external" >> /etc/hosts
+	fi
+	kubectl apply -f /root/ingress-gw.yaml || tdie
 }
 
 cmd_tcase_prometheus() {
@@ -71,17 +89,23 @@ cmd_tcase_prometheus() {
 cmd_tcase_external_http() {
 	tcase "External http traffic"
 	if ipv6base; then
-		kahttp_to http://[1000::80]
+		curl_to http://[1000::80]
+		grep -q kahttp.external /etc/hosts || \
+			echo "1000::10 kahttp.external" >> /etc/hosts
 	else
-		kahttp_to http://10.0.0.80
+		curl_to http://10.0.0.80
+		grep -q kahttp.external /etc/hosts || \
+			echo "10.0.0.10 kahttp.external" >> /etc/hosts
 	fi
+
+	curl_to http://kahttp.external/
 
 	isDual || return 0
 
-	kahttp_to http://10.0.0.81
-	kahttp_to http://[1000::81]
+	curl_to http://10.0.0.81
+	curl_to http://[1000::81]
 }
-kahttp_to() {
+curl_to() {
 	tlog "Traffic to; $1"
 	mkdir -p $tmp
 	curl -s --http1.1 -D - $1 > $tmp/out || tdie "$1"
