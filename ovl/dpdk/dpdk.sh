@@ -188,8 +188,8 @@ cmd_build() {
 	test -h $__kobj/build || ln -s . $__kobj/build
 
 	cd $__dpdk_src
-	$__meson_dir/meson.py -Dkernel_dir=$__kobj build || die "Meson config failed
-"
+	$__meson_dir/meson.py -Dkernel_dir=$__kobj -Dexamples=l2fwd,l3fwd build || \
+		die "Meson config failed"
 
 	cd $__dpdk_src/build
 	ninja || die "Ninja build failed"

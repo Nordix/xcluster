@@ -21,6 +21,7 @@ $XCLUSTER install_prog --dest=$tmp lshw jq hugeadm
 
 eval $($dir/dpdk.sh env)
 cp $(find $__dpdk_src/build/app/ -maxdepth 1 -name 'dpdk-*' -type f) $tmp/bin
+cp $(find $__dpdk_src/build/examples/ -maxdepth 1 -name 'dpdk-*' -type f) $tmp/bin
 $XCLUSTER cplib --dest=$tmp $tmp/bin/dpdk-*
 cp $__dpdk_src/usertools/dpdk-setup.sh $tmp/bin
 

@@ -13,8 +13,8 @@ May or may not be useful, in no particular order;
 * https://doc.dpdk.org/guides/prog_guide/kernel_nic_interface.html#kni
 * https://doc.dpdk.org/guides/tools/devbind.html
 * https://doc.dpdk.org/guides/linux_gsg/sys_reqs.html
-
-
+* https://dpdk-guide.gitlab.io/dpdk-guide/setup/binding.html CONFIG_VFIO_NOIOMMU=y
+* https://doc.dpdk.org/guides/sample_app_ug/l2_forward_real_virtual.html
 
 ## Usage
 
@@ -34,6 +34,8 @@ Then;
 
 ```
 #sudo apt install -y hugeadm # (if needed)
+cdo dpdk
+. ./Envsettings
 ./dpdk.sh test start > $log
 # On vm 201
 modprobe igb_uio
@@ -43,6 +45,9 @@ dpdk-testpmd -l 0-1 -n 2 --vdev=eth_af_packet0,iface=eth2 \
 # Or
 dpdk-testpmd -l 0-1 -n 2 --vdev=net_pcap0,iface=eth2 \
   --huge-dir=/dev/hugepages -- -i --total-num-mbufs=16384
+# Or
+dpdk-l2fwd -l 0-1 -n 2 --vdev=eth_af_packet0,iface=eth2 \
+  --vdev=eth_af_packet1,iface=eth1 --huge-dir=/dev/hugepages -- -p 3
 ```
 
 
@@ -104,3 +109,4 @@ cat /proc/meminfo | grep Huge
 sysctl vm.nr_hugepages
 ls /dev/hugepages
 ```
+
