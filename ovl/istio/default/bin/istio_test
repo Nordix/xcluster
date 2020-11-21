@@ -52,7 +52,7 @@ cmd_tcase_install_local() {
 	tcase "Install local built istio"
 	tar xzf istio-$ISTIO_VERSION-linux-amd64.tar.gz || tdie Unpack
 	local istioctl=$PWD/istio-$ISTIO_VERSION/bin/istioctl
-	$istioctl install -y --set profile=demo --set tag=uablrek \
+	$istioctl install -y --set profile=demo --set tag=$TAG \
 		--set hub=registry.nordix.org/cloud-native || tdie Install
 	$kubectl label namespace default istio-injection=enabled --overwrite
 }

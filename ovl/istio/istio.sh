@@ -118,6 +118,8 @@ test_basic() {
 test_basic_local() {
 	test -n "$__mode" || __mode=dual-stack
 	tlog "=== istio: Basic test with local images on $__mode"
+	test -n "$xcluster_TAG" || xcluster_TAG=$USER
+	export xcluster_TAG
 	test_start
 
 	otc 1 install_local
