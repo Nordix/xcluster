@@ -52,7 +52,7 @@ cmd_tcase_install_local() {
 	tcase "Install local built istio"
 	tar xzf istio-$ISTIO_VERSION-linux-amd64.tar.gz || tdie Unpack
 	local istioctl=$PWD/istio-$ISTIO_VERSION/bin/istioctl
-	$istioctl install --set profile=demo --set tag=uablrek \
+	$istioctl install -y --set profile=demo --set tag=uablrek \
 		--set hub=registry.nordix.org/cloud-native || tdie Install
 	$kubectl label namespace default istio-injection=enabled --overwrite
 }
@@ -63,7 +63,7 @@ cmd_tcase_install() {
 	tcase "Install istio $ISTIO_VERSION"
 	tar xzf istio-$ISTIO_VERSION-linux-amd64.tar.gz || tdie Unpack
 	local istioctl=$PWD/istio-$ISTIO_VERSION/bin/istioctl
-	$istioctl install --set profile=demo || tdie Install
+	$istioctl install -y --set profile=demo || tdie Install
 	$kubectl label namespace default istio-injection=enabled --overwrite
 }
 
@@ -76,7 +76,16 @@ cmd_tcase_ingress_gw() {
 		assign-lb-ip -n istio-system -svc istio-ingressgateway -ip 10.0.0.10
 		echo "10.0.0.10 kahttp.external" >> /etc/hosts
 	fi
-	kubectl apply -f /root/ingress-gw.yaml || tdie
+	apply_k8s $yamld || tdie
+
+	isDual || return 0
+
+	assign-lb-ip -n istio-system -svc istio-ipv4 -ip 10.0.0.20
+	assign-lb-ip -n istio-system -svc istio-ipv6 -ip 1000::20
+
+	isDual3 || return 0
+
+	assign-lb-ip -n istio-system -svc istio-dual -ip 10.0.0.30,1000::30
 }
 
 cmd_tcase_prometheus() {
@@ -102,11 +111,31 @@ cmd_tcase_external_http() {
 
 	isDual || return 0
 
+	# Not handled by the istio-ingressgateway
 	curl_to http://10.0.0.81
 	curl_to http://[1000::81]
+
+	# Dual-stack handled by the istio-ingressgateway
+	sed -i -e '/kahttp.external/d' /etc/hosts
+	echo "10.0.0.20 kahttp.external" >> /etc/hosts
+	curl_to http://kahttp.external/
+	sed -i -e '/kahttp.external/d' /etc/hosts
+	echo "1000::20 kahttp.external" >> /etc/hosts
+	curl_to http://kahttp.external/
+
+	isDual3 || return 0
+
+	sed -i -e '/kahttp.external/d' /etc/hosts
+	echo "10.0.0.30 kahttp.external" >> /etc/hosts
+	curl_to http://kahttp.external/
+	sed -i -e '/kahttp.external/d' /etc/hosts
+	echo "1000::30 kahttp.external" >> /etc/hosts
+	curl_to http://kahttp.external/
 }
 curl_to() {
-	tlog "Traffic to; $1"
+	local dn
+	echo $1 | grep -q kahttp && dn="($(grep kahttp.external /etc/hosts))"
+	tlog "Traffic to; $1 $dn"
 	mkdir -p $tmp
 	curl -s --http1.1 -D - $1 > $tmp/out || tdie "$1"
 	grep -q "200 OK" $tmp/out || tdie "Not OK"

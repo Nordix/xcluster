@@ -35,7 +35,7 @@ xcadmin k8s_test --mode=ipv6 istio start > $log
 # On vm-001
 export ISTIO_VERSION=$(cat ISTIO_VERSION)
 tar xzf istio-$ISTIO_VERSION-linux-amd64.tar.gz
-alias istioctl=$PWD/istio-1.7.4/bin/istioctl
+alias istioctl=$PWD/istio-$ISTIO_VERSION/bin/istioctl
 istioctl install --set profile=demo --set tag=$ISTIO_VERSION
 kubectl label namespace default istio-injection=enabled --overwrite
 assign-lb-ip -n istio-system -svc istio-ingressgateway -ip 10.0.0.1

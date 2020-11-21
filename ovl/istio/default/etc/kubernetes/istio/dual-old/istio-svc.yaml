@@ -1,0 +1,39 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: istio-ipv4
+  namespace: istio-system
+spec:
+  ipFamily: IPv4
+  ports:
+  - name: http2
+    port: 80
+    protocol: TCP
+    targetPort: 8080
+  - name: https
+    port: 443
+    protocol: TCP
+    targetPort: 8443
+  selector:
+    app: istio-ingressgateway
+  type: LoadBalancer
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: istio-ipv6
+  namespace: istio-system
+spec:
+  ipFamily: IPv6
+  ports:
+  - name: http2
+    port: 80
+    protocol: TCP
+    targetPort: 8080
+  - name: https
+    port: 443
+    protocol: TCP
+    targetPort: 8443
+  selector:
+    app: istio-ingressgateway
+  type: LoadBalancer
