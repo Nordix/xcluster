@@ -25,6 +25,11 @@ cp $(find $__dpdk_src/build/examples/ -maxdepth 1 -name 'dpdk-*' -type f) $tmp/b
 $XCLUSTER cplib --dest=$tmp $tmp/bin/dpdk-*
 cp $__dpdk_src/usertools/dpdk-setup.sh $tmp/bin
 
+export __dpdk_src
+make -f $dir/src/Makefile O=$tmp/bin hello > /dev/null
+mkdir -p $tmp/usr/lib/x86_64-linux-gnu
+cp $($dir/dpdk.sh libs $tmp/bin/helloworld) $tmp/usr/lib/x86_64-linux-gnu
+
 eval $($XCLUSTER env | grep __kver)
 dst=$tmp/lib/modules/$(echo $__kver | cut -d'-' -f2-)/extra/dpdk
 mkdir -p $dst

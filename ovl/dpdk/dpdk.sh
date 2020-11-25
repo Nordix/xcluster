@@ -103,6 +103,20 @@ test_basic() {
 	xcluster_stop
 }
 
+##   libs <bin...>
+cmd_libs() {
+	cmd_env
+	export LD_LIBRARY_PATH=$__dpdk_src/build/sys/usr/local/lib/x86_64-linux-gnu
+	local f libs=$tmp/libs
+	mkdir -p $tmp
+	for f in $@; do
+		test -x $f || continue
+		ldd $f | grep '=> /' | sed -re 's,.*=> (/[^ ]+) .*,\1,' | \
+			grep "$LD_LIBRARY_PATH" >> $libs
+	done
+
+	sort $libs | uniq
+}
 
 ##   install_meson [--meson_ver=0.53.1] [meson_dir=$HOME/tmp/meson-<ver>]
 cmd_install_meson() {
@@ -193,6 +207,8 @@ cmd_build() {
 
 	cd $__dpdk_src/build
 	ninja || die "Ninja build failed"
+
+	DESTDIR=$__dpdk_src/build/sys ninja install || die "Ninja install failed"
 }
 
 #  check_kobj

@@ -7,7 +7,7 @@ Run DPDK in xcluster.
 May or may not be useful, in no particular order;
 
 * https://doc.dpdk.org/guides/nics/virtio.html
-* https://wiki.qemu.org/Features/VirtioVhostUser  # <--- check this!
+* https://wiki.qemu.org/Features/VirtioVhostUser
 * https://doc.dpdk.org/guides-2.0/sample_app_ug/vhost.html
 * https://www.redhat.com/en/blog/hands-vhost-user-warm-welcome-dpdk
 * https://doc.dpdk.org/guides/prog_guide/kernel_nic_interface.html#kni
@@ -15,6 +15,7 @@ May or may not be useful, in no particular order;
 * https://doc.dpdk.org/guides/linux_gsg/sys_reqs.html
 * https://dpdk-guide.gitlab.io/dpdk-guide/setup/binding.html CONFIG_VFIO_NOIOMMU=y
 * https://doc.dpdk.org/guides/sample_app_ug/l2_forward_real_virtual.html
+
 
 ## Usage
 
@@ -95,6 +96,32 @@ installed. Then build;
 
 Remember to remove the cached ovl/dpdk if you want to use your local build.
 
+
+## Build own applications
+
+As part of the build dpdk is installed and the SDK can be used to
+build your own dpdk programs. An example `Makefile` is provided that
+builds some dpdk examples;
+
+```
+cdo dpdk
+. ./Envsettings
+eval $(./dpdk.sh env | grep __dpdk_src)
+export __dpdk_src
+make -f src/Makefile
+ls /tmp/tmp/$USER/dpdk
+```
+
+Copy the Makefile and modify it for your needs and, if needed, copy
+the dpdk SDK from `$__dpdk_src/build/sys`.
+
+You must copy the used dpdk lib's to the xcluster ovl;
+
+```
+./dpdk.sh libs /tmp/tmp/$USER/dpdk/*
+```
+
+See an example in the "tar" script.
 
 
 ## Other info and commands
