@@ -1,0 +1,3 @@
+#! /bin/sh
+. /etc/profile
+test -n "$IPV6_PREFIX" || echo "IPV6_PREFIX=1000::1:" >> /etc/profile
