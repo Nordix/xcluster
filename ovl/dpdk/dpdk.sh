@@ -210,6 +210,24 @@ cmd_build() {
 
 	DESTDIR=$__dpdk_src/build/sys ninja install || die "Ninja install failed"
 }
+##   make [--force]
+cmd_make() {
+	cmd_env
+	test "$__force" = "yes" && rm -rf $__dpdk_src/sys
+	if test -d $__dpdk_src/sys; then
+		echo "Already built at [$__dpdk_src/sys]"
+		return 0
+	fi
+
+	__force=no
+	cmd_unpack
+
+	# The dpdk build system requires a "build/" dir in kernel_dir
+	test -h $__kobj/build || ln -s . $__kobj/build
+
+	cd $__dpdk_src
+	DESTDIR=$__dpdk_src/sys make -j$(nproc) RTE_KERNELDIR=$__kobj T=x86_64-native-linuxapp-gcc install || tdie make
+}
 
 #  check_kobj
 #    By default dpdk build with kernel /lib/modules/$(uname -r)/.

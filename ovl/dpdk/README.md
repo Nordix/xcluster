@@ -41,8 +41,8 @@ cdo dpdk
 # On vm 201
 modprobe igb_uio
 modprobe rte_kni
-dpdk-testpmd -l 0-1 -n 2 --vdev=eth_af_packet0,iface=eth2 \
-  --huge-dir=/dev/hugepages -- -i --total-num-mbufs=16384
+dpdk-testpmd -l 0-1 -n 2 --vdev=eth_af_packet0,iface=eth2 -- \
+  -i --total-num-mbufs=16384
 # Or
 dpdk-testpmd -l 0-1 -n 2 --vdev=net_pcap0,iface=eth2 \
   --huge-dir=/dev/hugepages -- -i --total-num-mbufs=16384
@@ -93,6 +93,23 @@ installed. Then build;
 ./dpdk.sh unpack
 ./dpdk.sh build
 ```
+
+### Build older dpdk versions
+
+DPDK is kernel dependent so an older kernel must be used. Older dpdk
+uses an older SDK so `dpdk.sh make` must be used.
+
+```
+cdo dpdk
+export __dpdk_ver=17.11.10
+export __kver=linux-5.4.35
+. ./Envsettings
+# Download and build the kernel if necessary
+./dpdk.sh download
+./dpdk.sh unpack
+./dpdk.sh make
+```
+
 
 Remember to remove the cached ovl/dpdk if you want to use your local build.
 
