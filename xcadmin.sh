@@ -281,7 +281,7 @@ cmd_cache_refresh() {
 	fi
 	$XCLUSTER cache --clear
 	local o
-	for o in iptools xnet images crio; do
+	for o in iptools images crio; do
 		log "Caching ovl [$o]"
 		$XCLUSTER cache $o || die "Failed"
 	done
