@@ -209,6 +209,16 @@ cmd_build() {
 	ninja || die "Ninja build failed"
 
 	DESTDIR=$__dpdk_src/build/sys ninja install || die "Ninja install failed"
+
+	cmd_fix_pkg_config
+}
+cmd_fix_pkg_config() {
+	local d=$__dpdk_src/build/sys/usr/local/lib/x86_64-linux-gnu/pkgconfig
+	test -d $d || die "Not a directory [$d]"
+	local f
+	for f in $(find $d -type f -name 'libdpdk*.pc'); do
+		sed -i -e "s,prefix=/usr/local,prefix=$__dpdk_src/build/sys/usr/local," $f
+	done
 }
 ##   make [--force]
 cmd_make() {
