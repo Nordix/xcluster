@@ -24,16 +24,11 @@ eval $($XCLUSTER env | grep __kver)
 
 if test -d $__dpdk_src/build; then
 	# New build system
-	cp $(find $__dpdk_src/build/app/ -maxdepth 1 -name 'dpdk-*' -type f) $tmp/bin
-	cp $(find $__dpdk_src/build/examples/ -maxdepth 1 -name 'dpdk-*' -type f) $tmp/bin
-	$XCLUSTER cplib --dest=$tmp $tmp/bin/dpdk-*
-	export __dpdk_src
-	make -f $dir/src/Makefile O=$tmp/bin hello > /dev/null
-	mkdir -p $tmp/usr/lib/x86_64-linux-gnu
-	cp $($dir/dpdk.sh libs $tmp/bin/helloworld) $tmp/usr/lib/x86_64-linux-gnu
 	dst=$tmp/lib/modules/$(echo $__kver | cut -d'-' -f2-)/extra/dpdk
 	mkdir -p $dst
 	cp $(find $__dpdk_src/build/kernel/linux -name '*.ko') $dst
+	cp $(find $__dpdk_src/build/app/ -maxdepth 1 -name 'dpdk-*' -type f) $tmp/bin
+	$XCLUSTER cplib --dest=$tmp $tmp/bin/dpdk-*
 elif test -d $__dpdk_src/sys; then
 	# Old build system
 	dst=$tmp/lib/modules/$(echo $__kver | cut -d'-' -f2-)/extra/dpdk
@@ -42,9 +37,6 @@ elif test -d $__dpdk_src/sys; then
 else
 	die "No dpdk build found"
 fi
-
-cp $__dpdk_src/usertools/dpdk-setup.sh $tmp/bin
-
 
 cd $tmp
 tar cf "$1" *

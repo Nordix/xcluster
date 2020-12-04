@@ -37,8 +37,12 @@ dbg() {
 ##
 cmd_env() {
 
-	test -n "$__dpdk_ver" || __dpdk_ver=19.11.5
-	test -n "$__dpdk_src" || __dpdk_src=$XCLUSTER_WORKSPACE/dpdk-stable-$__dpdk_ver
+	test -n "$__dpdk_ver" || __dpdk_ver=20.11
+	if ! test -n "$__dpdk_src"; then
+		__dpdk_src=$XCLUSTER_WORKSPACE/dpdk-stable-$__dpdk_ver
+		test "$__dpdk_ver" = "20.11" && \
+			__dpdk_src=$XCLUSTER_WORKSPACE/dpdk-$__dpdk_ver
+	fi
 	test -n "$__meson_ver" || __meson_ver=0.53.1
 	test -n "$__meson_dir" || __meson_dir=$HOME/tmp/meson-$__meson_ver
 	test -n "$__arm_url" || __arm_url=https://artifactory.nordix.org/artifactory
@@ -74,7 +78,7 @@ cmd_test() {
             test_$t
         done
     else
-        for t in basic; do
+        for t in start_basic; do
             test_$t
         done
     fi      
@@ -84,24 +88,35 @@ cmd_test() {
 
 }
 
+# Start with the default xcluster network setup.
+# vm-201 prepared for DPDK, vm's are supposed to be back-ends.
 test_start() {
 	export __image=$XCLUSTER_HOME/hd.img
 	export XOVLS=$(echo $XOVLS | sed -e 's,private-reg,,')
 	export __nrouters=1
 	export __ntesters=1
-	unset __mem1 __mem201 __mem202 __mem203
 	export __mem=256
 	export __mem201=1024
 	export __smp201=4
 	export __append201="hugepages=128"
-
-	xcluster_start network-topology iptools dpdk
+	xcluster_start env network-topology iptools dpdk
 }
 
-test_basic() {
-	tlog "=== dpdk: Basic test"
-	xcluster_stop
+# Start just 2 VMs connected via eth1 and eth2 for basic tests
+test_start_basic() {
+	export __image=$XCLUSTER_HOME/hd.img
+	export XOVLS=$(echo $XOVLS | sed -e 's,private-reg,,')
+	export __nvm=2
+	export __nrouters=0
+	export __ntesters=0
+	export __mem=1024
+	export __smp=4
+	export __nets_vm=0,1,2
+	export __append="hugepages=128"
+	export xcluster_SETUP=basic
+	xcluster_start env iptools dpdk
 }
+
 
 ##   libs <bin...>
 cmd_libs() {
@@ -202,7 +217,7 @@ cmd_build() {
 	test -h $__kobj/build || ln -s . $__kobj/build
 
 	cd $__dpdk_src
-	$__meson_dir/meson.py -Dkernel_dir=$__kobj -Dexamples=l2fwd,l3fwd build || \
+	$__meson_dir/meson.py -Dkernel_dir=$__kobj -Denable_kmods=true build || \
 		die "Meson config failed"
 
 	cd $__dpdk_src/build

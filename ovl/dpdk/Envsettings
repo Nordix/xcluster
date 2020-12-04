@@ -1,4 +1,4 @@
-test -n "$__kver" || export __kver=linux-5.8.1
+#! /bin/sh
 
 # Dpdk uses extended instructions. Don't know which so turn on all;
 export __kvm_opt='-object rng-random,filename=/dev/urandom,id=rng0 -device virtio-rng-pci,rng=rng0,max-bytes=1024,period=80000 -cpu host'
@@ -6,3 +6,4 @@ export __kvm_opt='-object rng-random,filename=/dev/urandom,id=rng0 -device virti
 eval $(./dpdk.sh env | grep __dpdk_src)
 export __dpdk_src
 export PKG_CONFIG_PATH=$__dpdk_src/build/sys/usr/local/lib/x86_64-linux-gnu/pkgconfig
+unset __mem __mem201 __mem202 __mem203 __mem1

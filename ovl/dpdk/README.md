@@ -20,59 +20,89 @@ May or may not be useful, in no particular order;
 ## Usage
 
 A dpdk built for an xcluster kernel must be used. This is described in
-the "Build" chapter below. But for the normal user a pre-packed
-ovl/dpdk and kernel can be downloaded.
+the "Build" chapter below. But for basic experiments user a pre-packed
+ovl/dpdk can be downloaded to the xcluster cache.
 
 Prepare;
 ```
 cdo dpdk
-. ./Envsettings    # (use kernel linux-5.8.1)
+. ./Envsettings
 ./dpdk.sh download_cache
-./dpdk.sh download_kernel
+# Or build the kernel and DPDK locally as described below
 ```
 
-Then;
-
+Basic test;
 ```
 #sudo apt install -y hugeadm # (if needed)
 cdo dpdk
 . ./Envsettings
-./dpdk.sh test start > $log
-# On vm 201
-modprobe igb_uio
-modprobe rte_kni
-dpdk-testpmd -l 0-1 -n 2 --vdev=eth_af_packet0,iface=eth2 -- \
+./dpdk.sh test start_basic > $log
+# On vm-001
+dpdk-testpmd -l 0-1 -n 2 --vdev=eth_af_packet0,iface=eth1 -- \
   -i --total-num-mbufs=16384
-# Or
-dpdk-testpmd -l 0-1 -n 2 --vdev=net_pcap0,iface=eth2 \
-  --huge-dir=/dev/hugepages -- -i --total-num-mbufs=16384
-# Or
-dpdk-l2fwd -l 0-1 -n 2 --vdev=eth_af_packet0,iface=eth2 \
-  --vdev=eth_af_packet1,iface=eth1 --huge-dir=/dev/hugepages -- -p 3
 ```
 
+### Traffic tests with dpdk-testpmd
 
-## Build
+The `dpdk-testpmd` is used to verify that DPDK works. Two traffic
+cases are tested;
 
-The LTS (Long Term Stable) version is used;
+<img src="basic-test.svg" alt="basic test setup" width="95%" />
+
+First we test traffic that is just looped over the same interface.
+
+```
+# On vm-001;
+dpdk-testpmd -l 0-1 -n 2 \
+ --vdev=eth_af_packet0,iface=eth1 -- \
+ -i --total-num-mbufs=16384 --eth-peer=0,00:00:00:01:01:02
+set fwd macswap
+start
+# On vm-002;
+dpdk-testpmd -l 0-1 -n 2 \
+ --vdev=eth_af_packet0,iface=eth1 -- \
+ -i --total-num-mbufs=16384 --eth-peer=0,00:00:00:01:01:01
+set fwd macswap
+start tx_first
+# Wait a while, then do "stop" in both testpmd's and check statistics
+```
+
+In the second case traffic is forwarded between two interfaces.
+
+```
+# On vm-001;
+dpdk-testpmd -l 0-1 -n 2 \
+ --vdev=eth_af_packet0,iface=eth1 --vdev=eth_af_packet1,iface=eth2 -- \
+ -i --total-num-mbufs=16384 --eth-peer=0,00:00:00:01:01:02 --eth-peer=1,00:00:00:01:02:02
+set fwd mac
+start
+# On vm-002;
+dpdk-testpmd -l 0-1 -n 2 \
+ --vdev=eth_af_packet0,iface=eth1 --vdev=eth_af_packet1,iface=eth2 -- \
+ -i --total-num-mbufs=16384 --eth-peer=0,00:00:00:01:01:01 --eth-peer=1,00:00:00:01:02:01
+set fwd mac
+start tx_first
+# Wait a while, then do "stop" in both testpmd's and check statistics
+```
+
+## Build dpdk
+
+The latest LTS (Long Term Stable) version is used, at the moment 20.11;
 
 ```
 cdo dpdk
 . ./Envsettings
 ./dpdk.sh env | grep -E 'dpdk_ver|kver'
-__dpdk_ver='19.11.5'
-__kver='linux-5.8.1'
+__dpdk_ver='20.11'
 ```
-
-The current version (19.11.5) does not build with linux-5.9.1 which is
-the current default for xcluster so the kernel version is set to linux-5.8.1.
 
 To build dpdk a locally built kernel must be used;
 
 ```
 cdo dpdk
-. ./Envsettings    # (use kernel linux-5.8.1)
-curl -L https://mirrors.edge.kernel.org/pub/linux/kernel/v5.x/linux-5.8.1.tar.xz > $ARCHIVE/linux-5.8.1.tar.xz
+. ./Envsettings
+eval $($XCLUSTER env | grep __kver)
+curl -L https://mirrors.edge.kernel.org/pub/linux/kernel/v5.x/$__kver.tar.xz > $ARCHIVE/$__kver.tar.xz
 mkdir -p $HOME/bin $HOME/tmp/linux
 xc kernel_build
 ```
@@ -87,18 +117,34 @@ Dpdk build uses meson/ninja so these tools may have to be
 installed. Then build;
 
 ```
-#sudo apt install -y meson
+#sudo apt install -y meson  # Too old!
 ./dpdk.sh install_meson
+./dpdk.sh download
+./dpdk.sh unpack
+./dpdk.sh build
+# Installed in $__dpdk_src/build/sys
+```
+
+### Build older dpdk versions
+
+DPDK is kernel dependent so an older kernel must be used. The build
+system for DPDK is changed from "make" to "meson/ninja" in 19.11.x
+which supports both. 20.11 has only support for "meson/ninja" and
+17.11.x has only support for "make".
+
+19.11.x;
+```
+cdo dpdk
+export __dpdk_ver=19.11.5
+export __kver=linux-5.8.1
+. ./Envsettings
+# Download and build the kernel if necessary
 ./dpdk.sh download
 ./dpdk.sh unpack
 ./dpdk.sh build
 ```
 
-### Build older dpdk versions
-
-DPDK is kernel dependent so an older kernel must be used. Older dpdk
-uses an older SDK so `dpdk.sh make` must be used.
-
+17.11.x;
 ```
 cdo dpdk
 export __dpdk_ver=17.11.10
@@ -107,42 +153,74 @@ export __kver=linux-5.4.35
 # Download and build the kernel if necessary
 ./dpdk.sh download
 ./dpdk.sh unpack
-./dpdk.sh make
+./dpdk.sh make  # Not "build"!
+# Installed in $__dpdk_src/sys  (different from build!)
 ```
 
-
 Remember to remove the cached ovl/dpdk if you want to use your local build.
+
+```
+xc cache --list
+rm ...
+```
 
 
 ## Build own applications
 
-As part of the build dpdk is installed and the SDK can be used to
-build your own dpdk programs. An example `Makefile` is provided that
-builds some dpdk examples;
+Prerequisite; DPDK is built locally.
+
+As mentioned the DPDK build system has changed in 19.11.x. We start
+with the newer.
+
+To build a DPDK application set compile and link flags with
+`pkg-config`.
 
 ```
-cdo dpdk
-. ./Envsettings
-eval $(./dpdk.sh env | grep __dpdk_src)
-export __dpdk_src
-make -f src/Makefile
-ls /tmp/tmp/$USER/dpdk
+pkg-config --cflags libdpdk
+pkg-config --libs libdpdk
+pkg-config --static --libs libdpdk
 ```
 
-Copy the Makefile and modify it for your needs and, if needed, copy
-the dpdk SDK from `$__dpdk_src/build/sys`.
-
-You must copy the used dpdk lib's to the xcluster ovl;
+A generic Makefile is provided that can be used to build applications
+contained in one directly like the dpdk examples.
 
 ```
-./dpdk.sh libs /tmp/tmp/$USER/dpdk/*
+make -j$(nproc) -f src/Makefile DIR=$__dpdk_src/examples/l3fwd DST=/tmp
+ls -l /tmp/l3fwd
 ```
 
-See an example in the "tar" script.
+You must copy the dpdk lib's that your application uses to your
+xcluster ovl;
+
+```
+./dpdk.sh libs /tmp/l3fwd
+```
+
+### Build older applications
+
+Many DPDK applications uses the old build system. Here the
+[glb-director](https://github.com/github/glb-director) is taken as an
+example.
+
+Prerequisite; DPDK 17.11.10 is built locally and used.
+
+```bash
+# Clone the glb-director and cd to <src-dir>/src/glb-director
+export RTE_SDK=$__dpdk_src/sys/share/dpdk
+eval $($XCLUSTER env | grep __kobj)
+export RTE_KERNELDIR=$__kobj
+#sed -i -e 's,9220,2220,' -e 's,8192 \* 8,8192 \* 2,' config.h
+make -j$(nproc) RTE_TARGET=x86_64-native-linuxapp-gcc
+cd cli
+make glb-director-cli
+```
+
+(the `sed` reduces memory requirement to fit into xcluster)
 
 
 ## Other info and commands
 
+In no particular order;
 ```
 lshw -class network -businfo
 # json output is broken for "-class network"
@@ -153,4 +231,5 @@ cat /proc/meminfo | grep Huge
 sysctl vm.nr_hugepages
 ls /dev/hugepages
 ```
+
 
