@@ -7,54 +7,40 @@ in xcluster.
 
 ## Usage
 
-A [Private registry](../private-reg) is assumed (but not required).
+A [Private registry](../private-reg) is assumed.
 
 Pre-load images;
 ```
 ver=master
 # NSM;
 images lreg_cache docker.io/networkservicemesh/admission-webhook:$ver
-images lreg_cache docker.io/networkservicemesh/vppagent-dataplane:$ver
+images lreg_cache docker.io/networkservicemesh/vppagent-forwarder:$ver
+images lreg_cache docker.io/networkservicemesh/prefix-service:$ver
 images lreg_cache docker.io/networkservicemesh/nsmdp:$ver
 images lreg_cache docker.io/networkservicemesh/nsmd:$ver
 images lreg_cache docker.io/networkservicemesh/nsmd-k8s:$ver
-images lreg_cache docker.io/networkservicemesh/spire-registration:$ver
 images lreg_cache gcr.io/spiffe-io/wait-for-it:latest
-images lreg_cache docker.io/lobkovilya/spire-agent:kind
-images lreg_cache gcr.io/spiffe-io/spire-agent:0.8.0
+images lreg_cache gcr.io/spiffe-io/spire-server:0.11.0
+images lreg_cache gcr.io/spiffe-io/spire-agent:0.11.0
 # Needed for icmp-responder test;
+images lreg_cache docker.io/networkservicemesh/nsm-dns-init:$ver
 images lreg_cache docker.io/networkservicemesh/nsm-init:$ver
-images lreg_cache docker.io/networkservicemesh/nsm-coredns:$ver
+images lreg_cache docker.io/networkservicemesh/coredns:$ver
 images lreg_cache docker.io/networkservicemesh/nsm-monitor:$ver
 images lreg_cache docker.io/networkservicemesh/test-common:$ver
 images lreg_cache docker.io/networkservicemesh/vpp-test-common:$ver
 images lreg_cache docker.io/alpine:latest
 ```
 
-Manual start;
-```
-export __mem1=2048
-export __mem=1536
-xc mkcdrom nsm private-reg; xc starts
-cd $GOPATH/src/github.com/networkservicemesh/networkservicemesh
-helm install --generate-name --set spire.enable=false --set insecure=true deployments/helm/nsm
-kubectl get pods   # Wait until the "nsmgr" pods are ready, 3/3
-helm install --generate-name deployments/helm/icmp-responder
-NSM_NAMESPACE=default ./scripts/nsc_ping_all.sh
-kubectl get pods   # Wait until the "alpine-nsc" pods are ready, 3/3
-NSM_NAMESPACE=default ./scripts/nsc_ping_all.sh
-```
 
-Start with the test-system;
+Start;
 ```
-export __mem1=2048
-export __mem=1536
-XOVLS=private-reg ./nsm.sh test --mode=dual-stack start
+log=/tmp/$USER/xcluster/test.log
+xcadmin  k8s_test nsm start > $log
 # Now NSM is up and ready.
 cd $GOPATH/src/github.com/networkservicemesh/networkservicemesh
-helm install deployments/helm/icmp-responder --generate-name
-kubectl get pods   # Wait until the "alpine-nsc" pods are ready, 3/3
-NSM_NAMESPACE=default ./scripts/nsc_ping_all.sh
+helm install deployments/helm/vpp-icmp-responder --generate-name
+helm install deployments/helm/client --generate-name
 ```
 
 ## Automatic testing

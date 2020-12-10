@@ -100,13 +100,15 @@ test_bridge_domain_ipv4() {
 }
 
 test_start() {
+	export __mem1=2048
+	export __mem=1536
 	test -n "$__mode" || __mode=dual-stack
-    xcluster_prep $__mode
-    xcluster_start nsm
+	xcluster_prep $__mode
+	xcluster_start nsm
 
-    otc 1 check_namespaces
-    otc 1 check_nodes
-    otc 2 check_coredns
+	otc 1 check_namespaces
+	otc 1 check_nodes
+	otc 2 check_coredns
 
 	tcase_helm_start
 	otc 2 check_nsm
@@ -142,6 +144,7 @@ bridge_domain() {
 tcase_helm_start() {
 	test -n "$__tag" || __tag=master
 	tcase "Start NSM using helm (tag=$__tag)"
+	kubectl create namespace spire
 	cd $GOPATH/src/github.com/networkservicemesh/networkservicemesh
 	helm install --generate-name --set tag=$__tag \
 		--set spire.enable=false --set insecure=true deployments/helm/nsm || tdie
