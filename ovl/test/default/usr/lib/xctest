@@ -307,15 +307,23 @@ start_mconnect() {
 }
 
 ##  check_mconnect_result <file.json>
-##    Check the result of an "mconnect". The number of connections must be 100.
+##    Check the result of an "mconnect". The number of connections must be 100
+##    and the number of targets 4.
 ##
 check_mconnect_result() {
 	cat $1 | jq .
 	local v i=0
+	local max=36
+	local min=14
+	if test "$PROXY_MODE" != "ipvs"; then
+		# Handle lousy iptables distribution
+		max=50
+		min=8
+	fi
 	for v in $(cat $1 | jq -r '.hosts|flatten[]'); do
 		i=$((i + 1))
-		test $v -le 36 || return 1
-		test $v -ge 14 || return 1
+		test $v -le $max || return 1
+		test $v -ge $min || return 1
 	done
 	test $i -eq 4
 }
