@@ -28,21 +28,21 @@ data:
     kind: Config
     clusterCIDR: "11.0.0.0/16"
     clusters:
-    - name: cluster
-      cluster:
-        certificate-authority: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
-        server: http://192.168.1.1:8080
-    users:
-    - name: kube-router
-      user:
-        tokenFile: /var/run/secrets/kubernetes.io/serviceaccount/token
+    - cluster:
+        insecure-skip-tls-verify: true
+        server: https://192.168.1.1:6443
+      name: xcluster
     contexts:
     - context:
-        cluster: cluster
-        user: kube-router
-      name: kube-router-context
-    current-context: kube-router-context
-
+        cluster: xcluster
+        user: root
+      name: xcluster
+    current-context: xcluster
+    preferences: {}
+    users:
+    - name: root
+      user:
+        token: kallekula
 ---
 apiVersion: apps/v1
 kind: DaemonSet

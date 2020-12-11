@@ -7,10 +7,12 @@
 
 ```
 curl -L https://raw.githubusercontent.com/cloudnativelabs/kube-router/master/daemonset/generic-kuberouter-all-features.yaml > generic-kuberouter-all-features.yaml
-sed -e 's,%CLUSTERCIDR%,11.0.0.0/16,' -e 's,%APISERVER%,http://192.168.1.1:8080,' < generic-kuberouter-all-features.yaml > ipv4/etc/kubernetes/load/kuberouter.yaml
-vi ipv4/etc/kubernetes/load/kuberouter.yaml # Set version v1.0.0
+sed -e 's,%CLUSTERCIDR%,11.0.0.0/16,' < generic-kuberouter-all-features.yaml > ipv4/etc/kubernetes/load/kuberouter.yaml
+vi ipv4/etc/kubernetes/load/kuberouter.yaml
+# Set version v1.1.0
+# Alter kubeconfig to mimic ../kubernetes/default/etc/kubernetes/kubeconfig.token
 k8s checkimages k8s-cni-kube-router
-images lreg_cache docker.io/cloudnativelabs/kube-router:v1.0.0
+images lreg_cache docker.io/cloudnativelabs/kube-router:v1.1.0
 ```
 
 

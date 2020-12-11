@@ -24,3 +24,4 @@ done
 EOF
 chmod a+x /bin/kube-proxy
 
+sysctl -w net.bridge.bridge-nf-call-iptables=1
