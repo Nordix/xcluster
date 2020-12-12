@@ -20,7 +20,7 @@ meld weave-orig.yaml ipv4/etc/kubernetes/load/weave.yaml
 ```
 
 ```
-ver=2.6.2
+ver=2.7.0
 images lreg_cache docker.io/weaveworks/weave-kube:$ver
 images lreg_cache docker.io/weaveworks/weave-npc:$ver
 ```
