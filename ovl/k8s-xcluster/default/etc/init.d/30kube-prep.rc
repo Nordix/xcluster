@@ -22,6 +22,7 @@ printf '35f15062-7e2b-11e9-b640-0000000100%02x\n' $i > /etc/machine-id
 if test -n "$PROXY_MODE" -a "$PROXY_MODE" != "ipvs"; then
    sed -i -e "s,mode: \"ipvs\",mode: \"$PROXY_MODE\"," /etc/kubernetes/kube-proxy.config
    ip6tables -t nat -N KUBE-MARK-DROP
+   iptables -t nat -N KUBE-MARK-DROP
 fi
 
 # The tailing ':' makes sure this doesn't match an ipv6 address
