@@ -17,9 +17,10 @@ SETUP=ipv4 xc mkcdrom k8s-cni-cilium private-reg; xc starts
 
 Upgrade
 ```
-ver=1.8.2
+ver=1.8.6
 curl https://raw.githubusercontent.com/cilium/cilium/$ver/install/kubernetes/quick-install.yaml > quick-install-$ver.yaml
 meld quick-install.yaml default/etc/kubernetes/load/quick-install.yaml &
+meld quick-install-$ver.yaml default/etc/kubernetes/load/quick-install.yaml &
 cp quick-install-$ver.yaml quick-install-$ver-mod.yaml
 # Modify quick-install-$ver-mod.yaml
 cp quick-install-$ver-mod.yaml default/etc/kubernetes/load/quick-install.yaml
@@ -31,7 +32,8 @@ images lreg_missingimages default
 ```
 mkdir -p $GOPATH/src/github.com/cilium
 cd $GOPATH/src/github.com/cilium
-git clone --depth 1 https://github.com/cilium/cilium.git
+rm -rf cilium
+git clone --depth 1 -b v1.8 https://github.com/cilium/cilium.git
 cd $GOPATH/src/github.com/cilium/cilium/install/kubernetes
 helm template cilium \
   --namespace kube-system \

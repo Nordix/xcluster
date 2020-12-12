@@ -113,11 +113,10 @@ data:
   node-port-bind-protection: "true"
   enable-auto-protect-node-port-range: "true"
   enable-session-affinity: "true"
-  k8s-require-ipv4-pod-cidr: "true"
-  k8s-require-ipv6-pod-cidr: "false"
   enable-endpoint-health-checking: "true"
   enable-well-known-identities: "false"
   enable-remote-node-identity: "true"
+  enable-api-rate-limit: "false"
   operator-api-serve-addr: "127.0.0.1:9234"
   ipam: "kubernetes"
   disable-cnp-status-updates: "true"
@@ -160,6 +159,16 @@ rules:
   - ""
   resources:
   - pods
+  - pods/finalizers
+  verbs:
+  - get
+  - list
+  - watch
+  - update
+  - delete
+- apiGroups:
+  - ""
+  resources:
   - nodes
   verbs:
   - get
@@ -188,15 +197,20 @@ rules:
   resources:
   - ciliumnetworkpolicies
   - ciliumnetworkpolicies/status
+  - ciliumnetworkpolicies/finalizers
   - ciliumclusterwidenetworkpolicies
   - ciliumclusterwidenetworkpolicies/status
+  - ciliumclusterwidenetworkpolicies/finalizers
   - ciliumendpoints
   - ciliumendpoints/status
+  - ciliumendpoints/finalizers
   - ciliumnodes
   - ciliumnodes/status
+  - ciliumnodes/finalizers
   - ciliumidentities
 # deprecated remove in v1.9
   - ciliumidentities/status
+  - ciliumidentities/finalizers
   verbs:
   - '*'
 ---
@@ -242,14 +256,19 @@ rules:
   resources:
   - ciliumnetworkpolicies
   - ciliumnetworkpolicies/status
+  - ciliumnetworkpolicies/finalizers
   - ciliumclusterwidenetworkpolicies
   - ciliumclusterwidenetworkpolicies/status
+  - ciliumclusterwidenetworkpolicies/finalizers
   - ciliumendpoints
   - ciliumendpoints/status
+  - ciliumendpoints/finalizers
   - ciliumnodes
   - ciliumnodes/status
+  - ciliumnodes/finalizers
   - ciliumidentities
   - ciliumidentities/status
+  - ciliumidentities/finalizers
   verbs:
   - '*'
 - apiGroups:
@@ -416,7 +435,7 @@ spec:
           value: "192.168.1.1"
         - name: KUBERNETES_SERVICE_PORT
           value: "6443"
-        image: "docker.io/cilium/cilium:v1.8.4"
+        image: "quay.io/cilium/cilium:v1.8.6"
         imagePullPolicy: IfNotPresent
         lifecycle:
           postStart:
@@ -479,7 +498,7 @@ spec:
               key: wait-bpf-mount
               name: cilium-config
               optional: true
-        image: "docker.io/cilium/cilium:v1.8.4"
+        image: "quay.io/cilium/cilium:v1.8.6"
         imagePullPolicy: IfNotPresent
         name: clean-cilium-state
         securityContext:
@@ -632,7 +651,7 @@ spec:
               key: AWS_DEFAULT_REGION
               name: cilium-aws
               optional: true
-        image: "docker.io/cilium/operator-generic:v1.8.4"
+        image: "quay.io/cilium/operator-generic:v1.8.6"
         imagePullPolicy: IfNotPresent
         name: cilium-operator
         livenessProbe:
