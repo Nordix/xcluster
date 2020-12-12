@@ -24,9 +24,12 @@ if test -n "$PROXY_MODE" -a "$PROXY_MODE" != "ipvs"; then
 fi
 
 # The tailing ':' makes sure this doesn't match an ipv6 address
-test -n "$IPV6_PREFIX" && \
+if test -n "$IPV6_PREFIX"; then
 	sed -i -e "s,192.168.1.1:,[${IPV6_PREFIX}192.168.1.1]:," \
-	/etc/kubernetes/kubeconfig
+		/etc/kubernetes/kubeconfig
+	sed -i -e "s,192.168.1.1:,[${IPV6_PREFIX}192.168.1.1]:," \
+		/etc/kubernetes/kubeconfig.token
+fi
 
 # Work around for bad install of dropbear
 test -r /usr/bin/dbclient || ln /bin/dbclient /usr/bin/dbclient
