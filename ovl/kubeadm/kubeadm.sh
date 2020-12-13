@@ -167,7 +167,7 @@ test_mserver() {
 	push __no_stop yes
 	test_install mserver mconnect
 	pop __no_stop
-	subtest mserver basic_dual
+	subtest mserver basic
 }
 
 test_mserver4() {
@@ -182,7 +182,7 @@ subtest() {
 	shift
 	local x=$($XCLUSTER ovld $ovl)/${ovl}.sh
 	test -x $x || tdie "Not executable [$x]"
-	$x test --cluster-domain=cluster.local --no-start --no-stop=$__no_stop $@
+	$x test --cluster-domain=cluster.local --no-start --no-stop=$__no_stop $@ || tdie
 }
 
 ##   cache_images
