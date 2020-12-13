@@ -120,6 +120,12 @@ cmd_tcase_masquerade() {
 	iptables -t nat -I POSTROUTING 1 -s 11.0.0.0/16 ! -d 11.0.0.0/16 -j MASQUERADE
 	ip6tables -t nat -I POSTROUTING 1 -s 1000::2:11.0.0.0/112 ! -d 1000::2:11.0.0.0/112 -j MASQUERADE
 }
+cmd_tcase_get_kubeconfig() {
+	tcase "Get kubeconfig"
+	test -r $KUBECONFIG && return 0
+	dbclient -y -y 192.168.1.1 cat /etc/kubernetes/admin.conf > $KUBECONFIG 2> /dev/null
+}
+
 
 . /etc/profile
 . /usr/lib/xctest

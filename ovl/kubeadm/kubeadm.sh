@@ -116,11 +116,13 @@ test_install() {
 	for i in $(seq 2 $__nvm); do
 		otc $i join
 		otc $i coredns_k8s
+		otc $i get_kubeconfig
 	done
 
 	otc 1 "check_nodes $__nvm"
 	otc 1 check_nodes_ready
 	otc 1 untaint_master
+	otcr get_kubeconfig
 
 	xcluster_stop
 }
@@ -139,12 +141,14 @@ test_install_ipv4() {
 	for i in $(seq 2 $__nvm); do
 		otc $i join
 		otc $i coredns_k8s
+		otc $i get_kubeconfig
 	done
 
 	otc 1 "check_nodes $__nvm"
 	otc 1 check_nodes_ready
 	otc 1 untaint_master
-
+	otcr get_kubeconfig
+	
 	xcluster_stop
 }
 
