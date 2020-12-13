@@ -51,7 +51,8 @@ cmd_env() {
 	test -n "$XCLUSTER" || die 'Not set [$XCLUSTER]'
 	test -x "$XCLUSTER" || die "Not executable [$XCLUSTER]"
 	eval $($XCLUSTER env)
-	export KUBERNETESD=$HOME/tmp/kubernetes/kubernetes-$__k8sver/server/bin	
+	test -n "$KUBERNETESD" || \
+		export KUBERNETESD=$HOME/tmp/kubernetes/kubernetes-$__k8sver/server/bin	
 	kubeadm=$KUBERNETESD/kubeadm
 	test -x $kubeadm || tdie "Not executable [$kubeadm]"
 }
