@@ -90,7 +90,7 @@ test_start() {
 	otc 202 set_vip_routes
 	otc 1 start_servers
 	otc 1 check_servers
-	otc 1 check_metric_server
+	#otc 1 check_metric_server (does not always work, e.g with kubeadm or cilum)
 }
 
 test_basic4() {
