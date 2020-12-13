@@ -152,7 +152,8 @@ test_test_template() {
 	push __no_stop yes
 	test_install test-template mconnect
 	pop __no_stop
-	subtest test-template basic_dual
+	otcw masquerade
+	subtest test-template basic
 }
 
 test_test_template4() {
