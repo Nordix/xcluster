@@ -95,7 +95,7 @@ data:
   #   - disabled
   #   - vxlan (default)
   #   - geneve
-  tunnel: vxlan
+  tunnel: disabled
 
   # Name of the cluster. Only relevant when building a mesh of clusters.
   cluster-name: default
