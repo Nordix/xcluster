@@ -10,6 +10,7 @@ prg=$(basename $0)
 dir=$(dirname $0); dir=$(readlink -f $dir)
 tmp=/tmp/${prg}_$$
 . /etc/profile
+test -n "$KUBECONFIG" || KUBECONFIG=/etc/kubernetes/kubeconfig.token
 export KUBECONFIG
 
 die() {
