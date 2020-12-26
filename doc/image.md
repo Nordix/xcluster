@@ -3,9 +3,10 @@
 Describes howto alter the `xcluster` kernel and disk image.
 
 The `xcluster` disk image is shared by all VMs. It is not bootable
-instead `kvm` is started with the "-kernel bzImage" option. This is
-simpler and it also allows parametes to the kernel to be specified
-which can be accessed via `/proc/cmdline` from within the VMs.
+instead `kvm` is started with the "-kernel bzImage" option. This makes
+it possible to select different kernels and it also allows parametes
+to the kernel to be specified which can be accessed via
+`/proc/cmdline` from within the VMs.
 
 ## Diskim
 
@@ -55,18 +56,16 @@ start with systemd.
 
 ## Kernel
 
-Since the kernel modules has to be installed on the disk image there
-is a dependency from the image to the kernel. The kernel must be build
-before you can create a new image.
-
 Prerequisite; `diskim` is installed.
+
+Download the kernel from https://www.kernel.org/ to $ARCHIVE (default
+$HOME/Downloads), then;
 
 ```
 xc kernel_build
 ```
 
-This downloads the kernel and unpack it on $ARCHIVE (default
-$HOME/Downloads).
+The kernel modules are included in the bzImage in an "init ramfs".
 
 ### Alter the kernel config
 
@@ -77,9 +76,9 @@ xc kernel_build --menuconfig
 ### New kernel
 
 ```
-export __kver=linux-4.18.11
+export __kver=linux-5.10.1
 export __kcfg=$MY_CONFIGS/$__kver
-cp config/linux-4.18.5 $__kcfg
+cp config/linux-5.9.1 $__kcfg
 xc kernel_build --menuconfig
 ```
 

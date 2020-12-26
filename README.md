@@ -32,7 +32,7 @@ vm-250 -          Reserved
  * [Quick Start](#quick-start)
  * [100 VMs](doc/100nodes.md)
  * [Troubleshooting](doc/troubleshooting.md)
- * [Misc info](doc/misc.md). Prettiy xterms, use master-branch, and more...
+ * [Misc info](doc/misc.md). Prettify xterms, use master-branch, and more...
  * [Networking](doc/networking.md). Default network and DNS setup.
  * [Network name space](doc/netns.md). Setup a netns for running `xcluster`.
  * [Overlays](doc/overlays.md). How they work and how they are created
@@ -66,15 +66,16 @@ sw to running VMs, e.g. with `ssh`.  [read more](doc/overlays.md).
 
 ### Execution environment and dependencies
 
-`Xcluster` is developed on `Ubuntu 18.04.1 LTS`. It seems to work fine
-also on Ubuntu 16.04 LTS but it will probably not work on other
-distributions (mainly due to variations in libs). Xcluster can be
-started on [Fedora](doc/fedora.md) but this environment is not
-maintained. If you run on another distribution than Ubuntu 18.04 you
-*may* run into problems with pre-built images and cached overlays from
-the binary release when you add own programs (because of library
-version probems). In that case there may be no other option than to
-rebuild all images and overlays locally [from scratch](doc/build.md).
+`Xcluster` is developed on `Ubuntu 18.04.1 LTS` and `Ubuntu 20.04.1 LTS`.
+It seems to work fine also on Ubuntu 16.04 LTS but it will probably
+not work on other distributions (mainly due to variations in
+libs). Xcluster can be started on [Fedora](doc/fedora.md) but this
+environment is not maintained. If you run on another distribution than
+Ubuntu 18.04 you *may* run into problems with pre-built images and
+cached overlays from the binary release when you add own programs
+(because of library version probems). In that case there may be no
+other option than to rebuild all images and overlays locally [from
+scratch](doc/build.md).
 
 First you must be able to run a `kvm`;
 ```
@@ -145,7 +146,7 @@ want something better.
 
 Verify that `kvm` is installed and can be used and install
 dependencies if necessary (see
-[above](#execution-environment-and-dependencies);
+[above](#execution-environment-and-dependencies));
 
 ```
 kvm-ok
@@ -168,16 +169,16 @@ vm 2     # Opens a terminal on vm-002
 
 # In the terminal (on cluster) test things, for example;
 kubectl get nodes  # (may take ~10 sec to appear)
+kubectl version --short
 kubectl get node vm-002 -o json | jq .spec   # "podCIDRs" is dual-stack
 nslookup www.google.se   # (doesn't work? See below)
 wget -O /dev/null http://www.google.se # (doesn't work? See below)
 # Traffic test with mconnect
-kubectl apply -f /etc/kubernetes/mconnect-dual.yaml # (image is pre-pulled)
+kubectl apply -f /etc/kubernetes/mconnect/mconnect.yaml # (image is pre-pulled)
 kubectl get svc
-assign-lb-ip -svc mconnect-ipv4; assign-lb-ip -svc mconnect-ipv6
+assign-lb-ip -svc mconnect-lb -ip 10.0.0.0
 kubectl get svc
-mconnect -address mconnect-ipv4.default.svc.xcluster:5001 -nconn 100
-mconnect -address mconnect-ipv6.default.svc.xcluster:5001 -nconn 100
+mconnect -address mconnect.default.svc.xcluster:5001 -nconn 100
 ```
 
 No xterms? Start with "xtermopt=-hold xc start" to keep the window.
@@ -193,7 +194,7 @@ loaded from external sites (docker.io).
 Run a test-suite;
 ```
 log=/tmp/$USER-xcluster.log
-./xcadmin.sh k8s_test test-template basic > $log
+xcadmin k8s_test test-template basic > $log
 ```
 
 Suggested reading;
