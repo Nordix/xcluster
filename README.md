@@ -71,7 +71,7 @@ It seems to work fine also on Ubuntu 16.04 LTS but it will probably
 not work on other distributions (mainly due to variations in
 libs). Xcluster can be started on [Fedora](doc/fedora.md) but this
 environment is not maintained. If you run on another distribution than
-Ubuntu 18.04 you *may* run into problems with pre-built images and
+Ubuntu 20.04 you *may* run into problems with pre-built images and
 cached overlays from the binary release when you add own programs
 (because of library version probems). In that case there may be no
 other option than to rebuild all images and overlays locally [from
