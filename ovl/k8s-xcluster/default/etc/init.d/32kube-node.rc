@@ -13,6 +13,7 @@ i=$(hostname | cut -d- -f2 | sed -re 's,^0+,,')
 test $i -le 200 || exit 0
 test $i -eq 1 && exit 0
 test -n "$DOMAIN" || DOMAIN=xcluster
+test -n "$FEATURE_GATES" || FEATURE_GATES=IPv6DualStack=true
 
 ANY_ADDR=0.0.0.0
 if test -n "$IPV6_PREFIX"; then
@@ -28,7 +29,7 @@ test -r /etc/cri-plugin.rc && . /etc/cri-plugin.rc
 run_kubelet() {
 	kubelet --address=$ANY_ADDR \
 		--node-ip=${IPV6_PREFIX}192.168.1.$i $CRI_OPTS \
-		--feature-gates IPv6DualStack=true \
+		--feature-gates $FEATURE_GATES \
 		--register-node=true --kubeconfig $KUBECONFIG \
 		--network-plugin=cni \
 		--cluster-dns=${IPV6_PREFIX}192.168.1.$i --cluster-domain=$DOMAIN \

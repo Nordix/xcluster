@@ -68,3 +68,6 @@ if kubectl version --short --client | grep -q v1.2; then
 	grep -q API_FLAGS /etc/profile || \
 		echo "API_FLAGS='--service-account-signing-key-file=$key --service-account-issuer=Nemo --service-account-key-file=$key'" >> /etc/profile
 fi
+
+test -n "$FEATURE_GATES" || \
+	echo "FEATURE_GATES=IPv6DualStack=true,EphemeralContainers=true" >> /etc/profile

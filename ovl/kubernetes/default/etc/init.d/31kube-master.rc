@@ -14,8 +14,7 @@ i=$(hostname | cut -d- -f2 | sed -re 's,^0+,,')
 test $i -eq 1 || exit 0
 
 . /etc/profile
-test -n "$FEATURE_GATES" || FEATURE_GATES=IPv6DualStack=true,SCTPSupport=true
-
+test -n "$FEATURE_GATES" || FEATURE_GATES=IPv6DualStack=true
 
 CLUSTER_CIDR=11.0.0.0/16,1100::/48
 SERVICE_RANGE=12.0.0.0/16,fd00:4000::/112
