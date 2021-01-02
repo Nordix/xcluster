@@ -15,8 +15,6 @@ test -n "$DOMAIN" || DOMAIN=xcluster
 test -n "$KUBECONFIG" || KUBECONFIG=/etc/kubernetes/kubeconfig.token
 
 if grep -q 'token:' $KUBECONFIG; then
-	sed -i -e "s,/etc/kubernetes/kubeconfig,$KUBECONFIG," \
-		/etc/kubernetes/kube-proxy.config
 	cat > /etc/Corefile <<EOF
 .:53 {
     kubernetes $DOMAIN {
