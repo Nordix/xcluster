@@ -1,8 +1,8 @@
 # Xcluster ovl - timezone
 
 The timezone in `xcluster` is specified in `/etc/TZ` file on the
-VMs. The entire timezone data-base is not installed (of course) so the
-user friendly way, for instance `Pacific/Auckland` can **not** be
+VMs. The entire timezone data-base is not installed so the user
+friendly way, for instance `Pacific/Auckland` can **not** be
 used. Instead the more basic format must be used. Please read;
 
 ```
@@ -18,8 +18,7 @@ CET-1CEST-2,M3.5.0,M10.5.0/3
 ## Usage
 
 Copy the `timezone` overlay to some own directory earlier in the
-`$XCLUSTER_OVLPATH`. Then edit the `/etc/TZ` file and include the
-overlay;
+`$XCLUSTER_OVLPATH`. Then edit the `/etc/TZ` file and include ovl/timezone;
 
 ```
 echo "NZST-12:00:00NZDT-13:00:00,M10.1.0,M3.3.0" > \
@@ -37,3 +36,15 @@ wget -O - -q \
 xc ximage timezone
 ```
 
+## Set timezone with an enviroment variable
+
+If ovl/env is included it is possible to set the timezone using the
+`xcluster_TZ` variable;
+
+```
+export xcluster_TZ="NZST-12:00:00NZDT-13:00:00,M10.1.0,M3.3.0"
+xc mkcdrom env; xc start
+```
+
+In this case ovl/timezone can be omitted, the `xcluster_TZ` variable
+has precedence.

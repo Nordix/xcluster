@@ -6,9 +6,15 @@ export PATH
 mkdir -p /var/log/dumps
 echo "/var/log/dumps/core.%e.%p" > /proc/sys/kernel/core_pattern
 
-# Make syslog use local (Swedish/Hungarian) time
-TZ=CET-1CEST-2,M3.5.0,M10.5.0/3
+# Handle time-zone ($TZ)
+# 1. Use ovl/env (xcluster_TZ)
+# 2. Read from /etc/TZ (ovl/timezone)
+# 3. Use Swedish/Hungarian time by default
+test -r /etc/TZ && TZ=$(cat /etc/TZ)
+test -r /etc/xcluster_env && . /etc/xcluster_env
+test -n "$TZ" || TZ=CET-1CEST-2,M3.5.0,M10.5.0/3
 export TZ
+echo $TZ > /etc/TZ
 
 # Start syslog
 klogd -c 4
