@@ -17,8 +17,8 @@ spec:
     spec:
       terminationGracePeriodSeconds: 1
       containers:
-        - image: registry.nordix.org/cloud-native/nsm/nsc:latest
-#          imagePullPolicy: IfNotPresent
+        - image: registry.nordix.org/cloud-native/nsm/cmd-nsc:latest
+          imagePullPolicy: IfNotPresent
           name: nsc
           env:
             - name: NSM_NAME
@@ -29,10 +29,6 @@ spec:
               value: kernel://icmp-responder/nsm-1
             - name: SPIFFE_ENDPOINT_SOCKET
               value: unix:///run/spire/sockets/agent.sock
-            - name: NSC_OLD
-              value: "no"
-            - name: NSC_SERVICE
-              value: "icmp-responder"
           volumeMounts:
             - name: spire-agent-socket
               mountPath: /run/spire/sockets
