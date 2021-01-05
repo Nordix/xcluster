@@ -108,7 +108,6 @@ test_start() {
 
 	otc 1 check_namespaces
 	otc 1 check_nodes
-	otc 2 check_coredns
 
 	tcase_helm_start
 	otc 2 check_nsm
@@ -165,6 +164,29 @@ tcase_nsc_ping_all() {
 	tcase "nsc_ping_all"
 	cd $GOPATH/src/github.com/networkservicemesh/networkservicemesh
 	tex nsc_ping_all_ok || tdie
+}
+
+test_start_base() {
+	test -n "$__mode" || __mode=dual-stack
+	export xcluster___mode=$__mode
+	export __mem1=2048
+	export __mem=1536
+	xcluster_prep $__mode
+	xcluster_start nsm
+
+	otc 1 check_namespaces
+	otc 1 check_nodes
+	otcr vip_routes
+	otc 1 start_spire
+}
+test_start_nextgen() {
+	test_start_base
+	otc 1 start_nsm_next_gen
+}
+test_basic_nextgen() {
+	test_start_nextgen
+	otc 1 icmp
+	xcluster_stop
 }
 
 

@@ -9,6 +9,7 @@
 prg=$(basename $0)
 dir=$(dirname $0); dir=$(readlink -f $dir)
 tmp=/tmp/${prg}_$$
+yamld=/etc/kubernetes/nsm-next-gen
 
 die() {
     echo "ERROR: $*" >&2
@@ -49,9 +50,6 @@ cmd_tcase_check_namespaces() {
 }
 cmd_tcase_check_nodes() {
 	test_nodes
-}
-cmd_tcase_check_coredns() {
-	test_coredns
 }
 
 cmd_tcase_check_nsm() {
@@ -153,6 +151,65 @@ cmd_tcase_bridge_domain_ping_simple_client_ipv6() {
 	done
 	return 0
 }
+
+# ----------------------------------------------------------------------
+# Next-gen
+cmd_tcase_vip_routes() {
+	tcase "Set VIP routes (ECMP)"
+	vip_route
+}
+cmd_tcase_start_spire() {
+	tcase "Start spire"
+
+	$kubectl apply -f $yamld/spire.yaml
+	kubectl="kubectl -n spire"
+	test_daemonset spire-agent 180
+	
+	# https://github.com/networkservicemesh/deployments-k8s#how-to-register-nsm-spire-entry
+	$kubectl exec spire-server-0 -- \
+		/opt/spire/bin/spire-server entry create \
+		-spiffeID spiffe://example.org/ns/spire/sa/spire-agent \
+		-selector k8s_sat:cluster:nsm-cluster \
+		-selector k8s_sat:agent_ns:spire \
+		-selector k8s_sat:agent_sa:spire-agent \
+		-node || tdie
+	$kubectl exec spire-server-0 -- \
+		/opt/spire/bin/spire-server entry create \
+		-spiffeID spiffe://example.org/ns/nsm-system/sa/default \
+		-parentID spiffe://example.org/ns/spire/sa/spire-agent \
+		-selector k8s:ns:nsm-system \
+		-selector k8s:sa:default || tdie	
+	$kubectl exec spire-server-0 -- \
+		/opt/spire/bin/spire-server entry create \
+		-spiffeID spiffe://example.org/ns/nsm-system/sa/default \
+		-parentID spiffe://example.org/ns/spire/sa/spire-agent \
+		-selector k8s:ns:default \
+		-selector k8s:sa:default || tdie
+}
+
+cmd_tcase_start_nsm_next_gen() {
+	test -n "$NSM_FORWARDER" || NSM_FORWARDER=vpp
+	test -n "$NSM_REGISTRY" || NSM_REGISTRY=memory
+	tcase "Start nsm. Forwarder=$NSM_FORWARDER, Registry=$NSM_REGISTRY"
+	kubectl create namespace nsm-system
+	$kubectl apply -f $yamld/registry-$NSM_REGISTRY.yaml
+	$kubectl apply -f $yamld/nsmgr.yaml
+	$kubectl apply -f $yamld/forwarder-$NSM_FORWARDER.yaml
+
+	kubectl="kubectl -n nsm-system"
+	test_daemonset nsmgr 120
+	test_deployment registry-$NSM_REGISTRY 30
+	test_daemonset forwarder-$NSM_FORWARDER 30
+}
+
+cmd_tcase_icmp() {
+	tcase "Start the icmp-responder"
+	$kubectl apply -f $yamld/nse.yaml
+	test_deployment nse 60
+	$kubectl apply -f $yamld/nsc.yaml
+	test_deployment nsc 60
+}
+
 
 
 . /etc/profile

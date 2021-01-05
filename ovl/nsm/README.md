@@ -5,6 +5,40 @@ Network Service Mesh [NSM](https://networkservicemesh.io/)
 in xcluster.
 
 
+## NSM next-generation
+
+This is a Work in Progress. Images are built locally or taken from
+`registry.nordix.org/cloud-native/nsm`. A local registry is required.
+
+Refresh local image cache;
+```
+images lreg_missingimages default/
+for x in cmd-nsmgr cmd-nsc cmd-registry-memory cmd-nse-icmp-responder \
+  cmd-forwarder-vpp; do
+  images lreg_cache registry.nordix.org/cloud-native/nsm/$x:latest
+done
+for x in wait-for-it:latest \
+  spire-agent:0.10.0 spire-server:0.10.0; do
+  images lreg_cache gcr.io/spiffe-io/$x
+done
+```
+
+Usage with the test system;
+```
+log=/tmp/$USER/xcluster.log
+xcadmin k8s_test --no-stop nsm basic_nextgen > $log
+# Login and investigate things, e.g. kubectl logs ...
+```
+
+Build local image;
+```
+x=cmd-nsc
+cd $GOPATH/src/github.com/networkservicemesh/$x
+docker build --target=runtime --tag=registry.nordix.org/cloud-native/nsm/$x:latest .
+images lreg_upload --strip-host registry.nordix.org/cloud-native/nsm/$x:latest
+```
+
+
 ## Usage
 
 A [Private registry](../private-reg) is assumed.

@@ -1,0 +1,49 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: registry-memory
+  namespace: nsm-system
+  labels:
+    app: registry-memory
+spec:
+  selector:
+    matchLabels:
+      app: registry-memory
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: registry-memory
+    spec:
+      containers:
+        - image: registry.nordix.org/cloud-native/nsm/cmd-registry-memory:latest
+          imagePullPolicy: IfNotPresent
+          name: registry-memory
+          ports:
+            - containerPort: 5002
+          env:
+            - name: SPIFFE_ENDPOINT_SOCKET
+              value: unix:///run/spire/sockets/agent.sock
+            - name: REGISTRY_MEMORY_LISTEN_ON
+              value: "tcp://[::]:5002"
+          volumeMounts:
+            - name: spire-agent-socket
+              mountPath: /run/spire/sockets
+              readOnly: true
+      volumes:
+        - name: spire-agent-socket
+          hostPath:
+            path: /run/spire/sockets
+            type: Directory
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nsm-registry-svc
+  namespace: nsm-system
+spec:
+  selector:
+    app: registry-memory
+  ports:
+  - port: 5002
