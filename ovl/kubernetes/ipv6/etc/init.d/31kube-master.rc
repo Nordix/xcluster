@@ -13,20 +13,20 @@ i=$(hostname | cut -d- -f2 | sed -re 's,^0+,,')
 test $i -eq 1 || exit 0
 
 . /etc/profile
+test -n "$FEATURE_GATES" || FEATURE_GATES=IPv6DualStack=false
 
 sleep 1
-MASTER_IP=1000::1:192.168.1.1
 apiserver() {
 	local log=/var/log/kube-apiserver.log
 	logger -s -t K8s "STARTED: kube-apiserver at $(date)" >> log 2>&1
 	kube-apiserver --token-auth-file=/srv/kubernetes/known_tokens.csv \
 		--allow-privileged=true $API_FLAGS \
-		--feature-gates=SCTPSupport=true \
-		--insecure-bind-address=:: --advertise-address=$MASTER_IP \
+		--feature-gates=$FEATURE_GATES \
+		--advertise-address=:: \
 		--authorization-mode=AlwaysAllow \
 		--etcd-servers=http://127.0.0.1:2379 --anonymous-auth=false \
 		--service-cluster-ip-range=fd00:4000::/112 \
-		--enable-admission-plugins=ServiceAccount,AlwaysAdmit \
+		--enable-admission-plugins=ServiceAccount \
 		--client-ca-file=/srv/kubernetes/ca.crt \
 		--tls-private-key-file=/srv/kubernetes/server.key \
 		--tls-cert-file=/srv/kubernetes/server.crt \

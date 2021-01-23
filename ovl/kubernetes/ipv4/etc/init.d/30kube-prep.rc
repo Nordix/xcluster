@@ -1,7 +1,6 @@
 #! /bin/sh
 
 export PATH="/bin:/sbin:/usr/bin:/usr/sbin"
-echo "FEATURE_GATES=IPv6DualStack=false,SCTPSupport=true" >> /etc/profile
 . /etc/profile
 
 die() {

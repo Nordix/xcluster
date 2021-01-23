@@ -24,7 +24,6 @@ if echo "$FEATURE_GATES" | grep -q "IPv6DualStack=false"; then
 	SERVICE_RANGE=12.0.0.0/16
 fi
 
-MASTER_IP=${IPV6_PREFIX}192.168.1.$i
 ANY_ADDR=0.0.0.0
 if test -n "$IPV6_PREFIX"; then
 	SERVICE_RANGE=fd00:4000::/112,12.0.0.0/16
@@ -40,12 +39,12 @@ apiserver() {
 	logger -s -t K8s "STARTED: kube-apiserver at $(date)" >> log 2>&1
 	kube-apiserver --token-auth-file=/srv/kubernetes/known_tokens.csv \
 		$API_FLAGS --allow-privileged=true \
-		--advertise-address=$MASTER_IP \
+		--advertise-address=:: \
 		--authorization-mode=AlwaysAllow \
 		--feature-gates $FEATURE_GATES \
 		--etcd-servers=http://192.168.1.1:2379 --anonymous-auth=false \
 		--service-cluster-ip-range=$SERVICE_RANGE \
-		--enable-admission-plugins=ServiceAccount,AlwaysAdmit \
+		--enable-admission-plugins=ServiceAccount \
 		--client-ca-file=/srv/kubernetes/ca.crt \
 		--tls-private-key-file=/srv/kubernetes/server.key \
 		--tls-cert-file=/srv/kubernetes/server.crt \
