@@ -128,7 +128,7 @@ download() {
 
 libmnl_ver=1.0.4
 libnftnl_ver=1.1.8
-iptables_ver=1.8.6
+iptables_ver=1.8.7
 nftables_ver=0.9.7
 libnfnetlink_ver=1.0.1
 libnetfilter_cttimeout_ver=1.0.0

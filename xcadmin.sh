@@ -36,7 +36,7 @@ dbg() {
 ##    Print environment.
 ##
 cmd_env() {
-	test -n "$__corednsver" || __corednsver=1.8.0
+	test -n "$__corednsver" || __corednsver=1.8.1
 	test -n "$__k8sver" || __k8sver=v1.18.3
 	test -n "$GOPATH" || export GOPATH=$HOME/go
 	test -n "$ARCHIVE" || ARCHIVE=$HOME/Downloads
