@@ -11,6 +11,8 @@ die() {
 hostname | grep -Eq 'vm-[0-9]+$' || die "Invalid hostname [$(hostname)]"
 i=$(hostname | cut -d- -f2 | sed -re 's,^0+,,')
 test $i -le 200 || exit 0
+test -n "$PREFIX" || PREFIX=1000::1
+
 
 if ! grep -q CNI_INFO /etc/profile; then
 	echo CNI_INFO=bridge >> /etc/profile
@@ -60,7 +62,7 @@ test -n "$FIRST_WORKER" || FIRST_WORKER=1
 for n in $(seq $FIRST_WORKER $__nvm); do
 	test $n -eq $i && continue
 	ip ro add 11.0.$n.0/24 via 192.168.1.$n
-	ip -6 ro add 1100::${n}00/120 via 1000::1:192.168.1.$n
+	ip -6 ro add 1100::${n}00/120 via $PREFIX:192.168.1.$n
 done
 
 iptables -t nat -I POSTROUTING 1 -s 11.0.0.0/16 ! -d 11.0.0.0/16 -j MASQUERADE
