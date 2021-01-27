@@ -14,6 +14,7 @@ test $i -eq 1 || exit 0
 
 . /etc/profile
 test -n "$FEATURE_GATES" || FEATURE_GATES=IPv6DualStack=false
+test -n "$IPV6_PREFIX" || IPV6_PREFIX=1000::1:
 
 sleep 1
 apiserver() {
@@ -22,7 +23,7 @@ apiserver() {
 	kube-apiserver --token-auth-file=/srv/kubernetes/known_tokens.csv \
 		--allow-privileged=true $API_FLAGS \
 		--feature-gates=$FEATURE_GATES \
-		--advertise-address=:: \
+		--bind-address=:: --advertise-address=${IPV6_PREFIX}192.168.1.$i \
 		--authorization-mode=AlwaysAllow \
 		--etcd-servers=http://127.0.0.1:2379 --anonymous-auth=false \
 		--service-cluster-ip-range=fd00:4000::/112 \

@@ -16,20 +16,27 @@ test -n "$DOMAIN" || DOMAIN=xcluster
 test -n "$FEATURE_GATES" || FEATURE_GATES=IPv6DualStack=true
 . /etc/cri-plugin.rc
 
-ANY_ADDR=0.0.0.0
-if test -n "$IPV6_PREFIX"; then
-	ANY_ADDR=::
+if test -z "$BASE_FAMILY"; then
+	BASE_FAMILY=IPv4
+	test -n "$IPV6_PREFIX" && BASE_FAMILY=IPv6
+fi
+test -n "$IPV6_PREFIX" || IPV6_PREFIX=1000::1:
+
+DNS_ADR=192.168.1.$i
+if test "$BASE_FAMILY" = "IPv6"; then
 	sed -i -e 's,bindAddress: 0.0.0.0,bindAddress: "::1",' \
 		/etc/kubernetes/kube-proxy.config
+	DNS_ADR=${IPV6_PREFIX}192.168.1.$i
 fi
 
+NODE_IP=192.168.1.$i,${IPV6_PREFIX}192.168.1.$i
+
 run_kubelet() {
-	kubelet --address=$ANY_ADDR $CRI_OPTS \
-		--node-ip=${IPV6_PREFIX}192.168.1.$i \
+	kubelet --address=:: $CRI_OPTS --node-ip=$NODE_IP \
 		--register-node=true --kubeconfig $KUBECONFIG \
 		--feature-gates $FEATURE_GATES \
 		--network-plugin=cni \
-		--cluster-dns=${IPV6_PREFIX}192.168.1.$i \
+		--cluster-dns=$DNS_ADR \
 		--cluster-domain=$DOMAIN \
 		--runtime-cgroups=/systemd/system.slice \
 		--kubelet-cgroups=/systemd/system.slice >> /var/log/kubelet.log 2>&1
@@ -45,7 +52,7 @@ run_kube_proxy() {
 	CLUSTER_CIDR=11.0.0.0/16,1100::/48
 	if echo "$FEATURE_GATES" | grep -q "IPv6DualStack=false"; then
 		CLUSTER_CIDR=11.0.0.0/16
-		test -n "$IPV6_PREFIX" && CLUSTER_CIDR=1100::/48
+		test "$BASE_FAMILY" = "IPv6" && CLUSTER_CIDR=1100::/48
 	fi
 	sed -i -e "s,clusterCIDR:.*,clusterCIDR: \"$CLUSTER_CIDR\"," /etc/kubernetes/kube-proxy.config
 	kube-proxy --config /etc/kubernetes/kube-proxy.config --v 7 \

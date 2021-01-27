@@ -24,10 +24,16 @@ if echo "$FEATURE_GATES" | grep -q "IPv6DualStack=false"; then
 	SERVICE_RANGE=12.0.0.0/16
 fi
 
-ANY_ADDR=0.0.0.0
-if test -n "$IPV6_PREFIX"; then
+if test -z "$BASE_FAMILY"; then
+	BASE_FAMILY=IPv4
+	test -n "$IPV6_PREFIX" && BASE_FAMILY=IPv6
+fi
+test -n "$IPV6_PREFIX" || IPV6_PREFIX=1000::1:
+
+ADVERTISE_ADR=192.168.1.$i
+if test "$BASE_FAMILY" = "IPv6"; then
 	SERVICE_RANGE=fd00:4000::/112,12.0.0.0/16
-	ANY_ADDR=::
+	ADVERTISE_ADR=${IPV6_PREFIX}192.168.1.$i
 	if echo "$FEATURE_GATES" | grep -q "IPv6DualStack=false"; then
 		CLUSTER_CIDR=1100::/48
 		SERVICE_RANGE=fd00:4000::/112
@@ -39,7 +45,7 @@ apiserver() {
 	logger -s -t K8s "STARTED: kube-apiserver at $(date)" >> log 2>&1
 	kube-apiserver --token-auth-file=/srv/kubernetes/known_tokens.csv \
 		$API_FLAGS --allow-privileged=true \
-		--advertise-address=:: \
+		--bind-address=:: --advertise-address=$ADVERTISE_ADR \
 		--authorization-mode=AlwaysAllow \
 		--feature-gates $FEATURE_GATES \
 		--etcd-servers=http://192.168.1.1:2379 --anonymous-auth=false \
