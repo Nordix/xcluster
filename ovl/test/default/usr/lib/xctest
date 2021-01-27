@@ -480,6 +480,7 @@ apply_k8s() {
 ##    Setup ECMP routes to 10.0.0.0/24 and 1000::/120
 ##
 vip_route() {
+	test -n "$PREFIX" || PREFIX=1000::1
 	local X=1
 	test "$FIRST_WORKER" = "2" && X=5
 	ip ro replace 10.0.0.0/24 \
@@ -488,10 +489,10 @@ vip_route() {
 		nexthop via 192.168.1.4 \
 		nexthop via 192.168.1.$X || tdie "Ipv4 routes"
 	ip -6 ro replace 1000::/120 \
-		nexthop via 1000::1:192.168.1.2 \
-		nexthop via 1000::1:192.168.1.3 \
-		nexthop via 1000::1:192.168.1.4 \
-		nexthop via 1000::1:192.168.1.$X || tdie "Ipv6 routes"
+		nexthop via $PREFIX:192.168.1.2 \
+		nexthop via $PREFIX:192.168.1.3 \
+		nexthop via $PREFIX:192.168.1.4 \
+		nexthop via $PREFIX:192.168.1.$X || tdie "Ipv6 routes"
 }
 
 
