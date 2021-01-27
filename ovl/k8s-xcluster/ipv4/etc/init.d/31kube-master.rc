@@ -22,7 +22,7 @@ apiserver() {
 	logger -s -t K8s "STARTED: kube-apiserver at $(date)" >> log 2>&1
 	kube-apiserver --token-auth-file=/srv/kubernetes/known_tokens.csv \
 		$API_FLAGS --allow-privileged=true \
-		--insecure-bind-address=0.0.0.0 --advertise-address=$MASTER_IP \
+		--bind-address=:: --advertise-address=$MASTER_IP \
 		--authorization-mode=AlwaysAllow \
 		--feature-gates $FEATURE_GATES \
 		--etcd-servers=http://localhost:2379 --anonymous-auth=false \
