@@ -14,26 +14,28 @@ spec:
       labels:
         app: nse
     spec:
+      nodeSelector:
+        kubernetes.io/hostname: vm-002
       containers:
-        - image: registry.nordix.org/cloud-native/nsm/cmd-nse-icmp-responder:latest
+        - name: nse
+          image: registry.nordix.org/cloud-native/nsm/cmd-nse-icmp-responder:latest
           imagePullPolicy: IfNotPresent
-          name: nse
           env:
-            - name: NSE_CONNECT_TO
-              value: "unix:///var/lib/networkservicemesh/nsm.io.sock"
             - name: SPIFFE_ENDPOINT_SOCKET
-              value: "unix:///run/spire/sockets/agent.sock"
+              value: unix:///run/spire/sockets/agent.sock
             - name: NSE_NAME
               valueFrom:
                 fieldRef:
                   fieldPath: metadata.name
+            - name: NSE_CONNECT_TO
+              value: unix:///var/lib/networkservicemesh/nsm.io.sock
           volumeMounts:
             - name: spire-agent-socket
               mountPath: /run/spire/sockets
               readOnly: true
             - name: nsm-socket
               mountPath: /var/lib/networkservicemesh
-              readOnly: true
+              readOnly: false
       volumes:
         - name: spire-agent-socket
           hostPath:

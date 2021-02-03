@@ -3,7 +3,6 @@ apiVersion: apps/v1
 kind: DaemonSet
 metadata:
   name: forwarder-vpp
-  namespace: nsm-system
   labels:
     app: forwarder-vpp
 spec:
@@ -15,26 +14,25 @@ spec:
       labels:
         app: forwarder-vpp
     spec:
-      hostNetwork: true
       containers:
         - image: registry.nordix.org/cloud-native/nsm/cmd-forwarder-vpp:latest
           imagePullPolicy: IfNotPresent
           name: forwarder-vpp
+          securityContext:
+            privileged: true
           env:
             - name: SPIFFE_ENDPOINT_SOCKET
               value: unix:///run/spire/sockets/agent.sock
+            - name: NSM_TUNNEL_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+            - name: NSM_CONNECT_TO
+              value: unix:///var/lib/networkservicemesh/nsm.io.sock
             - name: NSM_NAME
               valueFrom:
                 fieldRef:
                   fieldPath: metadata.name
-            - name: NSM_REGISTRY_URL
-              value: "tcp://nsm-registry-svc.nsm-system.svc.xcluster:5002"
-            - name: NSM_CONNECT_TO
-              value: "unix:///var/lib/networkservicemesh/nsm.io.sock"
-            - name: POD_IP
-              valueFrom:
-                fieldRef:
-                  fieldPath: status.podIP
           volumeMounts:
             - name: spire-agent-socket
               mountPath: /run/spire/sockets

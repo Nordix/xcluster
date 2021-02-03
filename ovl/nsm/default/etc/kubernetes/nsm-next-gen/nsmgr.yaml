@@ -3,7 +3,6 @@ apiVersion: apps/v1
 kind: DaemonSet
 metadata:
   name: nsmgr
-  namespace: nsm-system
   labels:
     app: nsmgr
 spec:
@@ -54,4 +53,3 @@ spec:
           hostPath:
             path: /var/lib/networkservicemesh
             type: DirectoryOrCreate
-
