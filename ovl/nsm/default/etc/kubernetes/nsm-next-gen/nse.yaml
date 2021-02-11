@@ -15,7 +15,7 @@ spec:
         app: nse
     spec:
       nodeSelector:
-        kubernetes.io/hostname: vm-002
+        kubernetes.io/hostname: vm-003
       containers:
         - name: nse
           image: registry.nordix.org/cloud-native/nsm/cmd-nse-icmp-responder:latest
