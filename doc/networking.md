@@ -1,6 +1,6 @@
 # Xcluster networking
 
-The `xcluster` networkin uses 2 setups;
+The `xcluster` networking uses 2 setups;
 
 * User-space networking. This is used when `xcluster` is executed in
   main netns. It does not require root or sudo or any network
@@ -38,12 +38,13 @@ in the address is the number from the hostname, e.g. 1 for
 address on the interface towards the Internal net (eth0). This may
 however change for instance if the MAC addresses can't be controlled.
 
-With user-space networking the internal net is a qemu "user"
-network. It allows connectivity with the host but does not support
-traffic between VMs. So for instance you can't reach vm-002 from vm-001
-using the `192.168.0.2` address. The other nets are qemu "socket"
-networks (UML/multicast) they provide connectivity between VMs but can
-not be used for connectivity with the host.
+With user-space networking the internal net is a qemu [user
+network](https://wiki.qemu.org/Documentation/Networking#User_Networking_.28SLIRP.29).
+It allows connectivity with the host but does not support traffic
+between VMs. So for instance you can't reach vm-002 from vm-001 using
+the `192.168.0.2` address. The other nets are qemu "socket" networks
+(UML/multicast) they provide connectivity between VMs but can not be
+used for connectivity with the host.
 
 
 ## DNS
@@ -52,7 +53,7 @@ A `coredns` is started outside the xcluster on port `10053`. A
 `coredns` (shown as k8s in the figure) on the cluster is setup that
 proxies to the outside dns;
 
-<img src="xcluster-dns.svg" alt="Figure, xcluster dns" width="70%" />
+<img src="xcluster-dns.svg" alt="Figure, xcluster dns" width="50%" />
 
 A `coredns` binary is bundled in the `xcluster` binary release and is
 used unless a `$GOPATH/bin/coredns` exists. In Linux (in the clib to
@@ -109,17 +110,15 @@ Now try DNS lookups from within `xcluster` directly to the server
 running on the host;
 
 ```
-xc mkcdrom k8s-base; xc starts
+xc mkcdrom iptools; xc starts
 # On some vm;
 nslookup www.google.se 192.168.0.250:10053
-nslookup www.google.se [2000::250]:10053
+nslookup www.google.se [1000::1:192.168.0.250]:10053
 ```
 
-Now try the k8s coredns;
+Now try the local coredns;
 
 ```
-# Verify that the coredns pod is running
-kubectl get pods
 nslookup www.google.se
 nslookup kubernetes.default.svc.xcluster
 ```
@@ -130,9 +129,9 @@ is likely some problem with the `xcluster` setup.
 Finally you can verify that DNS lookups works from within a pod.
 
 ```
-kubectl apply -f /etc/kubernetes/xcbase.yaml
+kubectl apply -f /etc/kubernetes/alpine.yaml
 kubectl get pods
-kubectl exec -it xcbase-deployment-... sh
+kubectl exec -it alpine-deployment-... -- sh
 # In the pod;
 nslookup www.google.se
 nslookup kubernetes.default.svc.xcluster
@@ -178,7 +177,7 @@ This enables access to external addresses from within xcluster VMs via eth0.
 
 If the network topology is ok but you want to use something else than
 the default bridge/tap networking, for instance
-[ovs](https://www.openvswitch.org/) then you can secify a script with
+[ovs](https://www.openvswitch.org/), then you can secify a script with
 the `__net_setup` variable. The script will be called for each vm
 like;
 
@@ -193,8 +192,9 @@ Your script must do necessary configuration and print out options to
 an example.
 
 If you need more networks use `--nets-vm` and `--nets_router`
-options. Please see the [multinet](../ovl/multinet/README.md) ovl for
-an example.
+options. Please see
+[ovl/network-topology](../ovl/network-topology/README.md) for
+examples.
 
 
 ### Full custom
