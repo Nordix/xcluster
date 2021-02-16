@@ -1,0 +1,38 @@
+#! /bin/sh
+/bin/busybox echo "Alpine Xcluster starting..."
+mkdir -p /proc /sys /tmp /dev/pts /dev/shm /var/log \
+	/sbin /usr/bin /usr/sbin /dev/mqueue
+mount -t sysfs sysfs /sys
+mount -t sysfs sysfs /sys
+mount -t proc procfs /proc
+mdev -s
+
+mkdir -p /run /var/log/dumps /var/tmp
+ln -s /run /var/run
+
+mount /tmp
+
+echo /sbin/mdev > /proc/sys/kernel/hotplug
+
+mount /dev/shm
+mount /dev/pts
+mount -o remount -w /
+mdev -s
+mount /dev/mqueue
+
+# Get data from cdrom
+mkdir -p /mnt
+if mount -t iso9660 /dev/vdb /mnt > /dev/null 2>&1; then
+	for n in $(find /mnt -name '*.tar' | sort); do
+		EXTRACT_UNSAFE_SYMLINKS=1 tar -C / -xf $n
+	done
+	umount /mnt
+fi
+
+sysctl -p > /dev/null
+depmod
+ldconfig
+
+test -r /etc/init.d/init.hook && . /etc/init.d/init.hook
+
+exec /sbin/init

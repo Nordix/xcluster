@@ -1,0 +1,7 @@
+proc                 /proc                proc       defaults              0 0
+sysfs                /sys                 sysfs      noauto                0 0
+tmpfs                /tmp                 tmpfs      defaults              0 0
+devpts               /dev/pts             devpts     defaults              0 0
+tmpfs		     /dev/shm		  tmpfs	     defaults		   0 0
+tmpfs		     /var		  tmpfs	     defaults		   0 0
+mqueue			/dev/mqueue		mqueue		defaults 0 0

@@ -1,0 +1,43 @@
+#! /bin/sh
+. ./etc/profile
+
+die() {
+	echo "$@"
+	exit 1
+}
+
+hostname | grep -Eq 'vm-[0-9]+$' || die "Invalid hostname [$(hostname)]"
+i=$(hostname | cut -d- -f2 | sed -re 's,^0+,,')
+
+# Use the "real" ip if it exists
+test -x /usr/sbin/ip && rm -f /sbin/ip
+
+ip link set lo up
+ip link show dev eth0 > /dev/null 2>&1 || die "No external nets"
+
+test -n "$DNS" && echo "nameserver $DNS" > /etc/resolv.conf
+
+# Get the mtu from the kernel command line. The mtu shall be the same
+# on eth0 as on the supporting tap-device.
+eval $(grep -oE 'mtu0=[0-9]+' /proc/cmdline)
+test -n "$mtu0" && ip link set eth0 mtu $mtu0
+
+test -n "$PREFIX" || PREFIX=1000::1
+test -n "$__nvm" || __nvm=4
+echo 0 > /proc/sys/net/ipv6/conf/eth0/accept_dad
+ip link set eth0 up
+ip addr add 192.168.0.$i/24 dev eth0
+ip -6 addr add $PREFIX:192.168.0.$i/120 dev eth0
+
+cat >> /etc/hosts <<EOF
+192.168.0.250 host
+$PREFIX:192.168.0.250 ip6-host
+
+EOF
+for n in $(seq 1 $__nvm); do
+	printf '192.168.0.%d vm-%03d\n' $n $n >> /etc/hosts
+	printf "$PREFIX:192.168.0.%d ip6-vm-%03d\n" $n $n >> /etc/hosts
+done
+
+ip ro replace default via 192.168.0.250
+ip -6 ro replace default via $PREFIX:192.168.0.250

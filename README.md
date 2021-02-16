@@ -43,7 +43,7 @@ vm-250 -          Reserved
  * [Local docker registry](ovl/private-reg/README.md).
  * [Test](doc/test.md)
  * [Fedora](doc/fedora.md). Not maintained.
-
+ * [Alpine](doc/alpine.md) image in xcluster
 
 #### Overlays
 
