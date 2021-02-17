@@ -186,8 +186,63 @@ test_start_nextgen() {
 test_basic_nextgen() {
 	test_start_nextgen
 	otc 1 icmp
+	get_nsm_logs
 	xcluster_stop
 }
+
+
+get_nsm_logs() {
+	# kubectl get pod nse-58cc4f847-rx9v5 -o json | jq .metadata.labels
+	local dst=/tmp/$USER/nsm-logs
+	rm -rf $dst
+	mkdir -p $dst
+	test -n "$xcluster_NSM_FORWARDER" || xcluster_NSM_FORWARDER=vpp
+	local pod n ip
+	local sed=$dst/pods.sed
+
+	for n in NSC nsmgr-local forwarder-local \
+		nsmgr-remote forwarder-remote NSE; do
+		case $n in
+			nsmgr-local)
+				pod=$(get_pod app=nsmgr vm-002);;
+			forwarder-local)
+				pod=$(get_pod app=forwarder-$xcluster_NSM_FORWARDER vm-002);;
+			nsmgr-remote)
+				pod=$(get_pod app=nsmgr vm-003);;
+			forwarder-remote)
+				pod=$(get_pod app=forwarder-$xcluster_NSM_FORWARDER vm-003);;
+			NSC)
+				pod=$(get_pod app=nsc);;
+			NSE)
+				pod=$(get_pod app=nse);;
+		esac
+		ip=$($kubectl get pod $pod -o json | jq -r .status.podIP)
+		tlog "Get logs for $n ($pod, $ip)..."
+		echo "s,$pod,$n,g" >> $sed
+		echo "s,$ip,$ip[$n],g" >> $sed
+		$kubectl logs $pod > $dst/$n.log
+	done
+}
+
+##  readlog <nsm-log>
+##    Filter an nsm-log. Example;
+##    ./nsm.sh readlog /tmp/$USER/nsm-logs/nsmgr-local.log | less
+##
+cmd_readlog() {
+	test -n "$1" || die "No log"
+	test -r "$1" || die "Not readable [$1]"
+	local log="$1"
+	local pods=$(dirname $log)/pods.sed
+	test -r $pods || die "Not readable [$pods]"
+	mkdir -p $tmp
+
+	local pat='request|request-diff|response|response-diff'
+	grep -oE "($pat).*" $log | sed -Ee 's, *span=.*,,' \
+		| sed -Ee "s,($pat)=(.*),{\"\\1\": \\2}," |  jq . | grep -v token \
+		| sed -f $pods
+
+}
+
 
 
 . $($XCLUSTER ovld test)/default/usr/lib/xctest

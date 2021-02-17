@@ -48,6 +48,9 @@ test -x $f && cp $f $tmp/bin
 d=$GOPATH/src/github.com/networkservicemesh/examples/examples/bridge-domain
 test -d "$d/k8s" && cp -r "$d/k8s" $tmp/etc/kubernetes/bridge-domain
 
+f=$GOPATH/src/github.com/Nordix/nsm-forwarder-generic/forwarder-generic.yaml
+test -r $f && cp $f $tmp/etc/kubernetes/nsm-next-gen
+
 cd $tmp
 tar cf "$1" *
 cd - > /dev/null
