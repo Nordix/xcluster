@@ -28,7 +28,13 @@ if test "$BASE_FAMILY" = "IPv6"; then
 	sed -i -e 's,bindAddress: 0.0.0.0,bindAddress: "::1",' $f
     DNS_ADR=${IPV6_PREFIX}192.168.1.$i
 fi
+
+# From v1.20 dual-stack node addresses are supported
 NODE_IP=192.168.1.$i,${IPV6_PREFIX}192.168.1.$i
+if kubectl version --short --client | grep -q v1.1; then
+	NODE_IP=192.168.1.$i
+	test "$BASE_FAMILY" = "IPv6" && NODE_IP=${IPV6_PREFIX}192.168.1.$i
+fi
 
 # Read $CRI_OPTS;
 test -r /etc/cri-plugin.rc && . /etc/cri-plugin.rc
