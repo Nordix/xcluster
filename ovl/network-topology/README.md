@@ -46,7 +46,7 @@ routers, so setting `__nrouters` should be avoided.
 # Test all topologies;
 ./network-topology.sh test
 # Test a specific topology
-./network-topology.sh test $TOPOLOGY
+./network-topology.sh test $TOPOLOGY > $log
 ```
 
 
@@ -99,3 +99,16 @@ xc stop --nvm=30
 The cluster has a "backend" network for internal communication. All
 communication with the outside world goes through a "frontend"
 network.
+
+
+## Multilan
+
+<img src="multilan.svg" alt="Multiple networks" width="80%" />
+
+The cluster VMs has multiple networks for test of
+[Multus](https://github.com/intel/multus-cni),
+[NSM](https://networkservicemesh.io/),
+[DANM](https://github.com/nokia/danm), etc.
+
+No ip addresses are assigned to the interfaces since that is assumed
+to be done by the tested SW.

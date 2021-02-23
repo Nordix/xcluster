@@ -161,6 +161,14 @@ test_backend() {
 	xcluster_stop
 }
 
+test_multilan() {
+	export TOPOLOGY=multilan
+	tlog "=== network-topology test: $TOPOLOGY"
+	test_start
+	base_test
+	xcluster_stop
+}
+
 base_test() {
 	otc 1 "ping 192.168.2.221"
 	otc 1 "ping 192.168.2.222"
