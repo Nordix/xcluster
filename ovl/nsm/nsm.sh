@@ -167,12 +167,15 @@ tcase_nsc_ping_all() {
 }
 
 test_start_base() {
+	test -n "$TOPOLOGY" || TOPOLOGY=multilan
+	export TOPOLOGY
+	. "$($XCLUSTER ovld network-topology)/$TOPOLOGY/Envsettings"
 	test -n "$__mode" || __mode=dual-stack
 	export xcluster___mode=$__mode
 	export __mem1=2048
 	export __mem=1536
 	xcluster_prep $__mode
-	xcluster_start nsm
+	xcluster_start nsm network-topology
 
 	otc 1 check_namespaces
 	otc 1 check_nodes
