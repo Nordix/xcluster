@@ -201,7 +201,7 @@ cmd_tcase_start_nsm_next_gen() {
 	test_daemonset forwarder-$NSM_FORWARDER 30
 }
 
-cmd_tcase_icmp() {
+cmd_tcase_start_nsc_nse() {
 	test -n "$NSM_NSE" || NSM_NSE=icmp-responder
 	tcase "Start the nsc and nse-$NSM_NSE"
 	$kubectl apply -f $yamld/nse-$NSM_NSE.yaml
@@ -210,6 +210,26 @@ cmd_tcase_icmp() {
 	test_deployment nsc 60
 }
 
+cmd_tcase_check_interfaces() {
+	tcase "Check injected interfaces"
+	mkdir -p $tmp
+	local pod iface inet
+
+	pod=$(get_pod app=nsc)
+	$kubectl exec $pod -- ifconfig | grep -B1 169.254. > $tmp/nsc || tdie NSC
+	iface=$(head -1 $tmp/nsc | cut -d ' ' -f1)
+	inet=$(grep -oE '169\.254\.0\.[0-9]+' $tmp/nsc)
+	tlog "NSC; $iface, $inet"
+
+	pod=$(get_pod app=nse)
+	$kubectl exec $pod -- ifconfig | grep -B1 169.254. > $tmp/nse || tdie NSE
+	iface=$(head -1 $tmp/nse | cut -d ' ' -f1)
+	inet=$(grep -oE '169\.254\.0\.[0-9]+' $tmp/nse)
+	tlog "NSE; $iface, $inet"
+
+	tlog "Ping $inet from NSC"
+	kubectl_exec app=nsc ping -c1 -W1 $inet || tdie "Ping nsc->nse"
+}
 
 
 . /etc/profile

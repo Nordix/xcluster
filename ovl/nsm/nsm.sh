@@ -188,8 +188,9 @@ test_start_nextgen() {
 }
 test_basic_nextgen() {
 	test_start_nextgen
-	otc 1 icmp
-	get_nsm_logs
+	otc 1 start_nsc_nse
+	test "$__get_logs" = "yes" && get_nsm_logs
+	otc 1 check_interfaces
 	xcluster_stop
 }
 
