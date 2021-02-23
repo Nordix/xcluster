@@ -202,8 +202,9 @@ cmd_tcase_start_nsm_next_gen() {
 }
 
 cmd_tcase_icmp() {
-	tcase "Start the icmp-responder"
-	$kubectl apply -f $yamld/nse.yaml
+	test -n "$NSM_NSE" || NSM_NSE=icmp-responder
+	tcase "Start the nsc and nse-$NSM_NSE"
+	$kubectl apply -f $yamld/nse-$NSM_NSE.yaml
 	test_deployment nse 60
 	$kubectl apply -f $yamld/nsc.yaml
 	test_deployment nsc 60

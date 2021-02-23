@@ -26,6 +26,7 @@ done
 Usage with the test system;
 ```
 #export xcluster_NSM_FORWARDER=generic
+#export xcluster_NSM_NSE=generic
 log=/tmp/$USER/xcluster.log
 xcadmin k8s_test --no-stop nsm basic_nextgen > $log
 # Login and investigate things, e.g. kubectl logs ...
