@@ -231,6 +231,16 @@ cmd_tcase_check_interfaces() {
 	kubectl_exec app=nsc ping -c1 -W1 $inet || tdie "Ping nsc->nse"
 }
 
+cmd_tcase_start_nsc_nse_ipv6() {
+	tcase "Start the nsc and nse for IPv6"
+	test "$NSM_NSE" = "generic" || tdie "Generic NSM_NSE must be used"
+	sed -i -e 's,169.254.0.0/24,3000::169.254.0.0/120,' $yamld/nse-$NSM_NSE.yaml
+	$kubectl apply -f $yamld/nse-$NSM_NSE.yaml
+	test_deployment nse 60
+	$kubectl apply -f $yamld/nsc.yaml
+	test_deployment nsc 60
+}
+
 
 . /etc/profile
 test -r /usr/lib/xctest && . /usr/lib/xctest

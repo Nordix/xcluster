@@ -194,6 +194,15 @@ test_basic_nextgen() {
 	xcluster_stop
 }
 
+test_basic_ipv6() {
+	test_start_nextgen
+	otc 1 start_nsc_nse_ipv6
+	test "$__get_logs" = "yes" && get_nsm_logs
+	xcluster_stop
+}
+
+
+
 
 get_nsm_logs() {
 	# kubectl get pod nse-58cc4f847-rx9v5 -o json | jq .metadata.labels
