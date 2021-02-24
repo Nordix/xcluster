@@ -53,6 +53,10 @@ for f in forwarder-generic.yaml forwarder-generic-vlan.yaml; do
 	 test -r $d/$f && cp $d/$f $tmp/etc/kubernetes/nsm-next-gen
 done
 
+d=$GOPATH/src/github.com/Nordix/nsm-nse-generic
+f=nse-generic.yaml
+test -r $d/$f && cp $d/$f $tmp/etc/kubernetes/nsm-next-gen
+
 cd $tmp
 tar cf "$1" *
 cd - > /dev/null
