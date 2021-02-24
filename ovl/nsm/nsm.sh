@@ -201,7 +201,16 @@ test_basic_ipv6() {
 	xcluster_stop
 }
 
-
+test_ipvlan() {
+	export xcluster_NSM_FORWARDER=generic
+	export xcluster_NSM_NSE=generic
+	export xcluster_NSM_FORWARDER_CALLOUT=/bin/ipvlan.sh
+	test_start_nextgen
+	otc 1 start_nsc_nse_l2
+	test "$__get_logs" = "yes" && get_nsm_logs
+	otc 1 check_interfaces_ipvlan
+	xcluster_stop
+}
 
 
 get_nsm_logs() {

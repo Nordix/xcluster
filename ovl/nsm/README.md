@@ -27,6 +27,7 @@ Usage with the test system;
 ```
 #export xcluster_NSM_FORWARDER=generic
 #export xcluster_NSM_NSE=generic
+#export xcluster_NSM_FORWARDER_CALLOUT=/bin/forwarder.sh
 log=/tmp/$USER/xcluster.log
 export __get_logs=yes
 xcadmin k8s_test --no-stop nsm basic_nextgen > $log
