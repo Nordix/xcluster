@@ -184,10 +184,7 @@ cmd_tcase_start_nsm_next_gen() {
 	test -n "$NSM_FORWARDER" || NSM_FORWARDER=vpp
 	test -n "$NSM_REGISTRY" || NSM_REGISTRY=memory
 	tcase "Start nsm. Forwarder=$NSM_FORWARDER, Registry=$NSM_REGISTRY"
-	if test -n "$NSM_FORWARDER_CALLOUT" -a "$NSM_FORWARDER" = "generic"; then
-		tlog "FORWARDER_CALLOUT=$NSM_FORWARDER_CALLOUT"
-		sed -i -e "s,/bin/forwarder.sh,$NSM_FORWARDER_CALLOUT," $yamld/forwarder-$NSM_FORWARDER.yaml
-	fi
+
 	$kubectl apply -f $yamld/registry-$NSM_REGISTRY.yaml
 	$kubectl apply -f $yamld/registry-service.yaml
 	$kubectl apply -f $yamld/nsmgr.yaml
@@ -228,38 +225,6 @@ cmd_tcase_check_interfaces() {
 	kubectl_exec app=nsc ping -c1 -W1 $inet || tdie "Ping nsc->nse"
 }
 
-cmd_tcase_start_nsc_nse_ipv6() {
-	tcase "Start the nsc and nse for IPv6"
-	test "$NSM_NSE" = "generic" || tdie "Generic NSM_NSE must be used"
-	sed -i -e 's,169.254.0.0/24,3000::169.254.0.0/120,' $yamld/nse-$NSM_NSE.yaml
-	$kubectl apply -f $yamld/nse-$NSM_NSE.yaml
-	test_deployment nse 60
-	$kubectl apply -f $yamld/nsc.yaml
-	test_deployment nsc 60
-}
-
-cmd_tcase_start_nsc_nse_l2() {
-	tcase "Start the nsc and nse with L2 IPAM"
-	test "$NSM_NSE" = "generic" || tdie "Generic NSM_NSE must be used"
-	sed -i -e 's,value: "True",value: "False",' $yamld/nse-$NSM_NSE.yaml
-	$kubectl apply -f $yamld/nse-$NSM_NSE.yaml
-	test_deployment nse 60
-	$kubectl apply -f $yamld/nsc-10.yaml
-	test_deployment nsc 60
-}
-
-cmd_tcase_check_interfaces_ipvlan() {
-	tcase "Check IPVLAN interfaces"
-	local pod
-	for pod in $(kubectl get pods -l app=nsc -o name); do
-		kubectl exec $pod -- ip link show nsm-1 || tdie $pod
-	done
-	pod=$(kubectl get pods -l app=nse -o name | head -1)
-	local i
-	for i in $(seq 1 10); do
-		kubectl exec $pod -- ping -c1 -W1 169.254.0.$i || die "ping 169.254.0.$i"
-	done
-}
 
 . /etc/profile
 test -r /usr/lib/xctest && . /usr/lib/xctest
