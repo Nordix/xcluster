@@ -46,10 +46,6 @@ done
 mkdir -p $tmp/etc/ssl/certs
 cp /etc/ssl/certs/ca-certificates.crt $tmp/etc/ssl/certs/
 
-n=$GOPATH/bin/coredns
-test -x $n || n=$(dirname $XCLUSTER)/bin/coredns
-test -x $n && cp $n $tmp/bin
-
 $XCLUSTER install_prog --dest=$tmp jq base64
 
 f=$GOPATH/src/github.com/Nordix/assign-lb-ip/assign-lb-ip
