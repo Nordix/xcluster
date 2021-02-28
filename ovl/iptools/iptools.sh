@@ -34,7 +34,7 @@ cmd_env() {
 	kernel_fix
 }
 kernel_fix() {
-	echo $__kver | grep -q linux-5.9 || return 0
+	# For kernels >= 5.9
 	local f=$KERNELDIR/$__kver/include/linux/compiler.h
 	test -r $f || return 0
 	sed -i -e '/rwonce.h/d' $f
