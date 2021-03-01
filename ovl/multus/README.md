@@ -7,33 +7,24 @@ Use [multus](https://github.com/intel/multus-cni) in a Kubernetes xcluster.
 
 The binary release contains only one binary;
 ```
-> tar tf ~/Downloads/multus-cni_v3.1_linux_amd64.tar.gz
-multus-cni_v3.1_linux_amd64/multus-cni
-multus-cni_v3.1_linux_amd64/README.md
-multus-cni_v3.1_linux_amd64/LICENSE
-tar -O -xf ~/Downloads/multus-cni_v3.1_linux_amd64.tar.gz \
- multus-cni_v3.1_linux_amd64/multus-cni > $ARCHIVE/multus-cni
+ver=3.6
+ar=$HOME/Downloads/multus-cni_${ver}_linux_amd64.tar.gz
+tar tf $ar
+tar -O -xf $ar multus-cni_${ver}_linux_amd64/multus-cni > $ARCHIVE/multus-cni
 chmod a+x $ARCHIVE/multus-cni
 ```
 
+
+
 ## Usage
 
+The [multinet](../network-topology/README.md#multinet)
+network-topology is used which provides additional networks for the
+cluster VMs as eth2,3,4.
+
 ```
-# Once;
-xc br_setup 3
-xc br_setup 4
-xc br_setup 5
-# then;
-xc mkcdrom multinet multus private-reg; xc start --nets-vm=0,1,3,4,5
-# On cluster
-kubectl apply -f /etc/kubernetes/multus-crd.yml
-kubectl apply -f /etc/kubernetes/multus-crd-bridge.yaml
-kubectl apply -f /etc/kubernetes/multus-crd-ipvlan.yaml
-kubectl apply -f /etc/kubernetes/multus-crd-macvlan.yaml
-kubectl apply -f /etc/kubernetes/multus-crd-host-device.yaml
-kubectl apply -f /etc/kubernetes/multus-alpine.yaml
-kubectl get pods -o wide
-kubectl exec -it ... sh
+log=/tmp/$USER/xcluster.log
+xcadmin k8s_test multus start > $log
 ```
 
 In the `alpine` pod to a `ifconfig -a` and check the interfaces;

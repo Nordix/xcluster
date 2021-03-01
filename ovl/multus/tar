@@ -16,23 +16,17 @@ log() {
 test -n "$1" || die "No out-file"
 
 mkdir -p $tmp
-for s in $(echo "$SETUP" | tr ',' ' '); do
-	test -d $dir/$s || continue
-	cp -R $dir/$s/* $tmp
-	setup_copied=yes
-done
-test "$setup_copied" != "yes" && test -d $dir/default && cp -R $dir/default/* $tmp
+cp -R $dir/default/* $tmp
 
 f=$ARCHIVE/multus-cni
 test -x $f || die "Not executable [$f]"
 mkdir -p $tmp/opt/cni/bin
 cp $f $tmp/opt/cni/bin
 
-d=$GOPATH/src/github.com/containernetworking/plugins/bin
-for f in host-device ipvlan macvlan static ptp portmap; do
-	test -x $d/$f || die "Not executable [$d/$f]"
-	cp $d/$f $tmp/opt/cni/bin
-done
+test -n "$__cniver" || __cniver=v0.8.7
+f=$ARCHIVE/cni-plugins-linux-amd64-$__cniver.tgz
+test -r "$f" || die "Not readable [$f]"
+tar -C $tmp/opt/cni/bin -xf $f
 
 cd $tmp
 tar cf "$1" *
