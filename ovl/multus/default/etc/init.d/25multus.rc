@@ -12,7 +12,9 @@ i=$(hostname | cut -d- -f2 | sed -re 's,^0+,,')
 test $i -le 200 || exit 0
 test -n "$PREFIX" || PREFIX=1000::1
 
-rm -f /etc/cni/net.d/10-bridge.conf
+mkdir -p /etc/cni/multus/net.d
+mv /etc/cni/net.d/10-bridge.conf /etc/cni/multus/net.d/bridge.conf
+sed -i -e 's,cni-x,bridge,' /etc/cni/multus/net.d/bridge.conf
 
 if ! grep -q CNI_INFO /etc/profile; then
 	echo CNI_INFO=multus >> /etc/profile
@@ -22,10 +24,10 @@ fi
 
 sed -i -E "s,11.0.x,11.0.${i}," /etc/cni/net.d/cni.conf
 
-#exit 0
-
-cat > /etc/cni/net.d/10-multus.conf <<EOF
+if test "$DELEGATES" = "yes"; then
+	cat > /etc/cni/net.d/10-multus.conf <<EOF
 {
+    "cniVersion": "0.4.0",
     "name": "multus",
     "type": "multus-cni",
     "logFile": "/var/log/multus.log",
@@ -37,7 +39,7 @@ cat > /etc/cni/net.d/10-multus.conf <<EOF
 	"delegates": [
 {
   "cniVersion": "0.4.0",
-  "name": "default",
+  "name": "bridge",
   "type": "bridge",
   "bridge": "cbr0",
   "isDefaultGateway": true,
@@ -53,6 +55,23 @@ cat > /etc/cni/net.d/10-multus.conf <<EOF
 	]
 }
 EOF
-
+else
+	cat > /etc/cni/net.d/10-multus.conf <<EOF
+{
+    "cniVersion": "0.4.0",
+    "name": "multus",
+    "type": "multus-cni",
+    "logFile": "/var/log/multus.log",
+    "logLevel": "debug",
+    "kubeconfig": "/etc/kubernetes/kubeconfig.token",
+    "confDir": "/etc/cni/multus/net.d",
+    "cniDir": "/var/lib/cni/multus",
+    "binDir": "/opt/cni/bin",
+    "clusterNetwork": "bridge",
+	"defaultNetworks": []
+}
+EOF
+fi
+	
 
 
