@@ -22,7 +22,9 @@ else
 	sed -i -E 's,CNI_INFO=.+,CNI_INFO=multus,' /etc/profile
 fi
 
-sed -i -E "s,11.0.x,11.0.${i}," /etc/cni/net.d/cni.conf
+ip link set up dev eth2
+ip link set up dev eth3
+ip link set up dev eth4
 
 if test "$DELEGATES" = "yes"; then
 	cat > /etc/cni/net.d/10-multus.conf <<EOF

@@ -12,7 +12,6 @@ spec:
         app: multus-alpine
       annotations:
         k8s.v1.cni.cncf.io/networks: '[
-            { "name": "bridge" },
             { "name": "ipvlan" },
             { "name": "macvlan" },
             { "name": "host-device" }

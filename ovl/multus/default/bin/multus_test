@@ -37,15 +37,15 @@ dbg() {
 cmd_tcase_start_multus() {
 	tcase "Start multus"
 	kubectl apply -f /etc/kubernetes/multus-crd.yml || tdie
-	kubectl="kubectl -n kube-system"
-	$kubectl apply -f /etc/kubernetes/multus-crd-bridge.yaml || tdie
-	#$kubectl apply -f /etc/kubernetes/multus-crd-bridge-spec.yaml || tdie
-	$kubectl apply -f /etc/kubernetes/multus-crd-ipvlan.yaml || tdie
-	$kubectl apply -f /etc/kubernetes/multus-crd-macvlan.yaml || tdie
-	$kubectl apply -f /etc/kubernetes/multus-crd-host-device.yaml || tdie
-	#kubectl apply -f /etc/kubernetes/multus-alpine.yaml || tdie
+	kubectl apply -n kube-system -f /etc/kubernetes/multus-crd-bridge.yaml || tdie
+	#kubectl apply -n kube-system -f /etc/kubernetes/multus-crd-bridge-spec.yaml || tdie
+	kubectl apply -f /etc/kubernetes/multus-crd-ipvlan.yaml || tdie
+	kubectl apply -f /etc/kubernetes/multus-crd-macvlan.yaml || tdie
+	kubectl apply -f /etc/kubernetes/multus-crd-host-device.yaml || tdie
+	kubectl apply -f /etc/kubernetes/multus-alpine.yaml || tdie
 	kubectl apply -f /etc/kubernetes/alpine.yaml || tdie
-	return 0
+	test_deployment alpine-deployment 180
+	test_daemonset multus-alpine 180
 }
 
 . /etc/profile
