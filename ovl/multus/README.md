@@ -15,7 +15,6 @@ chmod a+x $ARCHIVE/multus-cni
 ```
 
 
-
 ## Usage
 
 The [multinet](../network-topology/README.md#multinet)
@@ -24,6 +23,8 @@ cluster VMs as eth2,3,4.
 
 ```
 log=/tmp/$USER/xcluster.log
+xcadmin k8s_test multus basic > $log
+# Manual testing;
 xcadmin k8s_test multus start > $log
 ```
 
@@ -60,8 +61,8 @@ EOF
 ```
 
 In `xcluster` the nodes has names like `vm-004` so we use the hostname
-to get a node unique index. The final `node-local` script in all it's
-glory;
+to get a node unique index. The final `node-local` script;
+
 
 ```
 #! /bin/sh

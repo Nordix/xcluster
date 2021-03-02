@@ -109,6 +109,8 @@ test_basic() {
 	test -n "$__mode" || __mode=dual-stack
 	tlog "=== multus: Basic test on $__mode"
 	test_start
+	otc 1 check_interfaces
+	otc 1 ping
 	xcluster_stop
 }
 

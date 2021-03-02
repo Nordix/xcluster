@@ -10,16 +10,24 @@ die() {
 hostname | grep -Eq 'vm-[0-9]+$' || die "Invalid hostname [$(hostname)]"
 i=$(hostname | cut -d- -f2 | sed -re 's,^0+,,')
 test $i -le 200 || exit 0
-test -n "$PREFIX" || PREFIX=1000::1
+test -n "$FIRST_WORKER" || FIRST_WORKER=1
+test $i -lt $FIRST_WORKER && exit 0
+test $FIRST_WORKER -eq 1 || die "Multus; Only works with built-in base CNI"
 
 mkdir -p /etc/cni/multus/net.d
-mv /etc/cni/net.d/10-bridge.conf /etc/cni/multus/net.d/bridge.conf
-sed -i -e 's,cni-x,bridge,' /etc/cni/multus/net.d/bridge.conf
+f=/etc/cni/net.d/10-bridge.conf
+if test -r $f; then
+	mv $f /etc/cni/multus/net.d/bridge.conf
+	sed -i -e 's,cni-x,bridge,' /etc/cni/multus/net.d/bridge.conf
+	BASE_CNI=bridge
+fi
+
+test -n "$BASE_CNI" || die "Multus; Unknown base CNI-plugin"
 
 if ! grep -q CNI_INFO /etc/profile; then
-	echo CNI_INFO=multus >> /etc/profile
+	echo CNI_INFO=multus+$BASE_CNI >> /etc/profile
 else
-	sed -i -E 's,CNI_INFO=.+,CNI_INFO=multus,' /etc/profile
+	sed -i -E "s,CNI_INFO=.+,CNI_INFO=multus+$BASE_CNI," /etc/profile
 fi
 
 ip link set up dev eth2
@@ -69,11 +77,8 @@ else
     "confDir": "/etc/cni/multus/net.d",
     "cniDir": "/var/lib/cni/multus",
     "binDir": "/opt/cni/bin",
-    "clusterNetwork": "bridge",
+    "clusterNetwork": "$BASE_CNI",
 	"defaultNetworks": []
 }
 EOF
 fi
-	
-
-

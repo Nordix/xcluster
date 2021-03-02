@@ -1,5 +1,5 @@
 {
-  "cniVersion": "0.3.1",
+  "cniVersion": "0.4.0",
   "name": "ipvlan",
   "ipam": {
     "type": "host-local",
@@ -10,7 +10,14 @@
 			"rangeStart": "16.0.x.0",
 			"gateway": "16.0.0.0"
          }
-       ]
+       ],
+	   [
+         {
+            "subnet": "4000::16.0.0.0/112",
+			"rangeStart": "4000::16.0.x.0",
+			"gateway": "4000::16.0.0.0"
+         }
+	   ]
     ]
   }
 }

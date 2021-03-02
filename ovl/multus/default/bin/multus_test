@@ -48,6 +48,29 @@ cmd_tcase_start_multus() {
 	test_daemonset multus-alpine 180
 }
 
+cmd_tcase_check_interfaces() {
+	tcase "Check extra interfaces"
+	local pod dev
+	for pod in $(kubectl get pods -l app=multus-alpine -o name); do
+		for dev in net1 net2 net3; do
+			kubectl exec $pod -- ip link show dev $dev || tdie "$pod $dev"
+		done
+	done
+}
+
+cmd_tcase_ping() {
+	tcase "Ping on MACVLAN and IPVLAN (net1, net2)"
+	local pod i adr
+	for pod in $(kubectl get pods -l app=multus-alpine -o name); do
+		for i in 1 2 3 4; do
+			for adr in 15.0.$i.0 16.0.$i.0 4000::15.0.$i.0 4000::16.0.$i.0; do
+				kubectl exec $pod -- ping -c1 -W1 $adr || tdie "Ping $pod $adr"
+			done
+		done
+	done
+}
+
+
 . /etc/profile
 . /usr/lib/xctest
 indent='  '
