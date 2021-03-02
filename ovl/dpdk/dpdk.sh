@@ -99,6 +99,8 @@ test_start() {
 	export __mem201=1024
 	export __smp201=4
 	export __append201="hugepages=128"
+	# Avoid "Illegal instruction" error
+	export __kvm_opt='-object rng-random,filename=/dev/urandom,id=rng0 -device virtio-rng-pci,rng=rng0,max-bytes=1024,period=80000 -cpu host'
 	xcluster_start env network-topology iptools dpdk
 }
 
@@ -114,6 +116,8 @@ test_start_basic() {
 	export __nets_vm=0,1,2
 	export __append="hugepages=128"
 	export xcluster_SETUP=basic
+	# Avoid "Illegal instruction" error
+	export __kvm_opt='-object rng-random,filename=/dev/urandom,id=rng0 -device virtio-rng-pci,rng=rng0,max-bytes=1024,period=80000 -cpu host'
 	xcluster_start env iptools dpdk
 }
 
