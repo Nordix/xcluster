@@ -293,8 +293,8 @@ kubectl_exec() {
 	local podid=$(get_pod $1)
 	test "$podid" = "null" && tdie "Pod not found [$1]"
 	shift
-	echo "[$kubectl exec $podid $@]"
-	$kubectl exec $podid $@
+	echo "[$kubectl exec $podid -- $@]"
+	$kubectl exec $podid -- $@
 }
 
 ##  start_mconnect <manifest>
