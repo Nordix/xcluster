@@ -6,11 +6,10 @@ Use [project calico](https://www.projectcalico.org/) in `xcluster`.
 
 Pre-load the local registry;
 ```
-ver=v3.16.0
-images lreg_cache docker.io/calico/cni:$ver
-images lreg_cache docker.io/calico/node:$ver
-images lreg_cache docker.io/calico/kube-controllers:$ver
-images lreg_cache docker.io/calico/pod2daemon-flexvol:$ver
+ver=v3.18.0
+for x in cni node kube-controllers pod2daemon-flexvol; do
+  images lreg_cache docker.io/calico/$x:$ver
+done
 ```
 
 Start;
