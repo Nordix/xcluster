@@ -62,6 +62,10 @@ cmd_waitfor_k8s() {
 	# Do things on the "master" only;
 	if ps www | grep -q kube-apiserver; then
 		# Auto-load manifests;
+		if test "$METRICS_SERVER" = "yes"; then
+			mkdir -p /etc/kubernetes/load
+			mv /etc/kubernetes/metrics-server.yaml /etc/kubernetes/load
+		fi
 		test -d /etc/kubernetes/load && kubectl apply -f /etc/kubernetes/load
 	fi
 
