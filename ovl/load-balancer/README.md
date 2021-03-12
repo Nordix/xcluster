@@ -169,11 +169,11 @@ gcc -o /tmp/lb src/lb.c src/maglev.c -lmnl -lnetfilter_queue -lrt
 /tmp/lb clean
 ```
 
-The `maglev.c` has a stand-alone test which is rather crude but can be
+The `maglev.c` has a test program which is rather crude but can be
 extended (by you);
 
 ```
-gcc -DSATEST -o /tmp/maglev src/maglev.c
+gcc -o /tmp/maglev src/maglev.c src/maglev-test.c
 /tmp/maglev  # The example from p6 in the maglev doc
 # /tmp/maglev M N seed -- Shows permutation, lookup and a scale in/out;
 /tmp/maglev 20 5 1
