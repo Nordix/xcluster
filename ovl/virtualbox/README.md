@@ -39,7 +39,11 @@ export __image=/tmp/$USER/vbox.qcow2
 ./vbox.sh mkimage --alpine=alpine:latest [ovls...]
 ```
 
-
+Extended Alpine example;
+```
+docker build -t alpine-quagga:latest alpine
+SETUP=gobgp-base ./vbox.sh mkimage --alpine=alpine-quagga:latest gobgp
+```
 
 
 ## Convert to vdi format
