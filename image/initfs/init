@@ -5,9 +5,11 @@
 mount -t sysfs sysfs /sys
 mount -t proc procfs /proc
 mdev -s
-test -b /dev/vda || exec /bin/busybox ash
+test -b /dev/hda && rootdevice=/dev/hda
+test -b /dev/vda && rootdevice=/dev/vda
+test -n "$rootdevice" || exec /bin/busybox ash
 
 mkdir /mnt
-mount /dev/vda /mnt
+mount $rootdevice /mnt
 cp -R /lib/modules /mnt/lib
 exec switch_root /mnt /init
