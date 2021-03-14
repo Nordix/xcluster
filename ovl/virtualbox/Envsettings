@@ -1,0 +1,6 @@
+#eval $($XCLUSTER env | grep __kver)
+export __kver=linux-5.11.1
+export __kcfg=$PWD/config/$__kver
+eval $($XCLUSTER env | grep XCLUSTER_HOME)
+test -n "$__kobj" || export __kobj=$XCLUSTER_HOME/obj-vbox-$__kver
+test -n "$__kbin" || export __kbin=$XCLUSTER_HOME/bzImage-vbox-$__kver

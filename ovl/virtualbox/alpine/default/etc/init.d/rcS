@@ -1,0 +1,31 @@
+#! /bin/sh
+
+PATH="/bin:/sbin:/usr/bin:/usr/sbin"
+export PATH
+
+mkdir -p /var/log/dumps
+echo "/var/log/dumps/core.%e.%p" > /proc/sys/kernel/core_pattern
+
+# Handle time-zone ($TZ)
+# 1. Use ovl/env (xcluster_TZ)
+# 2. Read from /etc/TZ (ovl/timezone)
+# 3. Use Swedish/Hungarian time by default
+test -r /etc/TZ && TZ=$(cat /etc/TZ)
+test -r /etc/xcluster_env && . /etc/xcluster_env
+test -n "$TZ" || TZ=CET-1CEST-2,M3.5.0,M10.5.0/3
+export TZ
+echo $TZ > /etc/TZ
+echo "export TZ=$TZ" >> /etc/profile
+
+hostname alpine$RANDOM
+hostname > /etc/hostname
+
+# Start syslog
+klogd -c 4
+syslogd -s 1000 -b 10
+
+# Start other services
+for n in `find /etc/init.d -name "*.rc" | sort`; do
+    $n start
+done
+

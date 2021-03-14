@@ -1,0 +1,83 @@
+#! /bin/sh
+##
+## default.script --
+##   Called on events from "udhcpc",
+##
+## Commands;
+##
+
+prg=$(basename $0)
+dir=$(dirname $0); dir=$(readlink -f $dir)
+tmp=/tmp/${prg}_$$
+
+die() {
+    echo "ERROR: $*" >&2
+    rm -rf $tmp
+    exit 1
+}
+help() {
+    grep '^##' $0 | cut -c3-
+    rm -rf $tmp
+    exit 0
+}
+test -n "$1" || help
+echo "$1" | grep -qi "^help\|-h" && help
+
+log() {
+	echo "$prg: $*" >&2
+}
+dbg() {
+	test -n "$__verbose" && echo "$prg: $*" >&2
+}
+
+##   deconfig
+##   bound
+##   renew
+##   nak
+##
+cmd_deconfig() {
+	log "==== deconfig"
+	ip addr flush dev $interface
+}
+cmd_bound() {
+	log "==== bound"
+	ip addr add $ip/$mask dev $interface
+	ip ro replace default via $router
+	test -n "$dns" && echo "nameserver $dns" > /etc/resolv.conf
+}
+cmd_renew() {
+	log "==== renew"
+	ip addr add $ip/$mask dev $interface
+	ip ro replace default via $router
+	test -n "$dns" && echo "nameserver $dns" > /etc/resolv.conf
+}
+cmd_nak() {
+	log "==== nak"
+}
+
+
+# Get the command
+cmd=$1
+shift
+grep -q "^cmd_$cmd()" $0 $hook || die "Invalid command [$cmd]"
+
+while echo "$1" | grep -q '^--'; do
+    if echo $1 | grep -q =; then
+	o=$(echo "$1" | cut -d= -f1 | sed -e 's,-,_,g')
+	v=$(echo "$1" | cut -d= -f2-)
+	eval "$o=\"$v\""
+    else
+	o=$(echo "$1" | sed -e 's,-,_,g')
+	eval "$o=yes"
+    fi
+    shift
+done
+unset o v
+long_opts=`set | grep '^__' | cut -d= -f1`
+
+# Execute command
+trap "die Interrupted" INT TERM
+cmd_$cmd "$@"
+status=$?
+rm -rf $tmp
+exit $status
