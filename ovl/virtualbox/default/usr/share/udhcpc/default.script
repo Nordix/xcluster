@@ -36,25 +36,38 @@ dbg() {
 ##   nak
 ##
 cmd_deconfig() {
-	log "==== deconfig"
+	log "==== deconfig $interface"
 	ip addr flush dev $interface
 }
 cmd_bound() {
-	log "==== bound"
-	ip addr add $ip/$mask dev $interface
-	ip ro replace default via $router
-	test -n "$dns" && echo "nameserver $dns" > /etc/resolv.conf
+	log "==== bound $interface"
+	setupif
 }
 cmd_renew() {
-	log "==== renew"
-	ip addr add $ip/$mask dev $interface
-	ip ro replace default via $router
-	test -n "$dns" && echo "nameserver $dns" > /etc/resolv.conf
+	log "==== renew $interface"
+	setupif
 }
 cmd_nak() {
-	log "==== nak"
+	log "==== nak $interface"
 }
+setupif() {
+	test "$DUMP" = "yes" && env
+	ip_cmd=ip
+	echo $ip | grep -q : && ip_cmd="ip -6"
+	$ip_cmd addr add $ip/$mask dev $interface
 
+	# Set default route and DNS only on eth0 (assumed to be NAT network)
+	test "$interface" = "eth0" || return 0
+
+	$ip_cmd ro replace default via $router
+	if ! echo $ip | grep -q : ; then
+		test -n "$dns" && echo "nameserver $dns" > /etc/resolv.conf
+		if echo "$boot_file" | grep -q '\.pxe$'; then
+			hostname $(basename $boot_file .pxe)
+			hostname > /etc/hostname
+		fi
+	fi
+}
 
 # Get the command
 cmd=$1

@@ -1,8 +1,10 @@
 #! /bin/sh
 ip link set up dev lo
 
-for i in eth1 eth0; do
+for i in eth0 eth1 eth2 eth3; do
 	ip link show dev $i > /dev/null 2>&1 || continue
 	ip link set up dev $i
 	udhcpc -i $i
 done
+
+inetd

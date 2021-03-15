@@ -41,8 +41,8 @@ export __image=/tmp/$USER/vbox.qcow2
 
 Extended Alpine example;
 ```
-docker build -t alpine-quagga:latest alpine
-SETUP=gobgp-base ./vbox.sh mkimage --alpine=alpine-quagga:latest gobgp
+docker build -t alpine-xcluster:latest alpine
+./vbox.sh mkimage --alpine=alpine-xcluster:latest
 ```
 
 
@@ -51,3 +51,10 @@ SETUP=gobgp-base ./vbox.sh mkimage --alpine=alpine-quagga:latest gobgp
 ```
 qemu-img convert -f qcow2 $__image -O vdi $VBOXDIR/xcluster.vdi
 ```
+
+## VirtualBox network setup
+
+All networks *must* be `virtio-net`.The first network should be a
+`NAT` network. You may add port forwarding to port 23 (telnet);
+
+<img src="vbox-net.png" alt="VBox network screenshot" width="80%" />
