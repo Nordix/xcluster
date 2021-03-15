@@ -16,6 +16,7 @@ echo 0 > /proc/sys/net/ipv6/conf/eth1/accept_dad
 ifsetup() {
 	dev=$1
 	net=$2
+	ip link show dev $dev > /dev/null 2>&1 || return 0
 	echo 0 > /proc/sys/net/ipv6/conf/$dev/accept_dad
 	ip addr add 192.168.$net.$i/24 dev $dev
 	ip -6 addr add $PREFIX:192.168.$net.$i/120 dev $dev
