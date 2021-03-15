@@ -32,6 +32,14 @@ Test with kvm;
 kvm -hda $__image
 ```
 
+A Kubernetes image;
+```
+# KUBERNETESD points to an unpacked k8s server release
+export KUBERNETESD=$HOME/tmp/kubernetes/kubernetes-v1.20.4/server/bin
+./vbox.sh mkimage --size=8G xnet etcd iptools crio kubernetes mconnect images k8s-cni-bridge
+```
+
+
 ### Alpine
 
 ```
@@ -50,6 +58,7 @@ docker build -t alpine-xcluster:latest alpine
 
 ```
 qemu-img convert -f qcow2 $__image -O vdi $VBOXDIR/xcluster.vdi
+VBoxManage modifymedium disk $VBOXDIR/xcluster.vdi --type immutable
 ```
 
 ## VirtualBox network setup
@@ -57,4 +66,4 @@ qemu-img convert -f qcow2 $__image -O vdi $VBOXDIR/xcluster.vdi
 All networks *must* be `virtio-net`.The first network should be a
 `NAT` network. You may add port forwarding to port 23 (telnet);
 
-<img src="vbox-net.png" alt="VBox network screenshot" width="80%" />
+<img src="vbox-net.png" alt="VBox network screenshot" width="50%" />

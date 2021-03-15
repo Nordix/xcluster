@@ -37,7 +37,8 @@ dbg() {
 ##
 cmd_deconfig() {
 	log "==== deconfig $interface"
-	ip addr flush dev $interface
+	# Bad idea! Will flush the ipv6 link-local address!
+	#ip addr flush dev $interface
 }
 cmd_bound() {
 	log "==== bound $interface"
@@ -51,15 +52,21 @@ cmd_nak() {
 	log "==== nak $interface"
 }
 setupif() {
-	test "$DUMP" = "yes" && env
-	ip_cmd=ip
-	echo $ip | grep -q : && ip_cmd="ip -6"
-	$ip_cmd addr add $ip/$mask dev $interface
+	local ip_opt
+	echo $ip | grep -q : && ip_opt="-6"
+	ip $ip_opt addr add $ip/$mask dev $interface
 
+	mkdir -p /var/lib/udhcpd
+	cat > /var/lib/udhcpd/$interface$ip_opt <<EOF
+interface=$interface
+ip=$ip
+dns=$dns
+boot_file=$boot_file
+EOF
 	# Set default route and DNS only on eth0 (assumed to be NAT network)
 	test "$interface" = "eth0" || return 0
 
-	$ip_cmd ro replace default via $router
+	ip $ip_opt ro replace default via $router
 	if ! echo $ip | grep -q : ; then
 		test -n "$dns" && echo "nameserver $dns" > /etc/resolv.conf
 		if echo "$boot_file" | grep -q '\.pxe$'; then

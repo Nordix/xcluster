@@ -1,10 +1,17 @@
 #! /bin/sh
+. /etc/profile
+test -n "$__nrouters" || echo "__nrouters=0" >> /etc/profile
+
+echo 1 > /proc/sys/net/ipv6/conf/all/addr_gen_mode
+echo 1 > /proc/sys/net/ipv6/conf/default/addr_gen_mode
+
 ip link set up dev lo
 
-for i in eth0 eth1 eth2 eth3; do
+for i in eth0; do
 	ip link show dev $i > /dev/null 2>&1 || continue
 	ip link set up dev $i
-	udhcpc -i $i
+	udhcpc -q -i $i
+	echo "DHCP_$i=yes" >> /etc/profile
 done
 
 inetd

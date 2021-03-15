@@ -57,7 +57,7 @@ cmd_mkimage() {
 
 	if test -z "$__alpine"; then
 		mkdir -p $(dirname $__image) || die mkdir
-		$XCLUSTER mkimage --bootable || die mkimage
+		$XCLUSTER mkimage --bootable --size=$__size || die mkimage
 		$XCLUSTER ximage virtualbox $@ || die ximage
 		return 0
 	fi
