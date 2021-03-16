@@ -7,10 +7,11 @@ echo 1 > /proc/sys/net/ipv6/conf/default/addr_gen_mode
 
 ip link set up dev lo
 
-for i in eth0; do
+test -n "$DHCP_IFACES" || DHCP_IFACES="eth0"
+for i in $DHCP_IFACES; do
 	ip link show dev $i > /dev/null 2>&1 || continue
 	ip link set up dev $i
-	udhcpc -q -i $i
+	udhcpc -q -n -t 2 -i $i || continue
 	echo "DHCP_$i=yes" >> /etc/profile
 done
 

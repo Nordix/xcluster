@@ -34,6 +34,7 @@ dbg() {
 ##   bound
 ##   renew
 ##   nak
+##   leasefail
 ##
 cmd_deconfig() {
 	log "==== deconfig $interface"
@@ -50,6 +51,9 @@ cmd_renew() {
 }
 cmd_nak() {
 	log "==== nak $interface"
+}
+cmd_leasefail() {
+	log "==== leasefail $interface"
 }
 setupif() {
 	local ip_opt

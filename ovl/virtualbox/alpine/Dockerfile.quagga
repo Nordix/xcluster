@@ -1,3 +1,2 @@
-FROM alpine:latest
+FROM alpine-xcluster:latest
 RUN apk add quagga
-

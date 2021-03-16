@@ -36,6 +36,7 @@ dbg() {
 cmd_env() {
 	test -n "$__kcfg" || . $dir/Envsettings
 	eval $($XCLUSTER env)
+	test -n "$VBOXDIR" || VBOXDIR=$HOME/VirtualBox
 	test "$cmd" = "env" && set | grep -E '^(__.*|ARCHIVE)='
 }
 
@@ -47,7 +48,7 @@ cmd_kernel_build() {
 	$XCLUSTER kernel_build --menuconfig=$__menuconfig
 }
 
-##  mkimage [--alpine] [ovls...]
+##  mkimage [--alpine=docker-img] [ovls...]
 ##
 cmd_mkimage() {
 	test -n "$__image" || die 'Not set [$__image]'
@@ -70,6 +71,37 @@ cmd_mkimage() {
 	$XCLUSTER ximage virtualbox $@ || die ximage
 }
 
+##  replace_disk --image= [--vdi_image=] <vm...>
+##    Delete the old vdi_image, create a new from image and replace on vms.
+##
+cmd_replace_disk() {
+	cmd_env
+	test -n "$__image" || die "No image"
+	test -r "$__image" || die "Not readable [$__image]"
+	test -n "$__vdi_image" || __vdi_image=/tmp/$USER/xcluster.vdi
+	local vm
+	for vm in $@; do
+		VBoxManage storageattach $vm --type hdd --storagectl IDE \
+			--port 0 --device 0 --medium none
+	done
+	deletemedium $__vdi_image
+	qemu-img convert -f qcow2 $__image -O vdi $__vdi_image || die convert
+	VBoxManage modifymedium disk $__vdi_image --type immutable || die immutable
+	for vm in $@; do
+		VBoxManage storageattach $vm --type hdd --storagectl IDE \
+			--port 0 --device 0 --mtype immutable --medium $__vdi_image \
+			|| die "Reattach hda"
+	done
+}
+deletemedium() {
+	local child
+	for child in $(VBoxManage showmediuminfo disk $1 | \
+		grep -A100 'Child UUIDs:' | sed -e 's,Child UUIDs:,,'); do
+		VBoxManage closemedium disk $child --delete || die "Delete child medium"
+	done
+	# May fail if there is no medium
+	VBoxManage closemedium disk $1 --delete > /dev/null 2>&1
+}
 
 # Get the command
 cmd=$1
