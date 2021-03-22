@@ -49,11 +49,6 @@ run_kubelet() {
 
 run_kube_proxy() {
 	local i g v
-	for i in $(echo $FEATURE_GATES | tr , ' '); do
-		g=$(echo $i | cut -d= -f1)
-		v=$(echo $i | cut -d= -f2)
-		sed -i -e "s,$g:.*,$g: $v," /etc/kubernetes/kube-proxy.config
-	done
 	CLUSTER_CIDR=11.0.0.0/16,1100::/48
 	if echo "$FEATURE_GATES" | grep -q "IPv6DualStack=false"; then
 		CLUSTER_CIDR=11.0.0.0/16
