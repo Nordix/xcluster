@@ -71,4 +71,10 @@ if kubectl version --short --client | grep -q v1.2; then
 fi
 
 test -n "$FEATURE_GATES" || \
-	echo "FEATURE_GATES=IPv6DualStack=true,EphemeralContainers=true" >> /etc/profile
+	echo "FEATURE_GATES=IPv6DualStack=true" >> /etc/profile
+
+f=/etc/kubernetes/kube-proxy.config
+for g in $(echo $FEATURE_GATES | tr ',' ' '); do
+	g=$(echo $g | sed -e 's,=,: ,')
+	sed -i -e "/featureGates:/a \  $g" $f
+done
