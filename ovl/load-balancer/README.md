@@ -229,3 +229,30 @@ re-sent packet is likely to arrive in the same order.
 
 The NFQUEUE does not support stored packets to be re-injected, so some
 other mechanism must be used, e.g. a raw socket or a tap device.
+
+
+## DPDK based load-balancer
+
+[DPDK](https://www.dpdk.org/) (Data Plane Development Kit) can be used
+to process packets in user-space. With HW support is can be extremly
+fast. In `xcluster` we have no HW and must use the kernel based DPDK
+drivers like `af_socket` or `pcap`.
+
+**Prerequisite**: You must firsts build DPDK locally as described in
+[ovl/dpdk](../dpdk/). And `ovl/dpdk/Envsettings` must be sourced.
+
+
+### l2lb
+
+A very simple load-balancer using only MAC addresses.
+
+```
+cdo dpdk
+. ./Envsettings
+cdo load-balancer
+./load-balancer.sh test dpdk > $log
+# Manual
+./load-balancer.sh test start_dpdk > $log
+# On vm-201 (router)
+l2lb show
+```

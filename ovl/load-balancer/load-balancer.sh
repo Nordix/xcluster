@@ -70,11 +70,12 @@ cmd_test() {
         for t in $@; do
             test_$t
         done
-    else
-        for t in basic; do
-            test_$t
-        done
-    fi      
+	else
+		test_ecmp
+		test_ipvs
+		test_nfqueue
+		test_dpdk
+    fi
 
     now=$(date +%s)
     tlog "Xcluster test ended. Total time $((now-begin)) sec"
@@ -87,7 +88,7 @@ test_start() {
 	unset __mem1 __mem201 __mem202 __mem203
 	export __mem=256
 	echo "$XOVLS" | grep -q private-reg && unset XOVLS
-	xcluster_start network-topology iptools load-balancer
+	xcluster_start env network-topology iptools load-balancer
 }
 
 
@@ -286,21 +287,26 @@ test_ipvs_scale() {
 	test "$__view" = "yes" && inkview /tmp/scale.svg
 }
 
+# DPDK l2lb -----------------------------------------------------------
 
-
-
-otcr() {
-	local x last_router
-	last_router=$((200 + __nrouters))
-	for x in $(seq 201 $last_router); do
-		otc $x "$@"
-	done
+test_start_dpdk() {
+	export SETUP=dpdk
+	export __image=$XCLUSTER_HOME/hd.img
+	export __ntesters=1
+	export __nrouters=1
+	unset __mem1
+	export __mem=256
+	export __mem201=2048
+	export __smp201=4
+    export __append201="hugepages=128"
+	echo "$XOVLS" | grep -q private-reg && unset XOVLS
+	xcluster_start network-topology iptools dpdk load-balancer
 }
-otcw() {
-	local x
-	for x in $(seq 1 $__nvm); do
-		otc $x "$@"
-	done
+test_dpdk() {
+	tlog "=== load-balancer: DPDK l2lb test"
+	test_start_dpdk
+	otc 221 "mconnect 10.0.0.0:5001"
+	xcluster_stop	
 }
 
 ##  src_build

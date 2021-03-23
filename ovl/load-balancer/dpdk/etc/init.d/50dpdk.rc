@@ -1,0 +1,64 @@
+#! /bin/sh
+
+export PATH="/bin:/sbin:/usr/bin:/usr/sbin"
+. /etc/profile
+test -n "$__nrouters" || __nrouters=1
+test -n "$__nvm" || __nvm=4
+
+die() {
+    echo "$@"
+    exit 1
+}
+
+hostname | grep -Eq 'vm-[0-9]+$' || die "Invalid hostname [$(hostname)]"
+i=$(hostname | cut -d- -f2 | sed -re 's,^0+,,')
+
+vm() {
+	killall coredns
+	ip neigh add 192.168.1.201 lladdr 00:00:00:01:01:C9 \
+		nud permanent dev eth1
+	ip -6 neigh add 1000::1:192.168.1.201 lladdr 00:00:00:01:01:C9 \
+		nud permanent dev eth1
+	return 0
+}
+
+router() {
+	mkdir -p /dev/hugepages
+	mount -t hugetlbfs nodev /dev/hugepages
+	killall coredns
+	ip ro del default > /dev/null 2>&1
+	ip -6 ro del default > /dev/null 2>&1
+	ip addr flush dev eth1
+	ip addr flush dev eth2
+	ethtool -K eth1 gro off gso off tso off
+	ethtool -K eth2 gro off gso off tso off
+	export LD_LIBRARY_PATH=/usr/local/lib/x86_64-linux-gnu
+	echo "export LD_LIBRARY_PATH=$LD_LIBRARY_PATH" >> /etc/profile
+	l2lb init
+	local n
+	for n in $(seq 1 $__nvm); do
+		l2lb activate --mac=0:0:0:1:1:$n $n
+	done
+	l2lb lb -l 0 -n 2 \
+		--vdev=net_pcap0,iface=eth1 --vdev=net_pcap1,iface=eth2 \
+		-- --mac1=00:00:00:01:02:DD --vip4=10.0.0.0/24 --vip6=1000::/120 \
+		> /var/log/l2lb.log 2>&1 &
+}
+
+tester() {
+	killall coredns
+    ip neigh add 192.168.2.201 lladdr 00:00:00:01:02:C9 \
+        nud permanent dev eth1
+    ip -6 neigh add 1000::1:192.168.2.201 lladdr 00:00:00:01:02:C9 \
+        nud permanent dev eth1
+	return 0
+}
+
+case $(hostname) in
+	vm-0*)
+		vm;;
+	vm-20*)
+		router;;
+	vm-22*)
+		tester;;
+esac

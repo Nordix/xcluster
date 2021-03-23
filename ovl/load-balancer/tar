@@ -36,6 +36,14 @@ test -x $f && $XCLUSTER install_prog --dest=$tmp $f
 echo $SETUP | grep -q nfqueue && \
 	gcc -o $tmp/bin/lb $dir/src/lb.c $dir/src/maglev.c -lmnl -lnetfilter_queue -lrt
 
+if echo $SETUP | grep -q dpdk; then
+	test -n "$__dpdk_src" || die 'Not set [$__dpdk_src]'
+	make -f $dir/src/dpdk/Makefile DIR=$dir/src/dpdk DST=$tmp/bin \
+		2>&1 > /dev/null || die "make l2lb"
+	mkdir -p $tmp/usr/local/lib
+    cp -R $__dpdk_src/build/sys/usr/local/lib/x86_64-linux-gnu $tmp/usr/local/lib
+fi
+
 $XCLUSTER install_prog --dest=$tmp jq
 
 cd $tmp
