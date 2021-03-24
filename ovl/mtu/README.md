@@ -275,8 +275,8 @@ progressively smaller.
 Incoming traffic is forced into the squeeze-chain with iptables rules
 and routes.
 
-``
-./mtu.sh test start_squeeze > $log`
+```
+./mtu.sh test start_squeeze > $log
 # on vm-001
 vm-001 ~ # tracepath 20.0.0.0
  1?: [LOCALHOST]                      pmtu 1500
