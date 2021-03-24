@@ -263,3 +263,46 @@ Pcap captures;
 * [vm-002](pcap/ecmp/vm-002-eth1.pcap)
 * [In the POD on vm-003](pcap/ecmp/mserver-vm-003.pcap)
 
+
+## Squeeze Chain
+
+<img src="squeeze-chain.svg" alt="Test setup" width="60%" />
+
+This is a one-vm variation of the mtu ladder. A number of network
+name-spaces (netns) are chained with `veth` pairs. The mtu size is
+progressively smaller.
+
+Incoming traffic is forced into the squeeze-chain with iptables rules
+and routes.
+
+``
+./mtu.sh test start_squeeze > $log`
+# on vm-001
+vm-001 ~ # tracepath 20.0.0.0
+ 1?: [LOCALHOST]                      pmtu 1500
+ 1:  192.168.1.201                                         1.827ms 
+ 1:  192.168.1.201                                         1.174ms 
+ 2:  192.168.1.201                                         0.990ms pmtu 1480
+ 2:  10.200.1.2                                            1.035ms 
+ 3:  10.200.1.2                                            0.980ms pmtu 1460
+ 3:  10.200.2.2                                            1.176ms 
+ 4:  10.200.2.2                                            1.021ms pmtu 1440
+ 4:  10.200.3.2                                            1.215ms 
+ 5:  10.200.3.2                                            1.102ms pmtu 1420
+ 5:  10.200.4.2                                            1.090ms 
+ 6:  10.200.4.2                                            0.878ms pmtu 1400
+ 6:  10.200.5.2                                            1.038ms 
+ 7:  10.200.5.2                                            1.146ms pmtu 1380
+ 7:  10.200.6.2                                            1.409ms 
+ 8:  10.200.6.2                                            1.123ms pmtu 1360
+ 8:  10.200.7.2                                            1.336ms 
+ 9:  10.200.7.2                                            1.165ms pmtu 1340
+ 9:  10.200.8.2                                            1.321ms 
+10:  10.200.8.2                                            1.230ms pmtu 1320
+10:  10.200.9.2                                            1.350ms 
+11:  10.200.9.2                                            1.192ms pmtu 1300
+11:  10.200.10.2                                           1.391ms 
+12:  192.168.1.201                                         1.208ms asymm  1 
+13:  20.0.0.0                                              2.952ms reached
+     Resume: pmtu 1300 hops 13 back 2 
+```
