@@ -21,7 +21,7 @@ cp -R $dir/default/* $tmp
 $XCLUSTER install_prog --dest=$tmp ping tracepath jq curl ethtool
 
 mkdir -p $tmp/bin
-f=$GOPATH/src/github.com/Nordix/mconnect/image/mconnectX
+f=$GOPATH/src/github.com/Nordix/mconnect/image/mconnect
 if test -x $f; then
 	cp $f $tmp/bin
 else

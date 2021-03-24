@@ -130,9 +130,7 @@ test_vip_setup() {
 	otc 203 "route 10.0.0.0 192.168.4.202"
 
 	otc 221 "assign_cidr 20.0.0.0"
-	for i in $(seq 1 4); do
-		otc $i "route 20.0.0.0 192.168.1.201"
-	done
+	otcw "route 20.0.0.0 192.168.1.201"
 	otc 201 "route 20.0.0.0 192.168.3.202"
 	otc 202 "route 20.0.0.0 192.168.4.203"
 	otc 203 "route 20.0.0.0 192.168.2.221"
@@ -389,6 +387,20 @@ test_multihop_capture_vm() {
 	xcluster_stop
 }
 
+test_start_squeeze() {
+	export __image=$XCLUSTER_HOME/hd.img
+	export XOVLS=$(echo $XOVLS | sed -e 's,private-reg,,')
+	export __nrouters=1
+	export __ntesters=1
+	xcluster_start network-topology iptools mtu
+	otcw "assign_cidr 10.0.0.0"
+	otc 221 "assign_cidr 20.0.0.0"
+	otcw start_mconnect
+	otc 201 ecmp_route
+	otcr "route 20.0.0.0 192.168.2.221"
+	otc 201 "squeeze_chain 10"
+}
+
 cmd_start_tcpdump() {
 	tcase "Start tcpdump capture in all mserver-pods"
 	local pod
@@ -427,22 +439,6 @@ cmd_collect_tcpdump_log() {
 	scp $sshopt root@192.168.0.$1:/tmp/$__interface.pcap $dst/$vm-$__interface 2>&1
 }
 
-otcw() {
-	cmd_env
-	local i
-	if test "$xcluster_FIRST_WORKER" = "2"; then
-		for i in $(seq 2 5); do otc $i "$1"; done
-	else
-		for i in $(seq 1 4); do otc $i "$1"; done
-	fi
-}
-cmd_otc() {
-	test -n "$__vm" || __vm=2
-	otc $__vm $@
-}
-cmd_otcw() {
-	otcw $@
-}
 
 . $($XCLUSTER ovld test)/default/usr/lib/xctest
 indent=''

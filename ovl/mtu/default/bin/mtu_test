@@ -266,6 +266,75 @@ cmd_tcase_stop_tcpdump() {
 	return 0
 }
 
+cmd_tcase_squeeze_chain() {
+	local last=5
+	test -n "$1" && last=$1
+	tcase "Squeeze chain. steps=$last"
+	local i j mtu ns
+	for i in $(seq 1 $last); do
+		mtu=$((1500 - i * 20))
+		test $i -eq $last && __last=yes
+		cmd_add_chain $i $mtu
+	done
+	for i in $(seq 1 $last); do
+		j=$((i + 1))
+		ns=$(printf "sz%02d" $i)
+		ip netns exec $ns ip ro add 20.0.0.0/24 via 10.200.$j.2
+		ip netns exec $ns ip -6 ro add $PREFIX:20.0.0.0/120 via $PREFIX:10.200.$j.2
+	done
+
+	# Force packets from the cluster to the squeeze chain
+	iptables -t mangle -A PREROUTING -i eth1 -d 20.0.0.0/24 -j MARK --set-mark 2
+	ip ro add default via 10.200.1.2 table 2
+	ip rule add fwmark 2 table 2
+}
+
+##  add_chain [--last] <index> [mtu]
+##    A a netns in the chain
+cmd_add_chain() {
+	test -n "$1" || die "No index"
+	local mtu=1500
+	test -n "$2" && mtu=$2
+	local i=$1
+	local name=$(printf "sz%02d" $i)
+
+	ip netns add $name
+	ip link add $name type veth peer name out
+
+	ip link set dev out netns $name
+	ip netns exec $name ip link set dev out up mtu $mtu
+	ip netns exec $name ip addr add 10.200.$i.2/24 dev out
+	ip netns exec $name ip ro add default via 10.200.$i.1
+	ip netns exec $name ip -6 addr add $PREFIX:10.200.$i.2/120 dev out
+	ip netns exec $name ip -6 ro add default via $PREFIX:10.200.$i.1
+
+	if test $i -eq 1; then
+		ip link set dev $name up mtu $mtu
+		ip addr add 10.200.$i.1/24 dev $name
+		ip -6 addr add $PREFIX:10.200.$i.1/120 dev $name
+	else
+		local prev=$(printf "sz%02d" $((i - 1)))
+		ip link set dev $name netns $prev
+		ip netns exec $prev ip link set dev $name up mtu $mtu
+		ip netns exec $prev ip addr add 10.200.$i.1/24 dev $name
+		ip netns exec $prev ip -6 addr add $PREFIX:10.200.$i.1/120 dev $name
+	fi
+
+	if test "$__last" = "yes"; then
+		i=$((i + 1))
+		ip link add $name type veth peer name host
+		ip link set dev $name up
+		ip addr add 10.200.$i.2/24 dev $name
+		ip -6 addr add $PREFIX:10.200.$i.2/120 dev $name
+
+		ip link set dev host netns $name
+		ip netns exec $name ip link set dev host up
+		ip netns exec $name ip addr add 10.200.$i.1/24 dev host
+		ip netns exec $name ip -6 addr add $PREFIX:10.200.$i.1/120 dev host
+	fi
+}
+
+
 . /etc/profile
 . /usr/lib/xctest
 indent='  '
