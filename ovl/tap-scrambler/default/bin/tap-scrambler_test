@@ -1,0 +1,83 @@
+#! /bin/sh
+##
+## tap-scrambler_test --
+##
+##   Test script for tap-scrambler executed in xcluster.
+##
+## Commands;
+##
+
+prg=$(basename $0)
+dir=$(dirname $0); dir=$(readlink -f $dir)
+me=$dir/$prg
+tmp=/tmp/${prg}_$$
+test -n "$PREFIX" || PREFIX=1000::1
+
+die() {
+	echo "ERROR: $*" >&2
+	rm -rf $tmp
+	exit 1
+}
+help() {
+	grep '^##' $0 | cut -c3-
+	rm -rf $tmp
+	exit 0
+}
+test -n "$1" || help
+echo "$1" | grep -qi "^help\|-h" && help
+
+log() {
+	echo "$prg: $*" >&2
+}
+dbg() {
+	test -n "$__verbose" && echo "$prg: $*" >&2
+}
+
+cmd_tcase_tap() {
+	local mtu=1500
+	test -n "$1" && mtu=$1
+	local iface=eth2
+	tcase "Create tap2, traffic from $iface, mtu=$mtu"
+	ethtool -K $iface gro off gso off tso off
+	ip tuntap add mode tap name tap2 || die "Create tap2"
+	ip link set dev tap2 up arp off mtu $mtu
+	ip addr add 10.200.0.0/32 dev tap2
+	ip -6 addr add $PREFIX:10.200.0.0/128 dev tap2
+	ip ro add default dev tap2 mtu $mtu table 2
+	ip rule add fwmark 2 table 2
+	iptables -t mangle -A PREROUTING -i $iface -j MARK --set-mark 2
+	ip -6 ro add default dev tap2 mtu $mtu table 102
+	ip -6 rule add fwmark 2 table 102
+	ip6tables -t mangle -A PREROUTING -i $iface -j MARK --set-mark 2
+}
+
+. /etc/profile
+. /usr/lib/xctest
+indent='  '
+
+
+# Get the command
+cmd=$1
+shift
+grep -q "^cmd_$cmd()" $0 || die "Invalid command [$cmd]"
+
+while echo "$1" | grep -q '^--'; do
+	if echo $1 | grep -q =; then
+		o=$(echo "$1" | cut -d= -f1 | sed -e 's,-,_,g')
+		v=$(echo "$1" | cut -d= -f2-)
+		eval "$o=\"$v\""
+	else
+		o=$(echo "$1" | sed -e 's,-,_,g')
+		eval "$o=yes"
+	fi
+	shift
+done
+unset o v
+long_opts=`set | grep '^__' | cut -d= -f1`
+
+# Execute command
+trap "die Interrupted" INT TERM
+cmd_$cmd "$@"
+status=$?
+rm -rf $tmp
+exit $status
