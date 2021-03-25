@@ -6,9 +6,13 @@
 #include "util.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
 #include <getopt.h>
 #include <unistd.h>
 #include <linux/if_tun.h>
+
+static void printPacket(uint8_t const* data, unsigned len);
+
 
 static int cmdFwd(int argc, char* argv[])
 {
@@ -44,12 +48,12 @@ static int cmdFwd(int argc, char* argv[])
 		return EXIT_FAILURE;
 	printf("Using MTU %d\n", mtu);
 
-	char buffer[mtu + 100];
+	uint8_t buffer[mtu + 100];
 	for (;;) {
 		int cnt = read(fd, buffer, sizeof(buffer));
 		if (cnt < 0)
 			return EXIT_FAILURE;
-		printf("Packet length=%d\n", cnt);
+		printPacket(buffer, cnt);
 		if (write(fd, buffer, cnt) != cnt)
 			return EXIT_FAILURE;
 	}
@@ -60,3 +64,8 @@ __attribute__ ((__constructor__)) static void addCmdFwd(void) {
 	addCmd("fwd", cmdFwd);
 }
 
+
+static void printPacket(uint8_t const* data, unsigned len)
+{
+	
+}

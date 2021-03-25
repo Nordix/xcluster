@@ -26,6 +26,49 @@ ping -c1 -s 2000 192.168.1.1
 ping -c1 -M do -s 2000 1000::1:192.168.1.1
 ```
 
+## Building and extending
+
+```
+gcc -Wall -o tap-scrambler src/*
+```
+
+There is no configuration language or something similar for
+`tap-scrambler`. That is intentional. When thinking about how to let
+users customize tests I realized that I have no idea what people might
+want to test. Instead `tap-scrambler` is really simple to extend. Just
+copy `cmdFwd.c` and write your own test in C.
+
+```
+# A new traffic-loss test;
+cp src/cmdFwd.c src/cmdDrop.c
+vi src/cmdDrop.c
+```
+
+No update in any central code is needed. The new function will be
+included automatically by the "constructor";
+
+```c
+__attribute__ ((__constructor__)) static void addCmdDrop(void) {
+	addCmd("drop", cmdDrop);
+}
+```
+
+
+## The Martian problem
+
+The figure above shows `tap-scrambler` in a forwarding machine. You
+might want to use `tap-scrambler` locally and direct local traffic to
+it, but there is a problem...
+
+<img src="martian.svg" alt="martian packet" width="45%" />
+
+Packets from a local program are sent with a local address as
+source. Packets are routed to `tap-scrambler` which will not alter the
+addresses and send the packet back. But the returned packet will have
+a local address as source but coming from a non-local source. The
+kernel will discard it as beeing a
+[martian](https://en.wikipedia.org/wiki/Martian_packet).
+
 
 ## Links
 
