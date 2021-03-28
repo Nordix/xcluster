@@ -5,5 +5,8 @@ export __kvm_opt='-object rng-random,filename=/dev/urandom,id=rng0 -device virti
 
 eval $(./dpdk.sh env | grep __dpdk_src)
 export __dpdk_src
-export PKG_CONFIG_PATH=$__dpdk_src/build/sys/usr/local/lib/x86_64-linux-gnu/pkgconfig
+PKG_CONFIG_PATH=$__dpdk_src//build/sys/usr/local/lib64/pkgconfig
+grep -qE 'VERSION_ID="18\.[0-9]+"' /etc/os-release \
+  && PKG_CONFIG_PATH=$__dpdk_src/build/sys/usr/local/lib/x86_64-linux-gnu/pkgconfig
+export PKG_CONFIG_PATH
 unset __mem __mem201 __mem202 __mem203 __mem1

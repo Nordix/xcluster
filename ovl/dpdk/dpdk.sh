@@ -232,10 +232,10 @@ cmd_build() {
 	cmd_fix_pkg_config
 }
 cmd_fix_pkg_config() {
-	local d=$__dpdk_src/build/sys/usr/local/lib/x86_64-linux-gnu/pkgconfig
-	test -d $d || die "Not a directory [$d]"
+	test -n "$PKG_CONFIG_PATH" || die 'Not set [$PKG_CONFIG_PATH]'
+	test -d $PKG_CONFIG_PATH || die "Not a directory [$PKG_CONFIG_PATH]"
 	local f
-	for f in $(find $d -type f -name 'libdpdk*.pc'); do
+	for f in $(find $PKG_CONFIG_PATH -type f -name 'libdpdk*.pc'); do
 		sed -i -e "s,prefix=/usr/local,prefix=$__dpdk_src/build/sys/usr/local," $f
 	done
 }
