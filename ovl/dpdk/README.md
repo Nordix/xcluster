@@ -34,6 +34,7 @@ cdo dpdk
 Basic test;
 ```
 #sudo apt install -y hugeadm # (if needed)
+#sudo apt install -y libhugetlbfs-bin
 cdo dpdk
 . ./Envsettings
 ./dpdk.sh test start_basic > $log
