@@ -50,6 +50,10 @@ ln -s ../xtables $tmp/usr/lib/x86_64-linux-gnu/xtables
 # Clean-up work-around
 rm -rf $tmp/$sysd $tmp/home $tmp/usr/lib/pkgconfig
 
+if which nmap > /dev/null; then
+	$XCLUSTER install_prog --dest=$tmp nmap ncat nping
+fi
+
 cd $tmp
 tar cf "$1" *
 cd - > /dev/null
