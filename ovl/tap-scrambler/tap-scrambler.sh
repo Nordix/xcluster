@@ -74,12 +74,17 @@ cmd_test() {
 }
 
 test_start() {
+	test $(cat /proc/sys/net/bridge/bridge-nf-call-iptables) -eq 0 ||
+		die "bridge-nf-call-iptables != 0"
+	test $(cat /proc/sys/net/bridge/bridge-nf-call-ip6tables) -eq 0 ||
+		die "bridge-nf-call-ip6tables != 0"
 	export __image=$XCLUSTER_HOME/hd.img
 	echo "$XOVLS" | grep -q private-reg && unset XOVLS
 	export __nrouters=1
 	export __ntesters=1
 	xcluster_start network-topology iptools tap-scrambler
-	otc 201 "tap 1500"
+	otcw start_servers
+	otc 201 "tap 1280"
 }
 
 

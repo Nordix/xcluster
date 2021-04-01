@@ -26,6 +26,25 @@ ping -c1 -s 2000 192.168.1.1
 ping -c1 -M do -s 2000 1000::1:192.168.1.1
 ```
 
+Reverse fragments;
+```
+./tap-scrambler.sh test start > $log
+# On vm-201
+tap-scrambler fragrev --tap=tap2
+# On vm-001
+ethtool -K eth1 gro off gso off tso off
+tcpdump -ni eth1
+# On vm-221
+ping -c1 -s 2000 192.168.1.1
+ping -c1 -M do -s 2000 1000::1:192.168.1.1
+```
+
+```
+iptables -t nat -F
+iptables -t raw -A PREROUTING -i tap2 -j NOTRACK
+
+```
+
 ## Building and extending
 
 ```

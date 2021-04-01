@@ -33,17 +33,31 @@ dbg() {
 	test -n "$__verbose" && echo "$prg: $*" >&2
 }
 
+cmd_tcase_start_servers() {
+	tcase "Start servers"
+	sysctl -w net.ipv4.conf.all.arp_announce=2
+	sysctl -w net.ipv4.conf.all.arp_ignore=1
+	sysctl -w net.ipv4.ip_nonlocal_bind=1
+	sysctl -w net.ipv6.ip_nonlocal_bind=1
+	sysctl -w net.ipv4.conf.all.proxy_arp=0
+	ip addr add 10.0.0.0/24 dev lo
+	ip -6 addr add 1000::/120 dev lo
+	ip -6 ro add local 1000::/120 dev lo
+	mconnect -address [::]:5001 -udp -server > /var/log/mconnect.log 2>&1 &
+	ctraffic -address [::]:5003 -server > /var/log/ctraffic.log 2>&1 &
+}
+
 cmd_tcase_tap() {
 	local mtu=1500
 	test -n "$1" && mtu=$1
 	local iface=eth2
 	tcase "Create tap2, traffic from $iface, mtu=$mtu"
 	ethtool -K $iface gro off gso off tso off
-	ip tuntap add mode tap name tap2 || die "Create tap2"
-	ip link set dev tap2 up arp off mtu $mtu
-	ip addr add 10.200.0.0/32 dev tap2
-	ip -6 addr add $PREFIX:10.200.0.0/128 dev tap2
-	ip ro add default dev tap2 mtu $mtu table 2
+	ip tuntap add mode tap name tap2 || die "Tap2 create"
+	ip link set dev tap2 up arp off mtu $mtu || die "Tap2 up"
+	ip addr add 10.200.0.0/32 dev tap2 || die "Tap2 ipv4"
+	ip -6 addr add $PREFIX:10.200.0.0/128 dev tap2 || die "Tap2 ipv6"
+	ip ro add default dev tap2 mtu $mtu table 2 
 	ip rule add fwmark 2 table 2
 	iptables -t mangle -A PREROUTING -i $iface -j MARK --set-mark 2
 	ip -6 ro add default dev tap2 mtu $mtu table 102

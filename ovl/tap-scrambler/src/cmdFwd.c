@@ -6,13 +6,9 @@
 #include "util.h"
 #include <stdio.h>
 #include <stdlib.h>
-#include <stdint.h>
 #include <getopt.h>
 #include <unistd.h>
 #include <linux/if_tun.h>
-
-static void printPacket(uint8_t const* data, unsigned len);
-
 
 static int cmdFwd(int argc, char* argv[])
 {
@@ -62,10 +58,4 @@ static int cmdFwd(int argc, char* argv[])
 }
 __attribute__ ((__constructor__)) static void addCmdFwd(void) {
 	addCmd("fwd", cmdFwd);
-}
-
-
-static void printPacket(uint8_t const* data, unsigned len)
-{
-	
 }
