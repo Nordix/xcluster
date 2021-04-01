@@ -244,9 +244,18 @@ get_selector() {
 ##    Wait for the k8s nodes to become available through the API
 ##
 test_nodes() {
-	tcase "Wait for k8s nodes"
+	# Special case; in k8s-xcluster we can start with only the master
+	# and zero workers (nodes==0).
+	test -n "$FIRST_WORKER" || FIRST_WORKER=1
+	test -n "$__nvm" || __nvm=4
+	if test $FIRST_WORKER -gt $__nvm; then
+		tcase "No k8s nodes, only master"
+		return 0
+	fi
+	local vm=$(printf "vm-%03d" $FIRST_WORKER)
+	tcase "Wait for k8s nodes (first node $vm)"
 	pushv 180 60 3
-	tex "$kubectl get nodes 2>&1 | ogrep vm-002" || tdie
+	tex "$kubectl get nodes 2>&1 | ogrep $vm" || tdie
 	tex all_nodes_ready || tdie
 	popv
 }
