@@ -1,0 +1,46 @@
+#! /bin/sh
+# NOTE: A common pattern is to specify "-" (stdout) as out-file,
+#  so there must be NO log printouts to stdout!
+
+dir=$(dirname $0); dir=$(readlink -f $dir)
+tmp=/tmp/$USER/xcluster_$$
+die() {
+	echo "ERROR: $*" >&2
+	rm -rf $tmp
+	exit 1
+}
+log() {
+	echo "INFO: $*" >&2
+}
+
+test -n "$1" || die "No out-file"
+
+mkdir -p $tmp
+cp -R $dir/default/* $tmp
+
+eval $($XCLUSTER env | grep -E '^KERNELDIR|__kver')
+kdir=$KERNELDIR/$__kver
+f=$kdir/tools/bpf/bpftool/bpftool
+test -x $f || die "Not executable [$f]"
+cp $f $tmp/bin
+f=$kdir/tools/perf/perf
+test -x $f || die "Not executable [$f]"
+$XCLUSTER install_prog --dest=$tmp $f
+
+d=$GOPATH/src/github.com/xdp-project/xdp-tutorial
+
+for x in basic01-xdp-pass basic02-prog-by-name basic03-map-counter \
+	basic04-pinning-maps packet01-parsing; do
+	mkdir -p $tmp/root/$x
+	for n in xdp_pass_user xdp_pass_kern.o \
+		xdp_loader xdp_prog_kern.o xdp_load_and_stats xdp_stats; do
+		f=$d/$x/$n
+		test -r $f && cp $f $tmp/root/$x
+	done
+done
+
+
+cd $tmp
+tar cf "$1" *
+cd - > /dev/null
+rm -rf $tmp
