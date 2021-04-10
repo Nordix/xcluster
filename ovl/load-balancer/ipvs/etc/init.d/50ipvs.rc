@@ -24,7 +24,7 @@ vm() {
 		ip -6 ro replace default via 1000::1:192.168.1.201
 		ip ro replace default via 192.168.1.201
 	fi
-	if test "$IPVS_SETUP" = "dsr"; then
+	if echo "$IPVS_SETUP" | grep -q "dsr"; then
 		ip addr add 10.0.0.0/32 dev lo
 		ip addr add 1000::/128 dev lo
 	fi
@@ -59,6 +59,20 @@ ipvs_dsr() {
 		ipvsadm -a -t 10.0.0.0:5003 -r 192.168.1.$x:5003
 		ipvsadm -a -t [1000::]:5003 -r [1000::1:192.168.1.$x]:5003
 	done
+}
+
+ipvs_fwmark() {
+	ipvsadm -A -f 1 -s rr
+	ipvsadm -A -f 1 -6 -s rr
+
+	local x
+	for x in $(seq 1 $__nvm); do
+		ipvsadm -a -f 1 -r 192.168.1.$x:0 -m
+		ipvsadm -a -f 1 -6 -r [1000::1:192.168.1.$x]:0 -m
+	done
+
+	iptables -t mangle -A PREROUTING -i eth2 -d 10.0.0.0/24 -j MARK --set-mark 1
+	ip6tables -t mangle -A PREROUTING -i eth2 -d 1000::/120 -j MARK --set-mark 1
 }
 
 router() {
