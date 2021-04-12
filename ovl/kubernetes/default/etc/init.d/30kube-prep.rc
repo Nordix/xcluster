@@ -77,3 +77,9 @@ for g in $(echo $FEATURE_GATES | tr ',' ' '); do
 	g=$(echo $g | sed -e 's,=,: ,')
 	sed -i -e "/featureGates:/a \  $g" $f
 done
+
+test -n "$NODEPORTADDRESSES" && \
+    sed -i -e "s%nodePortAddresses: null%nodePortAddresses: $NODEPORTADDRESSES%" $f
+
+exit 0
+
