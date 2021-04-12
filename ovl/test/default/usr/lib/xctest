@@ -174,8 +174,10 @@ lsimages() {
 ##    of central components if succesful.
 ##
 test_namespaces() {
-	tcase "Check namespaces (and API-server availability)"
-	pushv 60 30 2
+	local to=60
+	test -n "$1" && to=$1
+	tcase "Check namespaces (and API-server availability) ($to)"
+	pushv $to
 	tex "$kubectl get namespace default 2>&1 | ogrep -E '^default *Active'" || tdie	
 	tex "$kubectl get namespace kube-system 2>&1 | ogrep -E '^kube-system *Active'" || tdie	
 	popv
