@@ -9,10 +9,23 @@
 #include <fcntl.h>
 #include <unistd.h>
 
+// addCmd should be defined in main.c
+void addCmd(char const* name, int (*fn)(int argc, char* argv[]));
+
 void die(char const* fmt, ...)__attribute__ ((__noreturn__));
-uint32_t djb2_hash(uint8_t const* c, uint32_t len);
+
+struct Option {
+	char const* const name;
+	char const** arg;
+#define REQUIRED 1
+	int required;
+	char const* const help;
+};
+int parseOptions(int argc, char* argv[], struct Option const* options);
 void verifyRequiredOptions(
 	struct option const* long_options, unsigned required, unsigned got);
+
+uint32_t djb2_hash(uint8_t const* c, uint32_t len);
 
 int macParse(char const* str, uint8_t* mac);
 void macParseOrDie(char const* str, uint8_t* mac);

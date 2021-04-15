@@ -72,7 +72,7 @@ void verifyRequiredOptions(
 		if ((required & m) != (got & m)) {
 			char const* opt = "(unknown)";
 			struct option const* o;
-			for (o = long_options; o->val != 0; o++) {
+			for (o = long_options; o->name != NULL; o++) {
 				if (o->val == i) {
 					opt = o->name;
 					break;
@@ -81,7 +81,66 @@ void verifyRequiredOptions(
 			fprintf(stderr, "Missing option [--%s]\n", opt);
 		}
 	}
-	die("RequiredOptions missing (%u,%u)\n", required, got);
+	die("RequiredOptions missing\n");
+}
+
+static void printUsage(struct Option const* options)
+{
+	struct Option const* o;
+	for (o = options; o->name != NULL; o++) {
+		if (strcmp(o->name, "help") == 0) {
+			puts(o->help);
+			break;
+		}
+	}
+	for (o = options; o->name != NULL; o++) {
+		if (strcmp(o->name, "help") == 0)
+			continue;
+		printf(
+			"--%s %s\n  %s\n",
+			o->name, o->required ? "(required)":"", o->help);
+	}
+}
+
+int parseOptions(int argc, char* argv[], struct Option const* options)
+{
+	unsigned required = 0;
+	int i, len = 0;
+	struct Option const* o;
+	for (o = options; o->name != NULL; o++)
+		len++;
+	if (len >= 32)
+		die("Too many options %d (max 31)\n", len);
+	struct option long_options[len+1];
+	memset(long_options, 0, sizeof(long_options));
+	for (i = 0; i < len; i++) {
+		o = options + i;
+		struct option* lo = long_options + i;
+		lo->name = o->name;
+		lo->has_arg = o->arg == NULL ? no_argument : required_argument;
+		lo->val = i;
+		if (o->required == REQUIRED)
+			required |= (1 << i);
+	}
+
+	int option_index = 0;
+	unsigned got = 0;
+	i = getopt_long_only(argc, argv, "", long_options, &option_index);
+	while (i >= 0) {
+		if (i >= 32)
+			exit(EXIT_FAILURE);
+		got |= (1 << i);
+		o = options + i;
+		if (strcmp(o->name, "help") == 0) {
+			printUsage(options);
+			exit(EXIT_SUCCESS);
+		}
+		if (o->arg != NULL)
+			*(o->arg) = optarg;
+		i = getopt_long_only(argc, argv, "", long_options, &option_index);
+	}
+	verifyRequiredOptions(long_options, required, got);
+	return optind;
 }
 
 int createSharedData(char const* name, void* data, size_t len)
