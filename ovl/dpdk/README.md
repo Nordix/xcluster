@@ -124,6 +124,7 @@ installed. Then build;
 ./dpdk.sh unpack
 ./dpdk.sh build
 # Installed in $__dpdk_src/build/sys
+# sudo apt remove libdpdk-dev  # To avoid using a Ubuntu dpdk by mistake
 ```
 
 ### Build older dpdk versions
@@ -226,11 +227,11 @@ In no particular order;
 lshw -class network -businfo
 # json output is broken for "-class network"
 lshw -json | jq '.children[0].children[]|select(.class == "bridge")|.children[]|select(.class == "network")'
-echo igb_uio > /sys/bus/pci/devices/0000:00:05.0/driver_override
+modprobe uio
+modprobe uio_pci_generic
+echo uio_pci_generic > /sys/bus/pci/devices/0000:00:05.0/driver_override
 hugeadm --explain
 cat /proc/meminfo | grep Huge
 sysctl vm.nr_hugepages
 ls /dev/hugepages
 ```
-
-
