@@ -18,12 +18,12 @@ struct Option {
 	char const* const name;
 	char const** arg;
 #define REQUIRED 1
+#define OPTIONAL 0
 	int required;
 	char const* const help;
 };
+// Returns number of handled items, < 0 on error, 0 on help
 int parseOptions(int argc, char* argv[], struct Option const* options);
-void verifyRequiredOptions(
-	struct option const* long_options, unsigned required, unsigned got);
 
 uint32_t djb2_hash(uint8_t const* c, uint32_t len);
 

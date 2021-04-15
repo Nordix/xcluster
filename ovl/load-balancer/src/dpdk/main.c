@@ -319,36 +319,29 @@ static int cmdFwd(int argc, char* argv[])
 	argc -= ret;
 	argv += ret;
 
-	static struct option const long_options[] = {
-		{"mac0",    required_argument, 0,  1 },
-		{"mac1",    required_argument, 0,  2 },
-		{0,         0,                 0,  0 }
+	char const* shmName = defaultShmName;
+	char const* mac0;
+	char const* mac1;
+	struct Option options[] = {
+		{"help", NULL, 0,
+		 "fwd [dpdk-eal-options] -- [options]\n"
+		 "  Forward traffic"},
+		{"shm", &shmName, 0, "Shared memory struct created by 'init'"},
+		{"mac0", &mac0, REQUIRED, "Downstream MAC address (server)"},
+		{"mac1", &mac1, REQUIRED, "Upstream MAC address (client)"},
+		{0, 0, 0, 0}
 	};
-
+	int nopt = parseOptions(argc, argv, options);
+	if (nopt < 1) return nopt;
+	
 	/*
 	  struct rte_ether_addr {
 	    uint8_t addr_bytes[RTE_ETHER_ADDR_LEN];
 	  } __rte_aligned(2);
 	*/
 	struct rte_ether_addr dst0, dst1;
-	int option_index = 0;
-	unsigned got = 0;
-	int c = getopt_long_only(argc, argv, "", long_options, &option_index);
-	while (c >= 0) {
-		if (c < 32) got |= (1 << c);
-		switch (c) {
-		case 1:
-			macParseOrDie(optarg, dst0.addr_bytes);
-			break;
-		case 2:
-			macParseOrDie(optarg, dst1.addr_bytes);
-			break;
-		default:
-			printf("Unknown option [%s]\n", argv[option_index]);
-		}
-		c = getopt_long_only(argc, argv, "", long_options, &option_index);
-	}
-	verifyRequiredOptions(long_options, 0x6, got);
+	macParseOrDie(mac0, dst0.addr_bytes);
+	macParseOrDie(mac1, dst1.addr_bytes);
 
 	// Get the source MAC addresses
 	struct rte_ether_addr src0, src1;
@@ -402,23 +395,16 @@ static int cmdFwd(int argc, char* argv[])
 
 static int cmdInit(int argc, char* argv[])
 {
-	static struct option const long_options[] = {
-		{"shm",    required_argument, 0,  1 },
-		{0,        0,                 0,  0 }
-	};
 	char const* shmName = defaultShmName;
-	int option_index = 0;
-	int c = getopt_long_only(argc, argv, "", long_options, &option_index);
-	while (c >= 0) {
-		switch (c) {
-		case 1:
-			shmName = optarg;
-			break;
-		default:
-			printf("Unknown option [%s]\n", argv[option_index]);
-		}
-		c = getopt_long_only(argc, argv, "", long_options, &option_index);
-	}
+	struct Option options[] = {
+		{"help", NULL, 0,
+		 "init [options]\n"
+		 "  Initiate the shm structure"},
+		{"shm", &shmName, 0, "Shared memory struct to create"},
+		{0, 0, 0, 0}
+	};
+	int nopt = parseOptions(argc, argv, options);
+	if (nopt < 1) return nopt;
 
 	struct SharedData sh;
 	memset(&sh, 0, sizeof(sh));
@@ -429,23 +415,16 @@ static int cmdInit(int argc, char* argv[])
 
 static int cmdShow(int argc, char* argv[])
 {
-	static struct option const long_options[] = {
-		{"shm",    required_argument, 0,  1 },
-		{0,        0,                 0,  0 }
-	};
 	char const* shmName = defaultShmName;
-	int option_index = 0;
-	int c = getopt_long_only(argc, argv, "", long_options, &option_index);
-	while (c >= 0) {
-		switch (c) {
-		case 1:
-			shmName = optarg;
-			break;
-		default:
-			printf("Unknown option [%s]\n", argv[option_index]);
-		}
-		c = getopt_long_only(argc, argv, "", long_options, &option_index);
-	}
+	struct Option options[] = {
+		{"help", NULL, 0,
+		 "show [options]\n"
+		 "  Show LB status"},
+		{"shm", &shmName, 0, "Shared memory struct created by 'init'"},
+		{0, 0, 0, 0}
+	};
+	int nopt = parseOptions(argc, argv, options);
+	if (nopt < 1) return nopt;
 
 	struct SharedData* sh = mapSharedDataOrDie(
 		shmName, sizeof(struct SharedData), O_RDONLY);
@@ -465,33 +444,26 @@ static int cmdShow(int argc, char* argv[])
 
 static int setActive(int argc, char* argv[], int v)
 {
-	static struct option const long_options[] = {
-		{"shm",    required_argument, 0,  1 },
-		{"mac",    required_argument, 0,  2 },
-		{0,        0,                 0,  0 }
-	};
 	char const* shmName = defaultShmName;
 	char const* mac = NULL;
-	int option_index = 0;
-	int c = getopt_long_only(argc, argv, "", long_options, &option_index);
-	while (c >= 0) {
-		switch (c) {
-		case 1:
-			shmName = optarg;
-			break;
-		case 2:
-			mac = optarg;
-			break;
-		default:
-			printf("Unknown option [%s]\n", argv[option_index]);
-		}
-		c = getopt_long_only(argc, argv, "", long_options, &option_index);
-	}
-	if (optind >= argc) {
-		printf("(de)activate [--mac=] [--shm=] <index>\n");
+	struct Option options[] = {
+		{"help", NULL, 0,
+		 "(de)activate [options] <index>\n"
+		 "  Activate/deactivate a target"},
+		{"shm", &shmName, 0, "Shared memory struct created by 'init'"},
+		{"mac", &mac, 0, "MAC address for the target"},
+		{0, 0, 0, 0}
+	};
+	int nopt = parseOptions(argc, argv, options);
+	if (nopt < 1) return nopt;
+	argc -= nopt;
+	argv += nopt;
+	
+	if (argc < 1) {
+		printf("No index\n");
 		return 0;
 	}
-	unsigned i = atoi(argv[optind]);
+	unsigned i = atoi(argv[0]);
 
 	struct SharedData* sh = mapSharedDataOrDie(
 		shmName, sizeof(struct SharedData), O_RDWR);
@@ -525,13 +497,23 @@ static int cmdLb(int argc, char* argv[])
 	argc -= ret;
 	argv += ret;
 
-	static struct option const long_options[] = {
-		{"shm",    required_argument, 0,  1 },
-		{"mac1",   required_argument, 0,  2 },
-		{"vip4",   required_argument, 0,  3 },
-		{"vip6",   required_argument, 0,  4 },
-		{0,        0,                 0,  0 }
+	char const* shmName = defaultShmName;
+	char const* vip4;
+	char const* vip6;
+	char const* mac1;
+	struct Option options[] = {
+		{"help", NULL, 0,
+		 "lb [dpdk-eal-options] -- [options]\n"
+		 "  Start load-balancing"},
+		{"shm", &shmName, 0, "Shared memory struct created by 'init'"},
+		{"mac1", &mac1, REQUIRED, "Dest MAC address for reply packets"},
+		{"vip4", &vip4, REQUIRED, "IPv4 Virtual IP"},
+		{"vip6", &vip6, REQUIRED, "IPv6 Virtual IP"},
+		{0, 0, 0, 0}
 	};
+	int nopt = parseOptions(argc, argv, options);
+	if (nopt < 1) return nopt;
+
 
 	/*
 	  struct rte_ether_addr {
@@ -539,29 +521,7 @@ static int cmdLb(int argc, char* argv[])
 	  } __rte_aligned(2);
 	*/
 	struct rte_ether_addr dst1;
-	int option_index = 0;
-	unsigned got = 0;
-	char const* shmName = defaultShmName;
-	int c = getopt_long_only(argc, argv, "", long_options, &option_index);
-	while (c >= 0) {
-		if (c < 32) got |= (1 << c);
-		switch (c) {
-		case 1:
-			shmName = optarg;
-			break;
-		case 2:
-			macParseOrDie(optarg, dst1.addr_bytes);
-			break;
-		case 3:
-			break;
-		case 4:
-			break;
-		default:
-			printf("Unknown option [%s]\n", argv[option_index]);
-		}
-		c = getopt_long_only(argc, argv, "", long_options, &option_index);
-	}
-	verifyRequiredOptions(long_options, 0x1c, got);
+	macParseOrDie(mac1, dst1.addr_bytes);
 
 	struct SharedData* sh = mapSharedDataOrDie(
 		shmName, sizeof(struct SharedData), O_RDONLY);

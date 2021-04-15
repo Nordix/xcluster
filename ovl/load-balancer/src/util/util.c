@@ -61,11 +61,11 @@ char const* macToString(uint8_t const* mac)
 	return buf[bindex];
 }
 
-void verifyRequiredOptions(
+static int verifyRequiredOptions(
 	struct option const* long_options, unsigned required, unsigned got)
 {
 	got = got & required;
-	if (required == got) return;
+	if (required == got) return 0;
 	unsigned i, m;
 	for (i = 0; i < 32; i++) {
 		m = (1 << i);
@@ -81,7 +81,7 @@ void verifyRequiredOptions(
 			fprintf(stderr, "Missing option [--%s]\n", opt);
 		}
 	}
-	die("RequiredOptions missing\n");
+	return -1;
 }
 
 static void printUsage(struct Option const* options)
@@ -97,8 +97,8 @@ static void printUsage(struct Option const* options)
 		if (strcmp(o->name, "help") == 0)
 			continue;
 		printf(
-			"--%s %s\n  %s\n",
-			o->name, o->required ? "(required)":"", o->help);
+			"  --%s= %s %s\n",
+			o->name, o->help, o->required ? "(required)":"");
 	}
 }
 
@@ -128,18 +128,19 @@ int parseOptions(int argc, char* argv[], struct Option const* options)
 	i = getopt_long_only(argc, argv, "", long_options, &option_index);
 	while (i >= 0) {
 		if (i >= 32)
-			exit(EXIT_FAILURE);
+			return -1;
 		got |= (1 << i);
 		o = options + i;
 		if (strcmp(o->name, "help") == 0) {
 			printUsage(options);
-			exit(EXIT_SUCCESS);
+			return 0;
 		}
 		if (o->arg != NULL)
 			*(o->arg) = optarg;
 		i = getopt_long_only(argc, argv, "", long_options, &option_index);
 	}
-	verifyRequiredOptions(long_options, required, got);
+	if (verifyRequiredOptions(long_options, required, got) != 0)
+		return -1;
 	return optind;
 }
 
