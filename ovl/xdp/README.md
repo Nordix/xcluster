@@ -31,6 +31,15 @@ cdo xdp
 ./xdp.sh libbpf_build
 ```
 
+The kernel `perf` tool is used for kernel tracing in the tutorial. It
+is a part of the kernel and should be build from the `xcluster` kernel
+source.
+
+```
+cdo xdp
+./xdp.sh perf_build
+```
+
 Clone xdp-project;
 ```
 mkdir -p $GOPATH/src/github.com/xdp-project
@@ -44,15 +53,6 @@ kernel code so we create a link so the place `xdp-tutorial` expects;
 ```
 cdo xdp
 ./xdp.sh libbpf_link
-```
-
-The kernel `perf` tool is used for kernel tracing in the tutorial. It
-is a part of the kernel and should be build from the `xcluster` kernel
-source.
-
-```
-cdo xdp
-./xdp.sh perf_build
 ```
 
 ### HW offload for virtio
@@ -115,3 +115,4 @@ cd /root/basic01-xdp-pass
 ./xdp_pass_user --dev eth1
 ping 192.168.1.2
 ```
+

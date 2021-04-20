@@ -5,6 +5,7 @@ die() {
 	exit 1
 }
 
+# "standard" xcluster setup;
 netX() {
 	local nodeid=$1
 	local n=$2
@@ -32,6 +33,7 @@ netX() {
 	echo " -device virtio-net-pci,netdev=net$n,mac=00:00:00:01:0$b1:$b0"
 }
 
+# Mqueue setup. Needed for XDP with 0-copy
 netY() {
 	local nodeid=$1
 	local n=$2
@@ -53,11 +55,11 @@ EOF
 	
 	b0=$(printf '%02x' $nodeid)
 	b1=$n
-	echo " -netdev tap,id=net$n,script=$tmp/$tap,queues=4,vhost=on"
+	echo " -netdev tap,ifname=$tap,id=net$n,script=$tmp/$tap,queues=4,vhost=on"
 	echo " -device virtio-net-pci,mq=on,vectors=6,netdev=net$n,mac=00:00:00:01:0$b1:$b0"
 }
 
-if test "$2" = "1"; then
+if test "$2" != "0"; then
 	netY $1 $2
 else
 	netX $1 $2
