@@ -309,6 +309,20 @@ test_dpdk() {
 	xcluster_stop	
 }
 
+# XDP lb -----------------------------------------------------------
+
+test_start_xdp() {
+	export SETUP=xdp
+	export __image=$XCLUSTER_HOME/hd.img
+	export __ntesters=1
+	unset __mem1
+	export __mem=256
+	echo "$XOVLS" | grep -q private-reg && unset XOVLS
+	xcluster_start network-topology iptools load-balancer
+}
+
+
+
 ##  src_build
 cmd_src_build() {
 	cmd_env

@@ -256,3 +256,40 @@ cdo load-balancer
 # On vm-201 (router)
 l2lb show
 ```
+
+
+## XDP (WIP)
+
+**Work In Progress** Only build env and basic functions for now.
+
+[XDP](https://en.wikipedia.org/wiki/Express_Data_Path) (Express Data
+Path) provides yet another way to process packets in user-space.
+
+**Prerequisite**: You must firsts build the kernel and `bgplib` and
+`bgptool` locally as described in [ovl/xdp](../xdp/).
+
+Prepare and test-build;
+```
+cdo xdp
+. ./Envsettings
+cdo load-balancer
+eval $($XCLUSTER env | grep __kobj); export __kobj
+make -C ./src/xdp O=/tmp/$USER/tmp
+export __nrouters=1
+```
+
+Manual start;
+```
+./load-balancer.sh test start_xdp > $log
+# On vm-201
+cat /sys/kernel/debug/tracing/trace_pipe
+bpftool prog loadall /bin/xdp_vip_kern.o /sys/fs/bpf/lb pinmaps /sys/fs/bpf/lb
+ip link set xdp pinned /sys/fs/bpf/lb/xdp_vip dev eth2
+ip link set xdp pinned /sys/fs/bpf/lb/xdp_pass dev eth1
+ip link show dev eth2
+ethtool -l eth2
+bpftool map show
+bpftool map dump name xdp_vip_map
+bpftool map update name xdp_vip_map key hex 0 0 0 0 0 0 0 0 0 0 ff ff c0 a8 1 1 value 1 0 0 0
+bpftool map update name xdp_vip_map key hex 10 0 0 0 0 0 0 0 0 0 0 1 c0 a8 1 1 value 1 0 0 0
+```
