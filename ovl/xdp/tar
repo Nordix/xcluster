@@ -30,9 +30,9 @@ $XCLUSTER install_prog --dest=$tmp $f
 d=$GOPATH/src/github.com/xdp-project/xdp-tutorial
 
 for x in basic01-xdp-pass basic02-prog-by-name basic03-map-counter \
-	basic04-pinning-maps packet01-parsing; do
+	basic04-pinning-maps packet01-parsing advanced03-AF_XDP; do
 	mkdir -p $tmp/root/$x
-	for n in xdp_pass_user xdp_pass_kern.o \
+	for n in xdp_pass_user xdp_pass_kern.o af_xdp_user af_xdp_kern.o \
 		xdp_loader xdp_prog_kern.o xdp_load_and_stats xdp_stats; do
 		f=$d/$x/$n
 		test -r $f && cp $f $tmp/root/$x
