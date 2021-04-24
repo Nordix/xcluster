@@ -111,7 +111,6 @@ test_install() {
 	otc 1 check_namespaces
 	otc 1 rm_coredns_deployment
 	otc 1 install_cni
-	otc 1 coredns_k8s
 
 	for i in $(seq 2 $__nvm); do
 		otc $i join

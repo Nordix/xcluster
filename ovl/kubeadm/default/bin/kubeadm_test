@@ -90,13 +90,22 @@ cmd_tcase_rm_coredns_deployment() {
 	tcase "Delete the coredns deployment"
 	kubectl delete -n kube-system deployment coredns || tdie
 	killall coredns
-	coredns -conf /etc/Corefile.k8s 2>&1 > /var/log/coredns.log &
+	rm -f /var/log/coredns.log
+	tex start_coredns || tdie
 }
 
 cmd_tcase_coredns_k8s() {
 	tcase "Restart coredns with k8s support"
 	killall coredns
-	coredns -conf /etc/Corefile.k8s 2>&1 > /var/log/coredns.log &
+	dbclient -y -y root@192.168.1.1 cat /etc/kubernetes/admin.conf \
+		2> /dev/null > /etc/kubernetes/admin.conf
+	tex start_coredns || tdie
+}
+start_coredns() {
+	echo "$(date) Starting..." >> /var/log/coredns.log
+	coredns -conf /etc/Corefile.k8s 2>&1 >> /var/log/coredns.log &
+	sleep 0.2
+	pidof coredns
 }
 
 cmd_tcase_install_cni() {
