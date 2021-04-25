@@ -224,10 +224,12 @@ test_daemonset() {
 	local nodes=$(kubectl get nodes -o json | jq '.items|length')
 	tcase "Checking DaemonSet [$1] (nodes=$nodes)"
 	$kubectl get daemonset $1 -o json > $tmp/out || tdie
+	local desired=$(cat $tmp/out | jq -r .status.desiredNumberScheduled)
+	test $nodes -eq $desired || tlog "Nodes=$nodes but desired=$desired"
 	local selector=$(get_selector < $tmp/out)
 	test -n "$2" && pushv $2
-	tex "daemonset_ready $1 $nodes" || tdie
-	tex "npods $selector $nodes" || tdie
+	tex "daemonset_ready $1 $desired" || tdie
+	tex "npods $selector $desired" || tdie
 	tex "check_pods_ready $selector" || tdie
 	test -n "$2" && popv
 	return 0	
