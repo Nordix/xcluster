@@ -4,7 +4,7 @@ DST ?= .
 
 S := $(shell readlink -f $(DIR))
 X := $(DST)/l2lb
-SRC := $(wildcard $(S)/*.c) $(S)/../maglev.c $(S)/../util/util.c
+SRC := $(S)/main.c $(S)/../maglev.c $(wildcard $(S)/../util/*.c)
 
 CFLAGS := -I$(S) -I$(S)/.. -I$(S)/../util
 CFLAGS += $(shell pkg-config --cflags libdpdk)
