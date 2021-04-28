@@ -268,6 +268,15 @@ Path) provides yet another way to process packets in user-space.
 **Prerequisite**: You must firsts build the kernel and `bgplib` and
 `bgptool` locally as described in [ovl/xdp](../xdp/).
 
+This is important;
+
+* https://github.com/xdp-project/xdp-tutorial/tree/master/advanced03-AF_XDP#gotcha-by-rx-queue-id-binding
+
+With `virtio` you can't steer flows with `ethtool` so in this example
+we set the number of combined queues to one (1). That implies that
+`xdpgeneric` must be used. For performance you should create one
+AF_XDP socket per queue and use `xdpdrv` (see ip-link(8)).
+
 Prepare and test-build;
 ```
 cdo xdp
@@ -278,18 +287,37 @@ make -C ./src/xdp O=/tmp/$USER/tmp
 export __nrouters=1
 ```
 
+Semi-manual;
+```
+./load-balancer.sh test init_xdp > $log
+# On vm-201
+cat /sys/kernel/debug/tracing/trace_pipe
+xdplb lb --idev=eth2 --edev=eth1 --queue=0
+# On vm-221
+ping -c1 -W1 192.168.1.1
+rsh root@192.168.0.221 ping -c1 -W1 192.168.1.1
+# On vm-001
+tcpdump -ni eth1 icmp
+```
+
 Manual start;
 ```
 ./load-balancer.sh test start_xdp > $log
 # On vm-201
 cat /sys/kernel/debug/tracing/trace_pipe
+ethtool -L eth2 combined 1
 bpftool prog loadall /bin/xdp_vip_kern.o /sys/fs/bpf/lb pinmaps /sys/fs/bpf/lb
-ip link set xdp pinned /sys/fs/bpf/lb/xdp_vip dev eth2
-ip link set xdp pinned /sys/fs/bpf/lb/xdp_pass dev eth1
+ip link set dev eth2 xdpgeneric pinned /sys/fs/bpf/lb/xdp_vip
+ip link set dev eth1 xdpgeneric pinned /sys/fs/bpf/lb/xdp_pass
+ip link set dev eth1 xdpgeneric none
 ip link show dev eth2
 ethtool -l eth2
 bpftool map show
 bpftool map dump name xdp_vip_map
 bpftool map update name xdp_vip_map key hex 0 0 0 0 0 0 0 0 0 0 ff ff c0 a8 1 1 value 1 0 0 0
 bpftool map update name xdp_vip_map key hex 10 0 0 0 0 0 0 0 0 0 0 1 c0 a8 1 1 value 1 0 0 0
+#ethtool -N eth2 flow-type ip4 action 3 (not working with virtio)
+xdplb lb --queue=0 --idev=eth2 --edev=eth1
+# On vm-221
+ping -c1 -W1 192.168.1.1
 ```

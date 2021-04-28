@@ -9,6 +9,8 @@
 #include <sys/mman.h>
 #include <string.h>
 #include <errno.h>
+#include <netinet/ether.h>
+#include <arpa/inet.h>
 
 void die(char const* fmt, ...)
 {
@@ -192,3 +194,45 @@ void maglevSetActive(struct MagData* m, unsigned v, int argc, char *argv[])
 	populate(m);
 }
 
+#include <sys/ioctl.h>
+#include <net/if.h>	//ifreq
+
+int getMAC(char const* iface, /*out*/ unsigned char* mac)
+{
+	int fd;
+	struct ifreq ifr;
+	
+	fd = socket(AF_INET, SOCK_DGRAM, 0);
+	if (fd < 0) return -1;
+	ifr.ifr_addr.sa_family = AF_INET;
+	strncpy(ifr.ifr_name , iface , IFNAMSIZ-1);
+	if (ioctl(fd, SIOCGIFHWADDR, &ifr) < 0) {
+		close(fd);
+		return -1;
+	}
+	close(fd);
+	memcpy(mac, ifr.ifr_hwaddr.sa_data, ETH_ALEN);
+	return 0;
+}
+
+void framePrint(unsigned len, uint8_t const* pkt)
+{
+	if (len < sizeof(struct ethhdr)) {
+		printf("Short packet %u\n", len);
+		return;
+	}
+	struct ethhdr const* eth = (struct ethhdr const*)pkt;
+	pkt += sizeof(struct ethhdr);
+	len -= sizeof(struct ethhdr);
+	uint16_t proto = htons(eth->h_proto);
+	printf("%s -> %s; 0x%04x\n", macToString(eth->h_source), macToString(eth->h_dest), proto);
+	switch (proto) {
+	case ETH_P_IP:
+		ipv4Print(len, pkt);
+		break;
+	case ETH_P_IPV6:
+		ipv6Print(len, pkt);
+		break;
+	default:;
+	}
+}

@@ -20,7 +20,7 @@ struct bpf_map_def SEC("maps") xsks_map = {
 	.type = BPF_MAP_TYPE_XSKMAP,
 	.key_size = sizeof(int),
 	.value_size = sizeof(int),
-	.max_entries = 2,
+	.max_entries = 4,			/* Must match nqueues for the nic */
 };
 
 /* Header cursor to keep track of current parsing position */
@@ -72,22 +72,23 @@ static __always_inline int parse_ip4hdr(
 }
 
 #if 1
-#define D(fmt, ...)                                      \
+#define Dx(fmt, ...)                                      \
     ({                                                         \
         char ____fmt[] = fmt;                                  \
         bpf_trace_printk(____fmt, sizeof(____fmt), ##__VA_ARGS__); \
     })
 #else
-#define D(fmt, ...)
-#endif
 #define Dx(fmt, ...)
+#endif
+#define D(fmt, ...)
 
 SEC("xdp_vip")
 int  xdp_filter_vip(struct xdp_md *ctx)
 {
 	void *data_end = (void*)(long)ctx->data_end;
 	void *data = (void*)(long)ctx->data;
-	Dx("xdp_filter_vip %ld\n", data_end - data);
+    int index = ctx->rx_queue_index;
+	Dx("xdp_filter_vip %ld, Q %d", data_end - data, index);
 	
 	// Extract the destination IP address and create a hash map key.
 	struct in6_addr key;
@@ -105,14 +106,14 @@ int  xdp_filter_vip(struct xdp_md *ctx)
 		return XDP_PASS;
 	}
 
-	Dx("  key %lx %lx\n", ntohl(key.s6_addr32[2]), ntohl(key.s6_addr32[3]));
+	D("  key %lx %lx", ntohl(key.s6_addr32[2]), ntohl(key.s6_addr32[3]));
 	int* value = bpf_map_lookup_elem(&xdp_vip_map, &key);
 	if (value != 0) {
-		D("  VIP address\n");
-		int index = 0;
+		Dx("  VIP address");
 		if (bpf_map_lookup_elem(&xsks_map, &index)) {
-			D("  Redirect to user-space\n");
-			return bpf_redirect_map(&xsks_map, index, XDP_DROP);
+			int rc = bpf_redirect_map(&xsks_map, index, XDP_DROP);
+			Dx("  Redirect to user-space, rc = %d", rc);
+			return rc;
 		}
 		return *value;
 	}

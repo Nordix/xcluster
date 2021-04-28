@@ -26,19 +26,26 @@ struct Option {
 int parseOptions(int argc, char* argv[], struct Option const* options);
 
 uint32_t djb2_hash(uint8_t const* c, uint32_t len);
+unsigned ipv4Hash(unsigned len, uint8_t* pkt);
 
+// MAC
 int macParse(char const* str, uint8_t* mac);
 void macParseOrDie(char const* str, uint8_t* mac);
 char const* macToString(uint8_t const* mac);
+int getMAC(char const* iface, /*out*/ unsigned char* mac);
 
+// Shared-mem
 int createSharedData(char const* name, void* data, size_t len);
 void createSharedDataOrDie(char const* name, void* data, size_t len);
 void* mapSharedData(char const* name, size_t len, int mode);
 void* mapSharedDataOrDie(char const* name, size_t len, int mode);
 
+// Maglev
 void maglevInit(struct MagData* m);
 void maglevSetActive(struct MagData* m, unsigned v, int argc, char *argv[]);
 
-void ipv4Print(unsigned len, uint8_t* pkt);
-unsigned ipv4Hash(unsigned len, uint8_t* pkt);
-void ipv6Print(unsigned len, uint8_t* pkt);
+// Print
+void ipv4Print(unsigned len, uint8_t const* pkt);
+void ipv6Print(unsigned len, uint8_t const* pkt);
+void framePrint(unsigned len, uint8_t const* pkt);
+

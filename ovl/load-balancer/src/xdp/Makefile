@@ -8,7 +8,8 @@ CLANG ?= clang
 CC ?= gcc
 
 O ?= .
-SRC := main.c cmdLoadBfd.c ../util/util.c ../maglev.c
+TESTD := $(shell $(XCLUSTER) ovld test)/src
+SRC := $(TESTD)/main.c $(wildcard cmd*.c) $(wildcard ../util/*.c) ../maglev.c
 XDP_OBJ := $(O)/xdp_vip_kern.o
 KSRC := $(shell readlink -f $(__kobj)/source)
 BPFD := $(KSRC)/tools/lib/bpf/build

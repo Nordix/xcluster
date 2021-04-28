@@ -22,7 +22,7 @@ char const* protocolString(unsigned p)
 	return buf;
 }
 
-void ipv4Print(unsigned len, uint8_t* pkt)
+void ipv4Print(unsigned len, uint8_t const* pkt)
 {
 	struct iphdr* hdr = (struct iphdr*)pkt;
 	char src[16], dst[16];

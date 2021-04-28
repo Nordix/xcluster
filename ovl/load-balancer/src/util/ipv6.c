@@ -10,7 +10,7 @@
 
 char const* protocolString(unsigned p);
 
-void ipv6Print(unsigned len, uint8_t* pkt)
+void ipv6Print(unsigned len, uint8_t const* pkt)
 {
 	struct ip6_hdr* hdr = (struct ip6_hdr*)pkt;
 	char src[42], dst[42];

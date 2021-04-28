@@ -15,13 +15,15 @@ static int cmdLoadBpf(int argc, char **argv)
 	char const* dev;
 	struct Option options[] = {
 		{"help", NULL, 0,
-		 "loadbpf [options] file\n"
+		 "[WIP] loadbpf [options] file\n"
 		 "  Load a eBPF file to the kernel and attach to a device"},
 		{"dev", &dev, REQUIRED,
 		 "The eBPF program is attached to this device"},
 		{0, 0, 0, 0}
 	};
 	int nopt = parseOptions(argc, argv, options);
+	if (nopt <= 0)
+		return EXIT_SUCCESS;
 	argc -= nopt;
 	argv += nopt;
 	if (argc <= 0)
@@ -44,6 +46,6 @@ static int cmdLoadBpf(int argc, char **argv)
 
 	return EXIT_SUCCESS;
 }
-__attribute__ ((__constructor__)) static void addCmdFwd(void) {
+__attribute__ ((__constructor__)) static void addCommand(void) {
 	addCmd("loadbpf", cmdLoadBpf);
 }

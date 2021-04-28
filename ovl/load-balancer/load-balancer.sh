@@ -320,8 +320,17 @@ test_start_xdp() {
 	echo "$XOVLS" | grep -q private-reg && unset XOVLS
 	xcluster_start network-topology iptools load-balancer
 }
+test_init_xdp() {
+	test_start_xdp
+	otcr xdp_init
+}
 
+test_xdp() {
+	tlog "=== load-balancer: XDP lb test"
+	test_init_xdp
 
+	xcluster_stop	
+}
 
 ##  src_build
 cmd_src_build() {
