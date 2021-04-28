@@ -1,19 +1,10 @@
 # Xcluster/ovl - xdp
 
-Experiments and tests with [XDP](https://en.wikipedia.org/wiki/Express_Data_Path)
+Experiments and tests with
+[XDP](https://en.wikipedia.org/wiki/Express_Data_Path) and
+[eBPF](https://ebpf.io/).
 
-
-## xdp-tutorial
-
-The tutorial at;
-
-* https://github.com/xdp-project/xdp-tutorial
-
-
-### Prerequisites
-
-Install
-[dependencies](https://github.com/xdp-project/xdp-tutorial/blob/master/setup_dependencies.org).
+## Prerequisites
 
 We will use the `xcluster` kernel, not the kernel you have on your
 computer, so it must be built locally;
@@ -39,6 +30,22 @@ source.
 cdo xdp
 ./xdp.sh perf_build
 ```
+
+
+## xdp-tutorial
+
+The tutorial at;
+
+* https://github.com/xdp-project/xdp-tutorial
+
+These seem to be simplified versions of the sample programs found in
+the Linux kernel tree in `samples/bpf/xdp*`.
+
+
+### Prerequisites
+
+Install
+[dependencies](https://github.com/xdp-project/xdp-tutorial/blob/master/setup_dependencies.org).
 
 Clone xdp-project;
 ```
@@ -116,3 +123,33 @@ cd /root/basic01-xdp-pass
 ping 192.168.1.2
 ```
 
+## Local examples
+
+These examples focus on the xdp functions and uses `bpftool` and `ip`
+to load bpf programs and attach them to devices.
+
+Test build;
+```
+make -C src O=/tmp/$USER/xdp
+```
+
+Usage;
+```
+cdo xdp
+. ./Envsettings
+export __nrouters=1
+export __ntesters=1
+export __nvm=1
+./xdp.sh test start > $log
+# On vm-201
+cat /sys/kernel/debug/tracing/trace_pipe   # (optional)
+cd /root/xdptest
+bpftool prog loadall ./xdp_kern.o /sys/fs/bpf/xdptest pinmaps /sys/fs/bpf/xdptest
+ls /sys/fs/bpf/xdptest
+ethtool -L eth1 combined 1
+ip link set dev eth1 xdpgeneric pinned /sys/fs/bpf/xdptest/xdp_redirect
+./xdptest receive --dev=eth1 --fillq=4
+ssh $sshopt root@192.168.0.1 ping -c1 -W1 192.168.1.201
+ssh $sshopt root@192.168.0.1 ping -c1 -W1 1000::1:192.168.1.201 # (works)
+#ip link set dev eth1 xdpgeneric none
+```

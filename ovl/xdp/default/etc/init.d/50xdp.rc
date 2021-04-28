@@ -1,0 +1,6 @@
+#! /bin/sh
+
+mkdir -p /sys/fs/bpf
+mount -t bpf none /sys/fs/bpf
+mkdir -p /sys/kernel/debug
+mount -t debugfs none /sys/kernel/debug
