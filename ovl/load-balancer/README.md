@@ -258,7 +258,7 @@ l2lb show
 ```
 
 
-## XDP (WIP)
+## XDP
 
 [XDP](https://en.wikipedia.org/wiki/Express_Data_Path) (Express Data
 Path) provides yet another way to process packets in user-space.
@@ -268,6 +268,9 @@ In this example a `eBPF` program is attached to `eth2`, called the
 destination and redirects them to user-space. The user-space program
 re-writes the MAC addresses and sends the packet to a real server
 through `eth1`, called the "egress" interface.
+
+<img src="xdp-lb.svg" alt="XDP lb" width="60%" />
+
 
 What makes XDP fast is that the "hook" where the eBPF program is
 attached is very close to the NIC, before any Kernel handling
