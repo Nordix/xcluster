@@ -181,17 +181,26 @@ cmd_tcase_ipvs_scale_out() {
 # XDP
 
 cmd_tcase_xdp_init() {
-	tcase "Init XDP. Load eBPF programs and initiate maps"
+	tcase "Init XDP and maglev shared mem"
 	bpftool prog loadall /bin/xdp_vip_kern.o /sys/fs/bpf/lb \
 		pinmaps /sys/fs/bpf/lb 2>&1 || tdie "bpftool prog"
-	ip link set xdpgeneric pinned /sys/fs/bpf/lb/xdp_vip dev eth2 || tdie eth2
-	#ip link set xdpgeneric pinned /sys/fs/bpf/lb/xdp_pass dev eth1 || tdie eth1
-	ethtool -L eth1 combined 1 2>&1 || tdie "ethtool eth1"
+	ip link set dev eth2 xdpgeneric pinned /sys/fs/bpf/lb/xdp_vip || tdie eth2
+	ip link set dev eth1 xdpgeneric pinned /sys/fs/bpf/lb/xdp_vip || tdie eth1
+	# NO!! ethtool -L eth1 combined 1 2>&1 || tdie "ethtool eth1"
 	ethtool -L eth2 combined 1 2>&1 || tdie "ethtool eth2"
 	bpftool map update name xdp_vip_map \
-		key hex 0 0 0 0 0 0 0 0 0 0 ff ff c0 a8 1 1 value 1 0 0 0 || tdie map4
+		key hex 0 0 0 0 0 0 0 0 0 0 ff ff 0a 0 0 0 value 1 0 0 0 || tdie map4
 	bpftool map update name xdp_vip_map \
-		key hex 10 0 0 0 0 0 0 0 0 0 0 1 c0 a8 1 1 value 1 0 0 0 || tdie map6
+		key hex 10 0 0 0  0 0 0 0  0 0 0 0  0 0 0 0 value 1 0 0 0 || tdie map6
+	xdplb init
+	local i
+	for i in $(seq 1 $__nvm); do
+		xdplb activate --mac=0:0:0:1:1:$i $((i - 1))
+	done
+}
+cmd_tcase_xdp_start() {
+	tcase "Start the XDP load-balancer"
+	xdplb lb --idev=eth2 --edev=eth1 > /var/log/xdplb.log 2>&1 &
 }
 
 . /etc/profile

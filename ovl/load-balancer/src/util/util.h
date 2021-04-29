@@ -26,7 +26,7 @@ struct Option {
 int parseOptions(int argc, char* argv[], struct Option const* options);
 
 uint32_t djb2_hash(uint8_t const* c, uint32_t len);
-unsigned ipv4Hash(unsigned len, uint8_t* pkt);
+unsigned ipv4Hash(unsigned len, uint8_t const* pkt);
 
 // MAC
 int macParse(char const* str, uint8_t* mac);
@@ -49,3 +49,5 @@ void ipv4Print(unsigned len, uint8_t const* pkt);
 void ipv6Print(unsigned len, uint8_t const* pkt);
 void framePrint(unsigned len, uint8_t const* pkt);
 
+// Csum (only ipv4 for now)
+void tcpCsum(uint8_t* pkt, unsigned len);

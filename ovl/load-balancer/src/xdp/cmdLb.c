@@ -4,22 +4,21 @@
 */
 
 #include <util.h>
+#include "shm.h"
 #include <stdlib.h>
-//#include <stdio.h>
 #include <errno.h>
 #include <string.h>
 #include <poll.h>
-//#include <bpf/libbpf.h>
-//#include <bpf/bpf.h>
 #include <bpf/xsk.h>
 #include <net/if.h>
-#include <linux/if_ether.h>
+#include <arpa/inet.h>
 
 #define D(x)
 #define Dx(x) x
 
 // Forward declaration;
-static int getDestMAC(struct xdp_desc const* d, unsigned char* dmac);
+static uint8_t const*
+getDestMAC(struct SharedData* sh, uint8_t const* pkt, unsigned len);
 
 // This struct is used in xdp-tutorial and kernel sample
 struct xsk_umem_info {
@@ -92,7 +91,7 @@ static struct xsk_info* create_xsk_info(
 	xsk_cfg.tx_size = XSK_RING_PROD__DEFAULT_NUM_DESCS;
 	xsk_cfg.libbpf_flags = 0;
 	xsk_cfg.xdp_flags = 0;
-	xsk_cfg.bind_flags = 0;		/* (XDP_SHARED_UMEM is added in the call) */
+	xsk_cfg.bind_flags = XDP_COPY; /* (XDP_SHARED_UMEM is added in the call) */
 	int rc = xsk_socket__create_shared(
 		&x->xsk, dev, q, u->umem, &x->rx, &x->tx, &x->fq, &x->cq, &xsk_cfg);
 	if (rc != 0)
@@ -117,6 +116,7 @@ static struct xsk_info* create_xsk_info(
 
 static int cmdLb(int argc, char **argv)
 {
+	char const* shmName = defaultShmName;
 	char const* idev;
 	char const* edev;
 	char const* queue = NULL;
@@ -124,12 +124,10 @@ static int cmdLb(int argc, char **argv)
 		{"help", NULL, 0,
 		 "lb [options]\n"
 		 "  Start load-balancing in user-space"},
-		{"idev", &idev, REQUIRED,
-		 "Ingress device"},
-		{"edev", &edev, REQUIRED,
-		 "Egress device"},
-		{"queue", &queue, 0,
-		 "The RX queue to use. Default 0"},
+		{"shm", &shmName, 0, "Shared memory struct created by 'init'"},
+		{"idev", &idev, REQUIRED, "Ingress device"},
+		{"edev", &edev, REQUIRED, "Egress device"},
+		{"queue", &queue, 0, "The RX queue to use. Default 0"},
 		{0, 0, 0, 0}
 	};
 	int nopt = parseOptions(argc, argv, options);
@@ -137,6 +135,8 @@ static int cmdLb(int argc, char **argv)
 		return EXIT_FAILURE;
 	argc -= nopt;
 	argv += nopt;
+	struct SharedData* sh = mapSharedDataOrDie(
+		shmName, sizeof(struct SharedData), O_RDONLY);
 	unsigned int iifindex = if_nametoindex(idev);
 	if (iifindex == 0)
 		die("Unknown interface [%s]\n", idev);
@@ -161,8 +161,15 @@ static int cmdLb(int argc, char **argv)
 		die("Failed bpf_get_link_xdp_id egress; %s\n", strerror(-rc));
 
 	struct xsk_umem_info* uinfo = create_umem(0);
-	struct xsk_info* ixinfo = create_xsk_info(idev, q, uinfo, 512);
-	struct xsk_info* exinfo = create_xsk_info(edev, q, uinfo, 0);
+	struct xsk_info* ixinfo = create_xsk_info(idev, q, uinfo, 1024);
+	/*
+	  PROBLEM; q=0 can't be used for the xsk to the egress interface
+	  since it seem to clash with q=0 on the *ingress*
+	  interface. Traffic is not received. Q is hard-coded to 1 as a
+	  work-around. This requires the egress interface to have >1
+	  queue.
+	 */
+	struct xsk_info* exinfo = create_xsk_info(edev, 1, uinfo, 0);
 
 #define RX_BATCH_SIZE      64
 	uint32_t idx_rx;
@@ -170,7 +177,7 @@ static int cmdLb(int argc, char **argv)
 	int nreceived;
 	for (;;) {
 
-		Dx(printf("Poll enter...\n"));
+		D(printf("Poll enter...\n"));
 		memset(&fds, 0, sizeof(fds));
 		fds.fd = xsk_socket__fd(ixinfo->xsk);
 		fds.events = POLLIN;
@@ -179,7 +186,7 @@ static int cmdLb(int argc, char **argv)
 			die("poll %s\n", strerror(-rc));
 		if (rc == 0)
 			continue;
-		Dx(printf("Poll returned %d\n", rc));
+		D(printf("Poll returned %d\n", rc));
 
 		idx_rx = 0;
 		nreceived = xsk_ring_cons__peek(&ixinfo->rx, RX_BATCH_SIZE, &idx_rx);
@@ -187,44 +194,32 @@ static int cmdLb(int argc, char **argv)
 			continue;
 		D(printf("Received packets %d\n", nreceived));
 
-		for (int i = 0; i < rc; i++, idx_rx++) {
-			/* // Rx/Tx descriptor
-			   struct xdp_desc {
-			     __u64 addr;
-				 __u32 len;
-				 __u32 options;
-			   };
-			*/
+		uint32_t tx_idx = 0;
+		rc = xsk_ring_prod__reserve(&exinfo->tx, nreceived, &tx_idx);
+		if (rc != nreceived)
+			die("Can't reserve transmit slot %d\n", rc);
+
+		for (int i = 0; i < nreceived; i++, idx_rx++, tx_idx++) {
 			struct xdp_desc const* d = xsk_ring_cons__rx_desc(&ixinfo->rx, idx_rx);
-			D(printf("Packet received %d\n", d->len));
-			if (d->len > ETH_HLEN) {
-				uint8_t *pkt = xsk_umem__get_data(uinfo->buffer, d->addr);
-				D(printf(
-					   " addr=%llu, pkt=%p, buffer=%p (%p)\n",
-					   d->addr, pkt, packet_buffer, packet_buffer+d->addr));
-				struct ethhdr* h = (struct ethhdr*)pkt;
-				memcpy(h->h_source, emac, ETH_ALEN);
-				if (getDestMAC(d, h->h_dest) == 0) {
-					Dx(framePrint(d->len, pkt));
-					// Send packet on the egress device.
-					// We transfer the buffer (without copy) to the tx queue
-					// of the egress device.
-					uint32_t tx_idx = 0;
-					rc = xsk_ring_prod__reserve(&exinfo->tx, 1, &tx_idx);
-					if (rc != 1)
-						die("Can't reserve transmit slot %d\n", rc);
-					Dx(printf("Reserved transmit slot %u\n", tx_idx));
-					struct xdp_desc* td;
-					td = xsk_ring_prod__tx_desc(&exinfo->tx, tx_idx);
-					td->addr = d->addr;
-					td->len = d->len;
-					xsk_ring_prod__submit(&exinfo->tx, 1);
-					rc = sendto(
-						xsk_socket__fd(exinfo->xsk), NULL, 0, MSG_DONTWAIT, NULL, 0);
-					Dx(printf("Sendto %d\n", rc));
-				}
-			}
+			uint8_t *pkt = xsk_umem__get_data(uinfo->buffer, d->addr);
+			D(framePrint(d->len, pkt));
+			struct ethhdr* h = (struct ethhdr*)pkt;
+			memcpy(h->h_source, emac, ETH_ALEN);
+			memcpy(h->h_dest, getDestMAC(sh, pkt, d->len), ETH_ALEN);
+			tcpCsum(pkt, d->len);
+
+			// Enqueue packet on the egress device.
+			// We transfer the buffer (without copy) to the tx queue.
+			struct xdp_desc* td;
+			td = xsk_ring_prod__tx_desc(&exinfo->tx, tx_idx);
+			td->addr = d->addr;
+			td->len = d->len;
 		}
+
+		xsk_ring_prod__submit(&exinfo->tx, nreceived);
+		rc = sendto(
+			xsk_socket__fd(exinfo->xsk), NULL, 0, MSG_DONTWAIT,NULL, 0);
+		D(printf("Sendto %d\n", rc));
 		xsk_ring_cons__release(&ixinfo->rx, nreceived);
 
 		// Now we must take care of buffers used in previous sends now
@@ -234,7 +229,7 @@ static int cmdLb(int argc, char **argv)
 
 		uint32_t idx_cq = 0;
 		unsigned completed = xsk_ring_cons__peek(&exinfo->cq, RX_BATCH_SIZE, &idx_cq);
-		Dx(printf("Reclaiming %u completed buffers\n", completed));
+		D(printf("Reclaiming %u completed buffers\n", completed));
 		if (completed > 0) {
 			uint32_t idx_fq = 0;
 			if (xsk_ring_prod__reserve(&ixinfo->fq, completed, &idx_fq) != completed)
@@ -251,13 +246,22 @@ static int cmdLb(int argc, char **argv)
 	
 	return EXIT_SUCCESS;
 }
-__attribute__ ((__constructor__)) static void addCmdFwd(void) {
+__attribute__ ((__constructor__)) static void addCommand(void) {
 	addCmd("lb", cmdLb);
 }
 
-static int getDestMAC(struct xdp_desc const* d, unsigned char* dmac)
+static uint8_t const*
+getDestMAC(struct SharedData* sh, uint8_t const* pkt, unsigned len)
 {
-	static uint8_t const vm1[ETH_ALEN] = {0,0,0,1,1,1};
-	memcpy(dmac, vm1, ETH_ALEN);
-	return 0;
+	unsigned hash = 0;
+	if (len > ETH_HLEN) {
+		struct ethhdr* h = (struct ethhdr*)pkt;
+		if (ntohs(h->h_proto) == ETH_P_IP) {
+			hash = ipv4Hash(len - ETH_HLEN, pkt + ETH_HLEN);
+		}
+	}
+	unsigned t = sh->m.lookup[hash % sh->m.M];
+	D(printf("Load-balance to (%u); %u, %s\n", hash % sh->m.M, t, macToString(sh->target[t])));
+	return sh->target[t];
 }
+

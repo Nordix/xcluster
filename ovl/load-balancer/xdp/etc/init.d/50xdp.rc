@@ -18,8 +18,8 @@ vm() {
 }
 
 router() {
-	ethtool -K eth1 gro off gso off tso off
-	ethtool -K eth2 gro off gso off tso off
+	#ethtool -K eth1 gro off gso off tso off
+	#ethtool -K eth2 gro off gso off tso off
 	mkdir -p /sys/fs/bpf
 	mount -t bpf none /sys/fs/bpf
 	mkdir -p /sys/kernel/debug

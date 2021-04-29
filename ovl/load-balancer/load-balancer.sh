@@ -328,7 +328,8 @@ test_init_xdp() {
 test_xdp() {
 	tlog "=== load-balancer: XDP lb test"
 	test_init_xdp
-
+	otcr xdp_start
+	otc 221 "mconnect 10.0.0.0:5001"
 	xcluster_stop	
 }
 

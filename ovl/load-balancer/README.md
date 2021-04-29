@@ -260,22 +260,35 @@ l2lb show
 
 ## XDP (WIP)
 
-**Work In Progress** Only build env and basic functions for now.
-
 [XDP](https://en.wikipedia.org/wiki/Express_Data_Path) (Express Data
 Path) provides yet another way to process packets in user-space.
 
+In this example a `eBPF` program is attached to `eth2`, called the
+"ingress" interface. It filters packets with a VIP address as
+destination and redirects them to user-space. The user-space program
+re-writes the MAC addresses and sends the packet to a real server
+through `eth1`, called the "egress" interface.
+
+What makes XDP fast is that the "hook" where the eBPF program is
+attached is very close to the NIC, before any Kernel handling
+(e.g. allocation and copy to an `sk_buf`). The packet buffer buffers
+are pre-allocated in memory shared by the kernel and user-space called
+"UMEM". This allows zero-copy operation.
+
+Packet buffers are transfered between kernel and user-space with
+"rings" or "queues". An XF_XDP socket has 4 queues, two for receiving
+(rx) and 2 for sending (tx). In this example we forward packets from
+the ingress interface (eth2) to the egress interface (eth1).
+
+<img src="xdp-queues.svg" alt="XDP queues" width="60%" />
+
+
+## Usage
+
+
 **Prerequisite**: You must firsts build the kernel and `bgplib` and
-`bgptool` locally as described in [ovl/xdp](../xdp/).
-
-This is important;
-
-* https://github.com/xdp-project/xdp-tutorial/tree/master/advanced03-AF_XDP#gotcha-by-rx-queue-id-binding
-
-With `virtio` you can't steer flows with `ethtool` so in this example
-we set the number of combined queues to one (1). That implies that
-`xdpgeneric` must be used. For performance you should create one
-AF_XDP socket per queue and use `xdpdrv` (see ip-link(8)).
+`bgptool` locally as described in [ovl/xdp](../xdp/). You must also
+source `ovl/xdp/Envsettings`.
 
 Prepare and test-build;
 ```
@@ -284,40 +297,51 @@ cdo xdp
 cdo load-balancer
 eval $($XCLUSTER env | grep __kobj); export __kobj
 make -C ./src/xdp O=/tmp/$USER/tmp
+```
+
+Run the test;
+```
+./load-balancer.sh test xdp > $log
+```
+
+For understanding it may be useful to setup everything manually.
+
+Manual setup;
+```
 export __nrouters=1
-```
-
-Semi-manual;
-```
-./load-balancer.sh test init_xdp > $log
-# On vm-201
-cat /sys/kernel/debug/tracing/trace_pipe
-xdplb lb --idev=eth2 --edev=eth1 --queue=0
-# On vm-221
-ping -c1 -W1 192.168.1.1
-rsh root@192.168.0.221 ping -c1 -W1 192.168.1.1
-# On vm-001
-tcpdump -ni eth1 icmp
-```
-
-Manual start;
-```
 ./load-balancer.sh test start_xdp > $log
 # On vm-201
-cat /sys/kernel/debug/tracing/trace_pipe
+#cat /sys/kernel/debug/tracing/trace_pipe  # If printouts from eBPF is on
+# The ingress interface must have just one queue
 ethtool -L eth2 combined 1
+
+# Load eBPF programs and maps
 bpftool prog loadall /bin/xdp_vip_kern.o /sys/fs/bpf/lb pinmaps /sys/fs/bpf/lb
+ls /sys/fs/bpf/lb
+
+# Attach the eBPF program to the devices
 ip link set dev eth2 xdpgeneric pinned /sys/fs/bpf/lb/xdp_vip
-ip link set dev eth1 xdpgeneric pinned /sys/fs/bpf/lb/xdp_pass
-ip link set dev eth1 xdpgeneric none
+ip link set dev eth1 xdpgeneric pinned /sys/fs/bpf/lb/xdp_vip
 ip link show dev eth2
-ethtool -l eth2
+#ip link set dev eth1 xdpgeneric none  # To detach
+
+# Insert VIP addresses in the eBPF map
 bpftool map show
+bpftool map update name xdp_vip_map key hex 0 0 0 0 0 0 0 0 0 0 ff ff 0a 0 0 0 value 1 0 0 0
+bpftool map update name xdp_vip_map key hex 10 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 value 1 0 0 0
 bpftool map dump name xdp_vip_map
-bpftool map update name xdp_vip_map key hex 0 0 0 0 0 0 0 0 0 0 ff ff c0 a8 1 1 value 1 0 0 0
-bpftool map update name xdp_vip_map key hex 10 0 0 0 0 0 0 0 0 0 0 1 c0 a8 1 1 value 1 0 0 0
-#ethtool -N eth2 flow-type ip4 action 3 (not working with virtio)
-xdplb lb --queue=0 --idev=eth2 --edev=eth1
+
+# Configure the maglev shared mem
+xdplb init
+xdplb activate --mac=0:0:0:1:1:1 0
+xdplb activate --mac=0:0:0:1:1:2 1
+xdplb activate --mac=0:0:0:1:1:3 2
+xdplb activate --mac=0:0:0:1:1:4 3
+xdplb show
+
+# Start the load-balancer
+xdplb lb --idev=eth2 --edev=eth1
+
 # On vm-221
-ping -c1 -W1 192.168.1.1
+mconnect -address 10.0.0.0:5001 -nconn 100
 ```

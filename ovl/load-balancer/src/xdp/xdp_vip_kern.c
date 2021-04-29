@@ -71,7 +71,7 @@ static __always_inline int parse_ip4hdr(
 	return 0;
 }
 
-#if 1
+#if 0
 #define Dx(fmt, ...)                                      \
     ({                                                         \
         char ____fmt[] = fmt;                                  \

@@ -36,7 +36,7 @@ void ipv4Print(unsigned len, uint8_t const* pkt)
 		protocolString(hdr->protocol), frag);
 }
 
-unsigned ipv4Hash(unsigned len, uint8_t* pkt)
+unsigned ipv4Hash(unsigned len, uint8_t const* pkt)
 {
 	struct iphdr* hdr = (struct iphdr*)pkt;
 
