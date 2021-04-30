@@ -316,11 +316,13 @@ export __nrouters=1
 # On vm-201
 #cat /sys/kernel/debug/tracing/trace_pipe  # If printouts from eBPF is on
 # The ingress interface must have just one queue
+ethtool -l eth2
 ethtool -L eth2 combined 1
 
 # Load eBPF programs and maps
 bpftool prog loadall /bin/xdp_vip_kern.o /sys/fs/bpf/lb pinmaps /sys/fs/bpf/lb
 ls /sys/fs/bpf/lb
+mount | grep bpf
 
 # Attach the eBPF program to the devices
 ip link set dev eth2 xdpgeneric pinned /sys/fs/bpf/lb/xdp_vip
@@ -347,4 +349,7 @@ xdplb lb --idev=eth2 --edev=eth1
 
 # On vm-221
 mconnect -address 10.0.0.0:5001 -nconn 100
+ctraffic -address 10.0.0.0:5003 -monitor -nconn 50 -rate 50 -stats all -timeout 12s > /tmp/ctraffic
+ctraffic -analyze hosts -stat_file /tmp/ctraffic
+jq . < /tmp/ctraffic | less
 ```
