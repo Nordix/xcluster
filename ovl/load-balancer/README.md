@@ -88,58 +88,17 @@ is steteful so scale_out will not affect established connection and a
 scale in will only affect the connections on the scaled backends.
 
 
-## NFQUEUE
-
-The `-j NFQUEUE` iptables target directs packets to a user-space
-program. The program can analyze the packet, set `fwmark` and place a
-"verdict".
-
-<img src="nfqueue.svg" alt="NFQUEUQE packet path" width="60%" />
 
 
-Refs;
-
-* https://home.regit.org/netfilter-en/using-nfqueue-and-libnetfilter_queue/
-* http://www.netfilter.org/projects/libnetfilter_queue/doxygen/html/index.html
-
-
-Scaling test;
-```
-#sudo apt install -y libnl-3-dev libnl-genl-3-dev libnetfilter-queue1
-__nvm=10 __nrouters=1 ./load-balancer.sh test --view --scale="1 2" nfqueue_scale > $log
-```
-
-In this test the maximum vms are used (10) and just one load-balancer
-(for no good reason). VMs 1 and 2 are scaled out and scaled in again
-and a graph is presented. Example;
-
-<img src="scale.svg" alt="Scale graph" width="50%" />
-
-The ideal loss when 2 of 10 backends are scaled out is 20%, we lost
-26% which is very good. When the backends comes back we lose a lot
-fewer connections. This because the lookup table has 997 entries and
-we have just 100 connections so it's a fair chance that existing
-connections are preserved.
-
-The hash algorithm can be controlled with the `xcluster_LB_OPTIONS`
-variable;
-
-```
-# -p includes ports in the hash (fragments not handled)
-# -m maglev|modulo defines the hash algorithm, default=maglev
-export xcluster_LB_OPTIONS="-p -m modulo"
-```
-
-
-## Maglev hashing and the lb program
+## Maglev hashing
 
 Maglev is the Google load-balancer;
 
 * https://static.googleusercontent.com/media/research.google.com/en//pubs/archive/44824.pdf
 
-The NFQUEUE example uses "maglev hashing". The hash state is stored in
-"shared memory" so it is accessible from the program listening to the
-nfqueue as well as from programs performing various configurations;
+In these examples the hash state is stored in "shared memory" so it is
+accessible from the program doing load-balancing as well as from
+programs performing various configurations;
 
 ```c
 #define MAX_M 10000
@@ -152,22 +111,6 @@ struct MagData {
 };
 ```
 
-The `lb` program when listening on nfqueue ("lb run") creates a hash
-on src/dest addresses and gets a "fwmark" from MagData.lookup.
-
-The `lb` program is also used to create and configure the MagData in
-shared memory. It can be built and executed on your laptop;
-
-```
-gcc -o /tmp/lb src/lb.c src/maglev.c -lmnl -lnetfilter_queue -lrt
-/tmp/lb create -i 5 100 10
-/tmp/lb show
-/tmp/lb deactivate 1
-/tmp/lb show
-/tmp/lb activate 6 7 8
-/tmp/lb show
-/tmp/lb clean
-```
 
 The `maglev.c` has a test program which is rather crude but can be
 extended (by you);
@@ -180,19 +123,6 @@ gcc -o /tmp/maglev src/maglev.c src/maglev-test.c
 # /tmp/maglev M N seed loops -- Test scale in/out and print % loss
 /tmp/maglev 20 5 1 10
 /tmp/maglev 10000 10 1 10  # Larger M comes nearer to the ideal (10%)
-```
-
-### Manual tests
-
-```
-__nrouters=1 ./load-balancer.sh test start_nfqueue > $log
-# On vm-221;
-mconnect -address 10.0.0.0:5001 -nconn 100 -srccidr 50.0.0.0/16
-ctraffic -address 10.0.0.0:5003 -nconn 100 -srccidr 50.0.0.0/16 -timeout 1m -monitor -rate 100
-# On vm-201
-lb show
-lb deactivate 1
-# ...
 ```
 
 ### Fragment handling
@@ -227,8 +157,102 @@ before the first fragment must be stored temporarily and re-sent when
 the first fragment arrives. They can not be simply dropped since a
 re-sent packet is likely to arrive in the same order.
 
+
+
+## NFQUEUE
+
+The `-j NFQUEUE` iptables target directs packets to a user-space
+program. The program can analyze the packet, set `fwmark` and place a
+"verdict".
+
+<img src="nfqueue.svg" alt="NFQUEUQE packet path" width="60%" />
+
+
+Refs;
+
+* https://home.regit.org/netfilter-en/using-nfqueue-and-libnetfilter_queue/
+* http://www.netfilter.org/projects/libnetfilter_queue/doxygen/html/index.html
+
+The NFQUEUE example uses "maglev hashing". The `lb` program when
+listening on nfqueue ("lb run") creates a hash on src/dest addresses
+and gets a "fwmark" from MagData.lookup.
+
+The `lb` program is also used to create and configure the MagData in
+shared memory. It can be built and executed on your laptop;
+
+```
+gcc -o /tmp/lb src/lb.c src/maglev.c -lmnl -lnetfilter_queue -lrt
+/tmp/lb create -i 5 100 10
+/tmp/lb show
+/tmp/lb deactivate 1
+/tmp/lb show
+/tmp/lb activate 6 7 8
+/tmp/lb show
+/tmp/lb clean
+```
+
+
+### Tests
+
+Manual test;
+```
+__nrouters=1 ./load-balancer.sh test start_nfqueue > $log
+# On vm-221;
+mconnect -address 10.0.0.0:5001 -nconn 100 -srccidr 50.0.0.0/16
+ctraffic -address 10.0.0.0:5003 -nconn 100 -srccidr 50.0.0.0/16 -timeout 1m -monitor -rate 100
+# On vm-201
+lb show
+lb deactivate 1
+# ...
+```
+
+Scaling test;
+```
+#sudo apt install -y libnl-3-dev libnl-genl-3-dev libnetfilter-queue1
+__nvm=10 __nrouters=1 ./load-balancer.sh test --view --scale="1 2" nfqueue_scale > $log
+```
+
+In this test the maximum vms are used (10) and just one load-balancer
+(for no good reason). VMs 1 and 2 are scaled out and scaled in again
+and a graph is presented. Example;
+
+<img src="scale.svg" alt="Scale graph" width="50%" />
+
+The ideal loss when 2 of 10 backends are scaled out is 20%, we lost
+26% which is very good. When the backends comes back we lose a lot
+fewer connections. This because the lookup table has 997 entries and
+we have just 100 connections so it's a fair chance that existing
+connections are preserved.
+
+The hash algorithm can be controlled with the `xcluster_LB_OPTIONS`
+variable;
+
+```
+# -p includes ports in the hash (fragments not handled)
+# -m maglev|modulo defines the hash algorithm, default=maglev
+export xcluster_LB_OPTIONS="-p -m modulo"
+```
+
 The NFQUEUE does not support stored packets to be re-injected, so some
-other mechanism must be used, e.g. a raw socket or a tap device.
+other mechanism must be used for fragments, e.g. a raw socket or a tap
+device.
+
+### Improved NFQUEUE
+
+For TCP it is not necessary to redirect *all* packets to
+user-space. Only the `SYN` packets may be redirected and then we let
+the "conntracker" take care of subsequent packets in the kernel.
+
+This will not only boost performance for TCP it will also preserve all
+existing connections when the clients are scaled since conntracker is
+stateful.
+
+When the lb's are scaled we must redirect all "untracked" packets to
+user-space to recover.
+
+**To be investigated**; Does the contracker recover? Or must we
+  redirect untracked forever in case of lb scaling?
+
 
 
 ## DPDK based load-balancer
@@ -262,6 +286,9 @@ l2lb show
 
 [XDP](https://en.wikipedia.org/wiki/Express_Data_Path) (Express Data
 Path) provides yet another way to process packets in user-space.
+
+**BUG**; At present connections are stuck in "ESTABLISHED" on the
+  servers.
 
 In this example a `eBPF` program is attached to `eth2`, called the
 "ingress" interface. It filters packets with a VIP address as

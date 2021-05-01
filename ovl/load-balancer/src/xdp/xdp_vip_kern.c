@@ -89,7 +89,9 @@ int  xdp_filter_vip(struct xdp_md *ctx)
 	void *data = (void*)(long)ctx->data;
     int index = ctx->rx_queue_index;
 	Dx("xdp_filter_vip %ld, Q %d", data_end - data, index);
-	
+	if (index != 0)
+		return XDP_PASS;
+
 	// Extract the destination IP address and create a hash map key.
 	struct in6_addr key;
 	struct hdr_cursor nh;
@@ -118,14 +120,6 @@ int  xdp_filter_vip(struct xdp_md *ctx)
 		return *value;
 	}
 
-	return XDP_PASS;
-}
-
-// This program shall be attached to the interface connected to the
-// real servers just to allow a AF_XDP socket for sending messages.
-SEC("xdp_pass")
-int  xdp_prog_pass(struct xdp_md *ctx)
-{
 	return XDP_PASS;
 }
 
