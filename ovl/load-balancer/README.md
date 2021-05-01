@@ -244,14 +244,50 @@ user-space. Only the `SYN` packets may be redirected and then we let
 the "conntracker" take care of subsequent packets in the kernel.
 
 This will not only boost performance for TCP it will also preserve all
-existing connections when the clients are scaled since conntracker is
-stateful.
+existing connections when the clients are scaled since the conntracker
+is stateful.
 
-When the lb's are scaled we must redirect all "untracked" packets to
-user-space to recover.
+```
+export xcluster_SYN_ONLY=yes
+__nrouters=1 ./load-balancer.sh test start_nfqueue > $log
+# On vm-221
+ctraffic -address [1000::]:5003 -nconn 100 -srccidr 2000::/112 -timeout 30s -monitor -rate 100
+# On vm-201
+ip6tables -t mangle -vnL
+```
 
-**To be investigated**; Does the contracker recover? Or must we
-  redirect untracked forever in case of lb scaling?
+The iptables counters shows the improvement;
+
+```
+Chain PREROUTING (policy ACCEPT 3653 packets, 3334K bytes)
+ pkts bytes target     prot opt in     out     source               destination         
+ 6498 3540K VIP        all      eth2   *       ::/0                 1000::/112          
+
+Chain POSTROUTING (policy ACCEPT 10124 packets, 6873K bytes)
+ pkts bytes target     prot opt in     out     source               destination         
+ 6498 3540K VIPOUT     all      *      *       ::/0                 1000::/112          
+
+Chain ESTABLISHED (1 references)
+ pkts bytes target     prot opt in     out     source               destination         
+ 6398 3532K CONNMARK   all      *      *       ::/0                 ::/0                 CONNMARK restore
+ 6398 3532K ACCEPT     all      *      *       ::/0                 ::/0                
+
+Chain VIP (1 references)
+ pkts bytes target     prot opt in     out     source               destination         
+ 6398 3532K ESTABLISHED  all      *      *       ::/0                 ::/0                 ctstate ESTABLISHED
+  100  8000 NFQUEUE    all      *      *       ::/0                 ::/0                 NFQUEUE num 2
+
+Chain VIPOUT (1 references)
+ pkts bytes target     prot opt in     out     source               destination         
+  100  8000 CONNMARK   all      *      *       ::/0                 ::/0                 ctstate NEW CONNMARK save
+```
+
+Note that only 100 packets (the SYNs) are directed to user-space.
+
+When the lb's are scaled we must redirect all "INVALID" packets to
+user-space. Basically this will be as using nfqueue without the SYN
+optimization, it will work but slower.
+
 
 
 
