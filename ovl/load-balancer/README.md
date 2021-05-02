@@ -288,7 +288,11 @@ When the lb's are scaled we must redirect all "INVALID" packets to
 user-space. Basically this will be as using nfqueue without the SYN
 optimization, it will work but slower.
 
-
+**Problem**: If multiple LBs with DSR is used then the reply packets
+will likely take another path. So the conntracker will not see all
+connections go to "ESTABLISHED". It will work but the performance gain
+is lost. A solution may be to check "SYN_SEEN" instead of
+"ESTABLISHED" but that might require a custom iptables module.
 
 
 ## DPDK based load-balancer
