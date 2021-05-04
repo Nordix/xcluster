@@ -27,8 +27,8 @@ router() {
 	done
 	if test "$SYN_ONLY" = "yes"; then
 		for iptables in iptables ip6tables; do
-			$iptables -t mangle -N VIP
 			$iptables -t raw -F		# Remove any NOTRACK rules
+			$iptables -t mangle -N VIP
 			$iptables -t mangle -N VIPOUT
 			$iptables -t mangle -N ESTABLISHED
 			$iptables -t mangle -A VIP -m conntrack --ctstate ESTABLISHED -j ESTABLISHED
@@ -37,6 +37,7 @@ router() {
 			$iptables -t mangle -A VIP -j NFQUEUE --queue-num 2
 			$iptables -t mangle -A VIPOUT -m conntrack --ctstate NEW -j CONNMARK --save-mark
 		done
+		# Add VIPs
 		iptables -t mangle -A PREROUTING -i eth2 -d 10.0.0.0/24 -j VIP
 		iptables -t mangle -A POSTROUTING -d 10.0.0.0/24 -j VIPOUT
 		ip6tables -t mangle -A PREROUTING -i eth2 -d 1000::/112 -j VIP
@@ -46,6 +47,7 @@ router() {
 			$iptables -t mangle -N VIP
 			$iptables -t mangle -A VIP -j NFQUEUE --queue-num 2
 		done
+		# Add VIPs
 		iptables -t mangle -A PREROUTING -i eth2 -d 10.0.0.0/24 -j VIP
 		iptables -t mangle -A POSTROUTING -d 10.0.0.0/24 -j VIPOUT
 	fi

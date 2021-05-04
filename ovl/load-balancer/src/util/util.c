@@ -20,14 +20,6 @@ void die(char const* fmt, ...)
 	exit(EXIT_FAILURE);
 }
 
-uint32_t djb2_hash(uint8_t const* c, uint32_t len)
-{
-	uint32_t hash = 5381;
-	while (len--)
-		hash = ((hash << 5) + hash) + *c++; /* hash * 33 + c */
-	return hash;
-}
-
 int macParse(char const* str, uint8_t* mac)
 {
 	int values[6];
