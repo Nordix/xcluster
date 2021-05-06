@@ -61,7 +61,7 @@ linux-5.5.x and above sprays packets regardless of hash so
 `linux-5.4.35` is used in tests.
 
 ```
-./load-balancer.sh test --view ecmp > $log
+./load-balancer.sh test ecmp > $log
 __nrouters=1 __nvm=10 ./load-balancer.sh test --scale=1 ecmp_scale_in > $log
 __nrouters=1 __nvm=10 ./load-balancer.sh test --scale=5 ecmp_scale_in > $log
 ```

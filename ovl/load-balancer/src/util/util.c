@@ -2,15 +2,13 @@
    SPDX-License-Identifier: MIT License
    Copyright (c) 2021 Nordix Foundation
 */
+
 #include "util.h"
 #include <stdio.h>
 #include <stdarg.h>
 #include <stdlib.h>
-#include <sys/mman.h>
 #include <string.h>
-#include <errno.h>
 #include <netinet/ether.h>
-#include <arpa/inet.h>
 
 void die(char const* fmt, ...)
 {
@@ -138,52 +136,12 @@ int parseOptions(int argc, char* argv[], struct Option const* options)
 	return optind;
 }
 
-int createSharedData(char const* name, void* data, size_t len)
+int parseOptionsOrDie(int argc, char* argv[], struct Option const* options)
 {
-	int fd = shm_open(name, O_RDWR|O_CREAT, 0600);
-	if (fd < 0) return fd;
-	int c = write(fd, data, len);
-	if (c != len) return c;
-	close(fd);
-	return 0;
-}
-void createSharedDataOrDie(char const* name, void* data, size_t len)
-{
-	if (createSharedData(name, data, len) != 0) {
-		die("createSharedData: %s\n", strerror(errno));
-	}
-}
-void* mapSharedData(char const* name, size_t len, int mode)
-{
-	int fd = shm_open(name, mode, (mode == O_RDONLY)?0400:0600);
-	if (fd < 0) return NULL;
-	void* m = mmap(
-		NULL, len,
-		(mode == O_RDONLY)?PROT_READ:PROT_READ|PROT_WRITE, MAP_SHARED, fd, 0);
-	if (m == MAP_FAILED) return NULL;
-	return m;
-}
-void* mapSharedDataOrDie(char const* name, size_t len, int mode)
-{
-	void* m = mapSharedData(name, len, mode);
-	if (m == NULL)
-		die("mapSharedData %s\n", name);
-	return m;
-}
-
-
-void maglevInit(struct MagData* m)
-{
-	initMagData(m, 997, 32);
-	populate(m);
-}
-void maglevSetActive(struct MagData* m, unsigned v, int argc, char *argv[])
-{
-	while (argc-- > 0) {
-		int i = atoi(*argv++);
-		if (i >= 0 && i < m->N) m->active[i] = v;
-	}
-	populate(m);
+	int nopt = parseOptions(argc, argv, options);
+	if (nopt > 0)
+		return nopt;
+	exit(nopt == 0 ? EXIT_SUCCESS : EXIT_FAILURE);
 }
 
 #include <sys/ioctl.h>

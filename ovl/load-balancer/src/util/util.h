@@ -25,6 +25,7 @@ struct Option {
 };
 // Returns number of handled items, < 0 on error, 0 on help
 int parseOptions(int argc, char* argv[], struct Option const* options);
+int parseOptionsOrDie(int argc, char* argv[], struct Option const* options);
 
 uint32_t djb2_hash(uint8_t const* c, uint32_t len);
 unsigned ipv4Hash(unsigned len, uint8_t const* pkt);
