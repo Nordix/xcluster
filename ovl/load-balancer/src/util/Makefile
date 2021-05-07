@@ -10,7 +10,7 @@ CFLAGS ?= -Wall
 $(LIBD)/%.o : %.c
 	$(CC) -c $(CFLAGS) $(CPPFLAGS) $< -o $@
 
-$(LIB): $(OBJ)
+$(LIB): $(LIBD) $(OBJ)
 	@rm -f $(LIB)
 	ar rcs $@ $(OBJ)
 

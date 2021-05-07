@@ -22,6 +22,8 @@ struct ct {
 };
 
 #ifdef MEMDEBUG
+#undef BUCKET_ALLOC
+#undef BUCKET_FREE
 long nAllocatedBuckets = 0;
 static void* BUCKET_ALLOC(void) {
 	nAllocatedBuckets++;
@@ -31,9 +33,6 @@ static void BUCKET_FREE(void* b) {
 	nAllocatedBuckets--;
 	free(b);
 }
-#else
-#define BUCKET_ALLOC() calloc(1,sizeof(struct ctBucket))
-#define BUCKET_FREE(x) free(x)
 #endif
 
 static int keyEqual(struct ctKey const* key1, struct ctKey const* key2)
@@ -119,7 +118,7 @@ void* ctLookup(
 	}
 	return NULL;				/* Not found */
 }
-void ctInsert(
+int ctInsert(
 	struct ct* ct, struct timespec* now, struct ctKey const* key, void* data)
 {
 	struct ctBucket* b = ctLookupBucket(ct, now, key);
@@ -132,7 +131,7 @@ void ctInsert(
 		if (keyEqual(key, &item->key) == 0) {
 			item->refered = toNanos(now);
 			item->data = data;
-			return;				/* Existing item updated */
+			return 1;				/* Existing item updated */
 		}
 	}
 
@@ -142,18 +141,20 @@ void ctInsert(
 		b->refered = toNanos(now);
 		if (b->next != NULL)
 			ct->stats.collisions++;
-		return;
+		return 0;
 	}
 
 	// We must allocate a new bucket
 	ct->stats.collisions++;
 	struct ctBucket* x = BUCKET_ALLOC();
+	if (x == NULL)
+		return -1;
 	x->data = data;
 	x->key = *key;
 	x->refered = toNanos(now);
 	x->next = b->next;
 	b->next = x;
-	return;
+	return 0;
 }
 
 void ctRemove(

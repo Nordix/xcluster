@@ -7,6 +7,7 @@
 #include <stdio.h>
 #include <arpa/inet.h>
 #include <netinet/ip.h>
+#include <netinet/ip_icmp.h>
 
 char const* protocolString(unsigned p)
 {
@@ -36,6 +37,37 @@ void ipv4Print(unsigned len, uint8_t const* pkt)
 		protocolString(hdr->protocol), frag);
 }
 
+unsigned ipv4TcpUdpHash(void const* data, unsigned len)
+{
+	// We hash on addresses and ports
+	struct iphdr* hdr = (struct iphdr*)data;
+	int32_t hashData[3];
+	hashData[0] = hdr->saddr;
+	hashData[1] = hdr->daddr;
+	hashData[2] = *((uint32_t*)data + hdr->ihl);
+	return djb2_hash((uint8_t const*)hashData, sizeof(hashData));
+}
+unsigned ipv4IcmpHash(void const* data, unsigned len)
+{
+	struct iphdr* hdr = (struct iphdr*)data;
+	struct icmphdr* ihdr = (struct icmphdr*)((uint32_t*)data + hdr->ihl);
+	int32_t hashData[3];
+	hashData[0] = hdr->saddr;
+	hashData[1] = hdr->daddr;
+	switch (ihdr->type) {
+	case ICMP_ECHO:
+		// We hash on addresses and id
+		hashData[2] = ihdr->un.echo.id;
+		break;
+	case ICMP_FRAG_NEEDED:
+		// This is a PMTU discovery reply. We must use the *inner*
+		// header to make sure the origial sender gets the reply.
+	default:
+		hashData[2] = 0;
+	}
+	return djb2_hash((uint8_t const*)hashData, sizeof(hashData));
+}
+
 unsigned ipv4Hash(unsigned len, uint8_t const* pkt)
 {
 	struct iphdr* hdr = (struct iphdr*)pkt;
@@ -48,11 +80,5 @@ unsigned ipv4Hash(unsigned len, uint8_t const* pkt)
 	if (hdr->protocol != IPPROTO_TCP && hdr->protocol != IPPROTO_UDP)
 		return 0;
 
-	// We hash on addresses and ports
-	uint32_t hashData[3];
-	hashData[0] = hdr->saddr;
-	hashData[1] = hdr->saddr;
-	hashData[2] = *((uint32_t*)pkt + hdr->ihl);
-
-	return djb2_hash((uint8_t const*)hashData, sizeof(hashData));
+	return ipv4TcpUdpHash(pkt, len);
 }

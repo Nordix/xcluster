@@ -27,8 +27,17 @@ struct Option {
 int parseOptions(int argc, char* argv[], struct Option const* options);
 int parseOptionsOrDie(int argc, char* argv[], struct Option const* options);
 
+// Hash
+struct ip6_hdr;
+struct icmp6_hdr;
+struct ctStats;
 uint32_t djb2_hash(uint8_t const* c, uint32_t len);
 unsigned ipv4Hash(unsigned len, uint8_t const* pkt);
+unsigned ipv4TcpUdpHash(void const* data, unsigned len);
+unsigned ipv4IcmpHash(void const* data, unsigned len);
+unsigned ipv6Hash(void const* data, unsigned len);
+int ipv6HandleFragment(void const* data, unsigned len, unsigned* hash);
+struct ctStats const* ipv6FragStats(void);
 
 // MAC
 int macParse(char const* str, uint8_t* mac);
@@ -55,6 +64,8 @@ void framePrint(unsigned len, uint8_t const* pkt);
 void tcpCsum(uint8_t* pkt, unsigned len);
 
 // Conntrack
+#define BUCKET_ALLOC() calloc(1,sizeof(struct ctBucket))
+#define BUCKET_FREE(x) free(x)
 typedef uint32_t ctCounter;
 struct ctKey {
 	struct in6_addr dst;
@@ -71,7 +82,11 @@ typedef void (*ctFree)(void* data);
 struct ct* ctCreate(ctCounter hsize, uint64_t ttlNanos, ctFree freefn);
 void* ctLookup(
 	struct ct* ct, struct timespec* now, struct ctKey const* key);
-void ctInsert(
+// Return;
+//  0 - Inserted, ctFree will be called.
+//  1 - Updated, ctFree will be called for the updated data only.
+// -1 - Failed, ctFree WILL NOT be called.
+int ctInsert(
 	struct ct* ct, struct timespec* now, struct ctKey const* key, void* data);
 void ctRemove(
 	struct ct* ct, struct timespec* now, struct ctKey const* key);

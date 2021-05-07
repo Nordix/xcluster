@@ -9,3 +9,7 @@ struct SharedData {
 extern char const* const defaultLbShm;
 extern char const* const defaultTargetShm;
 
+typedef int (*packetHandleFn_t)(
+	unsigned short proto, void* payload, unsigned plen);
+
+int nfqueueRun(unsigned int queue_num, packetHandleFn_t packetHandleFn);

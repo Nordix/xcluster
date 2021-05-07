@@ -124,7 +124,11 @@ cmd_tcase_ecmp_scale() {
 cmd_tcase_nfqueue_activate_all() {
 	local vms="$(seq 1 $__nvm | tr '\n' ' ')"
 	tcase "nfqueue activate all [$vms]"
-	lb activate $vms
+	if test "$FRAG" = "yes"; then
+		nfqueuelb activate $vms
+	else
+		lb activate $vms
+	fi
 }
 
 cmd_tcase_nfqueue_scale_in() {

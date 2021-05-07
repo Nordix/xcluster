@@ -88,7 +88,7 @@ test_start() {
 	unset __mem1 __mem201 __mem202 __mem203
 	export __mem=256
 	echo "$XOVLS" | grep -q private-reg && unset XOVLS
-	xcluster_start env network-topology iptools load-balancer
+	xcluster_start network-topology iptools load-balancer
 }
 
 

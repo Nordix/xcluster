@@ -16,14 +16,16 @@ vm() {
 }
 
 router() {
+	local toffset=100
 	test -n "$__nvm" || __nvm=4
-	local i t
-	for i in $(seq 1 $__nvm); do
-		t=$i
-		ip rule add fwmark $i table $t
-		ip -6 rule add fwmark $i table $t
-		ip route add default via 192.168.1.$i table $t
-		ip -6 route add default via 1000::1:192.168.1.$i table $t
+	local n t
+	for n in $(seq 1 $__nvm); do
+		t=$n
+		test "$FRAG" = "yes" && t=$((n + toffset))
+		ip rule add fwmark $t table $t
+		ip -6 rule add fwmark $t table $t
+		ip route add default via 192.168.1.$n table $t
+		ip -6 route add default via 1000::1:192.168.1.$n table $t
 	done
 	if test "$SYN_ONLY" = "yes"; then
 		for iptables in iptables ip6tables; do
@@ -49,11 +51,18 @@ router() {
 		done
 		# Add VIPs
 		iptables -t mangle -A PREROUTING -i eth2 -d 10.0.0.0/24 -j VIP
-		iptables -t mangle -A POSTROUTING -d 10.0.0.0/24 -j VIPOUT
+		ip6tables -t mangle -A PREROUTING -i eth2 -d 1000::/112 -j VIP
 	fi
 
-	lb create 2000 20
-	lb run $LB_OPTIONS > /var/log/lb.log 2>&1 &
+	if test "$FRAG" = "yes"; then
+		ethtool -K eth1 gro off gso off tso off
+		ethtool -K eth2 gro off gso off tso off
+		nfqueuelb init --ownfw=$((i - 200)) --toffset=$toffset
+		nfqueuelb lb > /var/log/nfqueuelb.log 2>&1 &
+	else
+		lb create 2000 20
+		lb run $LB_OPTIONS > /var/log/lb.log 2>&1 &
+	fi
 }
 
 tester() {

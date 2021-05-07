@@ -22,6 +22,8 @@ for s in $(echo "$SETUP" | tr ',' ' '); do
 	cp -R $dir/$s/* $tmp
 done
 
+$XCLUSTER install_prog --dest=$tmp ping
+
 f=$GOPATH/src/github.com/Nordix/mconnect/image/mconnect
 test -x $f || die "Not executable [$f]"
 cp $f $tmp/bin
@@ -33,8 +35,12 @@ cp $f $tmp/bin
 f=$XCLUSTER_WORKSPACE/libnetfilter_queue-1.0.3/examples/.libs/nf-queue
 test -x $f && $XCLUSTER install_prog --dest=$tmp $f
 
-echo $SETUP | grep -q nfqueue && \
-	gcc -o $tmp/bin/lb $dir/src/lb.c $dir/src/maglev.c -lmnl -lnetfilter_queue -lrt
+if echo $SETUP | grep -q nfqueue; then
+	gcc -o $tmp/bin/lb $dir/src/lb.c $dir/src/maglev.c \
+		-lmnl -lnetfilter_queue -lrt || die "Gcc lb"
+	make -C src/util -j8 > /dev/null || die "Make util"
+	make -C src/nfqueue O=$tmp/bin > /dev/null || die "Make nfqueue"
+fi
 
 if echo $SETUP | grep -q dpdk; then
 	test -n "$__dpdk_src" || die 'Not set [$__dpdk_src]'
