@@ -45,7 +45,8 @@ monitor() {
 }
 
 (monitor run_kubelet) > /dev/null 2>&1 &
-(monitor run_kube_proxy) > /dev/null 2>&1 &
+echo "$PROXY_MODE" | grep -iq "disable" || \
+	(monitor run_kube_proxy) > /dev/null 2>&1 &
 
 # For --proxy-mode=iptables you must add;
 #ip -6 ro add local fd00:4000::/112 dev lo

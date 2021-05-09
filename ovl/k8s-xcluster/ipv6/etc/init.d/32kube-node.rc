@@ -44,4 +44,5 @@ monitor() {
 }
 
 (monitor run_kubelet) > /dev/null 2>&1 &
-(monitor run_kube_proxy) > /dev/null 2>&1 &
+echo "$PROXY_MODE" | grep -qi disabled || \
+	(monitor run_kube_proxy) > /dev/null 2>&1 &
