@@ -1,8 +1,8 @@
 # Xcluster ovl - crio
 
 [Cri-o](https://github.com/cri-o/cri-o) is used as CRI-plugin for
-Kubernetes in `xcluster`. Cri-o has not yet any binary release so this
-ovl builds `cri-o` from source.
+Kubernetes in `xcluster`.
+
 
 ## Cri-o static release bundle
 
@@ -41,6 +41,14 @@ git clone --depth 1 https://github.com/containers/conmon.git
 cd conmon
 make
 ```
+
+## Runtime
+
+The [runc](https://github.com/opencontainers/runc) runtime is bundled
+with the `cri-o` static release bundle.
+
+It is possible to replace `runc` with
+[crun](https://github.com/containers/crun)
 
 
 ## Problems
