@@ -116,7 +116,7 @@ to be done by the tested SW.
 
 ## Evil tester
 
-<img src="evil-tester/evil-tester.svg" alt="Evil teste topology" width="80%" />
+<img src="evil-tester.svg" alt="Evil tester topology" width="80%" />
 
 An "evil tester" is added to the path intended for doing bad things
 with traffic for test purposes.
