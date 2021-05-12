@@ -298,6 +298,50 @@ is lost. A solution may be to check "SYN_SEEN" instead of
 
 ### [WIP] Nfqueue with fragment handling
 
+When a fragment arrives we hash on addresses only as described in the
+maglev document (see above). If the lookup gives us our own fwmark we
+handle the fragment locally. If not, route it to another load-balancer.
+
+<img src="nfqueue-frag-routing.svg" alt="nfqueue frament routing" width="40%" />
+
+The code;
+```c
+static int handleIpv6(void* payload, unsigned plen)
+{
+	unsigned hash;
+	struct ip6_hdr* hdr = (struct ip6_hdr*)payload;
+	if (hdr->ip6_nxt == IPPROTO_FRAGMENT) {
+
+		// Make an addres-hash and check if we shall forward to the LB tier
+		hash = ipv6AddressHash(payload, plen);
+		int fw = slb->magd.lookup[hash % slb->magd.M];
+		if (fw != slb->ownFwmark) {
+			return fw + slb->fwOffset; /* To the LB tier */
+		}
+
+		// We shall handle the frament here
+		if (ipv6HandleFragment(payload, plen, &hash) != 0) {
+			return -1; /* Drop fragment */
+		}
+	} else {
+		hash = ipv6Hash(payload, plen);
+	}
+	return st->magd.lookup[hash % st->magd.M] + st->fwOffset;
+}
+```
+
+Now we have made sure that all fragments from a particular source ends
+up in the same load-balancer. Here we do the "real" hashing, including
+ports, and store the hash value in a hash-table with key
+`<src,dst,frag-id>`. Subsequent fragments will have the same `frag-id`
+and we retrieve the stored hash value.
+
+But what if the fragments are re-ordered and the first fragment with
+the ports does not come first? Then we have no options but it store
+fragments until the first fragment arrives.
+**This case is not yet implemented**
+
+
 Build;
 ```
 cd src/util
