@@ -49,11 +49,21 @@ static int handleIpv6(void* payload, unsigned plen)
 
 	struct ip6_hdr* hdr = (struct ip6_hdr*)payload;
 	if (hdr->ip6_nxt == IPPROTO_FRAGMENT) {
+
+		// Make an addres-hash and check if we shall forward to the LB tier
+		hash = ipv6AddressHash(payload, plen);
+		int fw = slb->magd.lookup[hash % slb->magd.M];
+		if (fw != slb->ownFwmark) {
+			Dx(printf("Fragment to LB tier. fw=%d\n", fw));
+			return fw + slb->fwOffset; /* To the LB tier */
+		}
+
+		// We shall handle the frament here
 		if (ipv6HandleFragment(payload, plen, &hash) != 0) {
 			Dx(printf("IPv6 fragment dropped\n"));
 			return -1;
 		}
-		D({
+		Dx({
 				struct ctStats const* stat = ipv6FragStats();
 				printf("Frag hash=%u, active=%u\n", hash, stat->active);
 			});

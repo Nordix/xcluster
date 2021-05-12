@@ -36,6 +36,7 @@ unsigned ipv4Hash(unsigned len, uint8_t const* pkt);
 unsigned ipv4TcpUdpHash(void const* data, unsigned len);
 unsigned ipv4IcmpHash(void const* data, unsigned len);
 unsigned ipv6Hash(void const* data, unsigned len);
+unsigned ipv6AddressHash(void const* data, unsigned len);
 int ipv6HandleFragment(void const* data, unsigned len, unsigned* hash);
 struct ctStats const* ipv6FragStats(void);
 

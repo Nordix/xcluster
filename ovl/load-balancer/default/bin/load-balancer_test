@@ -126,6 +126,10 @@ cmd_tcase_nfqueue_activate_all() {
 	tcase "nfqueue activate all [$vms]"
 	if test "$FRAG" = "yes"; then
 		nfqueuelb activate $vms
+		test -n "$__nrouters" || __nrouters=1
+		for n in $(seq 1 $__nrouters); do
+			nfqueuelb activate --shm=nfqueueLb $n
+		done
 	else
 		lb activate $vms
 	fi

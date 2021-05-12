@@ -7,7 +7,7 @@ X := $(O)/nfqueuelb
 CFLAGS := -I.. -I../util
 LDFLAGS := -L$(LIBD) -llbutil -lrt -lmnl -lnetfilter_queue
 
-$(X): $(SRC) $(LIBD)/liblbutil.a
+$(X): $(O) $(SRC) $(LIBD)/liblbutil.a
 	$(CC) -Wall -o $@ $(CFLAGS) $(SRC) $(LDFLAGS)
 
 $(O):

@@ -295,6 +295,30 @@ is lost. A solution may be to check "SYN_SEEN" instead of
 "ESTABLISHED" but that might require a custom iptables module.
 
 
+
+### [WIP] Nfqueue with fragment handling
+
+Build;
+```
+cd src/util
+make -j8
+cd ../nfqueue
+make O=/tmp/$USER/bin   # (just a test build)
+```
+
+Manual test;
+```
+xcluster_FRAG=yes __nrouters=3 ./load-balancer.sh test start_nfqueue > $log
+# On routers if you want printouts in real-time
+tail -f /var/log/nfqueuelb.log
+# On vm-221;
+ping -c1 -W1 -s 2000 -I 2000::2 1000::
+```
+
+
+
+
+
 ## DPDK based load-balancer
 
 [DPDK](https://www.dpdk.org/) (Data Plane Development Kit) can be used

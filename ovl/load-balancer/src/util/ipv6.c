@@ -59,6 +59,11 @@ unsigned ipv6Hash(void const* data, unsigned len)
 	}
 	return hash;
 }
+unsigned ipv6AddressHash(void const* data, unsigned len)
+{
+	struct ip6_hdr const* hdr = data;
+	return djb2_hash((uint8_t const*)&hdr->ip6_src, 32);
+}
 
 /* ----------------------------------------------------------------------
    Fragmentation handling
