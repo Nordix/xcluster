@@ -69,8 +69,10 @@ cmd_test() {
             test_$t
         done
     else
-        for t in xnet dual_path multihop zones; do
-            test_$t
+        for t in xnet dual_path multihop zones evil_tester; do
+			# Invoke $me rather than call the function to avoid
+			# lingering Envsettings
+            $me test $t
         done
     fi      
 
@@ -163,6 +165,14 @@ test_backend() {
 
 test_multilan() {
 	export TOPOLOGY=multilan
+	tlog "=== network-topology test: $TOPOLOGY"
+	test_start
+	base_test
+	xcluster_stop
+}
+
+test_evil_tester() {
+	export TOPOLOGY=evil_tester
 	tlog "=== network-topology test: $TOPOLOGY"
 	test_start
 	base_test

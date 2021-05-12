@@ -1,0 +1,15 @@
+#! /bin/sh
+
+export __ntesters=2
+export __nets_router=0,1,3
+export __nets221=0,2
+export __nets222=0,3,2
+
+if ip netns id | grep -q _xcluster; then
+	# Ensure bridges for net 3
+	for i in 3; do
+		if ! ip link show xcbr$i > /dev/null 2>&1; then
+			$XCLUSTER br_setup $i || echo "ERROR: could not create xcbr$i"
+		fi
+	done
+fi

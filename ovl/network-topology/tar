@@ -21,7 +21,7 @@ test "$TEST" = "yes" && cp -R $dir/test/* $tmp
 
 test -n "$TOPOLOGY" || TOPOLOGY=xnet
 test -d $dir/$TOPOLOGY && cp -R $dir/$TOPOLOGY/* $tmp
-rm -f $tmp/Envsettings
+rm -f $tmp/Envsettings $tmp/*.svg
 
 n=$GOPATH/bin/coredns
 test -x $n || n=$XCLUSTER_WORKSPACE/bin/coredns

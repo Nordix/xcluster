@@ -1,0 +1,61 @@
+#! /bin/sh
+. /usr/lib/network-topology.sh
+
+vm() {
+	ifsetup eth1 1
+    local i targets lastrouter=$((200 + __nrouters))
+    for i in $(seq 201 $lastrouter); do
+        targets="$targets nexthop via 192.168.1.$i"
+    done
+    ip ro replace default $targets
+    targets=''
+    for i in $(seq 201 $lastrouter); do
+        targets="$targets nexthop via 1000::1:192.168.1.$i"
+    done
+    ip -6 ro replace default $targets
+}
+
+router() {
+	fwsetup
+	ifsetup eth1 1
+	ifsetup eth2 3
+	ip ro add default via 192.168.0.250
+	ip ro add 192.168.2.0/24 via 192.168.3.222
+	ip ro add $PREFIX:192.168.2.0/120 via $PREFIX:192.168.3.222
+	iptables -t nat -A POSTROUTING -s 192.168.1.0/24 -o eth0 -j MASQUERADE
+	iptables -t nat -A POSTROUTING -s 192.168.2.0/24 -o eth0 -j MASQUERADE
+}
+
+tester221() {
+	ifsetup eth1 2
+	ip ro replace default via 192.168.2.222
+	ip -6 ro replace default via $PREFIX:192.168.2.222
+}
+
+tester222() {
+	fwsetup
+	ifsetup eth1 3
+	ifsetup eth2 2
+    local i targets lastrouter=$((200 + __nrouters))
+    for i in $(seq 201 $lastrouter); do
+        targets="$targets nexthop via 192.168.3.$i"
+    done
+    ip ro replace default $targets
+    targets=''
+    for i in $(seq 201 $lastrouter); do
+        targets="$targets nexthop via 1000::1:192.168.3.$i"
+    done
+    ip -6 ro replace default $targets
+}
+
+
+case $(hostname) in
+	vm-0*)
+		vm;;
+	vm-20*)
+		router;;
+	vm-221)
+		tester221;;
+	vm-222)
+		tester222;;
+esac
