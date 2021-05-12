@@ -33,6 +33,10 @@ int main(int argc, char *argv[])
 		}
 		exit(EXIT_FAILURE);
 	}
+	
+	// Make logs to stdout/stderr appear when output is redirected
+	setlinebuf(stdout);
+	setlinebuf(stderr);
 
 	argc--;
 	argv++;
