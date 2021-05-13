@@ -30,15 +30,32 @@ int parseOptionsOrDie(int argc, char* argv[], struct Option const* options);
 // Hash
 struct ip6_hdr;
 struct icmp6_hdr;
-struct ctStats;
 uint32_t djb2_hash(uint8_t const* c, uint32_t len);
 unsigned ipv4Hash(unsigned len, uint8_t const* pkt);
 unsigned ipv4TcpUdpHash(void const* data, unsigned len);
 unsigned ipv4IcmpHash(void const* data, unsigned len);
 unsigned ipv6Hash(void const* data, unsigned len);
 unsigned ipv6AddressHash(void const* data, unsigned len);
+
+// Limiter
+struct limiter;
+struct limiter* limiterCreate(unsigned count, unsigned intervalMillis);
+int limiterGo(struct limiter* l);
+
+// Fragments
+struct fragStats {
+	// Conntrack stats
+	unsigned active;
+	unsigned collisions;
+	unsigned inserts;
+	unsigned rejectedInserts;
+	unsigned lookups;
+	// Frag stats
+	unsigned allocatedFrags;
+	unsigned storedPackets;
+};
 int ipv6HandleFragment(void const* data, unsigned len, unsigned* hash);
-struct ctStats const* ipv6FragStats(void);
+struct fragStats const* ipv6FragStats(void);
 
 // MAC
 int macParse(char const* str, uint8_t* mac);

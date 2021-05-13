@@ -357,9 +357,9 @@ xcluster_FRAG=yes __nrouters=3 ./load-balancer.sh test start_nfqueue > $log
 tail -f /var/log/nfqueuelb.log
 # On vm-221;
 ping -c1 -W1 -s 2000 -I 2000::2 1000::
+ping -c3 -W1 -s 3000 -i 0.1 -I 2000::2 1000::
+ping -c1 -W1 -s 2000 -I 50.0.0.2 10.0.0.0
 ```
-
-
 
 
 

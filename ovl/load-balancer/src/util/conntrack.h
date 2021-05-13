@@ -59,6 +59,7 @@ struct ctStats {
 	ctCounter active;			/* Connections currently in use */
 	ctCounter collisions;		/* Bucket collisions counter */
 	ctCounter inserts;			/* Insert counter */
+	ctCounter rejectedInserts;	/* Rejected insert counter */
 	ctCounter lookups;			/* Lookup counter */
 };
 

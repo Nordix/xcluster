@@ -74,6 +74,30 @@ unsigned ipv6AddressHash(void const* data, unsigned len)
 #define PAFTER(x) (void*)x + (sizeof(*x))
 static struct ct* ct = NULL;
 
+#define REFINC(x) __atomic_add_fetch(&(x),1,__ATOMIC_SEQ_CST)
+#define REFDEC(x) __atomic_sub_fetch(&(x),1,__ATOMIC_SEQ_CST)
+
+struct FragData {
+	int referenceCounter;
+	int firstFragmentSeen;
+	unsigned hash;
+};
+static unsigned allocatedFrags = 0;
+static unsigned storedPackets = 0;
+
+static void lockFragData(void* data)
+{
+	struct FragData* f = data;
+	REFINC(f->referenceCounter);
+}
+static void unlockFragData(void* data)
+{
+	struct FragData* f = data;
+	if (REFDEC(f->referenceCounter) <= 0) {
+		__atomic_sub_fetch(&allocatedFrags,1,__ATOMIC_RELAXED);
+		free(data);
+	}
+}
 static void* allocBucket(void)
 {
 	return malloc(sizeof_bucket);
@@ -83,12 +107,35 @@ static void ctInit(void)
 {
 	if (ct != NULL)
 		return;
-	ct = ctCreate(1024, 250 * MS, free, NULL, allocBucket, free);
+	ct = ctCreate(
+		1024, 250 * MS, unlockFragData, lockFragData, allocBucket, free);
 }
 
-struct FragData {
-	unsigned hash;
-};
+static void* lookupOrCreate(struct timespec* now, struct ctKey const* key)
+{
+	struct FragData* f = ctLookup(ct, now, key);
+	if (f == NULL) {
+		f = calloc(1, sizeof(*f));
+		if (f == NULL)
+			return NULL;
+		f->referenceCounter = 2; /* ct and our selves = 2 references */
+		int rc = ctInsert(ct, now, key, f);
+		if (rc == 0) {
+			__atomic_add_fetch(&allocatedFrags,1,__ATOMIC_RELAXED);
+		} else if (rc < 0) {
+			free(f);
+			return NULL;
+		} else if (rc == 1) {
+			// Item already inserted
+			free(f);
+			f = ctLookup(ct, now, key);
+			if (f == NULL)
+				return NULL;	/* Some other thread has deleted the
+								 * entry. Give up! (should not happen) */
+		}
+	}
+	return f;
+}
 
 int ipv6HandleFragment(void const* data, unsigned len, unsigned* hash)
 {
@@ -97,27 +144,30 @@ int ipv6HandleFragment(void const* data, unsigned len, unsigned* hash)
 	struct timespec now;
 	clock_gettime(CLOCK_MONOTONIC, &now);
 
-	// Construct the key and lookup
+	// Construct the key lookup and insert if needed
 	struct ctKey key;
 	struct ip6_hdr* hdr = (struct ip6_hdr*)data;
 	struct ip6_frag* fh = (struct ip6_frag*)(data + 40);
 	key.dst = hdr->ip6_dst;
 	key.src = hdr->ip6_src;
 	key.id = fh->ip6f_ident;
-	struct FragData* f = ctLookup(ct, &now, &key);
+	struct FragData* f = lookupOrCreate(&now, &key);
+	if (f == NULL) {
+		return -1;
+	}
 
 	// Check offset
 	uint16_t fragOffset = (fh->ip6f_offlg & IP6F_OFF_MASK) >> 3;
 	if (fragOffset == 0) {
 		// First fragment
-		if (f != NULL) {
-			// Should always be NULL unless we have a duplicate
+		if (f->firstFragmentSeen) {
+			// Duplicate
+			unlockFragData(f);
 			return -1;
 		}
-		f = malloc(sizeof(*f));
-		if (f == NULL)
-			return -1;
-		// First fragment. Contains the protocol header.
+		f->firstFragmentSeen = 1;
+
+		// First fragment contains the protocol header.
 		switch (fh->ip6f_nxt) {
 		case IPPROTO_TCP:		/* (should not happen?) */
 		case IPPROTO_UDP:
@@ -130,26 +180,46 @@ int ipv6HandleFragment(void const* data, unsigned len, unsigned* hash)
 		default:
 			f->hash = 0;
 		}
-		if (ctInsert(ct, &now, &key, f) != 0)
-			return -1;
 		*hash = f->hash;
+
+		/*
+		  TODO; If there are any subsequent fragments strored re-inject them.
+		 */
+
+		unlockFragData(f);
 		return 0;
 	}
 
-	// NOT First fragment. We should have a connection entry
-	if (f == NULL)
-		return -1;				/* Nope */
-	*hash = f->hash;
-	if ((fh->ip6f_offlg & IP6F_MORE_FRAG) == 0) {
-		// Last fragment
-		ctRemove(ct, &now, &key);
+	// NOT First fragment.
+	if (f->firstFragmentSeen) {
+		// We have seen the first fragment and the hash is valid
+		*hash = f->hash;
+		unlockFragData(f);
+		return 0;
 	}
-	return 0;
+
+	/*
+	  This is the hard case. We have got an out-of-order fragment
+	  before the first fragment. We must store the packet and inject
+	  it later when the first fragment has arrived.
+	 */
+	unlockFragData(f);
+	return -1;					/* NYI */
 }
-struct ctStats const* ipv6FragStats(void)
+
+struct fragStats const* ipv6FragStats(void)
 {
+	static struct fragStats stats = {0};
 	ctInit();
 	struct timespec now;
 	clock_gettime(CLOCK_MONOTONIC, &now);
-	return ctStats(ct, &now);
+	struct ctStats const* ctstats = ctStats(ct, &now);
+	stats.active = ctstats->active;
+	stats.collisions = ctstats->collisions;
+	stats.inserts = ctstats->inserts;
+	stats.rejectedInserts = ctstats->rejectedInserts;
+	stats.lookups = ctstats->lookups;
+	stats.allocatedFrags = allocatedFrags;
+	stats.storedPackets = storedPackets;
+	return &stats;
 }

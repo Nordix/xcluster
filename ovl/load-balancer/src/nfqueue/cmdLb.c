@@ -12,8 +12,33 @@
 #include <netinet/ip.h>
 #include <netinet/ip6.h>
 
+#if 1
 #define D(x)
 #define Dx(x) x
+static void printFragStats(struct fragStats const* stats)
+{
+	printf(
+		"Conntrack Stats;\n"
+		"  active=%u, collisions=%u, inserts=%u(%u), lookups=%u\n"
+		"Frag Stats;\n"
+		"  allocated=%u, storedPacketsTotal=%u\n",
+		stats->active, stats->collisions, stats->inserts,
+		stats->rejectedInserts, stats->lookups,
+		stats->allocatedFrags,  stats->storedPackets); 
+}
+static void printIpv6FragStats(void)
+{
+	static struct limiter* l = NULL;
+	if (l == NULL)
+		l = limiterCreate(100, 1100);
+	if (limiterGo(l))
+		printFragStats(ipv6FragStats());
+}
+#else
+#define D(x)
+#define Dx(x)
+#endif
+
 #define HASH djb2_hash
 
 static struct SharedData* st;
@@ -63,10 +88,10 @@ static int handleIpv6(void* payload, unsigned plen)
 			Dx(printf("IPv6 fragment dropped\n"));
 			return -1;
 		}
-		Dx({
-				struct ctStats const* stat = ipv6FragStats();
-				printf("Frag hash=%u, active=%u\n", hash, stat->active);
-			});
+		Dx(printf(
+			   "Handle frag locally hash=%u, fwmark=%u\n",
+			   hash, st->magd.lookup[hash % st->magd.M] + st->fwOffset));
+		Dx(printIpv6FragStats());
 	} else {
 		hash = ipv6Hash(payload, plen);
 	}

@@ -189,15 +189,16 @@ int ctInsert(
 		b->key = *key;
 		b->refered = toNanos(now);
 		if (b->next != NULL)
-			ct->stats.collisions++;	  /* TODO make this an atomic operation */
+			__atomic_add_fetch(&ct->stats.collisions, 1, __ATOMIC_RELAXED);
 		UNLOCK(&b->mutex);
 		return 0;
 	}
 
 	// We must allocate a new bucket
-	ct->stats.collisions++;		/* TODO make this an atomic operation */
+	__atomic_add_fetch(&ct->stats.collisions, 1, __ATOMIC_RELAXED);
 	struct ctBucket* x = ct->allocBucket();
-	if (x == NULL) {
+	if (x == NULL) {	
+		__atomic_add_fetch(&ct->stats.rejectedInserts, 1, __ATOMIC_RELAXED);
 		UNLOCK(&b->mutex);
 		return -1;
 	}
