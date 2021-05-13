@@ -78,6 +78,8 @@ struct ctStats {
 	ctCounter size;
 	ctCounter active;
 	ctCounter collisions;
+	ctCounter inserts;
+	ctCounter lookups;
 };
 typedef void (*ctFree)(void* data);
 struct ct* ctCreate(ctCounter hsize, uint64_t ttlNanos, ctFree freefn);

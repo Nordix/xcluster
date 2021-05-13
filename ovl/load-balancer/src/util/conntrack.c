@@ -1,3 +1,8 @@
+/*
+  SPDX-License-Identifier: MIT License
+  Copyright (c) 2021 Nordix Foundation
+*/
+
 #include "util.h"
 #include <time.h>
 #include <stdlib.h>
@@ -7,18 +12,33 @@
 #define Dx(x) x
 #define D(x)
 
+#ifdef THREAD_SAFE
+#include <pthread.h>
+#define MUTEX(x) pthread_mutex_t x
+#define LOCK(x) pthread_mutex_lock(x)
+#define UNLOCK(x) pthread_mutex_unlock(x)
+#define MUTEX_DESTROY(x) pthread_mutex_destroy(x)
+#else
+#define MUTEX(x)
+#define LOCK(x)
+#define UNLOCK(x)
+#define MUTEX_DESTROY(x)
+#endif
+
 #define HASH djb2_hash
 struct ctBucket {
 	struct ctBucket* next;
 	struct ctKey key;
 	void* data;
-	uint64_t refered;
+	uint64_t refered;			/* Last time refered in nanoS */
+	MUTEX(mutex);
 };
 struct ct {
 	uint64_t ttl;
 	ctFree freefn;
 	struct ctStats stats;
 	struct ctBucket* bucket;
+	MUTEX(mutex);
 };
 
 #ifdef MEMDEBUG
@@ -44,6 +64,7 @@ static uint64_t toNanos(struct timespec* t)
 	return t->tv_sec * 1000000000 + t->tv_nsec;
 }
 // Remove stale entries. Returns number of active buckets
+// The bucket must be locked on call.
 static ctCounter
 bucketGC(struct ct* ct, struct ctBucket* b, uint64_t nowNanos)
 {
@@ -79,14 +100,23 @@ struct ct* ctCreate(ctCounter hsize, uint64_t ttlNanos, ctFree freefn)
 	ct->ttl = ttlNanos;
 	ct->freefn = freefn;
 	ct->bucket = calloc(hsize, sizeof(struct ctBucket));
+#ifdef THREAD_SAFE
+	pthread_mutex_init(&ct->mutex, NULL);
+	for (ctCounter i = 0; i < hsize; i++) {
+		pthread_mutex_init(&ct->bucket[i].mutex, NULL);
+	}
+#endif
 	return ct;
 }
 
+// "ct" must be locked on call.
+// The bucket is locked in the call.
 static struct ctBucket* ctLookupBucket(
 	struct ct* ct, struct timespec* now, struct ctKey const* key)
 {
 	uint32_t hash = HASH((uint8_t const*)key, sizeof(*key));
 	struct ctBucket* b = ct->bucket + (hash % ct->stats.size);
+	LOCK(&b->mutex);
 	uint64_t nowNanos = toNanos(now);
 
 	/* Is the main bucket stale? */
@@ -108,20 +138,28 @@ static struct ctBucket* ctLookupBucket(
 void* ctLookup(
 	struct ct* ct, struct timespec* now, struct ctKey const* key)
 {
-	struct ctBucket* b = ctLookupBucket(ct, now, key);
-	while (b != NULL) {
+	LOCK(&ct->mutex);
+	struct ctBucket* B = ctLookupBucket(ct, now, key);
+	ct->stats.lookups++;
+	UNLOCK(&ct->mutex);
+	struct ctBucket* b;
+	for (b = B; b != NULL; b = b->next) {
 		if (keyEqual(key, &b->key) == 0) {
 			b->refered = toNanos(now);
+			UNLOCK(&B->mutex);
 			return b->data;		/* Found! */
 		}
-		b = b->next;
 	}
+	UNLOCK(&B->mutex);
 	return NULL;				/* Not found */
 }
 int ctInsert(
 	struct ct* ct, struct timespec* now, struct ctKey const* key, void* data)
 {
+	LOCK(&ct->mutex);
 	struct ctBucket* b = ctLookupBucket(ct, now, key);
+	ct->stats.inserts++;
+	UNLOCK(&ct->mutex);
 
 	// Check if the entry already exists
 	struct ctBucket* item;
@@ -131,40 +169,49 @@ int ctInsert(
 		if (keyEqual(key, &item->key) == 0) {
 			item->refered = toNanos(now);
 			item->data = data;
+			UNLOCK(&b->mutex);
 			return 1;				/* Existing item updated */
 		}
 	}
 
 	if (b->data == NULL) {
+		// The main bucket is free
 		b->data = data;
 		b->key = *key;
 		b->refered = toNanos(now);
 		if (b->next != NULL)
 			ct->stats.collisions++;
+		UNLOCK(&b->mutex);
 		return 0;
 	}
 
 	// We must allocate a new bucket
 	ct->stats.collisions++;
 	struct ctBucket* x = BUCKET_ALLOC();
-	if (x == NULL)
+	if (x == NULL) {
+		UNLOCK(&b->mutex);
 		return -1;
+	}
 	x->data = data;
 	x->key = *key;
 	x->refered = toNanos(now);
 	x->next = b->next;
 	b->next = x;
+	UNLOCK(&b->mutex);
 	return 0;
 }
 
 void ctRemove(
 	struct ct* ct, struct timespec* now, struct ctKey const* key)
 {
+	LOCK(&ct->mutex);
 	struct ctBucket* b = ctLookupBucket(ct, now, key);
+	UNLOCK(&ct->mutex);
 	if (keyEqual(key, &b->key) == 0) {
 		if (b->data != NULL && ct->freefn != NULL)
 			ct->freefn(b->data);
 		b->data = NULL;
+		UNLOCK(&b->mutex);
 		return;
 	}
 	struct ctBucket* prev = b;
@@ -180,29 +227,40 @@ void ctRemove(
 		}
 		item = prev->next;
 	}
+	UNLOCK(&b->mutex);
 }
 
-// This function will scan the entire hash table and should be used for
+// This function will lock and scan the entire hash table and should be used for
 // debug and test only.
 struct ctStats const* ctStats(struct ct* ct, struct timespec* now)
 {
 	ctCounter active = 0;
 	uint64_t nowNanos = toNanos(now);
 	unsigned i;
+	LOCK(&ct->mutex);
 	struct ctBucket* b = ct->bucket;
 	for (i = 0; i < ct->stats.size; i++, b++) {
+		LOCK(&b->mutex);
 		active += bucketGC(ct, b, nowNanos);
+		UNLOCK(&b->mutex);
 	}
 	ct->stats.active = active;
+	UNLOCK(&ct->mutex);
 	return &ct->stats;
 }
 void ctDestroy(struct ct* ct)
 {
 	unsigned i;
+	LOCK(&ct->mutex);
 	struct ctBucket* b = ct->bucket;
 	for (i = 0; i < ct->stats.size; i++, b++) {
+		LOCK(&b->mutex);
 		bucketGC(ct, b, UINT64_MAX);
+		UNLOCK(&b->mutex);
+		MUTEX_DESTROY(&b->mutex);
 	}
 	free(ct->bucket);
+	UNLOCK(&ct->mutex);
+	MUTEX_DESTROY(&ct->mutex);
 	free(ct);
 }

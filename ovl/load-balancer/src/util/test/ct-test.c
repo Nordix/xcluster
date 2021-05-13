@@ -1,4 +1,4 @@
-// gcc -o /tmp/$USER/ct-test -DMEMDEBUG -I. -I.. test/ct-test.c conntrack.c hash.c -lrt
+// gcc -o /tmp/$USER/ct-test -DMEMDEBUG -DTHREAD_SAFE -I. -I.. test/ct-test.c conntrack.c hash.c -lrt && /tmp/$USER/ct-test
 
 
 #include "util.h"
@@ -9,12 +9,16 @@
 #define Dx(x) x
 #define D(x)
 
-void testConntrack(void);
+void testConntrack(struct ctStats* stats);
 
 int
 main(int argc, char* argv[])
 {
-	testConntrack();
+	struct ctStats stats = {0};
+	testConntrack(&stats);
+	printf(
+		"Test OK. inserts=%u lookups=%u collisions=%u\n",
+		stats.inserts, stats.lookups, stats.collisions);
 	return 0;
 }
 
@@ -25,13 +29,21 @@ static void freeData(void* data) {
 	nFreeData++;
 }
 
-void testConntrack(void)
+static void* collectStats(
+	struct ctStats* accumulatedStats, struct ctStats const* stats)
+{
+	accumulatedStats->collisions += stats->collisions;
+	accumulatedStats->inserts += stats->inserts;
+	accumulatedStats->lookups += stats->lookups;
+}
+
+void testConntrack(struct ctStats* accumulatedStats)
 {
 	struct ct* ct = ctCreate(1, 99, freeData);
 	struct timespec now = {0,0};
 	struct ctKey key = {IN6ADDR_ANY_INIT,IN6ADDR_ANY_INIT,0ull};
 	void* data;
-
+	
 	// Insert an empty key
 	data = ctLookup(ct, &now, &key);
 	assert(data == NULL);
@@ -107,6 +119,7 @@ void testConntrack(void)
 
 	// Destroy the table. Remaining items shall be freed
 	nFreeData = 0;
+	collectStats(accumulatedStats, ctStats(ct, &now));
 	ctDestroy(ct);
 	assert(nFreeData == 1);
 	assert(nAllocatedBuckets == 0);	
@@ -137,6 +150,7 @@ void testConntrack(void)
 	assert(nFreeData == 500);
 	D(printf("allocated=%ld\n", nAllocatedBuckets));
 	assert(nAllocatedBuckets == 384);
+	collectStats(accumulatedStats, ctStats(ct, &now));
 	ctDestroy(ct);
 	assert(nFreeData == 1000);
 }
