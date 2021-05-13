@@ -4,11 +4,11 @@
 */
 
 #include "maglev.h"
+#include "conntrack.h"
 #include <stdint.h>
 #include <getopt.h>
 #include <fcntl.h>
 #include <unistd.h>
-#include <netinet/in.h>
 
 // addCmd should be defined in main.c
 void addCmd(char const* name, int (*fn)(int argc, char* argv[]));
@@ -64,35 +64,3 @@ void framePrint(unsigned len, uint8_t const* pkt);
 // Csum (only ipv4 for now)
 void tcpCsum(uint8_t* pkt, unsigned len);
 
-// Conntrack
-#define BUCKET_ALLOC() calloc(1,sizeof(struct ctBucket))
-#define BUCKET_FREE(x) free(x)
-typedef uint32_t ctCounter;
-struct ctKey {
-	struct in6_addr dst;
-	struct in6_addr src;
-	uint64_t fragid;
-	// (fragid can be a union with {proto,dport,sport} for "real" ct)
-};
-struct ctStats {
-	ctCounter size;
-	ctCounter active;
-	ctCounter collisions;
-	ctCounter inserts;
-	ctCounter lookups;
-};
-typedef void (*ctFree)(void* data);
-struct ct* ctCreate(ctCounter hsize, uint64_t ttlNanos, ctFree freefn);
-void* ctLookup(
-	struct ct* ct, struct timespec* now, struct ctKey const* key);
-// Return;
-//  0 - Inserted, ctFree will be called.
-//  1 - Updated, ctFree will be called for the updated data only.
-// -1 - Failed, ctFree WILL NOT be called.
-int ctInsert(
-	struct ct* ct, struct timespec* now, struct ctKey const* key, void* data);
-void ctRemove(
-	struct ct* ct, struct timespec* now, struct ctKey const* key);
-struct ctStats const* ctStats(
-	struct ct* ct, struct timespec* now);
-void ctDestroy(struct ct* ct);

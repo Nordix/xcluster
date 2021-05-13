@@ -74,11 +74,16 @@ unsigned ipv6AddressHash(void const* data, unsigned len)
 #define PAFTER(x) (void*)x + (sizeof(*x))
 static struct ct* ct = NULL;
 
+static void* allocBucket(void)
+{
+	return malloc(sizeof_bucket);
+}
+
 static void ctInit(void)
 {
 	if (ct != NULL)
 		return;
-	ct = ctCreate(1024, 500 * MS, free);
+	ct = ctCreate(1024, 250 * MS, free, NULL, allocBucket, free);
 }
 
 struct FragData {
@@ -98,7 +103,7 @@ int ipv6HandleFragment(void const* data, unsigned len, unsigned* hash)
 	struct ip6_frag* fh = (struct ip6_frag*)(data + 40);
 	key.dst = hdr->ip6_dst;
 	key.src = hdr->ip6_src;
-	key.fragid = fh->ip6f_ident;
+	key.id = fh->ip6f_ident;
 	struct FragData* f = ctLookup(ct, &now, &key);
 
 	// Check offset

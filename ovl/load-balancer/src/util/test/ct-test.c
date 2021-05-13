@@ -1,10 +1,23 @@
-// gcc -o /tmp/$USER/ct-test -DMEMDEBUG -DTHREAD_SAFE -I. -I.. test/ct-test.c conntrack.c hash.c -lrt && /tmp/$USER/ct-test
+// gcc -o /tmp/$USER/ct-test -I. -I.. test/ct-test.c conntrack.c hash.c -lrt && /tmp/$USER/ct-test
 
 
-#include "util.h"
 #include <netinet/in.h>
 #include <assert.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include "conntrack.h"
+
+static long nAllocatedBuckets = 0;
+static void* BUCKET_ALLOC(void) {
+	nAllocatedBuckets++;
+	return calloc(1,sizeof_bucket);
+}
+static void BUCKET_FREE(void* b) {
+	nAllocatedBuckets--;
+	free(b);
+}
+
+
 
 #define Dx(x) x
 #define D(x)
@@ -22,11 +35,18 @@ main(int argc, char* argv[])
 	return 0;
 }
 
-extern long nAllocatedBuckets;
 static long nFreeData = 0;
+static uint64_t expectedFreeData = 0;
 static void freeData(void* data) {
 	D(printf("Free data; %lu\n", (uint64_t)data));
 	nFreeData++;
+	if (expectedFreeData != 0) {
+		if ((uint64_t)data != expectedFreeData)
+			printf(
+				"Free data = %lu, expected = %lu\n",
+				(uint64_t)data, expectedFreeData);
+		assert((uint64_t)data == expectedFreeData);
+	}
 }
 
 static void* collectStats(
@@ -39,49 +59,61 @@ static void* collectStats(
 
 void testConntrack(struct ctStats* accumulatedStats)
 {
-	struct ct* ct = ctCreate(1, 99, freeData);
+	struct ct* ct = ctCreate(1, 99, freeData, NULL, BUCKET_ALLOC, BUCKET_FREE);
 	struct timespec now = {0,0};
 	struct ctKey key = {IN6ADDR_ANY_INIT,IN6ADDR_ANY_INIT,0ull};
 	void* data;
-	
+	int rc;
+
 	// Insert an empty key
 	data = ctLookup(ct, &now, &key);
 	assert(data == NULL);
-	ctInsert(ct, &now, &key, (void*)1001);
+	rc = ctInsert(ct, &now, &key, (void*)1001);
+	assert(rc == 0);
 	assert(nAllocatedBuckets == 0);
 	data = ctLookup(ct, &now, &key);
 	assert(data == (void*)1001);
 	assert(ctStats(ct, &now)->active == 1);
 	assert(nFreeData == 0);
 
-	// Insert the same key again. This will update "data" but not call fnfree.
-	ctInsert(ct, &now, &key, (void*)1002);
+	// Insert the same key again.
+	nFreeData = 0;
+	rc = ctInsert(ct, &now, &key, (void*)1002);
+	assert(rc == 1);
 	assert(nAllocatedBuckets == 0);
 	assert(nFreeData == 0);
 	data = ctLookup(ct, &now, &key);
-	assert(data == (void*)1002);
+	assert(data == (void*)1001);
 	assert(ctStats(ct, &now)->active == 1);
 	
 	// The existing item should expire
+	nFreeData = 0;
+	expectedFreeData = 1001;
 	now.tv_nsec += 100;
-	ctInsert(ct, &now, &key, (void*)1003);
+	rc = ctInsert(ct, &now, &key, (void*)1003);
+	assert(rc == 0);
 	assert(nFreeData == 1);
 	assert(nAllocatedBuckets == 0);
 	assert(ctStats(ct, &now)->active == 1);
+	expectedFreeData = 0;
 
 	// Cause a collision
-	key.fragid++;
-	ctInsert(ct, &now, &key, (void*)1004);
-	assert(nFreeData == 1);
+	nFreeData = 0;
+	key.id++;
+	rc = ctInsert(ct, &now, &key, (void*)1004);
+	assert(rc == 0);
+	assert(nFreeData == 0);
 	assert(nAllocatedBuckets == 1);
 	assert(ctStats(ct, &now)->active == 2);
 	assert(ctStats(ct, &now)->collisions == 1);
 
 	// Insert a new item after some time
-	key.fragid++;
+	nFreeData = 0;
+	key.id++;
 	now.tv_nsec += 50;
-	ctInsert(ct, &now, &key, (void*)1005);
-	assert(nFreeData == 1);
+	rc = ctInsert(ct, &now, &key, (void*)1005);
+	assert(rc == 0);
+	assert(nFreeData == 0);
 	assert(nAllocatedBuckets == 2);
 	assert(ctStats(ct, &now)->active == 3);
 	assert(ctStats(ct, &now)->collisions == 2);
@@ -98,8 +130,9 @@ void testConntrack(struct ctStats* accumulatedStats)
 
 	// The main bucket should be free. Insert and check nAllocatedBuckets
 	nFreeData = 0;
-	key.fragid++;
-	ctInsert(ct, &now, &key, (void*)1006);
+	key.id++;
+	rc = ctInsert(ct, &now, &key, (void*)1006);
+	assert(rc == 0);
 	data = ctLookup(ct, &now, &key);
 	assert(data == (void*)1006);
 	assert(nAllocatedBuckets == 1);
@@ -109,6 +142,7 @@ void testConntrack(struct ctStats* accumulatedStats)
 
 	// Remove the item in the "main" bucket
 	nFreeData = 0;
+	expectedFreeData = 1006;
 	ctRemove(ct, &now, &key);
 	assert(nFreeData == 1);
 	assert(nAllocatedBuckets == 1);	
@@ -119,20 +153,22 @@ void testConntrack(struct ctStats* accumulatedStats)
 
 	// Destroy the table. Remaining items shall be freed
 	nFreeData = 0;
+	expectedFreeData = 0;
 	collectStats(accumulatedStats, ctStats(ct, &now));
 	ctDestroy(ct);
 	assert(nFreeData == 1);
 	assert(nAllocatedBuckets == 0);	
 
 	// Test with a larger table
-	ct = ctCreate(1000, 1000, freeData);
+	ct = ctCreate(1000, 1000, freeData, NULL, BUCKET_ALLOC, BUCKET_FREE);
 	now.tv_nsec = 0;
-	key.fragid = 0;
+	key.id = 0;
 	nFreeData = 0;
 	for (int i = 0; i < 1000; i++) {
-		ctInsert(ct, &now, &key, (void*)(key.fragid+1)); /* Don't use NULL! */
+		rc = ctInsert(ct, &now, &key, (void*)(key.id+1)); /* Don't use NULL! */
+		assert(rc == 0);
 		now.tv_nsec++;
-		key.fragid++;
+		key.id++;
 	}
 	assert(nFreeData == 0);
 	D(printf("Now = %lu, Active = %u\n",now.tv_nsec,ctStats(ct,&now)->active));

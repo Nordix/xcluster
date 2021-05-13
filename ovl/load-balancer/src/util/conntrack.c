@@ -3,7 +3,7 @@
   Copyright (c) 2021 Nordix Foundation
 */
 
-#include "util.h"
+#include "conntrack.h"
 #include <time.h>
 #include <stdlib.h>
 #include <string.h>
@@ -12,20 +12,22 @@
 #define Dx(x) x
 #define D(x)
 
-#ifdef THREAD_SAFE
+#ifdef SINGLE_THREAD
+#define MUTEX(x)
+#define LOCK(x)
+#define UNLOCK(x)
+#define MUTEX_DESTROY(x)
+#else
 #include <pthread.h>
 #define MUTEX(x) pthread_mutex_t x
 #define LOCK(x) pthread_mutex_lock(x)
 #define UNLOCK(x) pthread_mutex_unlock(x)
 #define MUTEX_DESTROY(x) pthread_mutex_destroy(x)
-#else
-#define MUTEX(x)
-#define LOCK(x)
-#define UNLOCK(x)
-#define MUTEX_DESTROY(x)
 #endif
 
+extern uint32_t djb2_hash(uint8_t const* c, uint32_t len);
 #define HASH djb2_hash
+
 struct ctBucket {
 	struct ctBucket* next;
 	struct ctKey key;
@@ -36,24 +38,15 @@ struct ctBucket {
 struct ct {
 	uint64_t ttl;
 	ctFree freefn;
+	ctLock lockfn;
+	ctAllocBucket allocBucket;
+	ctFree freeBucket;
 	struct ctStats stats;
 	struct ctBucket* bucket;
 	MUTEX(mutex);
 };
 
-#ifdef MEMDEBUG
-#undef BUCKET_ALLOC
-#undef BUCKET_FREE
-long nAllocatedBuckets = 0;
-static void* BUCKET_ALLOC(void) {
-	nAllocatedBuckets++;
-	return calloc(1,sizeof(struct ctBucket));
-}
-static void BUCKET_FREE(void* b) {
-	nAllocatedBuckets--;
-	free(b);
-}
-#endif
+size_t sizeof_bucket = sizeof(struct ctBucket);
 
 static int keyEqual(struct ctKey const* key1, struct ctKey const* key2)
 {
@@ -84,7 +77,7 @@ bucketGC(struct ct* ct, struct ctBucket* b, uint64_t nowNanos)
 			prev->next = item->next;
 			if (item->data != NULL && ct->freefn != NULL)
 				ct->freefn(item->data);
-			BUCKET_FREE(item);
+			ct->freeBucket(item);
 		} else {
 			prev = item;
 			count++;
@@ -93,14 +86,27 @@ bucketGC(struct ct* ct, struct ctBucket* b, uint64_t nowNanos)
 	}
 	return count;
 }
-struct ct* ctCreate(ctCounter hsize, uint64_t ttlNanos, ctFree freefn)
+struct ct* ctCreate(
+	ctCounter hsize, uint64_t ttlNanos, ctFree freefn, ctLock lockfn,
+	ctAllocBucket allocBucketFn, ctFree freeBucketFn)
 {
+	if (allocBucketFn == NULL || freeBucketFn == NULL)
+		return NULL;
 	struct ct* ct = calloc(1, sizeof(*ct));
+	if (ct == NULL)
+		return NULL;
 	ct->stats.size = hsize;
 	ct->ttl = ttlNanos;
 	ct->freefn = freefn;
+	ct->lockfn = lockfn;
+	ct->allocBucket = allocBucketFn;
+	ct->freeBucket = freeBucketFn;
 	ct->bucket = calloc(hsize, sizeof(struct ctBucket));
-#ifdef THREAD_SAFE
+	if (ct->bucket == NULL) {
+		free(ct);
+		return NULL;
+	}
+#ifndef SINGLE_THREAD
 	pthread_mutex_init(&ct->mutex, NULL);
 	for (ctCounter i = 0; i < hsize; i++) {
 		pthread_mutex_init(&ct->bucket[i].mutex, NULL);
@@ -146,6 +152,8 @@ void* ctLookup(
 	for (b = B; b != NULL; b = b->next) {
 		if (keyEqual(key, &b->key) == 0) {
 			b->refered = toNanos(now);
+			if (ct->lockfn != NULL)
+				ct->lockfn(b->data);
 			UNLOCK(&B->mutex);
 			return b->data;		/* Found! */
 		}
@@ -156,6 +164,8 @@ void* ctLookup(
 int ctInsert(
 	struct ct* ct, struct timespec* now, struct ctKey const* key, void* data)
 {
+	if (data == NULL)
+		return -1;				/* NULL indicates no-data */
 	LOCK(&ct->mutex);
 	struct ctBucket* b = ctLookupBucket(ct, now, key);
 	ct->stats.inserts++;
@@ -168,9 +178,8 @@ int ctInsert(
 			continue;
 		if (keyEqual(key, &item->key) == 0) {
 			item->refered = toNanos(now);
-			item->data = data;
 			UNLOCK(&b->mutex);
-			return 1;				/* Existing item updated */
+			return 1;				/* item exists already */
 		}
 	}
 
@@ -180,14 +189,14 @@ int ctInsert(
 		b->key = *key;
 		b->refered = toNanos(now);
 		if (b->next != NULL)
-			ct->stats.collisions++;
+			ct->stats.collisions++;	  /* TODO make this an atomic operation */
 		UNLOCK(&b->mutex);
 		return 0;
 	}
 
 	// We must allocate a new bucket
-	ct->stats.collisions++;
-	struct ctBucket* x = BUCKET_ALLOC();
+	ct->stats.collisions++;		/* TODO make this an atomic operation */
+	struct ctBucket* x = ct->allocBucket();
 	if (x == NULL) {
 		UNLOCK(&b->mutex);
 		return -1;
@@ -221,7 +230,7 @@ void ctRemove(
 			prev->next = item->next;
 			if (b->data != NULL && ct->freefn != NULL)
 				ct->freefn(b->data);
-			BUCKET_FREE(item);
+			ct->freeBucket(item);
 		} else {
 			prev = item;
 		}
@@ -230,8 +239,8 @@ void ctRemove(
 	UNLOCK(&b->mutex);
 }
 
-// This function will lock and scan the entire hash table and should be used for
-// debug and test only.
+// This function will lock and scan the entire hash table. It will
+// trig a full GC. Use it with caution!
 struct ctStats const* ctStats(struct ct* ct, struct timespec* now)
 {
 	ctCounter active = 0;
@@ -255,7 +264,7 @@ void ctDestroy(struct ct* ct)
 	struct ctBucket* b = ct->bucket;
 	for (i = 0; i < ct->stats.size; i++, b++) {
 		LOCK(&b->mutex);
-		bucketGC(ct, b, UINT64_MAX);
+		bucketGC(ct, b, UINT64_MAX); /* now=UINT64_MAX ensures all-timeout*/
 		UNLOCK(&b->mutex);
 		MUTEX_DESTROY(&b->mutex);
 	}
