@@ -1,11 +1,38 @@
 // gcc -o /tmp/$USER/ct-test -I. -I.. test/ct-test.c conntrack.c hash.c -lrt && /tmp/$USER/ct-test
 
+/*
+  SPDX-License-Identifier: MIT License
+  Copyright (c) 2021 Nordix Foundation
+*/
 
 #include <netinet/in.h>
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include "conntrack.h"
+
+// Debug macros
+#define Dx(x) x
+#define D(x)
+
+// Forwards
+static void testConntrack(struct ctStats* stats);
+static void testRefcount(struct ctStats* accumulatedStats);
+
+int
+main(int argc, char* argv[])
+{
+	struct ctStats stats = {0};
+	testConntrack(&stats);
+	testRefcount(&stats);
+
+	printf(
+		"Test OK. inserts=%u(%u) lookups=%u collisions=%u\n",
+		stats.inserts, stats.rejectedInserts, stats.lookups, stats.collisions);
+	return 0;
+}
+
+
 
 static long nAllocatedBuckets = 0;
 static void* BUCKET_ALLOC(void) {
@@ -15,24 +42,6 @@ static void* BUCKET_ALLOC(void) {
 static void BUCKET_FREE(void* b) {
 	nAllocatedBuckets--;
 	free(b);
-}
-
-
-
-#define Dx(x) x
-#define D(x)
-
-void testConntrack(struct ctStats* stats);
-
-int
-main(int argc, char* argv[])
-{
-	struct ctStats stats = {0};
-	testConntrack(&stats);
-	printf(
-		"Test OK. inserts=%u lookups=%u collisions=%u\n",
-		stats.inserts, stats.lookups, stats.collisions);
-	return 0;
 }
 
 static long nFreeData = 0;
@@ -54,10 +63,11 @@ static void* collectStats(
 {
 	accumulatedStats->collisions += stats->collisions;
 	accumulatedStats->inserts += stats->inserts;
+	accumulatedStats->rejectedInserts += stats->rejectedInserts;
 	accumulatedStats->lookups += stats->lookups;
 }
 
-void testConntrack(struct ctStats* accumulatedStats)
+static void testConntrack(struct ctStats* accumulatedStats)
 {
 	struct ct* ct = ctCreate(1, 99, freeData, NULL, BUCKET_ALLOC, BUCKET_FREE);
 	struct timespec now = {0,0};
@@ -189,4 +199,73 @@ void testConntrack(struct ctStats* accumulatedStats)
 	collectStats(accumulatedStats, ctStats(ct, &now));
 	ctDestroy(ct);
 	assert(nFreeData == 1000);
+}
+
+
+#define REFINC(x) __atomic_add_fetch(&(x),1,__ATOMIC_SEQ_CST)
+#define REFDEC(x) __atomic_sub_fetch(&(x),1,__ATOMIC_SEQ_CST)
+
+struct FragData {
+	int referenceCounter;
+	unsigned id;
+};
+static unsigned allocatedFrags = 0;
+
+static void lockFragData(void* data)
+{
+	struct FragData* f = data;
+	REFINC(f->referenceCounter);
+}
+static void unlockFragData(void* data)
+{
+	struct FragData* f = data;
+	if (REFDEC(f->referenceCounter) <= 0) {
+		REFDEC(allocatedFrags);
+		free(data);
+	}
+}
+static struct FragData* allocFragData(unsigned id)
+{
+	struct FragData* f = malloc(sizeof(*f));
+	REFINC(allocatedFrags);
+	f->id = id;
+
+	/*
+	  If this is a "pure insert" the referenceCounter MUST be set to 1 (one).
+
+	  If the item will be used in code that may have got the item by a
+	  lookup, that code will do an unlock and the referenceCounter
+	  MUST be set to 2 (two).
+	 */
+	f->referenceCounter = 1;		/* The ct refers it */
+}
+
+static void testRefcount(struct ctStats* accumulatedStats)
+{
+	struct ct* ct;
+	struct timespec now = {0,0};
+	struct ctKey key = {IN6ADDR_ANY_INIT,IN6ADDR_ANY_INIT,0ull};
+	int rc;
+	struct FragData* f;
+
+	ct = ctCreate(
+		1000, 1000, unlockFragData, lockFragData, BUCKET_ALLOC, BUCKET_FREE);
+
+	key.id = 1001;
+	rc = ctInsert(ct, &now, &key, allocFragData(key.id));
+	assert(rc == 0);
+	assert(allocatedFrags == 1);
+	f = ctLookup(ct, &now, &key);
+	assert(f != NULL);
+	assert(f->id == 1001);
+	assert(f->referenceCounter == 2);
+	assert(allocatedFrags == 1);
+	ctRemove(ct, &now, &key);
+	assert(f->referenceCounter == 1);
+	assert(allocatedFrags == 1);
+	unlockFragData(f);
+	assert(allocatedFrags == 0);
+	
+	collectStats(accumulatedStats, ctStats(ct, &now));
+	ctDestroy(ct);
 }

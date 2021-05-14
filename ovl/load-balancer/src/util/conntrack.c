@@ -9,20 +9,20 @@
 #include <string.h>
 #include <stdio.h>
 
-#define Dx(x) x
-#define D(x)
-
 #ifdef SINGLE_THREAD
+#warning SINGLE_THREAD
 #define MUTEX(x)
 #define LOCK(x)
 #define UNLOCK(x)
 #define MUTEX_DESTROY(x)
+#define ATOMIC_INC(x) ++(x)
 #else
 #include <pthread.h>
 #define MUTEX(x) pthread_mutex_t x
 #define LOCK(x) pthread_mutex_lock(x)
 #define UNLOCK(x) pthread_mutex_unlock(x)
 #define MUTEX_DESTROY(x) pthread_mutex_destroy(x)
+#define ATOMIC_INC(x) __atomic_add_fetch(&(x),1,__ATOMIC_RELAXED)
 #endif
 
 extern uint32_t djb2_hash(uint8_t const* c, uint32_t len);
@@ -43,7 +43,6 @@ struct ct {
 	ctFree freeBucket;
 	struct ctStats stats;
 	struct ctBucket* bucket;
-	MUTEX(mutex);
 };
 
 size_t sizeof_bucket = sizeof(struct ctBucket);
@@ -56,6 +55,7 @@ static uint64_t toNanos(struct timespec* t)
 {
 	return t->tv_sec * 1000000000 + t->tv_nsec;
 }
+
 // Remove stale entries. Returns number of active buckets
 // The bucket must be locked on call.
 static ctCounter
@@ -86,6 +86,32 @@ bucketGC(struct ct* ct, struct ctBucket* b, uint64_t nowNanos)
 	}
 	return count;
 }
+
+// The bucket is locked in the call.
+static struct ctBucket* ctLookupBucket(
+	struct ct* ct, uint64_t nowNanos, struct ctKey const* key)
+{
+	uint32_t hash = HASH((uint8_t const*)key, sizeof(*key));
+	struct ctBucket* b = ct->bucket + (hash % ct->stats.size);
+	LOCK(&b->mutex);
+
+	/* Is the main bucket stale? */
+	if (b->data != NULL && (nowNanos - b->refered) > ct->ttl) {
+		if (ct->freefn != NULL)
+			ct->freefn(b->data);
+		b->data = NULL;
+	}
+	if (b->next != NULL) {
+		/*
+		  We have had collisions and have allocated additional
+		  buckets. This is assumed to be a very rare case under normal
+		  circumstances and could be indicating a DoS attack.
+		 */
+		bucketGC(ct, b, nowNanos);
+	}
+	return b;
+}
+
 struct ct* ctCreate(
 	ctCounter hsize, uint64_t ttlNanos, ctFree freefn, ctLock lockfn,
 	ctAllocBucket allocBucketFn, ctFree freeBucketFn)
@@ -107,7 +133,6 @@ struct ct* ctCreate(
 		return NULL;
 	}
 #ifndef SINGLE_THREAD
-	pthread_mutex_init(&ct->mutex, NULL);
 	for (ctCounter i = 0; i < hsize; i++) {
 		pthread_mutex_init(&ct->bucket[i].mutex, NULL);
 	}
@@ -115,43 +140,16 @@ struct ct* ctCreate(
 	return ct;
 }
 
-// "ct" must be locked on call.
-// The bucket is locked in the call.
-static struct ctBucket* ctLookupBucket(
-	struct ct* ct, struct timespec* now, struct ctKey const* key)
-{
-	uint32_t hash = HASH((uint8_t const*)key, sizeof(*key));
-	struct ctBucket* b = ct->bucket + (hash % ct->stats.size);
-	LOCK(&b->mutex);
-	uint64_t nowNanos = toNanos(now);
-
-	/* Is the main bucket stale? */
-	if (b->data != NULL && (nowNanos - b->refered) > ct->ttl) {
-		if (ct->freefn != NULL)
-			ct->freefn(b->data);
-		b->data = NULL;
-	}
-	if (b->next != NULL) {
-		/*
-		  We have had collisions and have allocated additional
-		  buckets. This is assumed to be a very rare case under normal
-		  circumstances and could be indicating a DoS attack.
-		 */
-		bucketGC(ct, b, nowNanos);
-	}
-	return b;
-}
 void* ctLookup(
 	struct ct* ct, struct timespec* now, struct ctKey const* key)
 {
-	LOCK(&ct->mutex);
-	struct ctBucket* B = ctLookupBucket(ct, now, key);
-	ct->stats.lookups++;
-	UNLOCK(&ct->mutex);
+	uint64_t nowNanos = toNanos(now);
+	struct ctBucket* B = ctLookupBucket(ct, nowNanos, key);
+	ATOMIC_INC(ct->stats.lookups);
 	struct ctBucket* b;
 	for (b = B; b != NULL; b = b->next) {
 		if (keyEqual(key, &b->key) == 0) {
-			b->refered = toNanos(now);
+			b->refered = nowNanos;
 			if (ct->lockfn != NULL)
 				ct->lockfn(b->data);
 			UNLOCK(&B->mutex);
@@ -166,10 +164,9 @@ int ctInsert(
 {
 	if (data == NULL)
 		return -1;				/* NULL indicates no-data */
-	LOCK(&ct->mutex);
-	struct ctBucket* b = ctLookupBucket(ct, now, key);
-	ct->stats.inserts++;
-	UNLOCK(&ct->mutex);
+	uint64_t nowNanos = toNanos(now);
+	struct ctBucket* b = ctLookupBucket(ct, nowNanos, key);
+	ATOMIC_INC(ct->stats.inserts);
 
 	// Check if the entry already exists
 	struct ctBucket* item;
@@ -177,7 +174,7 @@ int ctInsert(
 		if (item->data == NULL)
 			continue;
 		if (keyEqual(key, &item->key) == 0) {
-			item->refered = toNanos(now);
+			item->refered = nowNanos;
 			UNLOCK(&b->mutex);
 			return 1;				/* item exists already */
 		}
@@ -189,16 +186,16 @@ int ctInsert(
 		b->key = *key;
 		b->refered = toNanos(now);
 		if (b->next != NULL)
-			__atomic_add_fetch(&ct->stats.collisions, 1, __ATOMIC_RELAXED);
+			ATOMIC_INC(ct->stats.collisions);
 		UNLOCK(&b->mutex);
 		return 0;
 	}
 
 	// We must allocate a new bucket
-	__atomic_add_fetch(&ct->stats.collisions, 1, __ATOMIC_RELAXED);
+	ATOMIC_INC(ct->stats.collisions);
 	struct ctBucket* x = ct->allocBucket();
-	if (x == NULL) {	
-		__atomic_add_fetch(&ct->stats.rejectedInserts, 1, __ATOMIC_RELAXED);
+	if (x == NULL) {
+		ATOMIC_INC(ct->stats.rejectedInserts);
 		UNLOCK(&b->mutex);
 		return -1;
 	}
@@ -214,9 +211,8 @@ int ctInsert(
 void ctRemove(
 	struct ct* ct, struct timespec* now, struct ctKey const* key)
 {
-	LOCK(&ct->mutex);
-	struct ctBucket* b = ctLookupBucket(ct, now, key);
-	UNLOCK(&ct->mutex);
+	uint64_t nowNanos = toNanos(now);
+	struct ctBucket* b = ctLookupBucket(ct, nowNanos, key);
 	if (keyEqual(key, &b->key) == 0) {
 		if (b->data != NULL && ct->freefn != NULL)
 			ct->freefn(b->data);
@@ -232,6 +228,7 @@ void ctRemove(
 			if (b->data != NULL && ct->freefn != NULL)
 				ct->freefn(b->data);
 			ct->freeBucket(item);
+			break;
 		} else {
 			prev = item;
 		}
@@ -240,14 +237,13 @@ void ctRemove(
 	UNLOCK(&b->mutex);
 }
 
-// This function will lock and scan the entire hash table. It will
-// trig a full GC. Use it with caution!
+// This function will scan the entire hash table. It will trig a full
+// GC. Use it with caution!
 struct ctStats const* ctStats(struct ct* ct, struct timespec* now)
 {
 	ctCounter active = 0;
 	uint64_t nowNanos = toNanos(now);
 	unsigned i;
-	LOCK(&ct->mutex);
 	struct ctBucket* b = ct->bucket;
 	for (i = 0; i < ct->stats.size; i++, b++) {
 		LOCK(&b->mutex);
@@ -255,13 +251,11 @@ struct ctStats const* ctStats(struct ct* ct, struct timespec* now)
 		UNLOCK(&b->mutex);
 	}
 	ct->stats.active = active;
-	UNLOCK(&ct->mutex);
 	return &ct->stats;
 }
 void ctDestroy(struct ct* ct)
 {
 	unsigned i;
-	LOCK(&ct->mutex);
 	struct ctBucket* b = ct->bucket;
 	for (i = 0; i < ct->stats.size; i++, b++) {
 		LOCK(&b->mutex);
@@ -270,7 +264,5 @@ void ctDestroy(struct ct* ct)
 		MUTEX_DESTROY(&b->mutex);
 	}
 	free(ct->bucket);
-	UNLOCK(&ct->mutex);
-	MUTEX_DESTROY(&ct->mutex);
 	free(ct);
 }
