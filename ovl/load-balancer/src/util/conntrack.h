@@ -68,9 +68,9 @@ struct ctStats {
 };
 
 
-typedef void (*ctFree)(void* data);
-typedef void (*ctLock)(void* data);
-typedef void* (*ctAllocBucket)(void); /* Return "sizeof_bucket" bytes or NULL */
+typedef void (*ctFree)(void* user_ref, void* data);
+typedef void (*ctLock)(void* user_ref, void* data);
+typedef void* (*ctAllocBucket)(void* user_ref); /* Return "sizeof_bucket" bytes or NULL */
 extern size_t sizeof_bucket;
 
 struct ct* ctCreate(
@@ -84,7 +84,12 @@ struct ct* ctCreate(
 	ctFree freeDataFn,
 	ctLock lockDataFn,
 	ctAllocBucket allocBucketFn,
-	ctFree freeBucketFn);
+	ctFree freeBucketFn,
+	/*
+	  The user_ref will be passed as first argument to the call-back
+	  functions.
+	 */
+	void* user_ref);
 
 /*
   There is nothing that prevents the returned data from beeing removed

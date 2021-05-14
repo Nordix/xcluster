@@ -18,6 +18,7 @@
 // Forwards
 static void testConntrack(struct ctStats* stats);
 static void testRefcount(struct ctStats* accumulatedStats);
+static void testLimitedBuckets(struct ctStats* accumulatedStats);
 
 int
 main(int argc, char* argv[])
@@ -25,7 +26,8 @@ main(int argc, char* argv[])
 	struct ctStats stats = {0};
 	testConntrack(&stats);
 	testRefcount(&stats);
-
+	testLimitedBuckets(&stats);
+	
 	printf(
 		"Test OK. inserts=%u(%u) lookups=%u collisions=%u\n",
 		stats.inserts, stats.rejectedInserts, stats.lookups, stats.collisions);
@@ -35,18 +37,18 @@ main(int argc, char* argv[])
 
 
 static long nAllocatedBuckets = 0;
-static void* BUCKET_ALLOC(void) {
+static void* BUCKET_ALLOC(void* user_ref) {
 	nAllocatedBuckets++;
 	return calloc(1,sizeof_bucket);
 }
-static void BUCKET_FREE(void* b) {
+static void BUCKET_FREE(void* user_ref, void* b) {
 	nAllocatedBuckets--;
 	free(b);
 }
 
 static long nFreeData = 0;
 static uint64_t expectedFreeData = 0;
-static void freeData(void* data) {
+static void freeData(void* user_ref, void* data) {
 	D(printf("Free data; %lu\n", (uint64_t)data));
 	nFreeData++;
 	if (expectedFreeData != 0) {
@@ -69,7 +71,8 @@ static void* collectStats(
 
 static void testConntrack(struct ctStats* accumulatedStats)
 {
-	struct ct* ct = ctCreate(1, 99, freeData, NULL, BUCKET_ALLOC, BUCKET_FREE);
+	struct ct* ct = ctCreate(
+		1, 99, freeData, NULL, BUCKET_ALLOC, BUCKET_FREE, NULL);
 	struct timespec now = {0,0};
 	struct ctKey key = {IN6ADDR_ANY_INIT,IN6ADDR_ANY_INIT,0ull};
 	void* data;
@@ -170,7 +173,8 @@ static void testConntrack(struct ctStats* accumulatedStats)
 	assert(nAllocatedBuckets == 0);	
 
 	// Test with a larger table
-	ct = ctCreate(1000, 1000, freeData, NULL, BUCKET_ALLOC, BUCKET_FREE);
+	ct = ctCreate(
+		1000, 1000, freeData, NULL, BUCKET_ALLOC, BUCKET_FREE, NULL);
 	now.tv_nsec = 0;
 	key.id = 0;
 	nFreeData = 0;
@@ -211,12 +215,12 @@ struct FragData {
 };
 static unsigned allocatedFrags = 0;
 
-static void lockFragData(void* data)
+static void lockFragData(void* user_ref, void* data)
 {
 	struct FragData* f = data;
 	REFINC(f->referenceCounter);
 }
-static void unlockFragData(void* data)
+static void unlockFragData(void* user_ref, void* data)
 {
 	struct FragData* f = data;
 	if (REFDEC(f->referenceCounter) <= 0) {
@@ -249,7 +253,7 @@ static void testRefcount(struct ctStats* accumulatedStats)
 	struct FragData* f;
 
 	ct = ctCreate(
-		1000, 1000, unlockFragData, lockFragData, BUCKET_ALLOC, BUCKET_FREE);
+		1000, 1000, unlockFragData, lockFragData, BUCKET_ALLOC, BUCKET_FREE, NULL);
 
 	key.id = 1001;
 	rc = ctInsert(ct, &now, &key, allocFragData(key.id));
@@ -263,9 +267,107 @@ static void testRefcount(struct ctStats* accumulatedStats)
 	ctRemove(ct, &now, &key);
 	assert(f->referenceCounter == 1);
 	assert(allocatedFrags == 1);
-	unlockFragData(f);
+	unlockFragData(NULL, f);
 	assert(allocatedFrags == 0);
 	
 	collectStats(accumulatedStats, ctStats(ct, &now));
 	ctDestroy(ct);
+}
+
+struct bucketPool {
+	// (mutex here for multi-treading)
+	unsigned nfree;
+	void** freeBuckets;
+	uint8_t* buffer;
+};
+
+static void bucketPoolInit(struct bucketPool* p, unsigned size)
+{
+	D(printf("bucketPoolInit; %p\n", p));
+	p->nfree = size;
+	p->buffer = calloc(size, sizeof_bucket);
+	p->freeBuckets = calloc(size, sizeof(void*));
+	for (int i = 0; i < size; i++) {
+		p->freeBuckets[i] = p->buffer + (i * sizeof_bucket);
+	}
+}
+static void* bucketPoolAllocate(void* user_ref)
+{
+	D(printf("bucketPoolAllocate; %p\n", user_ref));
+	struct bucketPool* p = user_ref;
+	// lock
+	if (p->nfree == 0) {
+		// unlock
+		return NULL;			/* Out of buckets */
+	}
+	p->nfree--;
+	void* b = p->freeBuckets[p->nfree];
+	// unlock
+	return b;
+}
+static void bucketPoolFree(void* user_ref, void* b)
+{
+	struct bucketPool* p = user_ref;
+	// lock
+	p->freeBuckets[p->nfree] = b;
+	p->nfree++;
+	// unlock
+}
+
+static void testLimitedBuckets(struct ctStats* accumulatedStats)
+{
+	struct bucketPool bucketPool;
+	struct ct* ct;
+	struct timespec now = {0,0};
+	struct ctKey key = {IN6ADDR_ANY_INIT,IN6ADDR_ANY_INIT,0ull};
+	void* data;
+	int rc;
+
+	bucketPoolInit(&bucketPool, 2);
+	assert(bucketPool.nfree == 2);
+	ct = ctCreate(
+		1, 100, NULL, NULL,
+		bucketPoolAllocate, bucketPoolFree, &bucketPool);
+	key.id = 1001;
+	rc = ctInsert(ct, &now, &key, (void*)key.id);
+	assert(rc == 0);
+	assert(bucketPool.nfree == 2);
+
+	key.id = 1002;
+	rc = ctInsert(ct, &now, &key, (void*)key.id);
+	assert(rc == 0);
+	assert(bucketPool.nfree == 1);
+
+	key.id = 1003;
+	rc = ctInsert(ct, &now, &key, (void*)key.id);
+	assert(rc == 0);
+	assert(bucketPool.nfree == 0);
+
+	key.id = 1004;
+	rc = ctInsert(ct, &now, &key, (void*)key.id);
+	assert(rc == -1);
+	assert(bucketPool.nfree == 0);
+
+	key.id = 1001;
+	ctRemove(ct, &now, &key);
+	assert(bucketPool.nfree == 0);
+	
+	key.id = 1005;
+	rc = ctInsert(ct, &now, &key, (void*)key.id);
+	assert(rc == 0);
+	assert(bucketPool.nfree == 0);
+
+	key.id = 1006;
+	rc = ctInsert(ct, &now, &key, (void*)key.id);
+	assert(rc == -1);
+	assert(bucketPool.nfree == 0);
+
+	key.id = 1003;
+	ctRemove(ct, &now, &key);
+	assert(bucketPool.nfree == 1);
+	
+	collectStats(accumulatedStats, ctStats(ct, &now));
+	ctDestroy(ct);
+	// Allocated buckets shall be freed on "ctDestroy"
+	assert(bucketPool.nfree == 2);
 }

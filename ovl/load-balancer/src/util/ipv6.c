@@ -85,12 +85,12 @@ struct FragData {
 static unsigned allocatedFrags = 0;
 static unsigned storedPackets = 0;
 
-static void lockFragData(void* data)
+static void lockFragData(void* user_ref, void* data)
 {
 	struct FragData* f = data;
 	REFINC(f->referenceCounter);
 }
-static void unlockFragData(void* data)
+static void unlockFragData(void* user_ref, void* data)
 {
 	struct FragData* f = data;
 	if (REFDEC(f->referenceCounter) <= 0) {
@@ -98,17 +98,20 @@ static void unlockFragData(void* data)
 		free(data);
 	}
 }
-static void* allocBucket(void)
+static void* allocBucket(void* user_ref)
 {
 	return malloc(sizeof_bucket);
 }
-
+static void freeBucket(void* user_ref, void* b)
+{
+	free(b);
+}
 static void ctInit(void)
 {
 	if (ct != NULL)
 		return;
 	ct = ctCreate(
-		1024, 250 * MS, unlockFragData, lockFragData, allocBucket, free);
+		1024, 250 * MS, unlockFragData, lockFragData, allocBucket, freeBucket, NULL);
 }
 
 static void* lookupOrCreate(struct timespec* now, struct ctKey const* key)
@@ -162,7 +165,7 @@ int ipv6HandleFragment(void const* data, unsigned len, unsigned* hash)
 		// First fragment
 		if (f->firstFragmentSeen) {
 			// Duplicate
-			unlockFragData(f);
+			unlockFragData(NULL, f);
 			return -1;
 		}
 		f->firstFragmentSeen = 1;
@@ -186,7 +189,7 @@ int ipv6HandleFragment(void const* data, unsigned len, unsigned* hash)
 		  TODO; If there are any subsequent fragments strored re-inject them.
 		 */
 
-		unlockFragData(f);
+		unlockFragData(NULL, f);
 		return 0;
 	}
 
@@ -194,7 +197,7 @@ int ipv6HandleFragment(void const* data, unsigned len, unsigned* hash)
 	if (f->firstFragmentSeen) {
 		// We have seen the first fragment and the hash is valid
 		*hash = f->hash;
-		unlockFragData(f);
+		unlockFragData(NULL, f);
 		return 0;
 	}
 
@@ -203,7 +206,7 @@ int ipv6HandleFragment(void const* data, unsigned len, unsigned* hash)
 	  before the first fragment. We must store the packet and inject
 	  it later when the first fragment has arrived.
 	 */
-	unlockFragData(f);
+	unlockFragData(NULL, f);
 	return -1;					/* NYI */
 }
 

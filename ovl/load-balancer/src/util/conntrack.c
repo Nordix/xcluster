@@ -43,6 +43,7 @@ struct ct {
 	ctFree freeBucket;
 	struct ctStats stats;
 	struct ctBucket* bucket;
+	void* user_ref;
 };
 
 size_t sizeof_bucket = sizeof(struct ctBucket);
@@ -64,7 +65,7 @@ bucketGC(struct ct* ct, struct ctBucket* b, uint64_t nowNanos)
 	ctCounter count = 0;
 	if (b->data != NULL && (nowNanos - b->refered) > ct->ttl) {
 		if (ct->freefn != NULL)
-			ct->freefn(b->data);
+			ct->freefn(ct->user_ref, b->data);
 		b->data = NULL;
 	}
 	if (b->data != NULL)
@@ -76,8 +77,8 @@ bucketGC(struct ct* ct, struct ctBucket* b, uint64_t nowNanos)
 		if ((nowNanos - item->refered) > ct->ttl) {
 			prev->next = item->next;
 			if (item->data != NULL && ct->freefn != NULL)
-				ct->freefn(item->data);
-			ct->freeBucket(item);
+				ct->freefn(ct->user_ref, item->data);
+			ct->freeBucket(ct->user_ref, item);
 		} else {
 			prev = item;
 			count++;
@@ -98,7 +99,7 @@ static struct ctBucket* ctLookupBucket(
 	/* Is the main bucket stale? */
 	if (b->data != NULL && (nowNanos - b->refered) > ct->ttl) {
 		if (ct->freefn != NULL)
-			ct->freefn(b->data);
+			ct->freefn(ct->user_ref, b->data);
 		b->data = NULL;
 	}
 	if (b->next != NULL) {
@@ -114,7 +115,7 @@ static struct ctBucket* ctLookupBucket(
 
 struct ct* ctCreate(
 	ctCounter hsize, uint64_t ttlNanos, ctFree freefn, ctLock lockfn,
-	ctAllocBucket allocBucketFn, ctFree freeBucketFn)
+	ctAllocBucket allocBucketFn, ctFree freeBucketFn, void* user_ref)
 {
 	if (allocBucketFn == NULL || freeBucketFn == NULL)
 		return NULL;
@@ -127,6 +128,7 @@ struct ct* ctCreate(
 	ct->lockfn = lockfn;
 	ct->allocBucket = allocBucketFn;
 	ct->freeBucket = freeBucketFn;
+	ct->user_ref = user_ref;
 	ct->bucket = calloc(hsize, sizeof(struct ctBucket));
 	if (ct->bucket == NULL) {
 		free(ct);
@@ -151,7 +153,7 @@ void* ctLookup(
 		if (keyEqual(key, &b->key) == 0) {
 			b->refered = nowNanos;
 			if (ct->lockfn != NULL)
-				ct->lockfn(b->data);
+				ct->lockfn(ct->user_ref, b->data);
 			UNLOCK(&B->mutex);
 			return b->data;		/* Found! */
 		}
@@ -193,7 +195,7 @@ int ctInsert(
 
 	// We must allocate a new bucket
 	ATOMIC_INC(ct->stats.collisions);
-	struct ctBucket* x = ct->allocBucket();
+	struct ctBucket* x = ct->allocBucket(ct->user_ref);
 	if (x == NULL) {
 		ATOMIC_INC(ct->stats.rejectedInserts);
 		UNLOCK(&b->mutex);
@@ -215,7 +217,7 @@ void ctRemove(
 	struct ctBucket* b = ctLookupBucket(ct, nowNanos, key);
 	if (keyEqual(key, &b->key) == 0) {
 		if (b->data != NULL && ct->freefn != NULL)
-			ct->freefn(b->data);
+			ct->freefn(ct->user_ref, b->data);
 		b->data = NULL;
 		UNLOCK(&b->mutex);
 		return;
@@ -226,8 +228,8 @@ void ctRemove(
 		if (keyEqual(key, &item->key) == 0) {
 			prev->next = item->next;
 			if (b->data != NULL && ct->freefn != NULL)
-				ct->freefn(b->data);
-			ct->freeBucket(item);
+				ct->freefn(ct->user_ref, b->data);
+			ct->freeBucket(ct->user_ref, item);
 			break;
 		} else {
 			prev = item;
