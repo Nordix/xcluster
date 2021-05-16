@@ -390,15 +390,16 @@ test_multihop_capture_vm() {
 test_start_squeeze() {
 	export __image=$XCLUSTER_HOME/hd.img
 	export XOVLS=$(echo $XOVLS | sed -e 's,private-reg,,')
-	export __nrouters=1
-	export __ntesters=1
+	export TOPOLOGY=evil_tester
+	. $($XCLUSTER ovld network-topology)/$TOPOLOGY/Envsettings
 	xcluster_start network-topology iptools mtu
 	otcw "assign_cidr 10.0.0.0"
 	otc 221 "assign_cidr 20.0.0.0"
 	otcw start_mconnect
 	otc 201 ecmp_route
-	otcr "route 20.0.0.0 192.168.2.221"
-	otc 201 "squeeze_chain 10"
+	otcr "route 20.0.0.0 192.168.3.222"
+	otc 222 "route 20.0.0.0 192.168.2.221"
+	otc 222 "squeeze_chain 10"
 }
 
 cmd_start_tcpdump() {

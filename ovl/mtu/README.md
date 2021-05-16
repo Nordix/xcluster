@@ -275,6 +275,10 @@ progressively smaller.
 Incoming traffic is forced into the squeeze-chain with iptables rules
 and routes.
 
+In the example the squeeze-chain is installed on the
+[evil tester](../network-topology#evil-tester).
+
+Example;
 ```
 ./mtu.sh test start_squeeze > $log
 # on vm-001
