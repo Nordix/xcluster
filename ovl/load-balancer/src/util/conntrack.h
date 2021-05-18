@@ -119,8 +119,8 @@ void ctRemove(
 	struct ct* ct, struct timespec* now, struct ctKey const* key);
 
 /*
- This function will lock and scan the entire hash table. It will trig
- a full GC. Use it with caution!
+ This function will scan the entire hash table. It will trig a full
+ GC. Use it with caution!
 */
 struct ctStats const* ctStats(
 	struct ct* ct, struct timespec* now);

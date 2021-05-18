@@ -32,6 +32,9 @@ f=$GOPATH/src/github.com/Nordix/ctraffic/image/ctraffic
 test -x $f || die "Not executable [$f]"
 cp $f $tmp/bin
 
+go build -ldflags "-extldflags '-static' -X main.version=$(date +%F:%T)" \
+	-o $tmp/bin/udp-test ./src/udp-test/main.go || die udp-test
+
 f=$XCLUSTER_WORKSPACE/libnetfilter_queue-1.0.3/examples/.libs/nf-queue
 test -x $f && $XCLUSTER install_prog --dest=$tmp $f
 

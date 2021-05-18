@@ -296,7 +296,7 @@ is lost. A solution may be to check "SYN_SEEN" instead of
 
 
 
-### [WIP] Nfqueue with fragment handling
+### Nfqueue with fragment handling
 
 When a fragment arrives we hash on addresses only as described in the
 maglev document (see above). If the lookup gives us our own fwmark we
@@ -336,10 +336,29 @@ ports, and store the hash value in a hash-table with key
 `<src,dst,frag-id>`. Subsequent fragments will have the same `frag-id`
 and we retrieve the stored hash value.
 
-But what if the fragments are re-ordered and the first fragment with
-the ports does not come first? Then we have no options but it store
-fragments until the first fragment arrives.
+If the fragments are re-ordered and the first fragment with the ports
+does not come first we have no option but it store fragments until the
+first fragment arrives.
+
 **This case is not yet implemented**
+
+<img src="nfqueue-frag-reorder.svg" alt="nfqueue frament reorder" width="70%" />
+
+1. The first fragment comes last
+
+2. When we don't have a stored hash we copy the fragment in user-space
+   and send `verdict=drop` so the kernel drops the original fragment.
+
+3. When the first fragment arrives we compute and store the hash and
+   load-balance the first fragment. We also initiate a re-inject of
+   the stored fragments.
+
+4. The stored fragments are injected to the kernel with a `tun`
+   device. They are (again) redirected to user-space by the nfqueue
+   but this time we have a stored hash and the fragments are
+   load-balanced.
+
+
 
 
 Build;
@@ -352,6 +371,7 @@ make O=/tmp/$USER/bin   # (just a test build)
 
 Manual test;
 ```
+#export TOPOLOGY=evil_tester
 xcluster_FRAG=yes __nrouters=3 ./load-balancer.sh test start_nfqueue > $log
 # On routers if you want printouts in real-time
 tail -f /var/log/nfqueuelb.log
@@ -359,6 +379,8 @@ tail -f /var/log/nfqueuelb.log
 ping -c1 -W1 -s 2000 -I 2000::2 1000::
 ping -c3 -W1 -s 3000 -i 0.1 -I 2000::2 1000::
 ping -c1 -W1 -s 2000 -I 50.0.0.2 10.0.0.0
+udp-test -address [1000::]:6001 -size 30000 -src [2000::]:0
+udp-test -address 10.0.0.0:6001 -size 30000 -src 50.0.0.0:0
 ```
 
 

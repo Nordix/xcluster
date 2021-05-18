@@ -56,14 +56,16 @@ router() {
 	fi
 
 	if test "$FRAG" = "yes"; then
+		local net=2
+		test "$TOPOLOGY" = "evil_tester" && net=3
 		if test -n "$__nrouters"; then
 			local endrouter=$((__nrouters + 200))
 			for n in $(seq 201 $endrouter); do
 				t=$((n - 200 + lboffset))
 				ip rule add fwmark $t table $t
 				ip -6 rule add fwmark $t table $t
-				ip route add default via 192.168.2.$n table $t
-				ip -6 route add default via 1000::1:192.168.2.$n table $t
+				ip route add default via 192.168.$net.$n table $t
+				ip -6 route add default via 1000::1:192.168.$net.$n table $t
 			done
 		fi
 		ethtool -K eth1 gro off gso off tso off

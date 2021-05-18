@@ -87,6 +87,10 @@ test_start() {
 	export __ntesters=1
 	unset __mem1 __mem201 __mem202 __mem203
 	export __mem=256
+	if test -n "$TOPOLOGY"; then
+		export xcluster_TOPOLOGY=$TOPOLOGY
+		. $($XCLUSTER ovld network-topology)/$TOPOLOGY/Envsettings
+	fi
 	echo "$XOVLS" | grep -q private-reg && unset XOVLS
 	xcluster_start network-topology iptools load-balancer
 }
@@ -344,6 +348,21 @@ cmd_src_build() {
 	fi
 	make -C $d/examples nf-queue
 	gcc src/lb.c -o /dev/null -lmnl -lnetfilter_queue
+}
+
+#  tail <log>
+#    Tail -f on logs on routers.
+cmd_tail() {
+	test -n "$1" || die "No log"
+	test -n "$__nrouters" || __nrouters=2
+	local rsh='ssh -q -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no'
+	$rsh root@192.168.0.201 test -r $1 || die "Not readable [$1]"
+	local i geometry
+	for i in $(seq 1 $__nrouters); do
+		geometry=$($XCLUSTER geometry 1 $i)
+		XXTERM=XCLUSTER xterm -T "Router $i $1" -bg '#400' $geometry -e \
+			$rsh root@192.168.0.$((200 + i)) tail -f $1 &
+	done
 }
 
 . $($XCLUSTER ovld test)/default/usr/lib/xctest
