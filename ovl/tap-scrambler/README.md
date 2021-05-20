@@ -16,10 +16,14 @@ In the image only traffic in one direction passes the
 
 ## Usage
 
+By default the `tap-scrambler` is started on the
+[evil_tester](https://github.com/Nordix/xcluster/tree/master/ovl/network-topology#evil-tester)
+(vm-222).
+
 Simple forwarding;
 ```
 ./tap-scrambler.sh test start > $log
-# On vm-201
+# On vm-222 (evil-tester)
 tap-scrambler fwd --tap=tap2
 # On vm-221
 ping -c1 -s 2000 192.168.1.1
@@ -29,20 +33,27 @@ ping -c1 -M do -s 2000 1000::1:192.168.1.1
 Reverse fragments;
 ```
 ./tap-scrambler.sh test start > $log
-# On vm-201
+# On vm-222 (evil-tester)
 tap-scrambler fragrev --tap=tap2
 # On vm-001
 ethtool -K eth1 gro off gso off tso off
 tcpdump -ni eth1
 # On vm-221
 ping -c1 -s 2000 192.168.1.1
-ping -c1 -M do -s 2000 1000::1:192.168.1.1
+ping -c1 -s 2000 1000::1:192.168.1.1
 ```
 
+Ipv4 fragments are re-ordered back by the kernel for some reason. So
+fragments leaves `tap2` in reverse order but are sent in correct orded
+over `eth1`. This is not what we want and the (faulty) order is
+preserved for ipv6 packets. Here are some attempts to stop the
+fragments to be re-ordered;
+
 ```
+ethtool -K eth1 gro off gso off tso off
+ethtool -K eth2 gro off gso off tso off
 iptables -t nat -F
 iptables -t raw -A PREROUTING -i tap2 -j NOTRACK
-
 ```
 
 ## Building and extending

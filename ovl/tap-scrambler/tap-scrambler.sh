@@ -80,11 +80,11 @@ test_start() {
 		die "bridge-nf-call-ip6tables != 0"
 	export __image=$XCLUSTER_HOME/hd.img
 	echo "$XOVLS" | grep -q private-reg && unset XOVLS
-	export __nrouters=1
-	export __ntesters=1
+	export TOPOLOGY=evil_tester
+	. $($XCLUSTER ovld network-topology)/$TOPOLOGY/Envsettings
 	xcluster_start network-topology iptools tap-scrambler
 	otcw start_servers
-	otc 201 "tap 1280"
+	otc 222 "tap 1500"
 }
 
 
