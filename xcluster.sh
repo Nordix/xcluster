@@ -135,6 +135,7 @@ cmd_completion() {
 
 
 ##  Network name-space commands;
+##   nsadd_docker <index>
 ##   nsadd [--ipv4-base=172.30.0.0] [--ipv6-prefix=fd00:1723::] <index>
 ##   nsdel <index>
 ##   nsenter <index>
@@ -161,6 +162,59 @@ cmd_nsadd() {
 		$me nssetup --ipv4-base=$__ipv4_base --ipv6-prefix=$__ipv6_prefix $1
 	sudo $me masq --ipv4-base=$__ipv4_base
 
+	mkrmtap
+}
+cmd_nsadd_docker() {
+	test -n "$1" || die 'No index'
+	XCLUSTER_WORKSPACE=$tmp
+	cmd_env
+	local netns=${USER}_xcluster$1
+	ip netns | grep -qe "^$netns " && die "Netns already exist [$netns]"
+	sudo ip netns add $netns
+    ip link add dev xcluster$1 type veth peer name host$1
+    ip link set xcluster$1 up
+	ip link set dev xcluster$1 master docker0
+
+	cmd_docker_net $1
+
+    ip link set host$1 netns $netns
+    sudo ip netns exec $netns \
+		$me nssetup --docker --adr4=$adr4 --gw4=$gw4 $1
+	mkrmtap
+}
+cmd_docker_net() {
+	test -n "$1" || die 'No index'
+	local i=$1
+	ip link show docker0 > /dev/null || die "Can't find docker0"
+	mkdir -p $tmp
+	local conf=$tmp/docker-bridge
+	docker network inspect bridge > $conf || die "Failed; inspect bridge"
+	local n
+	for n in $(jq -r .[].IPAM.Config[].Subnet < $conf); do
+		if echo $n | grep -q :; then
+			cidr6=$n
+		else
+			cidr4=$n
+		fi
+	done
+	for n in $(jq -r .[].IPAM.Config[].Gateway < $conf); do
+		if echo $n | grep -q :; then
+			gw6=$n
+		else
+			gw4=$n
+		fi
+	done
+	dbg "Docker subnets; $cidr4 $cidr6, GWs; $gw4 $gw6"
+	n=$(echo $cidr4 | cut -d/ -f2)
+	test $n -gt 26 && die "Too narrow range; $cidr4"
+	# Now we steal a docker address and *hope* it will not collide
+	# with any address assigned to containers.
+	local b0=$(echo $cidr4 | cut -d/ -f1 | cut -d. -f4)
+	b0=$((b0 + 50 + i))
+	adr4="$(echo $cidr4 | cut -d/ -f1 | cut -d. -f-3).$b0/$n"
+	log "Xcluster netns; $adr4"
+}
+mkrmtap() {
 	# Create /tmp/rmtap that will be called by qemu on VM-termination
 	if ! test -x /tmp/rmtap; then
 		cat > /tmp/rmtap <<"EOF"
@@ -186,15 +240,20 @@ cmd_nsenter() {
 
 cmd_nssetup() {
 	test -n "$1" || die 'No index'
-	set_netns_ipv4_addresses $1
 	ip link set lo up
 	ip link set host$1 up
-	ip addr add $ipv4_ns/32 dev host$1
-	ip ro add $ipv4_host/32 dev host$1
-	ip ro add default via $ipv4_host
-	ip -6 addr add $__ipv6_prefix$ipv4_ns/128 dev host$1
-	ip -6 ro add $__ipv6_prefix$ipv4_host/128 dev host$1
-	ip -6 ro add default via $__ipv6_prefix$ipv4_host
+	if test "$__docker" = "yes"; then
+		ip addr add $__adr4 dev host$1
+		ip ro add default via $__gw4
+	else
+		set_netns_ipv4_addresses $1
+		ip addr add $ipv4_ns/32 dev host$1
+		ip ro add $ipv4_host/32 dev host$1
+		ip ro add default via $ipv4_host
+		ip -6 addr add $__ipv6_prefix$ipv4_ns/128 dev host$1
+		ip -6 ro add $__ipv6_prefix$ipv4_host/128 dev host$1
+		ip -6 ro add default via $__ipv6_prefix$ipv4_host
+	fi
 	iptables -t nat -A POSTROUTING -s 192.168.0.0/24 -o host$1 -j MASQUERADE
 	ip6tables -t nat -A POSTROUTING -s $xcluster_PREFIX:192.168.0.0/120 -o host$1 -j MASQUERADE
 	echo 1 > /proc/sys/net/ipv4/conf/all/forwarding
