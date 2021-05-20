@@ -22,8 +22,7 @@ vm() {
 	ip -6 ro add local 1000::/120 dev lo
 	mconnect -address [::]:5001 -server > /var/log/mconnect.log 2>&1 &
 	ctraffic -address [::]:5003 -server > /var/log/ctraffic.log 2>&1 &
-	udp-test -address [1000::]:6001 -server > /var/log/udp-test.log 2>&1 &
-	udp-test -address 10.0.0.0:6001 -server > /var/log/udp-test.log 2>&1 &
+	udp-test -server > /var/log/udp-test.log 2>&1 &
 }
 
 router() {
