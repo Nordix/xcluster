@@ -29,7 +29,7 @@ main(int argc, char* argv[])
 	testLimitedBuckets(&stats);
 	
 	printf(
-		"Test OK. inserts=%u(%u) lookups=%u collisions=%u\n",
+		"==== ct-test OK. inserts=%u(%u) lookups=%u collisions=%u\n",
 		stats.inserts, stats.rejectedInserts, stats.lookups, stats.collisions);
 	return 0;
 }

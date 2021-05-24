@@ -372,6 +372,7 @@ make O=/tmp/$USER/bin   # (just a test build)
 Manual test;
 ```
 #export TOPOLOGY=evil_tester
+export xcluster_DISABLE_MASQUERADE=yes
 xcluster_FRAG=yes __nrouters=3 ./load-balancer.sh test start_nfqueue > $log
 # On routers if you want printouts in real-time
 tail -f /var/log/nfqueuelb.log

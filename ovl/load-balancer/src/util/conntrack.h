@@ -14,9 +14,9 @@
   If there are no hash collisions no buckets are allocated. On a
   collision the user defined "allocBucketFn" is called. It should
   return a pointer to memory of "sizeof_bucket" bytes or NULL. If NULL
-  is returned the "ctInsert" will fail and return -1. For saftey only
-  a limited ammmount of buckets should be allowed (i.e do not simply
-  use "malloc(sizeof_bucket)").
+  is returned the "ctInsert" will fail and return -1. For protection,
+  only a limited ammount of buckets should be allowed (i.e do not
+  simply use "malloc(sizeof_bucket)").
 
   User data handling
 
@@ -104,7 +104,7 @@ void* ctLookup(
 /*
   ctFree is only called for succesful inserts.
   Return;
-   0 - Success, Data inserted, ctFree will be called.
+   0 - Success, Data inserted, freeDataFn will be called.
    1 - Busy, data for this key exists already. Make a ctLookup and update.
   -1 - Failed, bucket allocation failed.
 */
@@ -112,7 +112,7 @@ int ctInsert(
 	struct ct* ct, struct timespec* now, struct ctKey const* key, void* data);
 
 /*
-  "ctFree" will be called immediately. ctRemove on a non-existing key
+  "freeDataFn" will be called immediately. ctRemove on a non-existing key
   is a no-op.
 */
 void ctRemove(
@@ -126,6 +126,6 @@ struct ctStats const* ctStats(
 	struct ct* ct, struct timespec* now);
 
 // Will hang until everything is unlocked. Other ct-operations MUST
-// NOT be called after this. "ctFree" WILL be called for any remaining
+// NOT be called after this. "freeDataFn" WILL be called for any remaining
 // entries.
 void ctDestroy(struct ct* ct);

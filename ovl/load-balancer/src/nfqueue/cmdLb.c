@@ -7,7 +7,6 @@
 #include <util.h>
 #include <stdlib.h>
 #include <stdio.h>
-//#include <arpa/inet.h>
 #include <netinet/if_ether.h>
 #include <netinet/ip.h>
 #include <netinet/ip6.h>
@@ -78,7 +77,7 @@ static int handleIpv6(void* payload, unsigned plen)
 		// Make an addres-hash and check if we shall forward to the LB tier
 		hash = ipv6AddressHash(payload, plen);
 		int fw = slb->magd.lookup[hash % slb->magd.M];
-		if (fw != slb->ownFwmark) {
+		if (fw >= 0 && fw != slb->ownFwmark) {
 			Dx(printf("Fragment to LB tier. fw=%d\n", fw));
 			return fw + slb->fwOffset; /* To the LB tier */
 		}
