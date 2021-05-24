@@ -62,7 +62,7 @@ void fragInit(
 	unsigned maxBuckets,		/* on top of hsize */
 	unsigned maxFragments,		/* Max non-first fragments to store */
 	unsigned mtu,				/* Max size of stored fragments */
-	unsigned timeoutMillis);	/* Timeout for fragments */
+	unsigned ttlMillis);		/* Timeout for fragments */
 
 /*
   Inserts the first fragment and stores the passed hash to be used for
@@ -95,34 +95,30 @@ int fragGetHashOrStore(
 int fragGetHash(struct timespec* now, struct ctKey* key, unsigned* hash);
 
 
-struct Fragment {
-	struct Fragment* next;
-	void* data;
-	unsigned len;
-};
-
 /*
-  Get stored fragments
+  Get stored fragments. The caller must call itemFree() on returned
+  fragment Items. It is sufficient to call this function once after
+  fragInsertFirst().
   return:
-  NULL - No fragments found
+  Fragment Items ot NULL.
 */
-struct Fragment* fragGetStored(struct timespec* now, struct ctKey* key);
-
-/*
-  Free fragments returned by fragGetStored(). Passing NULL is OK.
-*/
-void fragFree(struct Fragment* frags);
+struct Item* fragGetStored(struct timespec* now, struct ctKey* key);
 
 
 struct fragStats {
 	// Conntrack stats
+	unsigned ttlMillis;
+	unsigned size;
 	unsigned active;
 	unsigned collisions;
 	unsigned inserts;
 	unsigned rejectedInserts;
 	unsigned lookups;
+	unsigned objGC;
 	// Frag stats
-	unsigned allocatedFrags;
+	unsigned maxBuckets;
+	unsigned maxFragments;
+	unsigned mtu;
 	unsigned storedFrags;
 };
 

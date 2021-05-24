@@ -11,6 +11,14 @@
 #include <stddef.h>
 #include <string.h>
 
+// Nobody ever use -DNDEBUG so we better control this our selves
+#if 1
+#include <assert.h>
+#define SANITY_CHECK
+#else
+#define assert(x)
+#endif
+
 #define MS 1000000				/* One milli second in nanos */
 
 #define REFINC(x) __atomic_add_fetch(&(x),1,__ATOMIC_SEQ_CST)
@@ -177,6 +185,7 @@ void fragInit(
 	ctobj.ct = ctCreate(
 		hsize, timeoutMillis * MS, fragDataUnlock, fragDataLock,
 		bucketPoolAllocate, bucketPoolFree, &ctobj);
+	assert(ctobj.ct != NULL);
 }
 
 int fragInsertFirst(
@@ -186,21 +195,30 @@ int fragInsertFirst(
 	if (f == NULL) {
 		return -1;				/* Out of buckets */
 	}
+	// Lock here to avoid a race with fragGetHashOrStore()
+	LOCK(&f->mutex);
 	f->hash = hash;
-	f->firstFragmentSeen = 1;	/* atomic? */
+	f->firstFragmentSeen = 1;
+	UNLOCK(&f->mutex);
 	fragDataUnlock(NULL, f);
 	return 0;					/* OK return */
 }
 
-struct Fragment* fragGetStored(struct timespec* now, struct ctKey* key)
+struct Item* fragGetStored(struct timespec* now, struct ctKey* key)
 {
-	return NULL;
-}
+	struct FragData* f = ctLookup(ctobj.ct, now, key);
+	if (f == NULL)
+		return NULL;
 
-void fragFree(struct Fragment* frags)
-{
-}
+	struct Item* storedFragments;
+	LOCK(&f->mutex);
+	storedFragments = f->storedFragments;
+	f->storedFragments = NULL;
+	UNLOCK(&f->mutex);
 
+	fragDataUnlock(NULL, f);
+	return storedFragments;
+}
 
 int fragGetHash(struct timespec* now, struct ctKey* key, unsigned* hash)
 {
@@ -245,13 +263,30 @@ int fragGetHashOrStore(
 	item->len = len;
 	memcpy(item->data, data, len);
 
+	int rc;
 	LOCK(&f->mutex);
-	item->next = f->storedFragments;
-	f->storedFragments = item;
+	if (f->firstFragmentSeen) {
+		/*
+		 The first-fragment has arrived in another thread while we
+		 were working.  This race should be rare. Do NOT keep the
+		 mutex for longer than needed.
+		*/
+		rc = 0;
+	} else {
+		item->next = f->storedFragments;
+		f->storedFragments = item;
+		rc = 1;
+	}
 	UNLOCK(&f->mutex);
 
+	if (rc == 0) {
+		*hash = f->hash;
+		// Release no-longer-needed Item outside the lock
+		itemFree(item);
+	}
+
 	fragDataUnlock(NULL, f);
-	return 1;					/* Fragment stored */
+	return rc;
 }
 
 void fragGetStats(struct timespec* now, struct fragStats* stats)
@@ -262,14 +297,32 @@ void fragGetStats(struct timespec* now, struct fragStats* stats)
 	 */
 	struct ctStats const* ctstats = ctStats(ctobj.ct, now);
 
+	stats->ttlMillis = ctstats->ttlNanos / MS;
+	stats->size = ctstats->size;
 	stats->active = ctstats->active;
 	stats->collisions = ctstats->collisions;
 	stats->inserts = ctstats->inserts;
 	stats->rejectedInserts = ctstats->rejectedInserts;
 	stats->lookups = ctstats->lookups;
+	stats->objGC = ctstats->objGC;
 
-	//stats->allocatedFrags = allocatedFrags = ;
-	//stats->storedPackets = 
+	struct ItemPoolStats const* istats;
+	istats = itemPoolStats(ctobj.bucketPool);
+	stats->maxBuckets = istats->size;
+	istats = itemPoolStats(ctobj.fragmentPool);
+	stats->maxFragments = istats->size;
+	stats->mtu = istats->itemSize;
+	istats = itemPoolStats(ctobj.fragmentPool);
+	stats->storedFrags = istats->size - istats->nFree;
+
+#ifdef SANITY_CHECK
+	istats = itemPoolStats(ctobj.fragDataPool);
+	assert(ctstats->active == (istats->size - istats->nFree));
+	assert(stats->size == (istats->size - stats->maxBuckets));
+
+	istats = itemPoolStats(ctobj.bucketPool);
+	assert(ctstats->collisions == (istats->size - istats->nFree));
+#endif
 }
 
 

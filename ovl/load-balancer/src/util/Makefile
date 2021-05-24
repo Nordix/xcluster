@@ -18,7 +18,7 @@ SRC := $(wildcard *.c)
 OBJ := $(SRC:%.c=$(LIBD)/%.o) $(LIBD)/maglev.o
 
 CPPFLAGS := -I..
-CFLAGS ?= -Wall
+CFLAGS += -Wall
 
 $(LIBD)/%.o : %.c
 	$(CC) -c $(CFLAGS) $(CPPFLAGS) $< -o $@

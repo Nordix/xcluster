@@ -67,6 +67,7 @@ bucketGC(struct ct* ct, struct ctBucket* b, uint64_t nowNanos)
 		if (ct->freefn != NULL)
 			ct->freefn(ct->user_ref, b->data);
 		b->data = NULL;
+		ATOMIC_INC(ct->stats.objGC);
 	}
 	if (b->data != NULL)
 		count++;
@@ -79,6 +80,7 @@ bucketGC(struct ct* ct, struct ctBucket* b, uint64_t nowNanos)
 			if (item->data != NULL && ct->freefn != NULL)
 				ct->freefn(ct->user_ref, item->data);
 			ct->freeBucket(ct->user_ref, item);
+			ATOMIC_INC(ct->stats.objGC);
 		} else {
 			prev = item;
 			count++;
@@ -101,6 +103,7 @@ static struct ctBucket* ctLookupBucket(
 		if (ct->freefn != NULL)
 			ct->freefn(ct->user_ref, b->data);
 		b->data = NULL;
+		ATOMIC_INC(ct->stats.objGC);
 	}
 	if (b->next != NULL) {
 		/*
@@ -123,6 +126,7 @@ struct ct* ctCreate(
 	if (ct == NULL)
 		return NULL;
 	ct->stats.size = hsize;
+	ct->stats.ttlNanos = ttlNanos;
 	ct->ttl = ttlNanos;
 	ct->freefn = freefn;
 	ct->lockfn = lockfn;
@@ -150,7 +154,7 @@ void* ctLookup(
 	ATOMIC_INC(ct->stats.lookups);
 	struct ctBucket* b;
 	for (b = B; b != NULL; b = b->next) {
-		if (keyEqual(key, &b->key) == 0) {
+		if (b->data != NULL && keyEqual(key, &b->key) == 0) {
 			b->refered = nowNanos;
 			if (ct->lockfn != NULL)
 				ct->lockfn(ct->user_ref, b->data);

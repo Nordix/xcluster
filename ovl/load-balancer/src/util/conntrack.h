@@ -59,12 +59,14 @@ struct ctKey {
 // Stats
 typedef uint32_t ctCounter;
 struct ctStats {
+	uint64_t ttlNanos;
 	ctCounter size;				/* Size of the hash table */
 	ctCounter active;			/* Connections currently in use */
 	ctCounter collisions;		/* Bucket collisions counter */
 	ctCounter inserts;			/* Insert counter */
 	ctCounter rejectedInserts;	/* Rejected insert counter */
 	ctCounter lookups;			/* Lookup counter */
+	ctCounter objGC;			/* Objects GC'ed (not ctRemove'ed) */
 };
 
 

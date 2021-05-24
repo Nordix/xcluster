@@ -81,7 +81,7 @@ main(int argc, char* argv[])
 	itemPoolDestroy(ipool, itemDestroyFn);
 	assert(nitems == 0);
 
-	printf("==== ct-utils-test OK\n");
+	printf("==== itempool-test OK\n");
 	return 0;
 }
 
