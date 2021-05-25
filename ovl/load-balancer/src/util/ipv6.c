@@ -1,6 +1,6 @@
 /*
-   SPDX-License-Identifier: MIT License
-   Copyright (c) 2021 Nordix Foundation
+  SPDX-License-Identifier: MIT License
+  Copyright (c) 2021 Nordix Foundation
 */
 
 #include "util.h"
@@ -10,6 +10,8 @@
 #include <netinet/icmp6.h>
 #include <string.h>
 #include <stdlib.h>
+
+#define HASH(d,l) djb2_hash(d,l)
 
 char const* protocolString(unsigned p);
 
@@ -31,7 +33,7 @@ ipv6TcpUdpHash(struct ip6_hdr const* h, uint32_t const* ports)
 	int32_t hashData[9];
 	memcpy(hashData, &h->ip6_src, 32);
 	hashData[8] = *ports;
-	return djb2_hash((uint8_t const*)hashData, sizeof(hashData));
+	return HASH((uint8_t const*)hashData, sizeof(hashData));
 }
 static unsigned
 ipv6IcmpHash(struct ip6_hdr const* h, struct icmp6_hdr const* ih)
@@ -39,7 +41,7 @@ ipv6IcmpHash(struct ip6_hdr const* h, struct icmp6_hdr const* ih)
 	int32_t hashData[9];
 	memcpy(hashData, &h->ip6_src, 32);
 	hashData[8] = ih->icmp6_id;
-	return djb2_hash((uint8_t const*)hashData, sizeof(hashData));
+	return HASH((uint8_t const*)hashData, sizeof(hashData));
 }
 
 unsigned ipv6Hash(void const* data, unsigned len)
@@ -62,167 +64,86 @@ unsigned ipv6Hash(void const* data, unsigned len)
 unsigned ipv6AddressHash(void const* data, unsigned len)
 {
 	struct ip6_hdr const* hdr = data;
-	return djb2_hash((uint8_t const*)&hdr->ip6_src, 32);
+	return HASH((uint8_t const*)&hdr->ip6_src, 32);
 }
 
 /* ----------------------------------------------------------------------
    Fragmentation handling
  */
 
+#include "fragutils.h"
 #include <time.h>
-#define MS 1000000				/* One milli second in nanos */
+#include <pthread.h>
+
 #define PAFTER(x) (void*)x + (sizeof(*x))
-static struct ct* ct = NULL;
-
-#define REFINC(x) __atomic_add_fetch(&(x),1,__ATOMIC_SEQ_CST)
-#define REFDEC(x) __atomic_sub_fetch(&(x),1,__ATOMIC_SEQ_CST)
-
-struct FragData {
-	int referenceCounter;
-	int firstFragmentSeen;
-	unsigned hash;
-};
-static unsigned allocatedFrags = 0;
-static unsigned storedPackets = 0;
-
-static void lockFragData(void* user_ref, void* data)
-{
-	struct FragData* f = data;
-	REFINC(f->referenceCounter);
-}
-static void unlockFragData(void* user_ref, void* data)
-{
-	struct FragData* f = data;
-	if (REFDEC(f->referenceCounter) <= 0) {
-		__atomic_sub_fetch(&allocatedFrags,1,__ATOMIC_RELAXED);
-		free(data);
-	}
-}
-static void* allocBucket(void* user_ref)
-{
-	return malloc(sizeof_bucket);
-}
-static void freeBucket(void* user_ref, void* b)
-{
-	free(b);
-}
-static void ctInit(void)
-{
-	if (ct != NULL)
-		return;
-	ct = ctCreate(
-		1024, 250 * MS, unlockFragData, lockFragData, allocBucket, freeBucket, NULL);
-}
-
-static void* lookupOrCreate(struct timespec* now, struct ctKey const* key)
-{
-	struct FragData* f = ctLookup(ct, now, key);
-	if (f == NULL) {
-		f = calloc(1, sizeof(*f));
-		if (f == NULL)
-			return NULL;
-		f->referenceCounter = 2; /* ct and our selves = 2 references */
-		int rc = ctInsert(ct, now, key, f);
-		if (rc == 0) {
-			__atomic_add_fetch(&allocatedFrags,1,__ATOMIC_RELAXED);
-		} else if (rc < 0) {
-			free(f);
-			return NULL;
-		} else if (rc == 1) {
-			// Item already inserted
-			free(f);
-			f = ctLookup(ct, now, key);
-			if (f == NULL)
-				return NULL;	/* Some other thread has deleted the
-								 * entry. Give up! (should not happen) */
-		}
-	}
-	return f;
-}
 
 int ipv6HandleFragment(void const* data, unsigned len, unsigned* hash)
 {
 	// Prepare
-	ctInit();
+	static int initiated = 0;
+	static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+	if (!initiated) {			/* Try without lock first (normal case) */
+		pthread_mutex_lock(&mutex);
+		if (!initiated) {		/* Try again with lock (race is possible) */
+			initiated = 1;
+			fragInit(
+				997,			/* CT table size */
+				100,			/* Extra buckets for hash collisions */
+				1000,			/* Max stored fragments */
+				1550,			/* MTU + some extras */
+				200);			/* Fragment TTL in milli seconds */
+		}
+		pthread_mutex_unlock(&mutex);
+	}
 	struct timespec now;
 	clock_gettime(CLOCK_MONOTONIC, &now);
 
-	// Construct the key lookup and insert if needed
+	// Construct the key
 	struct ctKey key;
 	struct ip6_hdr* hdr = (struct ip6_hdr*)data;
 	struct ip6_frag* fh = (struct ip6_frag*)(data + 40);
 	key.dst = hdr->ip6_dst;
 	key.src = hdr->ip6_src;
 	key.id = fh->ip6f_ident;
-	struct FragData* f = lookupOrCreate(&now, &key);
-	if (f == NULL) {
-		return -1;
-	}
 
-	// Check offset
+	// Check offset to see if this is the first fragment
 	uint16_t fragOffset = (fh->ip6f_offlg & IP6F_OFF_MASK) >> 3;
 	if (fragOffset == 0) {
-		// First fragment
-		if (f->firstFragmentSeen) {
-			// Duplicate
-			unlockFragData(NULL, f);
-			return -1;
-		}
-		f->firstFragmentSeen = 1;
-
-		// First fragment contains the protocol header.
+		// First fragment. contains the protocol header.
 		switch (fh->ip6f_nxt) {
 		case IPPROTO_TCP:		/* (should not happen?) */
 		case IPPROTO_UDP:
-			f->hash = ipv6TcpUdpHash(hdr, PAFTER(fh));
+			*hash = ipv6TcpUdpHash(hdr, PAFTER(fh));
 			break;
 		case IPPROTO_ICMPV6:
-			f->hash = ipv6IcmpHash(hdr, PAFTER(fh));
+			*hash = ipv6IcmpHash(hdr, PAFTER(fh));
 			break;
 		case IPPROTO_SCTP:
 		default:
-			f->hash = 0;
+			*hash = 0;
 		}
-		*hash = f->hash;
+		if (fragInsertFirst(&now, &key, *hash) != 0) {
+			return -1;
+		}
 
-		/*
-		  TODO; If there are any subsequent fragments strored re-inject them.
-		 */
-
-		unlockFragData(NULL, f);
-		return 0;
-	}
-
-	// NOT First fragment.
-	if (f->firstFragmentSeen) {
-		// We have seen the first fragment and the hash is valid
-		*hash = f->hash;
-		unlockFragData(NULL, f);
-		return 0;
+		/* Check if we have any stored fragments that should be
+		 * re-injected */
+		struct Item* storedFragments = fragGetStored(&now, &key);
+		if (storedFragments != NULL) {
+			unsigned cnt = 0;
+			for (struct Item* i = storedFragments; i != NULL; i = i->next)
+				cnt++;
+			printf("Dropped %u stored fragments\n", cnt);
+			itemFree(storedFragments);
+			return -1;	/* NYI */
+		}
+		return 0;				/* First fragment handled. Hash stored. */
 	}
 
 	/*
-	  This is the hard case. We have got an out-of-order fragment
-	  before the first fragment. We must store the packet and inject
-	  it later when the first fragment has arrived.
-	 */
-	unlockFragData(NULL, f);
-	return -1;					/* NYI */
-}
+	  Not the first fragment. Get the hash if possible or store this
+	  fragment if not.
+	*/
 
-struct fragStats const* ipv6FragStats(void)
-{
-	static struct fragStats stats = {0};
-	ctInit();
-	struct timespec now;
-	clock_gettime(CLOCK_MONOTONIC, &now);
-	struct ctStats const* ctstats = ctStats(ct, &now);
-	stats.active = ctstats->active;
-	stats.collisions = ctstats->collisions;
-	stats.inserts = ctstats->inserts;
-	stats.rejectedInserts = ctstats->rejectedInserts;
-	stats.lookups = ctstats->lookups;
-	stats.allocatedFrags = allocatedFrags;
-	stats.storedPackets = storedPackets;
-	return &stats;
+	return fragGetHashOrStore(&now, &key, hash, data, len);
 }

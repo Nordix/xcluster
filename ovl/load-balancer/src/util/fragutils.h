@@ -83,7 +83,7 @@ int fragInsertFirst(
 */
 int fragGetHashOrStore(
 	struct timespec* now, struct ctKey* key, unsigned* hash,
-	void* data, unsigned len);
+	void const* data, unsigned len);
 
 /*
   Called for non-first fragments when we don't want to store the fragment.

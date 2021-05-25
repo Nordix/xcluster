@@ -10,6 +10,7 @@
 #include <string.h>
 #include <time.h>
 #include <netinet/ether.h>
+#include <arpa/inet.h>			/* htons */
 
 void die(char const* fmt, ...)
 {
@@ -202,11 +203,9 @@ struct limiter* limiterCreate(unsigned intervalCount, unsigned intervalMillis)
 	l->intervalMillis = intervalMillis;
 	return l;
 }
-int limiterGo(struct limiter* l)
+int limiterGo(struct timespec* now, struct limiter* l)
 {
-	struct timespec now;
-	clock_gettime(CLOCK_MONOTONIC, &now);
-	uint64_t nowMillis = now.tv_sec * 1000 + now.tv_nsec / 1000000;
+	uint64_t nowMillis = now->tv_sec * 1000 + now->tv_nsec / 1000000;
 	l->count++;
 	if ((nowMillis - l->lastGoMillis) >= l->intervalMillis
 		|| l->count >= l->intervalCount) {

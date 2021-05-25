@@ -4,7 +4,6 @@
 */
 
 #include "maglev.h"
-#include "conntrack.h"
 #include <stdint.h>
 #include <getopt.h>
 #include <fcntl.h>
@@ -36,26 +35,13 @@ unsigned ipv4TcpUdpHash(void const* data, unsigned len);
 unsigned ipv4IcmpHash(void const* data, unsigned len);
 unsigned ipv6Hash(void const* data, unsigned len);
 unsigned ipv6AddressHash(void const* data, unsigned len);
+int ipv6HandleFragment(void const* data, unsigned len, unsigned* hash);
 
 // Limiter
 struct limiter;
 struct limiter* limiterCreate(unsigned count, unsigned intervalMillis);
-int limiterGo(struct limiter* l);
+int limiterGo(struct timespec* now, struct limiter* l);
 
-// Fragments
-struct fragStats {
-	// Conntrack stats
-	unsigned active;
-	unsigned collisions;
-	unsigned inserts;
-	unsigned rejectedInserts;
-	unsigned lookups;
-	// Frag stats
-	unsigned allocatedFrags;
-	unsigned storedPackets;
-};
-int ipv6HandleFragment(void const* data, unsigned len, unsigned* hash);
-struct fragStats const* ipv6FragStats(void);
 
 // MAC
 int macParse(char const* str, uint8_t* mac);

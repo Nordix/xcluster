@@ -4,34 +4,41 @@
 */
 
 #include "nfqueue.h"
+#include <fragutils.h>
 #include <util.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <netinet/if_ether.h>
 #include <netinet/ip.h>
 #include <netinet/ip6.h>
+#include <time.h>
 
 #if 1
 #define D(x)
 #define Dx(x) x
-static void printFragStats(struct fragStats const* stats)
+static void printFragStats(struct timespec* now)
 {
+	struct fragStats stats;
+	fragGetStats(now, &stats);
 	printf(
 		"Conntrack Stats;\n"
-		"  active=%u, collisions=%u, inserts=%u(%u), lookups=%u\n"
+		"  active=%u, collisions=%u, inserts=%u(%u), lookups=%u, gc=%u\n"
 		"Frag Stats;\n"
-		"  allocated=%u, storedPacketsTotal=%u\n",
-		stats->active, stats->collisions, stats->inserts,
-		stats->rejectedInserts, stats->lookups,
-		stats->allocatedFrags,  stats->storedPackets); 
+		"  storedFrags=%u\n",
+		stats.active, stats.collisions, stats.inserts,
+		stats.rejectedInserts, stats.lookups, stats.objGC,
+		stats.storedFrags); 
 }
 static void printIpv6FragStats(void)
 {
+	struct timespec now;
+	clock_gettime(CLOCK_MONOTONIC, &now);
+
 	static struct limiter* l = NULL;
 	if (l == NULL)
 		l = limiterCreate(100, 1100);
-	if (limiterGo(l))
-		printFragStats(ipv6FragStats());
+	if (limiterGo(&now, l))
+		printFragStats(&now);
 }
 #else
 #define D(x)
@@ -84,7 +91,7 @@ static int handleIpv6(void* payload, unsigned plen)
 
 		// We shall handle the frament here
 		if (ipv6HandleFragment(payload, plen, &hash) != 0) {
-			Dx(printf("IPv6 fragment dropped\n"));
+			Dx(printf("IPv6 fragment dropped or stored\n"));
 			return -1;
 		}
 		Dx(printf(

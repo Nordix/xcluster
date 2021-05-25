@@ -21,7 +21,7 @@ static void testRefcount(struct ctStats* accumulatedStats);
 static void testLimitedBuckets(struct ctStats* accumulatedStats);
 
 int
-main(int argc, char* argv[])
+cmdCtBasic(int argc, char* argv[])
 {
 	struct ctStats stats = {0};
 	testConntrack(&stats);
@@ -60,7 +60,7 @@ static void freeData(void* user_ref, void* data) {
 	}
 }
 
-static void* collectStats(
+static void collectStats(
 	struct ctStats* accumulatedStats, struct ctStats const* stats)
 {
 	accumulatedStats->collisions += stats->collisions;
@@ -74,7 +74,7 @@ static void testConntrack(struct ctStats* accumulatedStats)
 	struct ct* ct = ctCreate(
 		1, 99, freeData, NULL, BUCKET_ALLOC, BUCKET_FREE, NULL);
 	struct timespec now = {0,0};
-	struct ctKey key = {IN6ADDR_ANY_INIT,IN6ADDR_ANY_INIT,0ull};
+	struct ctKey key = {IN6ADDR_ANY_INIT,IN6ADDR_ANY_INIT,{0ull}};
 	void* data;
 	int rc;
 
@@ -242,13 +242,14 @@ static struct FragData* allocFragData(unsigned id)
 	  MUST be set to 2 (two).
 	 */
 	f->referenceCounter = 1;		/* The ct refers it */
+	return f;
 }
 
 static void testRefcount(struct ctStats* accumulatedStats)
 {
 	struct ct* ct;
 	struct timespec now = {0,0};
-	struct ctKey key = {IN6ADDR_ANY_INIT,IN6ADDR_ANY_INIT,0ull};
+	struct ctKey key = {IN6ADDR_ANY_INIT,IN6ADDR_ANY_INIT,{0ull}};
 	int rc;
 	struct FragData* f;
 
@@ -319,8 +320,7 @@ static void testLimitedBuckets(struct ctStats* accumulatedStats)
 	struct bucketPool bucketPool;
 	struct ct* ct;
 	struct timespec now = {0,0};
-	struct ctKey key = {IN6ADDR_ANY_INIT,IN6ADDR_ANY_INIT,0ull};
-	void* data;
+	struct ctKey key = {IN6ADDR_ANY_INIT,IN6ADDR_ANY_INIT,{0ull}};
 	int rc;
 
 	bucketPoolInit(&bucketPool, 2);
@@ -371,3 +371,16 @@ static void testLimitedBuckets(struct ctStats* accumulatedStats)
 	// Allocated buckets shall be freed on "ctDestroy"
 	assert(bucketPool.nfree == 2);
 }
+
+#ifdef CMD
+void addCmd(char const* name, int (*fn)(int argc, char* argv[]));
+__attribute__ ((__constructor__)) static void addCommand(void) {
+        addCmd("ct_basic", cmdCtBasic);
+}
+#else
+int main(int argc, char* argv[])
+{
+	return cmdCtBasic(argc, argv);
+}
+#endif
+

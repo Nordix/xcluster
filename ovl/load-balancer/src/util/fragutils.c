@@ -233,7 +233,7 @@ int fragGetHash(struct timespec* now, struct ctKey* key, unsigned* hash)
 
 int fragGetHashOrStore(
 	struct timespec* now, struct ctKey* key, unsigned* hash,
-	void* data, unsigned len)
+	void const* data, unsigned len)
 {
 	struct FragData* f = fragDataLookup(&ctobj, now, key);
 	if (f == NULL) {

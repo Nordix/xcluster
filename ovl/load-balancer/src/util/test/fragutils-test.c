@@ -41,12 +41,12 @@ static int numItems(struct Item* items)
 
 
 int
-main(int argc, char* argv[])
+cmdFragutilsBasic(int argc, char* argv[])
 {
 	struct timespec now = {0,0};
 	struct fragStats a;
 	struct fragStats b;
-	struct ctKey key = {IN6ADDR_ANY_INIT,IN6ADDR_ANY_INIT,0ull};
+	struct ctKey key = {IN6ADDR_ANY_INIT,IN6ADDR_ANY_INIT,{0ull}};
 	int rc;
 	unsigned hash;
 	struct Item* item;
@@ -177,3 +177,14 @@ main(int argc, char* argv[])
 	return 0;
 }
 
+#ifdef CMD
+void addCmd(char const* name, int (*fn)(int argc, char* argv[]));
+__attribute__ ((__constructor__)) static void addCommand(void) {
+	addCmd("fragutils_basic", cmdFragutilsBasic);
+}
+#else
+int main(int argc, char* argv[])
+{
+	return cmdFragutilsBasic(argc, argv);
+}
+#endif

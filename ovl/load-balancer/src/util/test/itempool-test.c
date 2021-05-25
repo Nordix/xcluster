@@ -32,7 +32,7 @@ static void itemDestroyFn(struct Item* item)
 }
 
 int
-main(int argc, char* argv[])
+cmdItempoolBasic(int argc, char* argv[])
 {
 	// ----------------------------------------------------------------------
 	// Generic Item Pool tests
@@ -85,3 +85,14 @@ main(int argc, char* argv[])
 	return 0;
 }
 
+#ifdef CMD
+void addCmd(char const* name, int (*fn)(int argc, char* argv[]));
+__attribute__ ((__constructor__)) static void addCommand(void) {
+	addCmd("itempool_basic", cmdItempoolBasic);
+}
+#else
+int main(int argc, char* argv[])
+{
+	return cmdItempoolBasic(argc, argv);
+}
+#endif
