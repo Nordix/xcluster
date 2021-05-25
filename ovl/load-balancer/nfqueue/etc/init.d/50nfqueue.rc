@@ -55,7 +55,10 @@ router() {
 		ip6tables -t mangle -A PREROUTING -i eth2 -d 1000::/112 -j VIP
 	fi
 
-	if test "$FRAG" = "yes"; then
+	if test "$OLDLB" = "yes"; then
+		lb create 2000 20
+		lb run $LB_OPTIONS > /var/log/lb.log 2>&1 &
+	else
 		local net=2
 		test "$TOPOLOGY" = "evil_tester" && net=3
 		if test -n "$__nrouters"; then
@@ -71,10 +74,7 @@ router() {
 		ethtool -K eth1 gro off gso off tso off
 		ethtool -K eth2 gro off gso off tso off
 		nfqueuelb init --ownfw=$((i - 200)) --toffset=$toffset
-		nfqueuelb lb > /var/log/nfqueuelb.log 2>&1 &
-	else
-		lb create 2000 20
-		lb run $LB_OPTIONS > /var/log/lb.log 2>&1 &
+		nfqueuelb lb $LBOPT > /var/log/nfqueuelb.log 2>&1 &
 	fi
 }
 

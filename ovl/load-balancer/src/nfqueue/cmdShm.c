@@ -5,6 +5,7 @@
 
 #include "nfqueue.h"
 #include <util.h>
+#include <conntrack.h>
 #include <stdlib.h>
 #include <stdio.h>
 
@@ -81,7 +82,32 @@ static int cmdShow(int argc, char **argv)
 	return 0;
 }
 
+static int cmdStats(int argc, char **argv)
+{
+	char const* ftShm = "ftshm";
+	struct Option options[] = {
+		{"help", NULL, 0,
+		 "stats [options]\n"
+		 "  Show frag table stats"},
+		{"ft_shm", &ftShm, 0, "Frag table; shared memory stats"},
+		{0, 0, 0, 0}
+	};
+	(void)parseOptionsOrDie(argc, argv, options);
+	struct ctStats* sft = mapSharedDataOrDie(ftShm, sizeof(*sft), O_RDONLY);
+	printf(
+		"size:         %u\n"
+		"ttlNanos:     %lu\n"
+		"collisions:   %u\n"
+		"inserts:      %u (%u)\n"
+		"lookups:      %u\n"
+		"objGC:        %u\n",
+		sft->size, sft->ttlNanos, sft->collisions, sft->inserts,
+		sft->rejectedInserts, sft->lookups, sft->objGC);
+	return 0;
+}
+
 __attribute__ ((__constructor__)) static void addCommands(void) {
 	addCmd("init", cmdInit);
 	addCmd("show", cmdShow);
+	addCmd("stats", cmdStats);
 }

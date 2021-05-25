@@ -15,16 +15,30 @@
   It is of course impossible to give a definite answer, but there are
   some things to consider.
 
-  The theoretical max of fragment entries is (hsize + maxBuckets). But
-  hashing is not perfect so a better estimate is (hsize * used% + maxBuckets).
-  The used% depends on the data and the quality of the hash function.
+  The theoretical max of concurrent fragmented packets is (hsize +
+  maxBuckets). But hashing is not perfect so a better estimate is
+  (hsize * used% + maxBuckets).  The used% depends on the data and the
+  quality of the hash function.
 
   The larger the hsize, the lower the probablility for collisions and
   therefore better performance. maxBuckets is only needed on hash
   collisions but they may happen even on low usage if we are unlucky.
 
-  A rule of thumb may be to set hsize to x2 the estimated concurrent
-  fragmented packets and always set maxBuckets equal to hsize.
+  Since all packets times out there is a correlation between the
+  fragmented packet rate (not the fragment rate) and the size and ttl.
+
+    max-frag-packet-rate = max-packets / ttl-in-seconds
+
+  With this we can make a rough estimate of that hsize is needed for a
+  *sustained* rate of fragmented packets;
+
+    hsize = rate * ttl * 5, maxBuckets = hsize / 2
+
+  For ttl=0.2 S, rate=200 pkt/S we get hsize=200, maxBuckets=100
+  (with ttl=0.2 we get hsize = rate)
+
+  The constant "5" is more or less taken out of thin air, but this can
+  actually be tested and 5 seem pretty OK.
 
   Fragments out-of-order should be extremely rare. A conservative
   value for maxFragments may be ok. Even 0 (zero) if we don't care.
@@ -63,7 +77,7 @@ void fragInit(
 	unsigned maxFragments,		/* Max non-first fragments to store */
 	unsigned mtu,				/* Max size of stored fragments */
 	unsigned ttlMillis);		/* Timeout for fragments */
-
+void fragUseStats(struct ctStats* stats);
 /*
   Inserts the first fragment and stores the passed hash to be used for
   sub-sequent fragments.

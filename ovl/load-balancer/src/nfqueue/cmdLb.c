@@ -13,7 +13,7 @@
 #include <netinet/ip6.h>
 #include <time.h>
 
-#if 1
+#if 0
 #define D(x)
 #define Dx(x) x
 static void printFragStats(struct timespec* now)
@@ -21,9 +21,8 @@ static void printFragStats(struct timespec* now)
 	struct fragStats stats;
 	fragGetStats(now, &stats);
 	printf(
-		"Conntrack Stats;\n"
-		"  active=%u, collisions=%u, inserts=%u(%u), lookups=%u, gc=%u\n"
 		"Frag Stats;\n"
+		"  active=%u, collisions=%u, inserts=%u(%u), lookups=%u, gc=%u\n"
 		"  storedFrags=%u\n",
 		stats.active, stats.collisions, stats.inserts,
 		stats.rejectedInserts, stats.lookups, stats.objGC,
@@ -49,6 +48,7 @@ static void printIpv6FragStats(void)
 
 static struct SharedData* st;
 static struct SharedData* slb;
+
 
 static int handleIpv4(void* payload, unsigned plen)
 {
@@ -90,8 +90,10 @@ static int handleIpv6(void* payload, unsigned plen)
 		}
 
 		// We shall handle the frament here
-		if (ipv6HandleFragment(payload, plen, &hash) != 0) {
-			Dx(printf("IPv6 fragment dropped or stored\n"));
+		int rc = ipv6HandleFragment(payload, plen, &hash);
+		if (rc != 0) {
+			Dx(printf("IPv6 fragment dropped or stored, rc=%d\n", rc));
+			Dx(printIpv6FragStats());
 			return -1;
 		}
 		Dx(printf(
@@ -128,7 +130,12 @@ static int cmdLb(int argc, char **argv)
 {
 	char const* targetShm = defaultTargetShm;
 	char const* lbShm = defaultLbShm;
-	char const* qnum = NULL;
+	char const* ftShm = "ftshm";
+	char const* qnum = "2";
+	char const* ft_size = "997";
+	char const* ft_buckets = "100";
+	char const* ft_frag = "100";
+	char const* ft_ttl = "200";
 	struct Option options[] = {
 		{"help", NULL, 0,
 		 "lb [options]\n"
@@ -136,15 +143,31 @@ static int cmdLb(int argc, char **argv)
 		{"tshm", &targetShm, 0, "Target shared memory"},
 		{"lbshm", &lbShm, 0, "Lb shared memory"},
 		{"queue", &qnum, 0, "NF-queue to listen to (default 2)"},
+		{"ft_shm", &ftShm, 0, "Frag table; shared memory stats"},
+		{"ft_size", &ft_size, 0, "Frag table; size"},
+		{"ft_buckets", &ft_buckets, 0, "Frag table; extra buckets"},
+		{"ft_frag", &ft_frag, 0, "Frag table; stored frags"},
+		{"ft_ttl", &ft_ttl, 0, "Frag table; ttl"},
 		{0, 0, 0, 0}
 	};
 	(void)parseOptionsOrDie(argc, argv, options);
-	int q = 2;
-	if (qnum != NULL)
-		q = atoi(qnum);
 	st = mapSharedDataOrDie(targetShm,sizeof(*st), O_RDONLY);
 	slb = mapSharedDataOrDie(lbShm,sizeof(*slb), O_RDONLY);
-	return nfqueueRun(q, packetHandleFn);
+	struct ctStats* sft = calloc(1, sizeof(*sft));
+	createSharedDataOrDie(ftShm, sft, sizeof(*sft));
+	free(sft);
+	sft = mapSharedDataOrDie(ftShm, sizeof(*sft), O_RDWR);
+	fragInit(
+		atoi(ft_size),		/* table size */
+		atoi(ft_buckets),	/* Extra buckets for hash collisions */
+		atoi(ft_frag),		/* Max stored fragments */
+		1550,				/* MTU + some extras */
+		atoi(ft_ttl));		/* Fragment TTL in milli seconds */
+	fragUseStats(sft);
+	printf(
+		"FragTable; size=%d, buckets=%d, frag=%d, mtu=%d, ttl=%d\n",
+		atoi(ft_size),atoi(ft_buckets),atoi(ft_frag),1550,atoi(ft_ttl));
+	return nfqueueRun(atoi(qnum), packetHandleFn);
 }
 
 __attribute__ ((__constructor__)) static void addCommands(void) {

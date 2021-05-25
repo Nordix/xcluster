@@ -41,7 +41,8 @@ struct ct {
 	ctLock lockfn;
 	ctAllocBucket allocBucket;
 	ctFree freeBucket;
-	struct ctStats stats;
+	struct ctStats* stats;
+	struct ctStats _stats;
 	struct ctBucket* bucket;
 	void* user_ref;
 };
@@ -67,7 +68,7 @@ bucketGC(struct ct* ct, struct ctBucket* b, uint64_t nowNanos)
 		if (ct->freefn != NULL)
 			ct->freefn(ct->user_ref, b->data);
 		b->data = NULL;
-		ATOMIC_INC(ct->stats.objGC);
+		ATOMIC_INC(ct->stats->objGC);
 	}
 	if (b->data != NULL)
 		count++;
@@ -80,7 +81,7 @@ bucketGC(struct ct* ct, struct ctBucket* b, uint64_t nowNanos)
 			if (item->data != NULL && ct->freefn != NULL)
 				ct->freefn(ct->user_ref, item->data);
 			ct->freeBucket(ct->user_ref, item);
-			ATOMIC_INC(ct->stats.objGC);
+			ATOMIC_INC(ct->stats->objGC);
 		} else {
 			prev = item;
 			count++;
@@ -95,7 +96,7 @@ static struct ctBucket* ctLookupBucket(
 	struct ct* ct, uint64_t nowNanos, struct ctKey const* key)
 {
 	uint32_t hash = HASH((uint8_t const*)key, sizeof(*key));
-	struct ctBucket* b = ct->bucket + (hash % ct->stats.size);
+	struct ctBucket* b = ct->bucket + (hash % ct->stats->size);
 	LOCK(&b->mutex);
 
 	/* Is the main bucket stale? */
@@ -103,7 +104,7 @@ static struct ctBucket* ctLookupBucket(
 		if (ct->freefn != NULL)
 			ct->freefn(ct->user_ref, b->data);
 		b->data = NULL;
-		ATOMIC_INC(ct->stats.objGC);
+		ATOMIC_INC(ct->stats->objGC);
 	}
 	if (b->next != NULL) {
 		/*
@@ -125,8 +126,9 @@ struct ct* ctCreate(
 	struct ct* ct = calloc(1, sizeof(*ct));
 	if (ct == NULL)
 		return NULL;
-	ct->stats.size = hsize;
-	ct->stats.ttlNanos = ttlNanos;
+	ct->stats = &ct->_stats;
+	ct->stats->size = hsize;
+	ct->stats->ttlNanos = ttlNanos;
 	ct->ttl = ttlNanos;
 	ct->freefn = freefn;
 	ct->lockfn = lockfn;
@@ -146,12 +148,18 @@ struct ct* ctCreate(
 	return ct;
 }
 
+void ctUseStats(struct ct* ct, struct ctStats* stats)
+{
+	memcpy(stats, ct->stats, sizeof(struct ctStats));
+	ct->stats = stats;
+}
+
 void* ctLookup(
 	struct ct* ct, struct timespec* now, struct ctKey const* key)
 {
 	uint64_t nowNanos = toNanos(now);
 	struct ctBucket* B = ctLookupBucket(ct, nowNanos, key);
-	ATOMIC_INC(ct->stats.lookups);
+	ATOMIC_INC(ct->stats->lookups);
 	struct ctBucket* b;
 	for (b = B; b != NULL; b = b->next) {
 		if (b->data != NULL && keyEqual(key, &b->key) == 0) {
@@ -172,7 +180,7 @@ int ctInsert(
 		return -1;				/* NULL indicates no-data */
 	uint64_t nowNanos = toNanos(now);
 	struct ctBucket* b = ctLookupBucket(ct, nowNanos, key);
-	ATOMIC_INC(ct->stats.inserts);
+	ATOMIC_INC(ct->stats->inserts);
 
 	// Check if the entry already exists
 	struct ctBucket* item;
@@ -192,16 +200,16 @@ int ctInsert(
 		b->key = *key;
 		b->refered = toNanos(now);
 		if (b->next != NULL)
-			ATOMIC_INC(ct->stats.collisions);
+			ATOMIC_INC(ct->stats->collisions);
 		UNLOCK(&b->mutex);
 		return 0;
 	}
 
 	// We must allocate a new bucket
-	ATOMIC_INC(ct->stats.collisions);
+	ATOMIC_INC(ct->stats->collisions);
 	struct ctBucket* x = ct->allocBucket(ct->user_ref);
 	if (x == NULL) {
-		ATOMIC_INC(ct->stats.rejectedInserts);
+		ATOMIC_INC(ct->stats->rejectedInserts);
 		UNLOCK(&b->mutex);
 		return -1;
 	}
@@ -251,19 +259,19 @@ struct ctStats const* ctStats(struct ct* ct, struct timespec* now)
 	uint64_t nowNanos = toNanos(now);
 	unsigned i;
 	struct ctBucket* b = ct->bucket;
-	for (i = 0; i < ct->stats.size; i++, b++) {
+	for (i = 0; i < ct->stats->size; i++, b++) {
 		LOCK(&b->mutex);
 		active += bucketGC(ct, b, nowNanos);
 		UNLOCK(&b->mutex);
 	}
-	ct->stats.active = active;
-	return &ct->stats;
+	ct->stats->active = active;
+	return ct->stats;
 }
 void ctDestroy(struct ct* ct)
 {
 	unsigned i;
 	struct ctBucket* b = ct->bucket;
-	for (i = 0; i < ct->stats.size; i++, b++) {
+	for (i = 0; i < ct->stats->size; i++, b++) {
 		LOCK(&b->mutex);
 		bucketGC(ct, b, UINT64_MAX); /* now=UINT64_MAX ensures all-timeout*/
 		UNLOCK(&b->mutex);

@@ -92,7 +92,7 @@ test_start() {
 		. $($XCLUSTER ovld network-topology)/$TOPOLOGY/Envsettings
 	fi
 	echo "$XOVLS" | grep -q private-reg && unset XOVLS
-	xcluster_start network-topology iptools load-balancer
+	xcluster_start network-topology iptools $@ load-balancer
 }
 
 
@@ -188,7 +188,8 @@ test_ecmp_scale_in() {
 
 test_start_nfqueue() {
 	export SETUP=nfqueue
-	test_start
+	export TOPOLOGY=evil_tester
+	test_start tap-scrambler
 	otcr nfqueue_activate_all
 }
 test_nfqueue() {

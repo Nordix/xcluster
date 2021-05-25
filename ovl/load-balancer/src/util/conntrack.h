@@ -94,6 +94,13 @@ struct ct* ctCreate(
 	void* user_ref);
 
 /*
+  CT uses this struct to store it's stats from now on. This function
+  must only be called right after ctCreate(). It can be used to force
+  CT to use shared mem for cool live monitoring.
+*/
+void ctUseStats(struct ct* ct, struct ctStats* stats);
+
+/*
   There is nothing that prevents the returned data from beeing removed
   from the conntracker at any time after the call. Some other thread
   may call "ctRemove" for instance. The user should use the

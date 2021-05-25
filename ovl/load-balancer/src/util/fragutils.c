@@ -187,6 +187,10 @@ void fragInit(
 		bucketPoolAllocate, bucketPoolFree, &ctobj);
 	assert(ctobj.ct != NULL);
 }
+void fragUseStats(struct ctStats* stats)
+{
+	ctUseStats(ctobj.ct, stats);
+}
 
 int fragInsertFirst(
 	struct timespec* now, struct ctKey* key, unsigned hash)

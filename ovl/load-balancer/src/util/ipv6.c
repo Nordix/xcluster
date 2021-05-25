@@ -79,22 +79,6 @@ unsigned ipv6AddressHash(void const* data, unsigned len)
 
 int ipv6HandleFragment(void const* data, unsigned len, unsigned* hash)
 {
-	// Prepare
-	static int initiated = 0;
-	static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
-	if (!initiated) {			/* Try without lock first (normal case) */
-		pthread_mutex_lock(&mutex);
-		if (!initiated) {		/* Try again with lock (race is possible) */
-			initiated = 1;
-			fragInit(
-				997,			/* CT table size */
-				100,			/* Extra buckets for hash collisions */
-				1000,			/* Max stored fragments */
-				1550,			/* MTU + some extras */
-				200);			/* Fragment TTL in milli seconds */
-		}
-		pthread_mutex_unlock(&mutex);
-	}
 	struct timespec now;
 	clock_gettime(CLOCK_MONOTONIC, &now);
 
