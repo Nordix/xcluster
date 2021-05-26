@@ -428,7 +428,7 @@ static void testLimitedBuckets(struct ctStats* accumulatedStats)
     hsize = rate * ttl * C
 	maxBuckets = hsize / 2
 
-  which is supposed to give rough recommended sizes.
+  C = 5 is supposed to give rough recommended sizes.
  */
 #define MS 1000000ul
 #define SEC 1000000000ul

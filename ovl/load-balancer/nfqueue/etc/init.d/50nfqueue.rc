@@ -22,7 +22,7 @@ router() {
 	local n t
 	for n in $(seq 1 $__nvm); do
 		t=$n
-		test "$FRAG" = "yes" && t=$((n + toffset))
+		test "$OLDLB" = "yes" || t=$((n + toffset))
 		ip rule add fwmark $t table $t
 		ip -6 rule add fwmark $t table $t
 		ip route add default via 192.168.1.$n table $t

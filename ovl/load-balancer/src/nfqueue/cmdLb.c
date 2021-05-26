@@ -53,23 +53,38 @@ static struct SharedData* slb;
 static int handleIpv4(void* payload, unsigned plen)
 {
 	struct iphdr* hdr = (struct iphdr*)payload;
+	unsigned hash = 0;
 
 	if (ntohs(hdr->frag_off) & (IP_OFFMASK|IP_MF)) {
-		Dx(printf("IPv4 fragment dropped\n"));
-		return -1;
-	}
+		// Make an addres-hash and check if we shall forward to the LB tier
+		hash = ipv4AddressHash(payload, plen);
+		int fw = slb->magd.lookup[hash % slb->magd.M];
+		if (fw >= 0 && fw != slb->ownFwmark) {
+			Dx(printf("IPv4 fragment to LB tier. fw=%d\n", fw));
+			return fw + slb->fwOffset; /* To the LB tier */
+		}
 
-	unsigned hash = 0;
-	switch (hdr->protocol) {
-	case IPPROTO_TCP:
-	case IPPROTO_UDP:
-		hash = ipv4TcpUdpHash(payload, plen);
-		break;
-	case IPPROTO_ICMP:
-		hash = ipv4IcmpHash(payload, plen);
-		break;
-	case IPPROTO_SCTP:
-	default:;
+		// We shall handle the frament here
+		int rc = ipv4HandleFragment(payload, plen, &hash);
+		if (rc != 0) {
+			Dx(printf("IPv4 fragment dropped or stored, rc=%d\n", rc));
+			return -1;
+		}
+		Dx(printf(
+			   "Handle IPv4 frag locally hash=%u, fwmark=%u\n",
+			   hash, st->magd.lookup[hash % st->magd.M] + st->fwOffset));
+	} else {
+		switch (hdr->protocol) {
+		case IPPROTO_TCP:
+		case IPPROTO_UDP:
+			hash = ipv4TcpUdpHash(payload, plen);
+			break;
+		case IPPROTO_ICMP:
+			hash = ipv4IcmpHash(payload, plen);
+			break;
+		case IPPROTO_SCTP:
+		default:;
+		}
 	}
 	return st->magd.lookup[hash % st->magd.M] + st->fwOffset;
 }
@@ -79,13 +94,17 @@ static int handleIpv6(void* payload, unsigned plen)
 	unsigned hash;
 
 	struct ip6_hdr* hdr = (struct ip6_hdr*)payload;
+	/*
+	  TODO; the next-header does NOT have to be the fragment-header!!
+	  See; https://datatracker.ietf.org/doc/html/rfc2460#section-4.1
+	 */
 	if (hdr->ip6_nxt == IPPROTO_FRAGMENT) {
 
 		// Make an addres-hash and check if we shall forward to the LB tier
 		hash = ipv6AddressHash(payload, plen);
 		int fw = slb->magd.lookup[hash % slb->magd.M];
 		if (fw >= 0 && fw != slb->ownFwmark) {
-			Dx(printf("Fragment to LB tier. fw=%d\n", fw));
+			Dx(printf("IPv6 fragment to LB tier. fw=%d\n", fw));
 			return fw + slb->fwOffset; /* To the LB tier */
 		}
 
@@ -97,7 +116,7 @@ static int handleIpv6(void* payload, unsigned plen)
 			return -1;
 		}
 		Dx(printf(
-			   "Handle frag locally hash=%u, fwmark=%u\n",
+			   "Handle IPv6 frag locally hash=%u, fwmark=%u\n",
 			   hash, st->magd.lookup[hash % st->magd.M] + st->fwOffset));
 		Dx(printIpv6FragStats());
 	} else {
