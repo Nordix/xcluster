@@ -40,13 +40,13 @@ TEST_SRC := $(wildcard test/*-test.c)
 TEST_PROGS := $(TEST_SRC:test/%.c=$(LIBD)/%) $(LIBD)/lbtest
 $(TEST_PROGS): $(LIB)
 $(LIBD)/% : test/%.c
-	$(CC) -o $@ -I. -I.. $(CFLAGS) $< -L$(LIBD) -llbutil -lrt
+	$(CC) -o $@ -I. -I.. $(CFLAGS) $< -L$(LIBD) -llbutil -lrt -lm
 test: $(TEST_PROGS)
 	@$(foreach p,$(TEST_PROGS),echo $(p);$(p);)
-	@touch $(LIB)				# prevent re-build of $(LIB)
+	@touch $(LIB) $(TEST_PROGS)			# prevent re-build
 TMAIN := $(shell $(XCLUSTER) ovld test)/src/main.c
 $(LIBD)/lbtest: $(TEST_SRC) $(TMAIN)
-	$(CC) -o $@ -I. -I.. -DCMD $(CFLAGS) $^ -L$(LIBD) -llbutil -lrt
+	$(CC) -o $@ -I. -I.. -DCMD $(CFLAGS) $^ -L$(LIBD) -llbutil -lrt -lm
 
 .PHONY: clean
 clean:

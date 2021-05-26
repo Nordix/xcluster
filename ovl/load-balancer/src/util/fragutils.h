@@ -38,7 +38,7 @@
   (with ttl=0.2 we get hsize = rate)
 
   The constant "5" is more or less taken out of thin air, but this can
-  actually be tested and 5 seem pretty OK.
+  actually be simulated and 5 seem OK, a bit high even
 
   Fragments out-of-order should be extremely rare. A conservative
   value for maxFragments may be ok. Even 0 (zero) if we don't care.
@@ -61,9 +61,9 @@
 
   But if we have got collisions and allocated new bucket structures
   they will linger until next time we happen to hash to that same
-  bucket (which may be never). This should work fairly well over time
-  since buckets will most often be re-used eventually, and in case of
-  high load, more frequently.
+  bucket (which may be never). This works well over time since buckets
+  will most often be re-used eventually, and in case of high load,
+  more frequently.
 
   However a full GC is trigged by reading the fragmentation stats. So
   it may be prudent to do so from time to time. A reason may be for

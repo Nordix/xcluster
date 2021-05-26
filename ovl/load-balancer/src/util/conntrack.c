@@ -14,6 +14,7 @@
 #define MUTEX(x)
 #define LOCK(x)
 #define UNLOCK(x)
+#define MUTEX_INIT(x)
 #define MUTEX_DESTROY(x)
 #define ATOMIC_INC(x) ++(x)
 #else
@@ -21,15 +22,19 @@
 #define MUTEX(x) pthread_mutex_t x
 #define LOCK(x) pthread_mutex_lock(x)
 #define UNLOCK(x) pthread_mutex_unlock(x)
+#define MUTEX_INIT(x) pthread_mutex_init(x,NULL)
 #define MUTEX_DESTROY(x) pthread_mutex_destroy(x)
 #define ATOMIC_INC(x) __atomic_add_fetch(&(x),1,__ATOMIC_RELAXED)
 #endif
+#define CALLOC(n,s) calloc(n,s)
+#define FREE(m) free(m)
 
 extern uint32_t djb2_hash(uint8_t const* c, uint32_t len);
 #define HASH djb2_hash
 
 struct ctBucket {
 	struct ctBucket* next;
+	uint64_t ttl;
 	struct ctKey key;
 	void* data;
 	uint64_t refered;			/* Last time refered in nanoS */
@@ -64,7 +69,7 @@ static ctCounter
 bucketGC(struct ct* ct, struct ctBucket* b, uint64_t nowNanos)
 {
 	ctCounter count = 0;
-	if (b->data != NULL && (nowNanos - b->refered) > ct->ttl) {
+	if (b->data != NULL && (nowNanos - b->refered) > b->ttl) {
 		if (ct->freefn != NULL)
 			ct->freefn(ct->user_ref, b->data);
 		b->data = NULL;
@@ -76,7 +81,7 @@ bucketGC(struct ct* ct, struct ctBucket* b, uint64_t nowNanos)
 	struct ctBucket* prev = b;
 	struct ctBucket* item = prev->next;
 	while (item != NULL) {
-		if ((nowNanos - item->refered) > ct->ttl) {
+		if ((nowNanos - item->refered) > item->ttl) {
 			prev->next = item->next;
 			if (item->data != NULL && ct->freefn != NULL)
 				ct->freefn(ct->user_ref, item->data);
@@ -100,7 +105,7 @@ static struct ctBucket* ctLookupBucket(
 	LOCK(&b->mutex);
 
 	/* Is the main bucket stale? */
-	if (b->data != NULL && (nowNanos - b->refered) > ct->ttl) {
+	if (b->data != NULL && (nowNanos - b->refered) > b->ttl) {
 		if (ct->freefn != NULL)
 			ct->freefn(ct->user_ref, b->data);
 		b->data = NULL;
@@ -109,8 +114,7 @@ static struct ctBucket* ctLookupBucket(
 	if (b->next != NULL) {
 		/*
 		  We have had collisions and have allocated additional
-		  buckets. This is assumed to be a very rare case under normal
-		  circumstances and could be indicating a DoS attack.
+		  buckets.
 		 */
 		bucketGC(ct, b, nowNanos);
 	}
@@ -123,7 +127,7 @@ struct ct* ctCreate(
 {
 	if (allocBucketFn == NULL || freeBucketFn == NULL)
 		return NULL;
-	struct ct* ct = calloc(1, sizeof(*ct));
+	struct ct* ct = CALLOC(1, sizeof(*ct));
 	if (ct == NULL)
 		return NULL;
 	ct->stats = &ct->_stats;
@@ -135,16 +139,16 @@ struct ct* ctCreate(
 	ct->allocBucket = allocBucketFn;
 	ct->freeBucket = freeBucketFn;
 	ct->user_ref = user_ref;
-	ct->bucket = calloc(hsize, sizeof(struct ctBucket));
+	ct->bucket = CALLOC(hsize, sizeof(struct ctBucket));
 	if (ct->bucket == NULL) {
-		free(ct);
+		FREE(ct);
 		return NULL;
 	}
-#ifndef SINGLE_THREAD
+
 	for (ctCounter i = 0; i < hsize; i++) {
-		pthread_mutex_init(&ct->bucket[i].mutex, NULL);
+		MUTEX_INIT(&ct->bucket[i].mutex);
 	}
-#endif
+
 	return ct;
 }
 
@@ -173,8 +177,9 @@ void* ctLookup(
 	UNLOCK(&B->mutex);
 	return NULL;				/* Not found */
 }
-int ctInsert(
-	struct ct* ct, struct timespec* now, struct ctKey const* key, void* data)
+int ctInsertWithTTL(
+	struct ct* ct, struct timespec* now, struct ctKey const* key,
+	uint64_t ttl, void* data)
 {
 	if (data == NULL)
 		return -1;				/* NULL indicates no-data */
@@ -198,6 +203,7 @@ int ctInsert(
 		// The main bucket is free
 		b->data = data;
 		b->key = *key;
+		b->ttl = ttl;
 		b->refered = toNanos(now);
 		if (b->next != NULL)
 			ATOMIC_INC(ct->stats->collisions);
@@ -215,11 +221,17 @@ int ctInsert(
 	}
 	x->data = data;
 	x->key = *key;
+	x->ttl = ttl;
 	x->refered = toNanos(now);
 	x->next = b->next;
 	b->next = x;
 	UNLOCK(&b->mutex);
 	return 0;
+}
+int ctInsert(
+	struct ct* ct, struct timespec* now, struct ctKey const* key, void* data)
+{
+	return ctInsertWithTTL(ct, now, key, ct->ttl, data);
 }
 
 void ctRemove(
@@ -277,6 +289,6 @@ void ctDestroy(struct ct* ct)
 		UNLOCK(&b->mutex);
 		MUTEX_DESTROY(&b->mutex);
 	}
-	free(ct->bucket);
-	free(ct);
+	FREE(ct->bucket);
+	FREE(ct);
 }

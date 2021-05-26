@@ -119,6 +119,9 @@ void* ctLookup(
 */
 int ctInsert(
 	struct ct* ct, struct timespec* now, struct ctKey const* key, void* data);
+int ctInsertWithTTL(
+	struct ct* ct, struct timespec* now, struct ctKey const* key,
+	uint64_t ttl, void* data);
 
 /*
   "freeDataFn" will be called immediately. ctRemove on a non-existing key

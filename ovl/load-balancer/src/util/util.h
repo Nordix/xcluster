@@ -67,3 +67,6 @@ void framePrint(unsigned len, uint8_t const* pkt);
 // Csum (only ipv4 for now)
 void tcpCsum(uint8_t* pkt, unsigned len);
 
+// Primes
+int isPrime(unsigned n);
+unsigned primeBelow(unsigned n);

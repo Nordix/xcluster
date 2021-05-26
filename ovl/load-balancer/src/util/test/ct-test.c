@@ -1,15 +1,16 @@
-// gcc -o /tmp/$USER/ct-test -I. -I.. test/ct-test.c conntrack.c hash.c -lrt && /tmp/$USER/ct-test
-
 /*
   SPDX-License-Identifier: MIT License
   Copyright (c) 2021 Nordix Foundation
 */
 
+#include "conntrack.h"
+#include "util.h"
 #include <netinet/in.h>
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include "conntrack.h"
+#include <time.h>
+#include <string.h>
 
 // Debug macros
 #define Dx(x) x
@@ -19,15 +20,32 @@
 static void testConntrack(struct ctStats* stats);
 static void testRefcount(struct ctStats* accumulatedStats);
 static void testLimitedBuckets(struct ctStats* accumulatedStats);
+static void testSustainedRate(
+	unsigned repeat, unsigned rate, unsigned durationSeconds, unsigned factor);
 
 int
 cmdCtBasic(int argc, char* argv[])
 {
+	unsigned repeat = 1;
+	unsigned rate = 10000;
+	unsigned durationSeconds = 300;
+	unsigned factor = 60;
+
+	if (argc > 1)
+		repeat = atoi(argv[1]);
+	if (argc > 2)
+		rate = atoi(argv[2]);
+	if (argc > 3)
+		durationSeconds = atoi(argv[3]);
+	if (argc > 4)
+		factor = atoi(argv[4]);
+
 	struct ctStats stats = {0};
 	testConntrack(&stats);
 	testRefcount(&stats);
 	testLimitedBuckets(&stats);
-	
+	testSustainedRate(repeat, rate, durationSeconds, factor);
+
 	printf(
 		"==== ct-test OK. inserts=%u(%u) lookups=%u collisions=%u\n",
 		stats.inserts, stats.rejectedInserts, stats.lookups, stats.collisions);
@@ -35,10 +53,15 @@ cmdCtBasic(int argc, char* argv[])
 }
 
 
-
+static unsigned maxBuckets = 10000;
+static unsigned bucketsPeak = 0;
 static long nAllocatedBuckets = 0;
 static void* BUCKET_ALLOC(void* user_ref) {
+	if (nAllocatedBuckets >= maxBuckets)
+		return NULL;
 	nAllocatedBuckets++;
+	if (nAllocatedBuckets > bucketsPeak)
+		bucketsPeak = nAllocatedBuckets;
 	return calloc(1,sizeof_bucket);
 }
 static void BUCKET_FREE(void* user_ref, void* b) {
@@ -46,7 +69,7 @@ static void BUCKET_FREE(void* user_ref, void* b) {
 	free(b);
 }
 
-static long nFreeData = 0;
+static unsigned nFreeData = 0;
 static uint64_t expectedFreeData = 0;
 static void freeData(void* user_ref, void* data) {
 	D(printf("Free data; %lu\n", (uint64_t)data));
@@ -71,12 +94,15 @@ static void collectStats(
 
 static void testConntrack(struct ctStats* accumulatedStats)
 {
-	struct ct* ct = ctCreate(
-		1, 99, freeData, NULL, BUCKET_ALLOC, BUCKET_FREE, NULL);
+	struct ct* ct;
 	struct timespec now = {0,0};
 	struct ctKey key = {IN6ADDR_ANY_INIT,IN6ADDR_ANY_INIT,{0ull}};
 	void* data;
 	int rc;
+
+	// Create table
+	ct = ctCreate(
+		1, 99, freeData, NULL, BUCKET_ALLOC, BUCKET_FREE, NULL);
 
 	// Insert an empty key
 	data = ctLookup(ct, &now, &key);
@@ -164,9 +190,32 @@ static void testConntrack(struct ctStats* accumulatedStats)
 	assert(ctStats(ct, &now)->active == 1);
 	assert(ctStats(ct, &now)->collisions == 3);
 
+	// Flush the remaining item
+	nFreeData = 0;
+	expectedFreeData = 1005;
+	assert(ctStats(ct, &now)->active == 1);
+	now.tv_nsec += 100;
+	assert(ctStats(ct, &now)->active == 0);
+	assert(nFreeData == 1);
+
+	// Insert 2 items with different TTL, step time and verify that
+	// only one has expired
+	key.id = 1007;
+	rc = ctInsertWithTTL(ct, &now, &key, 200, (void*)key.id);
+	assert(rc == 0);
+	key.id = 1008;
+	rc = ctInsertWithTTL(ct, &now, &key, 100, (void*)key.id);
+	assert(rc == 0);
+	assert(ctStats(ct, &now)->active == 2);
+	now.tv_nsec += 150;
+	nFreeData = 0;
+	expectedFreeData = 1008;
+	assert(ctStats(ct, &now)->active == 1);
+	assert(nFreeData == 1);
+	
 	// Destroy the table. Remaining items shall be freed
 	nFreeData = 0;
-	expectedFreeData = 0;
+	expectedFreeData = 1007;
 	collectStats(accumulatedStats, ctStats(ct, &now));
 	ctDestroy(ct);
 	assert(nFreeData == 1);
@@ -177,6 +226,7 @@ static void testConntrack(struct ctStats* accumulatedStats)
 		1000, 1000, freeData, NULL, BUCKET_ALLOC, BUCKET_FREE, NULL);
 	now.tv_nsec = 0;
 	key.id = 0;
+	expectedFreeData = 0;
 	nFreeData = 0;
 	for (int i = 0; i < 1000; i++) {
 		rc = ctInsert(ct, &now, &key, (void*)(key.id+1)); /* Don't use NULL! */
@@ -370,6 +420,95 @@ static void testLimitedBuckets(struct ctStats* accumulatedStats)
 	ctDestroy(ct);
 	// Allocated buckets shall be freed on "ctDestroy"
 	assert(bucketPool.nfree == 2);
+}
+
+/*
+  With ttl=0.2s and sustained rate of 10000 pkt/sec we test the formula;
+
+    hsize = rate * ttl * C
+	maxBuckets = hsize / 2
+
+  which is supposed to give rough recommended sizes.
+ */
+#define MS 1000000ul
+#define SEC 1000000000ul
+static uint64_t timeToNextPacket(unsigned rate);
+static void testSustainedRate(
+	unsigned repeat, unsigned rate, unsigned durationSeconds, unsigned factor)
+{
+	struct ct* ct;
+	struct timespec now = {0,0};
+	struct ctKey key;
+	uint64_t nowNanos = 0;
+	uint64_t duration = (uint64_t)durationSeconds * SEC;
+	struct ctStats stats;
+	//unsigned hsize = primeBelow(rate * factor / 10 / 5);
+	unsigned hsize = rate * factor / 10 / 5;
+
+	srand(time(NULL));
+	D(printf("rand=%u\n", rand()));
+
+	for (int i = 0; i < repeat; i++) {
+		// init variables
+		expectedFreeData = 0;
+		nFreeData = 0;
+		maxBuckets = hsize / 2;
+		bucketsPeak = 0;
+		assert(nAllocatedBuckets == 0);
+		nowNanos = 0;
+		memset(&key, 0, sizeof(key));
+
+		// Create table and init globals
+		ct = ctCreate(
+			hsize, 200*MS,
+			freeData, NULL, BUCKET_ALLOC, BUCKET_FREE, NULL);
+		ctUseStats(ct, &stats);
+
+		// Simulated time
+		while (nowNanos < duration) {
+			nowNanos += timeToNextPacket(rate);
+			now.tv_sec = nowNanos / SEC;
+			now.tv_nsec = nowNanos % SEC;
+			key.src.s6_addr32[0]++;
+			key.id = rand();
+			ctInsert(ct, &now, &key, (void*)(key.id));
+		}
+
+		unsigned beforeFullGC = stats.objGC;
+		(void)ctStats(ct, &now);
+		Dx(printf(
+			   "ttlNanos:     %lu\n"
+			   "size:         %u\n"
+			   "active:       %u\n"
+			   "collisions:   %u\n"
+			   "inserts:      %u (%u)\n"
+			   "lookups:      %u\n"
+			   "objGC:        %u\n",
+			   stats.ttlNanos, stats.size, stats.active,
+			   stats.collisions, stats.inserts, stats.rejectedInserts,
+			   stats.lookups, stats.objGC));
+
+		Dx(printf(
+			   "Buckets; peak=%u, stale=%u\n",
+			   bucketsPeak, stats.objGC - beforeFullGC));
+		double percentLoss =
+			(double)stats.rejectedInserts * 100.0 / (double)stats.inserts;
+		Dx(printf("Packet loss; %2.1f%%\n", percentLoss));
+		if (repeat == 1)
+			assert(percentLoss <= 1);
+	
+		// Destroy table
+		unsigned nData = stats.inserts - stats.rejectedInserts;
+		ctDestroy(ct);
+		assert(nAllocatedBuckets == 0);
+		assert(nFreeData == nData);
+	}
+}
+static uint64_t timeToNextPacket(unsigned rate)
+{
+	uint64_t d = SEC / rate;
+	// Randomize this some
+	return rand() % (d * 2);
 }
 
 #ifdef CMD
