@@ -43,8 +43,8 @@ test -x $f && $XCLUSTER install_prog --dest=$tmp $f
 if echo $SETUP | grep -q nfqueue; then
 	gcc -o $tmp/bin/lb $dir/src/lb.c $dir/src/maglev.c \
 		-lmnl -lnetfilter_queue -lrt || die "Gcc lb"
-	make -C src/util -j8 > /dev/null || die "Make util"
-	make -C src/nfqueue O=$tmp/bin > /dev/null || die "Make nfqueue"
+	d=$GOPATH/src/github.com/Nordix/nfqueue-loadbalancer/src
+	make -C $d X=$tmp/bin/nfqueuelb > /dev/null || die "Make nfqueuelb"
 fi
 
 if echo $SETUP | grep -q dpdk; then
