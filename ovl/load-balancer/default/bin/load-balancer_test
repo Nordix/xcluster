@@ -127,10 +127,10 @@ cmd_tcase_nfqueue_activate_all() {
 	if test "$OLDLB" = "yes"; then
 		lb activate $vms
 	else
-		nfqueuelb activate $vms
+		nfqlb activate $vms
 		test -n "$__nrouters" || __nrouters=1
 		for n in $(seq 1 $__nrouters); do
-			nfqueuelb activate --shm=nfqueueLb $n
+			nfqlb activate --shm=nfqueueLb $n
 		done
 	fi
 }
@@ -141,7 +141,7 @@ cmd_tcase_nfqueue_scale_in() {
 		tlog "Nothing to scale"
 		return 0
 	fi
-	lb deactivate $@
+	nfqlb deactivate $@
 }
 
 cmd_tcase_nfqueue_scale_out() {
@@ -150,7 +150,7 @@ cmd_tcase_nfqueue_scale_out() {
 		tlog "Nothing to scale"
 		return 0
 	fi
-	lb activate $@
+	nfqlb activate $@
 }
 
 # ----------------------------------------------------------------------
