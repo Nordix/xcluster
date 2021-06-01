@@ -43,18 +43,11 @@ ping -c1 -s 2000 192.168.1.1
 ping -c1 -s 2000 1000::1:192.168.1.1
 ```
 
-Ipv4 fragments are re-ordered back by the kernel for some reason. So
-fragments leaves `tap2` in reverse order but are sent in correct orded
-over `eth1`. This is not what we want and the (faulty) order is
-preserved for ipv6 packets. Here are some attempts to stop the
-fragments to be re-ordered;
+If the Linux conntracker has *ever* been used in a netns (including
+the main netns) packets are re-assembed by the kernel.  This is
+described in an excellent way
+[here](https://unix.stackexchange.com/questions/650790/unwanted-defragmentation-of-forwarded-ipv4-packets).
 
-```
-ethtool -K eth1 gro off gso off tso off
-ethtool -K eth2 gro off gso off tso off
-iptables -t nat -F
-iptables -t raw -A PREROUTING -i tap2 -j NOTRACK
-```
 
 ## Building and extending
 

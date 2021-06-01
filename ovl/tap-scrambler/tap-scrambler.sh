@@ -80,6 +80,7 @@ test_start() {
 		die "bridge-nf-call-ip6tables != 0"
 	export __image=$XCLUSTER_HOME/hd.img
 	echo "$XOVLS" | grep -q private-reg && unset XOVLS
+	export xcluster_DISABLE_MASQUERADE=yes
 	export TOPOLOGY=evil_tester
 	. $($XCLUSTER ovld network-topology)/$TOPOLOGY/Envsettings
 	xcluster_start network-topology iptools tap-scrambler
