@@ -350,7 +350,7 @@ cmd_k8s_test() {
 	if test -n "$__cni"; then
 		# Test with k8s-xcluster;
 		__image=$XCLUSTER_HOME/hd-k8s-xcluster-$__k8sver.img
-		test -r $__image || $XCLUSTER_HOME/hd-k8s-xcluster.img
+		test -r $__image || __image=$XCLUSTER_HOME/hd-k8s-xcluster.img
 		export __image
 		test -r $__image || die "Not readable [$__image]"
 		export XCTEST_HOOK=$($XCLUSTER ovld k8s-xcluster)/xctest-hook
