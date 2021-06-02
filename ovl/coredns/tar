@@ -14,14 +14,14 @@ log() {
 }
 
 test -n "$1" || die "No out-file"
-
 mkdir -p $tmp
-for s in $(echo "$SETUP" | tr ',' ' '); do
-	test -d $dir/$s || continue
-	cp -R $dir/$s/* $tmp
-	setup_copied=yes
-done
-test "$setup_copied" != "yes" && cp -R $dir/default/* $tmp
+cp -R $dir/default/* $tmp
+
+test -n "$coredns_ver" || coredns_ver=1.8.1
+ar=$ARCHIVE/coredns_${coredns_ver}_linux_amd64.tgz
+test -r $ar || die "Not readable [$ar]"
+tar -C $tmp/bin -xf $ar
+
 
 cd $tmp
 tar cf "$1" *

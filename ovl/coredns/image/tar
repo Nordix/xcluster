@@ -13,23 +13,15 @@ log() {
 
 test -n "$1" || die "No out-file"
 
-prg=$GOPATH/bin/coredns
+prg=$XCLUSTER_WORKSPACE/bin/coredns
+test -x $prg || prg=$GOPATH/bin/coredns
 test -x $prg || prg=$(dirname $XCLUSTER)/bin/coredns
 test -x $prg || die "Not executable [$prg]"
 
-mkdir -p $tmp/bin
+mkdir -p $tmp/bin $tmp/etc
 cp $prg $tmp/bin
+cp $(dirname $XCLUSTER)/config/Corefile $tmp/etc
 
-mkdir -p $tmp
-base=$($XCLUSTER ovld k8s-base)
-$base/image/tar - | tar -C $tmp -x
-
-which jq > /dev/null || die "Can't find [jq]"
-cp $(which jq) $tmp/bin
-
-$XCLUSTER cplib --dest=$tmp $tmp/bin/*
-
-cp -r $dir/default/* $tmp
 
 cd $tmp
 tar cf "$1" *

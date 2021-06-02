@@ -41,7 +41,7 @@ cmd_env() {
 		set | grep -E '^(__.*)='
 		retrun 0
 	fi
-
+	test -n "$__tag" || __tag="registry.nordix.org/cloud-native/xcluster-coredns:latest"
 	test -n "$xcluster_DOMAIN" || xcluster_DOMAIN=xcluster
 	test -n "$XCLUSTER" || die 'Not set [$XCLUSTER]'
 	test -x "$XCLUSTER" || die "Not executable [$XCLUSTER]"
@@ -116,6 +116,14 @@ basic() {
 	xcluster_stop
 }
 
+##   mkimage [--tag=registry.nordix.org/cloud-native/xcluster-coredns:latest]
+##     Create the docker image and upload it to the local registry.
+##
+cmd_mkimage() {
+	cmd_env
+	local imagesd=$($XCLUSTER ovld images)
+	$imagesd/images.sh mkimage --force --tag=$__tag $dir/image
+}
 
 cmd_otc() {
 	test -n "$__vm" || __vm=2
