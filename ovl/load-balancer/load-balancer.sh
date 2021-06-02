@@ -189,6 +189,7 @@ test_ecmp_scale_in() {
 test_start_nfqueue() {
 	export SETUP=nfqueue
 	export TOPOLOGY=evil_tester
+	export xcluster_DISABLE_MASQUERADE=yes
 	test_start tap-scrambler
 	otcr nfqueue_activate_all
 }
@@ -257,6 +258,16 @@ test_nfqueue_scale_in() {
 	$ctraffic -analyze hosts -stat_file /tmp/scale.out >&2
 	test "$__view" = "yes" && inkview /tmp/scale.svg	
 }
+
+test_nfqueue_frag() {
+	test -n "$__vip" || __vip="[1000::]:6003"
+	#export xcluster_LBOPT="--ft_size=500 --ft_buckets=500 --ft_frag=100"
+	#__copt="-monitor -psize 2048 -rate 1000 -nconn 40 -timeout 20s"
+	test_start_nfqueue
+	otc 221 "frag --copt='$__copt'"
+	otcr nfqlb_stats
+}
+
 
 # ipvs ----------------------------------------------------------------
 
@@ -351,18 +362,17 @@ cmd_src_build() {
 	gcc src/lb.c -o /dev/null -lmnl -lnetfilter_queue
 }
 
-#  tail <log>
-#    Tail -f on logs on routers.
-cmd_tail() {
+#  rexec <cmd>
+#    Exec command on routers.
+cmd_rexec() {
 	test -n "$1" || die "No log"
 	test -n "$__nrouters" || __nrouters=2
 	local rsh='ssh -q -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no'
-	$rsh root@192.168.0.201 test -r $1 || die "Not readable [$1]"
 	local i geometry
 	for i in $(seq 1 $__nrouters); do
 		geometry=$($XCLUSTER geometry 1 $i)
 		XXTERM=XCLUSTER xterm -T "Router $i $1" -bg '#400' $geometry -e \
-			$rsh root@192.168.0.$((200 + i)) tail -f $1 &
+			$rsh root@192.168.0.$((200 + i)) -- $1 &
 	done
 }
 

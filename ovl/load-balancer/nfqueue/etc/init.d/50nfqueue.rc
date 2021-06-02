@@ -19,9 +19,15 @@ router() {
 	local toffset=100
 	local lboffset=200
 	test -n "$__nvm" || __nvm=4
+
+	// Create the tun device
+	local mtu=1500
+	local tap=nfqlb0
+	ip tuntap add mode tun name $tap || die "create $tap"
+	ip link set dev $tap up arp off mtu $mtu || die "up $tap"
+
 	local n t
 	for n in $(seq 1 $__nvm); do
-		t=$n
 		t=$((n + toffset))
 		ip rule add fwmark $t table $t
 		ip -6 rule add fwmark $t table $t
@@ -53,6 +59,8 @@ router() {
 		# Add VIPs
 		iptables -t mangle -A PREROUTING -i eth2 -d 10.0.0.0/24 -j VIP
 		ip6tables -t mangle -A PREROUTING -i eth2 -d 1000::/112 -j VIP
+		iptables -t mangle -A PREROUTING -i $tap -d 10.0.0.0/24 -j VIP
+		ip6tables -t mangle -A PREROUTING -i $tap -d 1000::/112 -j VIP
 	fi
 
 	local net=2
@@ -69,8 +77,14 @@ router() {
 	fi
 	ethtool -K eth1 gro off gso off tso off
 	ethtool -K eth2 gro off gso off tso off
-	nfqlb init --ownfw=$((i - 200)) --toffset=$toffset
-	nfqlb lb $LBOPT > /var/log/nfqlb.log 2>&1 &
+
+	local ownfw=$((i - 200))
+	# Target tier. ownfw is not used on LBs
+	nfqlb init --shm=nfqlb --ownfw=0 --offset=$toffset --M=900 --N=20
+	# LB tier
+	nfqlb init --shm=nfqlbLb --ownfw=$ownfw --offset=$lboffset --M=400 --N=10
+
+	nfqlb lb --lbshm=nfqlbLb --tun=$tap $LBOPT > /var/log/nfqlb.log 2>&1 &
 }
 
 tester() {

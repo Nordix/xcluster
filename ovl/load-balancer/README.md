@@ -142,19 +142,31 @@ connections are preserved.
 
 As described [here](https://github.com/Nordix/nfqueue-loadbalancer/blob/master/fragments.md).
 
+Test;
+```
+#export xcluster_LBOPT="--ft_size=500 --ft_buckets=500 --ft_frag=100"
+#export __copt="-monitor -psize 1024 -rate 1000 -nconn 40 -timeout 20s"
+#export __nrouters=1
+./load-balancer.sh test nfqueue_frag > $log
+```
+
 Manual test;
 ```
-#export TOPOLOGY=evil_tester
-export xcluster_DISABLE_MASQUERADE=yes
-__nrouters=3 ./load-balancer.sh test start_nfqueue > $log
-# On routers if you want printouts in real-time
+#export CFLAGS="-DVERBOSE -DSANITY_CHECK"
+export __nrouters=1
+export xcluster_LBOPT="--ft_size=500 --ft_buckets=500 --ft_frag=100"
+./load-balancer.sh test start_nfqueue > $log
+# On routers (optional)
 tail -f /var/log/nfqlb.log
+watch nfqlb stats
 # On vm-221;
 ping -c1 -W1 -s 2000 -I 2000::2 1000::
 ping -c3 -W1 -s 3000 -i 0.1 -I 2000::2 1000::
 ping -c1 -W1 -s 2000 -I 50.0.0.2 10.0.0.0
 udp-test -address [1000::]:6001 -size 30000 -src [2000::]:0
 udp-test -address 10.0.0.0:6001 -size 30000 -src 50.0.0.0:0
+ctraffic -udp -address [1000::]:6001 -srccidr 2000::/112 -monitor \
+  -nconn 40 -psize 2048 -rate 1000 -timeout 30s
 ```
 
 ### Only load-balance SYN for TCP
