@@ -20,13 +20,24 @@ cp -R $dir/default/* $tmp
 gcc -Wall -o $tmp/bin/tap-scrambler $dir/src/* || die Compile
 $XCLUSTER install_prog --dest=$tmp ping
 
-f=$GOPATH/src/github.com/Nordix/mconnect/image/mconnect
-test -x $f || die "Not executable [$f]"
-cp $f $tmp/bin
-
-f=$GOPATH/src/github.com/Nordix/ctraffic/image/ctraffic
-test -x $f || die "Not executable [$f]"
-cp $f $tmp/bin
+for x in mconnect ctraffic; do
+	f=$GOPATH/src/github.com/Nordix/$x/image/$x
+	if test -x $f; then
+		log "Using local [$x]"
+		cp $f $tmp/bin
+	else
+		ar=$ARCHIVE/$x.xz
+		if test -r $ar; then
+			unpack=xz
+		else
+			ar=$ARCHIVE/$x.gz			
+			test -r $ar || die "Not found [$x]"
+			unpack=gzip
+		fi
+		$unpack -dc $ar > $tmp/bin/$x
+		chmod a+x $tmp/bin/$x
+	fi
+done
 
 cd $tmp
 tar cf "$1" *
