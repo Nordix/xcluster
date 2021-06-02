@@ -22,8 +22,12 @@ router() {
 	ip ro add default via 192.168.0.250
 	ip ro add 192.168.2.0/24 via 192.168.3.222
 	ip ro add $PREFIX:192.168.2.0/120 via $PREFIX:192.168.3.222
-	iptables -t nat -A POSTROUTING -s 192.168.1.0/24 -o eth0 -j MASQUERADE
-	iptables -t nat -A POSTROUTING -s 192.168.2.0/24 -o eth0 -j MASQUERADE
+	# MASQUERADE enforces packet re-assembly, see;
+	# https://unix.stackexchange.com/questions/650790/unwanted-defragmentation-of-forwarded-ipv4-packets
+	if test "$DISABLE_MASQUERADE" != "yes"; then
+		iptables -t nat -A POSTROUTING -s 192.168.1.0/24 -o eth0 -j MASQUERADE
+		iptables -t nat -A POSTROUTING -s 192.168.2.0/24 -o eth0 -j MASQUERADE
+	fi
 }
 
 tester221() {
