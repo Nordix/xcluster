@@ -18,11 +18,19 @@ netns for more advanced network testing. To setup do;
 sudo setcap cap_net_admin,cap_sys_admin+ep /bin/ip   # (once)
 # On Ubuntu 20 setcap does not work, instead;
 sudo chmod a+s /bin/ip
-xc nsadd 1    # Requires "sudo"
+xc nsadd 1          # Requires "sudo"
+# Or
+xc nsadd_docker 1   # This steals a docker container address
 xc nsenter 1
 . ./Envsettings
 . ./Envsettings.k8s
 ```
+
+The `xc nsadd_docker <index>` does not start any Docker container, but
+it "steals" a Docker container address and use it for the `xcluster`
+netns. *There might be conflicts!*. No checks are made so be
+observant. However this uses the Docker network which is probably left
+alone by the NetworkManager and firewalls.
 
 <img src="xcluster-netns.svg" alt="Figure of xcluster netns" width="80%" />
 
