@@ -31,7 +31,7 @@ int main(int argc, char *argv[])
 		for (struct Cmd const* c = cmd; c->name != NULL; c++) {
 			printf("  %s\n", c->name);
 		}
-		exit(EXIT_FAILURE);
+		exit(EXIT_SUCCESS);
 	}
 	
 	// Make logs to stdout/stderr appear when output is redirected
