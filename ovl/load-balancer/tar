@@ -23,14 +23,24 @@ for s in $(echo "$SETUP" | tr ',' ' '); do
 done
 
 $XCLUSTER install_prog --dest=$tmp ping
-
-f=$GOPATH/src/github.com/Nordix/mconnect/image/mconnect
-test -x $f || die "Not executable [$f]"
-cp $f $tmp/bin
-
-f=$GOPATH/src/github.com/Nordix/ctraffic/image/ctraffic
-test -x $f || die "Not executable [$f]"
-cp $f $tmp/bin
+for x in mconnect ctraffic; do
+	f=$GOPATH/src/github.com/Nordix/$x/image/$x
+	if test -x $f; then
+		log "Using local [$x]"
+		cp $f $tmp/bin
+	else
+		ar=$ARCHIVE/$x.xz
+		if test -r $ar; then
+			unpack=xz
+		else
+			ar=$ARCHIVE/$x.gz						
+			test -r $ar || die "Not found [$x]"
+			unpack=gzip
+		fi
+		$unpack -dc $ar > $tmp/bin/$x
+		chmod a+x $tmp/bin/$x
+	fi
+done
 
 cd $dir/src/udp-test
 go build -ldflags "-extldflags '-static' -X main.version=$(date +%F:%T)" \
@@ -42,8 +52,15 @@ test -x $f && $XCLUSTER install_prog --dest=$tmp $f
 
 if echo $SETUP | grep -q nfqueue; then
 	d=$GOPATH/src/github.com/Nordix/nfqueue-loadbalancer/src
-	make -C $d clean > /dev/null
-	make -j8 -C $d X=$tmp/bin/nfqlb static > /dev/null || die "Make nfqlb"
+	if test -d $d; then
+		make -C $d clean > /dev/null
+		make -j8 -C $d X=$tmp/bin/nfqlb static > /dev/null || die "Make nfqlb"
+	else
+		ar=$(find $ARCHIVE -name 'nfqlb-*.tar.xz' | sort -rV | head -1)
+		test -n "$ar" || die 'Could not find: $ARCHIVE/nfqlb-*.tar.xz'
+		tar -xO --wildcards -f $ar '*/bin/nfqlb' > $tmp/bin/nfqlb
+		chmod a+x $tmp/bin/nfqlb
+	fi
 fi
 
 if echo $SETUP | grep -q dpdk; then

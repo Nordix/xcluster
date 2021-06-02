@@ -190,7 +190,7 @@ test_start_nfqueue() {
 	export SETUP=nfqueue
 	export TOPOLOGY=evil_tester
 	export xcluster_DISABLE_MASQUERADE=yes
-	test_start tap-scrambler
+	test_start $@
 	otcr nfqueue_activate_all
 }
 test_nfqueue() {
@@ -362,15 +362,19 @@ cmd_src_build() {
 	gcc src/lb.c -o /dev/null -lmnl -lnetfilter_queue
 }
 
-#  rexec <cmd>
-#    Exec command on routers.
+#  rexec [--expand=x|y] <cmd>
+#    Exec command on routers in xterms.
 cmd_rexec() {
-	test -n "$1" || die "No log"
+	test -n "$1" || die "No cmd"
 	test -n "$__nrouters" || __nrouters=2
 	local rsh='ssh -q -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no'
 	local i geometry
 	for i in $(seq 1 $__nrouters); do
-		geometry=$($XCLUSTER geometry 1 $i)
+		if test "$__expand" = "x"; then
+			geometry=$($XCLUSTER geometry $i 1)
+		else
+			geometry=$($XCLUSTER geometry 1 $i)
+		fi
 		XXTERM=XCLUSTER xterm -T "Router $i $1" -bg '#400' $geometry -e \
 			$rsh root@192.168.0.$((200 + i)) -- $1 &
 	done
