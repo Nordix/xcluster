@@ -42,7 +42,7 @@ meld calico-orig.yaml default/etc/kubernetes/load/calico.yaml &
 # Make the corresponding in the new "calico.yaml"
 cp calico.yaml calico-new.yaml
 ec calico-new.yaml
-mv -f calico-new.yaml default/etc/kubernetes/load/calico.yaml
+cp calico-new.yaml default/etc/kubernetes/load/calico.yaml
 images lreg_missingimages default
 # Cache images
 # Test!
