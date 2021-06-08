@@ -15,7 +15,7 @@
    viewBox="0 0 840.88275 392"
    version="1.1"
    id="SVGRoot"
-   inkscape:version="0.92.3 (2405546, 2018-03-11)"
+   inkscape:version="0.92.5 (2060ec1f9f, 2020-04-08)"
    sodipodi:docname="tap-scrambler.svg">
   <sodipodi:namedview
      id="base"
@@ -25,7 +25,7 @@
      inkscape:pageopacity="0.0"
      inkscape:pageshadow="2"
      inkscape:zoom="1"
-     inkscape:cx="424.27528"
+     inkscape:cx="246.27528"
      inkscape:cy="218.5"
      inkscape:document-units="px"
      inkscape:current-layer="layer1"
@@ -33,7 +33,7 @@
      inkscape:window-width="1717"
      inkscape:window-height="1046"
      inkscape:window-x="1998"
-     inkscape:window-y="50"
+     inkscape:window-y="33"
      inkscape:window-maximized="0"
      inkscape:snap-global="false"
      fit-margin-left="10"
@@ -157,7 +157,7 @@
         <dc:format>image/svg+xml</dc:format>
         <dc:type
            rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
-        <dc:title></dc:title>
+        <dc:title />
       </cc:Work>
     </rdf:RDF>
   </metadata>
@@ -167,7 +167,7 @@
      inkscape:label="Layer 1"
      transform="translate(-95.058637,-170.5)">
     <rect
-       style="opacity:1;vector-effect:none;fill:#c29a92;fill-opacity:1;stroke:#000000;stroke-width:1;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1;marker:none"
+       style="opacity:1;vector-effect:none;fill:#e4e4e4;fill-opacity:1;stroke:#000000;stroke-width:1;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1;marker:none"
        id="rect823"
        width="646"
        height="371"
