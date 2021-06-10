@@ -259,16 +259,6 @@ test_nfqueue_scale_in() {
 	test "$__view" = "yes" && inkview /tmp/scale.svg	
 }
 
-test_nfqueue_frag() {
-	test -n "$__vip" || __vip="[1000::]:6003"
-	#export xcluster_LBOPT="--ft_size=500 --ft_buckets=500 --ft_frag=100"
-	#__copt="-monitor -psize 2048 -rate 1000 -nconn 40 -timeout 20s"
-	test_start_nfqueue
-	otc 221 "frag --copt='$__copt'"
-	otcr nfqlb_stats
-}
-
-
 # ipvs ----------------------------------------------------------------
 
 test_start_ipvs() {

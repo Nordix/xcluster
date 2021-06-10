@@ -122,13 +122,15 @@ cmd_tcase_ecmp_scale() {
 # nfqueue
 
 cmd_tcase_nfqueue_activate_all() {
-	local vms="$(seq 1 $__nvm | tr '\n' ' ')"
-	tcase "nfqueue activate all [$vms]"
-	nfqlb activate $vms
+	tcase "nfqueue activate all"
+	local n
+	for n in $(seq 1 $__nvm); do
+		nfqlb activate --lookup=$n $((n + 100))
+	done
 	nfqlb show --shm=nfqlbLb > /dev/null 2&>1 || return 0
 	test -n "$__nrouters" || __nrouters=1
 	for n in $(seq 1 $__nrouters); do
-		nfqlb activate --shm=nfqlbLb $n
+		nfqlb activate --shm=nfqlbLb --lookup=$n $((n + 200))
 	done
 }
 
@@ -138,7 +140,10 @@ cmd_tcase_nfqueue_scale_in() {
 		tlog "Nothing to scale"
 		return 0
 	fi
-	nfqlb deactivate $@
+	local n
+	for n in $@; do
+		nfqlb deactivate --lookup=$n
+	done
 }
 
 cmd_tcase_nfqueue_scale_out() {
@@ -147,32 +152,10 @@ cmd_tcase_nfqueue_scale_out() {
 		tlog "Nothing to scale"
 		return 0
 	fi
-	nfqlb activate $@
-}
-
-cmd_tcase_frag() {
-	test -n "$__vip" || __vip="[1000::]:6003"
-	tcase "Test traffic to [$__vip]"
-	test -n "$__copt" || __copt="-monitor -psize 2048 -rate 1000 -nconn 40 -timeout 20s"
-	test -n "$LBOPT" && tlog "LBOPT=[$LBOPT]"
-	tlog "ctraffic opts; $__copt"
-	local srccidr=2000::/112
-	echo $__vip | grep -Fq '[' || srccidr=50.0.0.0/16
-	mkdir -p $tmp
-	ctraffic -udp -address $__vip -srccidr $srccidr $__copt > $tmp/out || tdie ctraffic
-	jq < $tmp/out >&2
-	# We accept 1% packet loss
-	local sent rec drop loss
-	sent=$(jq -r .Sent < $tmp/out)
-	rec=$(jq -r .Received < $tmp/out)
-	drop=$(jq -r .Dropped < $tmp/out)
-	loss=$(( (sent + drop - rec) * 100 / (sent + drop) ))
-	test $loss -le 1 || tdie "Lost traffic $loss%"
-}
-
-cmd_tcase_nfqlb_stats() {
-	tcase "nfqlb fragment stats"
-	nfqlb stats >&2
+	local n
+	for n in $@; do
+		nfqlb activate --lookup=$n $((n + 100))
+	done
 }
 
 # ----------------------------------------------------------------------

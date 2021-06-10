@@ -3,8 +3,7 @@
 * Test setup for load-balancers
 
 This ovl provides a setup for testing different load-balancers
-(without K8s). The default xcluster network-topology is used when
-possible (always);
+(without K8s). The default xcluster network-topology is used;
 
 <img src="../network-topology/xnet.svg" alt="Default network topology" width="60%" />
 
@@ -16,6 +15,15 @@ Ecmp does not work with linux > 5.4.x so download;
 ```
 curl https://artifactory.nordix.org/artifactory/cloud-native/xcluster/images/bzImage-linux-5.4.35 > \
   $XCLUSTER_WORKSPACE/xcluster/bzImage-linux-5.4.35
+```
+
+Scaling tests requires [ctraffic](https://github.com/Nordix/ctraffic);
+```
+mkdir -p $GOPATH/src/github.com/Nordix
+cd $GOPATH/src/github.com/Nordix
+git clone --depth 1 https://github.com/Nordix/ctraffic.git
+cd ctraffic
+__image= ./build.sh image
 ```
 
 Scaling tests and show a graph;
@@ -115,7 +123,7 @@ mconnect -address 10.0.0.0:5001 -nconn 100 -srccidr 50.0.0.0/16
 ctraffic -address 10.0.0.0:5003 -nconn 100 -srccidr 50.0.0.0/16 -timeout 1m -monitor -rate 100
 # On vm-201
 nfqlb show
-nfqlb deactivate 1
+nfqlb deactivate 101
 # ...
 ```
 
@@ -138,36 +146,6 @@ we have just 100 connections so it's a fair chance that existing
 connections are preserved.
 
 
-### Fragment handling
-
-As described [here](https://github.com/Nordix/nfqueue-loadbalancer/blob/master/fragments.md).
-
-Test;
-```
-#export xcluster_LBOPT="--ft_size=500 --ft_buckets=500 --ft_frag=100"
-#export __copt="-monitor -psize 1024 -rate 1000 -nconn 40 -timeout 20s"
-#export __nrouters=1
-./load-balancer.sh test nfqueue_frag > $log
-```
-
-Manual test;
-```
-#export CFLAGS="-DVERBOSE -DSANITY_CHECK"
-export __nrouters=1
-export xcluster_LBOPT="--ft_size=500 --ft_buckets=500 --ft_frag=100"
-./load-balancer.sh test start_nfqueue > $log
-# On routers (optional)
-tail -f /var/log/nfqlb.log
-watch nfqlb stats
-# On vm-221;
-ping -c1 -W1 -s 2000 -I 2000::2 1000::
-ping -c3 -W1 -s 3000 -i 0.1 -I 2000::2 1000::
-ping -c1 -W1 -s 2000 -I 50.0.0.2 10.0.0.0
-udp-test -address [1000::]:6001 -size 30000 -src [2000::]:0
-udp-test -address 10.0.0.0:6001 -size 30000 -src 50.0.0.0:0
-ctraffic -udp -address [1000::]:6001 -srccidr 2000::/112 -monitor \
-  -nconn 40 -psize 2048 -rate 1000 -timeout 30s
-```
 
 ### Only load-balance SYN for TCP
 

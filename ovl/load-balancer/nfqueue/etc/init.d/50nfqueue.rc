@@ -78,12 +78,13 @@ router() {
 	ethtool -K eth1 gro off gso off tso off
 	ethtool -K eth2 gro off gso off tso off
 
-	local ownfw=$((i - 200))
 	# Target tier. ownfw is not used on LBs
-	nfqlb init --shm=nfqlb --ownfw=0 --offset=$toffset --M=900 --N=20
+	nfqlb init --shm=nfqlb --M=900 --N=20
 	# LB tier
-	nfqlb init --shm=nfqlbLb --ownfw=$ownfw --offset=$lboffset --M=400 --N=10
+	local ownfw=$((i - 200 + lboffset))
+	nfqlb init --shm=nfqlbLb --ownfw=$ownfw --M=400 --N=10
 
+	# Load-balance!
 	nfqlb lb --lbshm=nfqlbLb --tun=$tap $LBOPT > /var/log/nfqlb.log 2>&1 &
 }
 
