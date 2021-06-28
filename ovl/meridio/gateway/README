@@ -1,0 +1,6 @@
+Docker image to be used by gateway router PODs.
+
+build:
+docker build -t localhost:5000/cloud-native/meridio/test-gw:latest . -f Dockerfile
+docker push localhost:5000/cloud-native/meridio/test-gw:latest
+
