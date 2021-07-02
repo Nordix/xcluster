@@ -13,13 +13,7 @@ spec:
           "master": "{{ .Values.tgMasterItf }}",
           "vlanId": {{ .Values.tgVlanId }},
           "ipam": {
-            "type": "static",
-            "routes": [
-                        { "dst": "20.0.0.1/32", "gw": "{{ regexReplaceAllLiteral "/[0-9]+" .Values.gwtg1IPv4 "" }}" },
-                        { "dst": "20.0.0.1/32", "gw": "{{ regexReplaceAllLiteral "/[0-9]+" .Values.gwtg2IPv4 "" }}" },
-                        { "dst": "2000::1/128", "gw": "{{ regexReplaceAllLiteral "/[0-9]+" .Values.gwtg1IPv6 "" }}" },
-                        { "dst": "2000::1/128", "gw": "{{ regexReplaceAllLiteral "/[0-9]+" .Values.gwtg2IPv6 "" }}" }
-                    ]
+            "type": "static"
           }
         }
       ]
@@ -53,17 +47,25 @@ spec:
             values:
             - "gateway"
         topologyKey: kubernetes.io/hostname
+  initContainers:
+        - name: sysctl-init
+          image: {{ .Values.registry }}/{{ .Values.organization }}/busybox:1.29
+          securityContext:
+            privileged: true
+          command: ["/bin/sh"]
+          args:
+            - -c
+            - sysctl -w net.ipv4.fib_multipath_hash_policy=1 ; sysctl -w net.ipv6.fib_multipath_hash_policy=1
   containers:
         - name: ctraffic
           image: {{ .Values.registry }}/{{ .Values.organization }}/ctraffic:latest
           imagePullPolicy: {{ .Values.pullPolicy }}
           securityContext:
             privileged: true
-#        - name: bird
-#          image: {{ .Values.registry }}/{{ .Values.organization }}/{{ .Values.gatewayImage }}:{{ .Values.gatewayImageVer }}
-#          imagePullPolicy: IfNotPresent
-#          securityContext:
-#            privileged: true
-#          command: [ "/bin/bash", "-c", "--" ]
-#          args: [ "while true; do sleep 30; done;" ]
-
+        - name: bird
+          image: {{ .Values.registry }}/{{ .Values.organization }}/{{ .Values.gatewayImage }}:{{ .Values.gatewayImageVer }}
+          imagePullPolicy: {{ .Values.pullPolicy }}
+          securityContext:
+            privileged: true
+          command: [ "/usr/sbin/bird" ]
+          args: ["-d", "-c", "/etc/bird/bird-tg.conf"]

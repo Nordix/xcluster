@@ -10,8 +10,11 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get update && \
 	apt-get install -y bird2
 
 RUN mkdir -p /run/bird \
-	mkdir -p /etc/bird
+	mkdir -p /etc/bird \
+	mkdir -p /tmp
 COPY bird-common.conf bird-gw.conf /etc/bird/
+COPY gw.sh /tmp/
+COPY bird-tg.conf /etc/bird/
 
 ENTRYPOINT ["/usr/sbin/bird", "-f"]
 CMD []

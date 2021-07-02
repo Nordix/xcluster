@@ -13,9 +13,8 @@ The aim is to deploy via Helm:
   Connects with the two gateway PODs through a secondary vlan interface
   installed via Multus. The benefit of a TG POD is to properly test Meridio
   when there are more than 1 external gateways available.
-  Currently TG uses static routes to relay VIP traffic towards gateway-1. Thus
-  when the set of VIPs is changed, routing in the TG POD must be manually updated. 
-  (It might be worth introducing BGP between them as well...) 
+  TG also runs BIRD in a separate container to learn and install VIP related routes
+  (via BGP). Thus enabling on-the-fly VIP changes being propageted to the TG a well. 
 
 
 ## Basic Usage
@@ -38,10 +37,18 @@ xc mkcdrom private-reg meridio; xc starts --nets_vm=0,1,2 --nvm=2 --mem=4096 --s
 helm install Meridio/docs/demo/deployments/spire --generate-name
 Meridio/docs/demo/scripts/spire-config.sh
 helm install Meridio/docs/demo/deployments/nsm-vlan --generate-name
-# use eth2 interface between meridio and the gateways, and eth1 between gateways and tg
-helm install Meridio/deployments/helm --generate-name --set ipFamily=dualstack,vlan.interface=eth2
-helm install xcluster/ovl/meridio/helm/gateway --generate-name --set masterItf=eth2,tgMasterItf=eth1
+# use eth1 interface between meridio and the gateways, and eth2 between gateways and tg
+helm install Meridio/deployments/helm --generate-name --namespace default --set vlan.interface=eth1,ipFamily=dualstack
+helm install xcluster/ovl/meridio/helm/gateway --generate-name --set masterItf=eth1,tgMasterItf=eth2
+# start targets
+helm install Meridio/examples/target/helm/ --generate-name --namespace default --set defaultTrench=default
 # test something...
+# edit VIPs through the config map
+kubectl edit configmaps meridio-configuration
+# remove gateway-2 POD
+kubectl scale --replicas 0 deployment/gateway-2
+# start gateway-2 POD again
+kubectl scale --replicas 1 deployment/gateway-2
 xc stop
 ```
 

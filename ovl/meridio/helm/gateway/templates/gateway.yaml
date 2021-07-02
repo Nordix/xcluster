@@ -139,6 +139,126 @@ spec:
 #           command: [ "/usr/sbin/bird" ]
 #           args: ["-d", "-c", "/etc/bird/bird-gw.conf"]
 ---
+# apiVersion: apps/v1
+# kind: Deployment
+# metadata:
+#   name: gateway-1
+#   labels:
+#     app: gateway
+# spec:
+#   replicas: 1
+#   selector:
+#     matchLabels:
+#       app: gateway
+#   template:
+#     metadata:
+#       annotations:
+#         k8s.v1.cni.cncf.io/networks: '[
+#           { "name": "vlan-conf",
+#             "ips": [ "{{ .Values.gw1IPv4 }}", "{{ .Values.gw1IPv6 }}", "{{ .Values.gwVRRPIP4 }}", "{{ .Values.gwVRRPIP6 }}" ],
+#            "interface": "vlan0"
+#           },
+#          { "name": "gwtg-conf",
+#            "ips": [ "{{ .Values.gwtg1IPv4 }}", "{{ .Values.gwtg1IPv6 }}" ],
+#            "interface": "tg"
+#          }]'
+#       labels:
+#         app: gateway
+#     spec:
+#       nodeSelector:
+#         gw: "true"
+#       tolerations:
+#       - key: "gw"
+#         operator: "Exists"
+#       affinity:
+#         podAntiAffinity:
+#           requiredDuringSchedulingIgnoredDuringExecution:
+#           - labelSelector:
+#               matchExpressions:
+#               - key: app
+#                 operator: In
+#                 values:
+#                 - "gateway"
+#                 - "tg"
+#             topologyKey: kubernetes.io/hostname
+#       initContainers:
+#         - name: sysctl-init
+#           image: {{ .Values.registry }}/{{ .Values.organization }}/busybox:1.29
+#           securityContext:
+#             privileged: true
+#           command: ["/bin/sh"]
+#           args:
+#             - -c
+#             - sysctl -w net.ipv6.conf.all.forwarding=1 ; sysctl -w net.ipv4.conf.all.forwarding=1 ; sysctl -w net.ipv4.fib_multipath_hash_policy=1 ; sysctl -w net.ipv6.fib_multipath_hash_policy=1
+#       containers:
+#         - name: bird
+#           image: {{ .Values.registry }}/{{ .Values.organization }}/{{ .Values.gatewayImage }}:{{ .Values.gatewayImageVer }}
+#           imagePullPolicy: IfNotPresent
+#           securityContext:
+#             privileged: true
+#           command: [ "/usr/sbin/bird" ]
+#           args: ["-d", "-c", "/etc/bird/bird-gw.conf"]
+---
+# apiVersion: apps/v1
+# kind: Deployment
+# metadata:
+#   name: gateway-2
+#   labels:
+#     app: gateway
+# spec:
+#   replicas: 1
+#   selector:
+#     matchLabels:
+#       app: gateway
+#   template:
+#     metadata:
+#       annotations:
+#         k8s.v1.cni.cncf.io/networks: '[
+#           { "name": "vlan-conf",
+#             "ips": [ "{{ .Values.gw2IPv4 }}", "{{ .Values.gw2IPv6 }}" ],
+#             "interface": "vlan0"
+#           },
+#          { "name": "gwtg-conf",
+#            "ips": [ "{{ .Values.gwtg2IPv4 }}", "{{ .Values.gwtg2IPv6 }}" ],
+#            "interface": "tg"
+#          }]'
+#       labels:
+#         app: gateway
+#     spec:
+#       nodeSelector:
+#         gw: "true"
+#       tolerations:
+#       - key: "gw"
+#         operator: "Exists"
+#       affinity:
+#         podAntiAffinity:
+#           requiredDuringSchedulingIgnoredDuringExecution:
+#           - labelSelector:
+#               matchExpressions:
+#               - key: app
+#                 operator: In
+#                 values:
+#                 - "gateway"
+#                 - "tg"
+#             topologyKey: kubernetes.io/hostname
+#       initContainers:
+#         - name: sysctl-init
+#           image: {{ .Values.registry }}/{{ .Values.organization }}/busybox:1.29
+#           securityContext:
+#             privileged: true
+#           command: ["/bin/sh"]
+#           args:
+#             - -c
+#             - sysctl -w net.ipv6.conf.all.forwarding=1 ; sysctl -w net.ipv4.conf.all.forwarding=1 ; sysctl -w net.ipv4.fib_multipath_hash_policy=1 ; sysctl -w net.ipv6.fib_multipath_hash_policy=1
+#       containers:
+#         - name: bird
+#           image: {{ .Values.registry }}/{{ .Values.organization }}/{{ .Values.gatewayImage }}:{{ .Values.gatewayImageVer }}
+#           imagePullPolicy: IfNotPresent
+#           securityContext:
+#             privileged: true
+#           command: [ "/usr/sbin/bird" ]
+#           args: ["-d", "-c", "/etc/bird/bird-gw.conf"]
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -193,11 +313,11 @@ spec:
       containers:
         - name: bird
           image: {{ .Values.registry }}/{{ .Values.organization }}/{{ .Values.gatewayImage }}:{{ .Values.gatewayImageVer }}
-          imagePullPolicy: IfNotPresent
+          imagePullPolicy: {{ .Values.pullPolicy }}
           securityContext:
             privileged: true
-          command: [ "/usr/sbin/bird" ]
-          args: ["-d", "-c", "/etc/bird/bird-gw.conf"]
+          command: [ "/tmp/gw.sh" ]
+          args: [ "--bird-conf=/etc/bird/bird-gw.conf", "--tg4_addr={{ regexReplaceAllLiteral "/[0-9]+" .Values.tg1IPv4 "" }}", "--tg6_addr={{ regexReplaceAllLiteral "/[0-9]+" .Values.tg1IPv6 "" }}", "-d" ]
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -253,8 +373,9 @@ spec:
       containers:
         - name: bird
           image: {{ .Values.registry }}/{{ .Values.organization }}/{{ .Values.gatewayImage }}:{{ .Values.gatewayImageVer }}
-          imagePullPolicy: IfNotPresent
+          imagePullPolicy: {{ .Values.pullPolicy }}
           securityContext:
             privileged: true
-          command: [ "/usr/sbin/bird" ]
-          args: ["-d", "-c", "/etc/bird/bird-gw.conf"]
+          command: [ "/tmp/gw.sh" ]
+          args: [ "--bird-conf=/etc/bird/bird-gw.conf", "--tg4_addr={{ regexReplaceAllLiteral "/[0-9]+" .Values.tg1IPv4 "" }}", "--tg6_addr={{ regexReplaceAllLiteral "/[0-9]+" .Values.tg1IPv6 "" }}", "-d" ]
+
