@@ -16,6 +16,7 @@ log() {
 test -n "$1" || die "No out-file"
 
 mkdir -p $tmp/bin
+cd $dir
 go build -o $tmp/bin/udp-test ./cmd/...
 strip $tmp/bin/udp-test
 #cp -R $dir/default/* $tmp

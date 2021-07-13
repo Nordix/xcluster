@@ -83,10 +83,14 @@ curl -L \
 chmod a+x $GOPATH/bin/calicoctl
 ```
 
-## Doc
+## Doc/check
 
 * https://docs.projectcalico.org/v3.8/networking/ipv6
 
 * https://docs.projectcalico.org/v3.8/reference/felix/configuration
 
 * https://docs.projectcalico.org/v3.8/getting-started/calicoctl/install
+
+```
+logs -n kube-system calico-node-cn5fv | grep -i "Successfully loaded configuration"
+```

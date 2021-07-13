@@ -25,9 +25,9 @@ f=$GOPATH/src/github.com/Nordix/mconnect/image/mconnect
 if test -x $f; then
 	cp $f $tmp/bin
 else
-	f=$ARCHIVE/mconnect-v2.0.gz
+	f=$ARCHIVE/mconnect.xz
 	test -r $f || die "Not readable [$f]"
-	zcat $f > $tmp/bin/mconnect
+	xzcat $f > $tmp/bin/mconnect
 	chmod a+x $tmp/bin/mconnect
 fi
 
