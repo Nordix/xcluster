@@ -1,0 +1,37 @@
+@startuml
+hide footbox
+box "server"
+participant Server
+participant "eth1\n192.168.1.1" as s1
+participant "eth2\n192.168.4.1" as s2
+end box
+box "client"
+participant "eth1\n192.168.2.221" as c1
+participant "eth2\n192.168.6.221" as c2
+participant "Client"
+end box
+
+Client -> c1 : INIT
+c1 -> s1 : "INIT(192.168.2.221,192.168.6.221)"
+s1 -> Server : INIT
+
+Server -> s1 : INIT_ACK
+s1 -> c1 : "INIT_ACK(192.168.1.1,192.168.4.1)"
+c1 -> Client : INIT_ACK
+
+Client -> c1 : COOKIE_ECHO
+c1 -> s1 : COOKIE_ECHO
+s1 -> Server : COOKIE_ECHO
+
+Server -> s1 : COOKIE_ACK
+s1 -> c1 : COOKIE_ACK
+c1 -> Client : COOKIE_ACK
+
+Server -> s2 : HEARTBEAT
+s2 -> c2 : HEARTBEAT
+c2 -> Client : HEARTBEAT
+Client -> c2 : HEARTBEAT_ACK
+c2 -> s2 : HEARTBEAT_ACK
+s2 -> Server : HEARTBEAT_ACK
+
+@enduml

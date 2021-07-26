@@ -21,6 +21,37 @@ with the `dual-path` setup;
 <img src="../network-topology/dual-path.svg" alt="Dual-path network topology" width="80%" />
 
 
+## Basic example
+
+```
+./sctp.sh nfqlb_download
+./sctp.sh test start > $log
+# On vm-001
+sctpt server --log 6 --addr 192.168.1.1,192.168.4.1
+# On vm-221
+sctpt client --log 6 --addr 192.168.1.1,192.168.4.1 --laddr 192.168.2.221,192.168.6.221
+# (typed text will be echoed by the server)
+# Type ^D to quit
+```
+
+The `sctpt` test program is used to setup a multihomed sctp
+"association" ([trace](captures/basic.html)).
+
+<img src="basic.svg" alt="Setup sequence" width="80%" />
+
+The multihoming addresses are passed in the `INIT` and `INIT_ACK`
+messages. This makes NAT (and load-balancing) very complicated.
+
+You can trace with `tcpdump` on any VM and try to disable the primary
+path and watch the failover to the secondary path;
+
+```
+# On vm-201
+iptables -A FORWARD -p sctp -j DROP
+# (send something from the client)
+iptables -D FORWARD 1
+```
+
 
 ## References
 
@@ -29,3 +60,4 @@ with the `dual-path` setup;
 * [usrsctp](https://github.com/sctplab/usrsctp)
 * https://github.com/ishidawataru/sctp
 * https://github.com/pion/sctp/
+* https://www.ietf.org/staging/draft-ietf-tsvwg-natsupp-21-to-be-None.html

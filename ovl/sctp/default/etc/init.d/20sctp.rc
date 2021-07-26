@@ -1,0 +1,24 @@
+#! /bin/sh
+
+vm() {
+	ip ro add 192.168.6.0/24 via 192.168.4.202
+	ip -6 ro add 1000::1:192.168.6.0/120 via 1000::1:192.168.4.202
+}
+
+router() {
+	return 0
+}
+
+tester() {
+	ip ro add 192.168.4.0/24 via 192.168.6.204
+	ip -6 ro add 1000::1:192.168.4.0/120 via 1000::1:192.168.6.204
+}
+
+case $(hostname) in
+    vm-0*)
+        vm;;
+    vm-20*)
+        router;;
+    vm-22*)
+        tester;;
+esac

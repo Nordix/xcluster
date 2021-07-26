@@ -70,13 +70,7 @@ cmd_test() {
             test_$t
         done
     else
-		__mode=dual-stack
 		test_start
-		push __no_stop yes
-		__no_start=yes
-		test_basic
-		pop __no_stop
-		xcluster_stop
     fi      
 
     now=$(date +%s)
@@ -98,6 +92,39 @@ test_start_k8s() {
 	unset otcprog
 }
 
+test_start() {
+	export TOPOLOGY=dual-path
+	export __image=$XCLUSTER_HOME/hd.img
+	echo "$XOVLS" | grep -q private-reg && unset XOVLS
+	. $($XCLUSTER ovld network-topology)/$TOPOLOGY/Envsettings
+	xcluster_start iptools network-topology sctp
+}
+
+##   nfqlb_download
+##     Download a nfqlb release to $HOME/Downloads
+cmd_nfqlb_download() {
+	eval $(make -s -C $dir/src ver)
+	local ar=nfqlb-$NFQLB_VER.tar.xz
+	local f=$HOME/Downloads/$ar
+	if test -r $f; then
+		log "Already downloaded [$f]"
+	else
+		local url=https://github.com/Nordix/nfqueue-loadbalancer
+		curl -L $url/releases/download/$NFQLB_VER/$ar > $f
+	fi
+}
+
+##   pcap2html <file.pcap>
+##     Convert pcap to html on stdout
+cmd_pcap2html() {
+	test -n "$1" || die "No file"
+	test -r "$1" || die "Not readable [$1]"
+	local xsl=/usr/share/wireshark/pdml2html.xsl
+	test -r $xsl || die "Not readable [$xsl]"
+	mkdir -p $tmp
+	tshark -I -T pdml -r "$1" | xsltproc $xsl - | \
+		sed -e "s,<title>.*<,<title>$1<,"
+}
 
 ##   mkimage [--tag=registry.nordix.org/cloud-native/sctp-test:latest]
 ##     Create the docker image and upload it to the local registry.
