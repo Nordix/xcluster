@@ -1,0 +1,33 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: sctp
+spec:
+  ipFamilyPolicy: PreferDualStack
+  selector:
+    app: sctp-test
+  ports:
+  - port: 7002
+    name: sctp-hostname
+    protocol: SCTP
+  - port: 7003
+    name: sctp-sh
+    protocol: SCTP
+  type: LoadBalancer
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: sctp-hostnet
+spec:
+  ipFamilyPolicy: PreferDualStack
+  selector:
+    app: sctp-test-hostnet
+  ports:
+  - port: 7002
+    name: sctp-hostname
+    protocol: SCTP
+  - port: 7003
+    name: sctp-sh
+    protocol: SCTP
+  type: LoadBalancer

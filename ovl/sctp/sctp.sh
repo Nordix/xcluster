@@ -81,15 +81,19 @@ cmd_test() {
 test_start_k8s() {
 	test -n "$__mode" || __mode=dual-stack
 	export xcluster___mode=$__mode
+	export TOPOLOGY=dual-path
+	. $($XCLUSTER ovld network-topology)/$TOPOLOGY/Envsettings
+	
 	xcluster_prep $__mode
-	xcluster_start k8s-test sctp
+	xcluster_start sctp iptools network-topology
 
-	otcprog=k8s-test_test
 	otc 1 check_namespaces
 	otc 1 check_nodes
-	otcr vip_routes
 	otc 1 start_servers
-	unset otcprog
+	otc 201 vip_ecmp_route
+	otc 203 "vip_route 192.168.3.201"
+	#otc 202 vip_ecmp_route
+	#otc 204 "vip_route 192.168.5.202"
 }
 
 test_start() {
@@ -131,6 +135,9 @@ cmd_pcap2html() {
 ##
 cmd_mkimage() {
 	cmd_env
+	mkdir -p $dir/image/default/bin
+	make -C $dir/src clean
+	make -j$(nproc) -C $dir/src X=$dir/image/default/bin/sctpt static
 	local imagesd=$($XCLUSTER ovld images)
 	$imagesd/images.sh mkimage --force --upload --strip-host --tag=$__tag $dir/image
 }

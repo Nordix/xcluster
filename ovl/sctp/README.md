@@ -35,12 +35,13 @@ sctpt client --log 6 --addr 192.168.1.1,192.168.4.1 --laddr 192.168.2.221,192.16
 ```
 
 The `sctpt` test program is used to setup a multihomed sctp
-"association" ([trace](captures/basic.html)).
+"association" ([trace](captures/basic.pcap)).
 
 <img src="basic.svg" alt="Setup sequence" width="80%" />
 
 The multihoming addresses are passed in the `INIT` and `INIT_ACK`
-messages. This makes NAT (and load-balancing) very complicated.
+messages. This makes NAT (and load-balancing)
+[very complicated](https://datatracker.ietf.org/doc/html/rfc3257#section-4).
 
 You can trace with `tcpdump` on any VM and try to disable the primary
 path and watch the failover to the secondary path;
@@ -61,3 +62,4 @@ iptables -D FORWARD 1
 * https://github.com/ishidawataru/sctp
 * https://github.com/pion/sctp/
 * https://www.ietf.org/staging/draft-ietf-tsvwg-natsupp-21-to-be-None.html
+* https://datatracker.ietf.org/doc/html/rfc3257

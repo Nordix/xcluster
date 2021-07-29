@@ -1,8 +1,7 @@
 #! /bin/sh
 
 vm() {
-	ip ro add 192.168.6.0/24 via 192.168.4.202
-	ip -6 ro add 1000::1:192.168.6.0/120 via 1000::1:192.168.4.202
+	return 0
 }
 
 router() {
@@ -10,8 +9,7 @@ router() {
 }
 
 tester() {
-	ip ro add 192.168.4.0/24 via 192.168.6.204
-	ip -6 ro add 1000::1:192.168.4.0/120 via 1000::1:192.168.6.204
+	return 0
 }
 
 case $(hostname) in

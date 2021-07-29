@@ -1,0 +1,45 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: sctp-test-hostnet
+spec:
+  selector:
+    matchLabels:
+      app: sctp-test-hostnet
+  template:
+    metadata:
+      labels:
+        app: sctp-test-hostnet
+    spec:
+      hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
+      containers:
+      - name: sctp-test-hostnet
+        image: registry.nordix.org/cloud-native/sctp-test:latest
+        ports:
+        - containerPort: 6000
+        securityContext:
+          privileged: true
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: sctp-test
+spec:
+  selector:
+    matchLabels:
+      app: sctp-test
+  template:
+    metadata:
+      labels:
+        app: sctp-test
+    spec:
+      serviceAccount: default
+      containers:
+      - name: sctp-test
+        imagePullPolicy: IfNotPresent
+        image: registry.nordix.org/cloud-native/sctp-test:latest
+        ports:
+        - containerPort: 5001
+        securityContext:
+          privileged: true
