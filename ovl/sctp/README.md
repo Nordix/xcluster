@@ -53,6 +53,31 @@ iptables -A FORWARD -p sctp -j DROP
 iptables -D FORWARD 1
 ```
 
+## Kubernetes
+
+K8s supports services with "protocol: SCTP". But multihoming can't be
+used because of NAT.
+
+<img src="k8s-node.svg" alt="K8s node" width="70%" />
+
+Assuming `externalTrafficPolicy: Local` this happens;
+
+1. INIT from the client arrives on eth1 with load-balancer-IP (VIP) 10.0.0.72. The INIT chunk contains the multihoming addresses of the client (192.168.2.221, 192.168.6.221).
+
+2. The VIP address is translated to the podIP (11.0.1.2) by iptables or ipvs (configured by kube-proxy).
+
+3. The server (in the POD) sends a INIT_ACK (without addresses) and the association is succesful.
+
+4. The server tries to send HP to the client's multihoming addresses. But the source is NAT'ed to the node address.
+
+5. The client responds with ABORT since the source is not valid.
+
+6. The ABORT messages arrives to the node (some via eth2) but are *not* forwarded to the POD. This I can't explain.
+
+
+
+
+
 
 ## References
 

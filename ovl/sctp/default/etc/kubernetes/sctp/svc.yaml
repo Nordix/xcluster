@@ -3,6 +3,7 @@ kind: Service
 metadata:
   name: sctp
 spec:
+  externalTrafficPolicy: Local
   ipFamilyPolicy: PreferDualStack
   selector:
     app: sctp-test
@@ -20,6 +21,7 @@ kind: Service
 metadata:
   name: sctp-hostnet
 spec:
+  externalTrafficPolicy: Local
   ipFamilyPolicy: PreferDualStack
   selector:
     app: sctp-test-hostnet

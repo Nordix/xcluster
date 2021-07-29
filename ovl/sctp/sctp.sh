@@ -93,7 +93,7 @@ test_start_k8s() {
 	otc 201 vip_ecmp_route
 	otc 203 "vip_route 192.168.3.201"
 	#otc 202 vip_ecmp_route
-	#otc 204 "vip_route 192.168.5.202"
+	#tc 204 "vip_route 192.168.5.202"
 }
 
 test_start() {
