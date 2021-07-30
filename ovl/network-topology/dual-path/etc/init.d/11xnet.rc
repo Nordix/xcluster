@@ -8,10 +8,13 @@ vm() {
 	ip ro add default via 192.168.1.201
 	ip -6 ro add default via $PREFIX:192.168.1.201
 
-	ip ru add from 192.168.4.$i table 300
+	ip ru add oif eth2 table 300
 	ip ro add default via 192.168.4.202 table 300
-	ip -6 ru add from $PREFIX:192.168.4.$i table 301
+	ip -6 ru add oif eth2 table 301
 	ip -6 ro add default via $PREFIX:192.168.4.202 table 301
+
+	ip ro add 192.168.6.0/24 via 192.168.4.202
+	ip -6 ro add $PREFIX:192.168.6.0/120 via $PREFIX:192.168.4.202
 }
 
 router201() {
@@ -24,12 +27,14 @@ router201() {
 	ip -6 ro add $PREFIX:192.168.6.0/120 via $PREFIX:192.168.3.203
 	ip ro add default via 192.168.0.250
 	iptables -t nat -A POSTROUTING -s 192.168.1.0/24 -o eth0 -j MASQUERADE
-	# The "other" vm net;
-	local i
-	for i in $(seq 1 4); do
-		ip ro add 192.168.4.$i/32 via 192.168.1.$i
-		ip -6 ro add $PREFIX:192.168.4.$i/128 via $PREFIX:192.168.1.$i
-	done
+	if test "$CROSSROUTE" = "yes"; then
+		# The "other" net;
+		local i
+		for i in $(seq 1 4); do
+			ip ro add 192.168.4.$i/32 via 192.168.1.$i
+			ip -6 ro add $PREFIX:192.168.4.$i/128 via $PREFIX:192.168.1.$i
+		done
+	fi
 }
 
 router203() {
@@ -42,12 +47,14 @@ router203() {
 	ip -6 ro add $PREFIX:192.168.4.0/120 via $PREFIX:192.168.3.201
 	ip ro add default via 192.168.0.250
 	iptables -t nat -A POSTROUTING -s 192.168.2.0/24 -o eth0 -j MASQUERADE
-	# The "other" tester net;
-	local i
-	for i in $(seq 221 222); do
-		ip ro add 192.168.6.$i/32 via 192.168.2.$i
-		ip -6 ro add $PREFIX:192.168.6.$i/128 via $PREFIX:192.168.2.$i
-	done	
+	if test "$CROSSROUTE" = "yes"; then
+		# The "other" tester net;
+		local i
+		for i in $(seq 221 222); do
+			ip ro add 192.168.6.$i/32 via 192.168.2.$i
+			ip -6 ro add $PREFIX:192.168.6.$i/128 via $PREFIX:192.168.2.$i
+		done
+	fi
 }
 
 router202() {
@@ -59,12 +66,14 @@ router202() {
 	ip -6 ro add $PREFIX:192.168.6.0/120 via $PREFIX:192.168.5.204
 	ip -6 ro add $PREFIX:192.168.2.0/120 via $PREFIX:192.168.5.204
 	ip ro add default via 192.168.0.250
-	# The "other" vm net;
-	local i
-	for i in $(seq 1 4); do
-		ip ro add 192.168.1.$i/32 via 192.168.4.$i
-		ip -6 ro add $PREFIX:192.168.1.$i/128 via $PREFIX:192.168.4.$i
-	done
+	if test "$CROSSROUTE" = "yes"; then
+		# The "other" vm net;
+		local i
+		for i in $(seq 1 4); do
+			ip ro add 192.168.1.$i/32 via 192.168.4.$i
+			ip -6 ro add $PREFIX:192.168.1.$i/128 via $PREFIX:192.168.4.$i
+		done
+	fi
 }
 
 router204() {
@@ -76,12 +85,14 @@ router204() {
 	ip -6 ro add $PREFIX:192.168.4.0/120 via $PREFIX:192.168.5.202
 	ip -6 ro add $PREFIX:192.168.1.0/120 via $PREFIX:192.168.5.202
 	ip ro add default via 192.168.0.250
-	# The "other" tester net;
-	local i
-	for i in $(seq 221 222); do
-		ip ro add 192.168.2.$i/32 via 192.168.6.$i
-		ip -6 ro add $PREFIX:192.168.2.$i/128 via $PREFIX:192.168.6.$i
-	done	
+	if test "$CROSSROUTE" = "yes"; then
+		# The "other" tester net;
+		local i
+		for i in $(seq 221 222); do
+			ip ro add 192.168.2.$i/32 via 192.168.6.$i
+			ip -6 ro add $PREFIX:192.168.2.$i/128 via $PREFIX:192.168.6.$i
+		done
+	fi
 }
 
 tester() {
@@ -91,10 +102,13 @@ tester() {
 	ip ro add default via 192.168.2.203
 	ip -6 ro add default via $PREFIX:192.168.2.203
 	
-	ip ru add from 192.168.6.$i table 300
+	ip ru add oif eth2 table 300
 	ip ro add default via 192.168.6.204 table 300
-	ip -6 ru add from $PREFIX:192.168.6.$i table 301
+	ip -6 ru add oif eth2 table 301
 	ip -6 ro add default via $PREFIX:192.168.6.204 table 301
+
+	ip ro add 192.168.4.0/24 via 192.168.6.204
+	ip -6 ro add $PREFIX:192.168.4.0/120 via $PREFIX:192.168.6.204
 }
 
 
