@@ -69,6 +69,10 @@ build() {
 		build_ipvsadm $n-$v
 		return
 	fi
+	if test "$1" = "iproute2"; then
+		build_iproute2 $n-$v
+		return
+	fi
 	ar=$n-$v.tar.bz2
 	test -r $ARCHIVE/$ar || ar=$n-$v.tar.gz
 	tar -C $XCLUSTER_WORKSPACE -xf $ARCHIVE/$ar
@@ -97,6 +101,20 @@ build_ipvsadm() {
 	cp $d/ipvsadm $sysd/usr/sbin
 	echo "Built at [$d]"
 }
+build_iproute2() {
+	cmd_env
+	local ar d libs
+	d=$XCLUSTER_WORKSPACE/$1
+	test -d $__kobj/sys/include || cmd_build_kernel_headers
+	return
+	rm -fr $d
+	ar=$1.tar.gz
+	tar -C $XCLUSTER_WORKSPACE -xf $ARCHIVE/$ar || die tar
+	cd $d
+	make KERNEL_INCLUDE=$__kobj/sys/include || die make
+	make DESTDIR=$d/sys install || die "make install"
+	echo "Built at [$d]"
+}
 
 download() {
 	local n v u ar
@@ -110,6 +128,9 @@ download() {
 		ipset)
 			ar=$n-$v.tar.bz2
 			u=http://ipset.netfilter.org/$ar;;
+		iproute2)
+			ar=iproute2-$v.tar.gz
+			u=https://git.kernel.org/pub/scm/network/iproute2/iproute2.git/snapshot/$ar;;
 		*)
 			ar=$n-$v.tar.bz2
 			u=$netfilter_url/$n/files/$ar;;
@@ -138,12 +159,19 @@ libnetfilter_queue_ver=1.0.3
 conntrack_tools_ver=1.4.5
 ipvsadm_ver=1.31
 ipset_ver=6.38
+iproute2_ver=5.13.0
 ver() {
 	eval "echo \$${1}_ver"
 }
 
 # ----------------------------------------------------------------------
 #
+
+cmd_build_kernel_headers() {
+	eval $($XCLUSTER env | grep -E '__kver|__kobj|KERNELDIR')
+	cd $__kobj
+	make INSTALL_HDR_PATH=$(readlink -f .)/sys headers_install || die make
+}
 
 ##   items
 ##     List items handled by this script

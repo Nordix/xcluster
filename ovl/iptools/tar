@@ -8,7 +8,9 @@ die() {
     rm -rf $tmp
     exit 1
 }
-
+log() {
+    echo "iptools: $*" >&2
+}
 test -n "$1" || die "No out-file"
 
 sysd=$XCLUSTER_WORKSPACE/sys
@@ -23,6 +25,9 @@ Iptools are not built. Please do;
 EOF
 	die "Iptools not built"
 fi
+
+
+eval $($dir/iptools.sh versions)
 
 mkdir -p $tmp
 cp -r $dir/default/* $tmp
@@ -52,6 +57,13 @@ rm -rf $tmp/$sysd $tmp/home $tmp/usr/lib/pkgconfig
 
 if which nmap > /dev/null; then
 	$XCLUSTER install_prog --dest=$tmp nmap ncat nping
+fi
+
+d=$XCLUSTER_WORKSPACE/iproute2-$iproute2/sys
+if test -d $d; then
+	log "Including iproute2-$iproute2..."
+	cp -R $d/sbin $tmp
+	$XCLUSTER cplib --dest=$tmp $d/sbin/ip
 fi
 
 cd $tmp
