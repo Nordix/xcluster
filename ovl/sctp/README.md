@@ -53,6 +53,28 @@ iptables -A FORWARD -p sctp -j DROP
 iptables -D FORWARD 1
 ```
 
+
+## Virtual IP (VIP) and cluster
+
+If we use VIP addresses and ECMP in a cluster we got a problem;
+
+
+<img src="cluster-2if.svg" alt="" width="40%" />
+
+The HB_ACK has different addresses (both source and dest) and will
+probably be ecmp'ed to another node.
+
+We can add a load-balancer to handle the situation;
+
+<img src="cluster-2if-lb.svg" alt="" width="60%" />
+
+But a problem is that the LB handling the HB_ACK must select the same
+POD as the INIT message. The addresses are different *but the ports are the same*! Note that there is no NAT, direct server return (DSR) is used.
+
+So a possible approach is to let the load-balancers *hash on ports only*.
+
+
+
 ## Kubernetes
 
 K8s supports services with "protocol: SCTP". But multihoming can't be
@@ -68,7 +90,7 @@ Assuming `externalTrafficPolicy: Local` this happens;
 
 3. The server (in the POD) sends a INIT_ACK (without addresses) and the association is succesful.
 
-4. The server tries to send HP to the client's multihoming addresses. But the source is NAT'ed to the node address.
+4. The server tries to send HB to the client's multihoming addresses. But the source is NAT'ed to the node address.
 
 5. The client responds with ABORT since the source is not valid.
 
