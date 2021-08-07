@@ -1,7 +1,50 @@
 #! /bin/sh
 
+. /etc/profile
+. /usr/lib/network-topology.sh
+
+# Setup a netns with two interfaces (veth)
+setup_netns() {
+	ip netns add pod
+	ip netns exec pod ip link set up dev lo
+
+	setup_veth pod 1 0
+	setup_veth pod 2 128
+
+	ip netns exec pod ip route add default via 10.0.0.0
+	ip netns exec pod ip route add 192.168.6.0/24 via 10.0.0.128
+}
+
+# setup_veth pod index addr_base
+setup_veth() {
+	local pod=$1
+	local i=$2
+	local a1=$3
+	local a2=$((a1 + 1))
+
+	ip link add $pod$i type veth peer host$i
+	ip link set host$i netns pod
+	ip link set up dev $pod$i
+	ip netns exec $pod ip link set up host$i
+
+	ip addr add 10.0.0.$a1/31 dev $pod$i
+	ip netns exec $pod ip addr add 10.0.0.$a2/31 dev host$i
+}
+
 vm() {
-	return 0
+	if test "$NETNS" = "yes"; then
+		fwsetup
+		setup_netns
+	else
+		sysctl -w net.ipv4.conf.all.arp_announce=2
+		sysctl -w net.ipv4.conf.all.arp_ignore=1
+		sysctl -w net.ipv4.ip_nonlocal_bind=1
+		sysctl -w net.ipv6.ip_nonlocal_bind=1
+		sysctl -w net.ipv4.conf.all.proxy_arp=0
+		ip addr add 10.0.0.0/24 dev lo
+		ip -6 addr add 1000::/120 dev lo
+		ip -6 ro add local 1000::/120 dev lo
+	fi
 }
 
 router() {

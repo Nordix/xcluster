@@ -53,8 +53,10 @@ cmd_tcase_start_servers() {
 }
 
 cmd_tcase_vip_ecmp_route() {
-	tcase "Setup VIP ECMP routes"
-	vip_route
+	local net=1
+	test -n "$1" && net=$1
+	tcase "Setup VIP ECMP routes. net=$net"
+	vip_route $net
 }
 cmd_tcase_vip_route() {
 	tcase "Setup VIP route to [$1]"
