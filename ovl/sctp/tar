@@ -17,6 +17,14 @@ mkdir -p $tmp
 test -n "$1" || die "No out-file"
 cp -R $dir/default/* $tmp
 
+nfqlb=/tmp/$USER/nfqlb/nfqlb/nfqlb
+if test -x $nfqlb; then
+	log "Including nfqlb"
+	cp $nfqlb $tmp/bin
+else
+	log "Nfqlb not included"
+fi
+
 make -s -C $dir/src clean > /dev/null 2>&1
 make -s -C $dir/src -j$(nproc) X=$tmp/bin/sctpt static > /dev/null 2>&1 || die make
 

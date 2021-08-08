@@ -13,6 +13,8 @@ setup_netns() {
 
 	ip netns exec pod ip route add default via 10.0.0.0
 	ip netns exec pod ip route add 192.168.6.0/24 via 10.0.0.128
+	ip netns exec pod ip -6 route add default via 1000::0
+	ip netns exec pod ip -6 route add 1000::1:192.168.6.0/24 via 1000::80
 }
 
 # setup_veth pod index addr_base
@@ -29,6 +31,8 @@ setup_veth() {
 
 	ip addr add 10.0.0.$a1/31 dev $pod$i
 	ip netns exec $pod ip addr add 10.0.0.$a2/31 dev host$i
+	ip -6 addr add 1000::0.0.0.$a1/127 dev $pod$i
+	ip netns exec $pod ip -6 addr add 1000::0.0.0.$a2/127 dev host$i
 }
 
 vm() {
@@ -52,7 +56,10 @@ router() {
 }
 
 tester() {
-	return 0
+	if test "$NETNS" = "yes"; then
+		ip ro add 10.0.0.128/25 via 192.168.6.204
+		ip -6 ro add 1000::80/121 via 1000::1:192.168.6.204
+	fi
 }
 
 case $(hostname) in
