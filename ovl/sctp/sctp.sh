@@ -107,6 +107,14 @@ test_start() {
 	otc 204 "vip_route 192.168.5.202"
 }
 
+
+test_nfqlb() {
+	test_start
+	otc 201 nfqlb_setup
+	otc 202 nfqlb_setup
+	xcluster_stop
+}
+
 ##   nfqlb_download
 ##     Download a nfqlb release to $HOME/Downloads
 cmd_nfqlb_download() {
