@@ -38,7 +38,7 @@ static int cmdServer(int argc, char **argv)
 		{0, 0, 0, 0}
 	};
 	(void)parseOptionsOrDie(argc, argv, options);
-	loginit();
+	loginit(stderr);
 
 	if (atoi(port) == 0)
 		die("Invalid port [%s]\n", port);
@@ -61,7 +61,7 @@ static int cmdServer(int argc, char **argv)
 		int cnt = sctp_getladdrs(sd, 0, &addrs);
 		if (cnt <= 0)
 			die("sctp_getladdrs %d\n", cnt);
-		printf("Accepting connections on:\n");
+		logf("Accepting connections on:\n");
 		printAddrs("  ", addrs, cnt);
 		sctp_freeladdrs(addrs);
 	}
@@ -74,7 +74,7 @@ static int cmdServer(int argc, char **argv)
 		if (arg->sd < 0)
 			die("accept %s\n", strerror(errno));
 		INFO{
-			printf("Got a new connection (%d) from\n", arg->sd);
+			logf("Got a new connection (%d) from\n", arg->sd);
 			printAddrs("  ", (struct sockaddr*)&peer, 1);
 		}
 
@@ -91,19 +91,19 @@ static void* serverThread(void* _arg)
 {
 	struct serverThreadArg* arg = _arg;
 	INFO{
-		printf("serverThread (%d).\n", arg->sd);
+		logf("serverThread (%d).\n", arg->sd);
 		struct sockaddr* addrs;
 		int cnt;
 		cnt = sctp_getladdrs(arg->sd, 0, &addrs);
 		if (cnt <= 0)
 			die("sctp_getladdrs %d\n", cnt);
-		printf("Local addresses\n");
+		logf("Local addresses\n");
 		printAddrs("  ", addrs, cnt);
 		sctp_freeladdrs(addrs);
 		cnt = sctp_getpaddrs(arg->sd, 0, &addrs);
 		if (cnt <= 0)
 			die("sctp_getpaddrs %d\n", cnt);
-		printf("Peer addresses\n");
+		logf("Peer addresses\n");
 		printAddrs("  ", addrs, cnt);
 		sctp_freepaddrs(addrs);
 	}

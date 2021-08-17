@@ -8,14 +8,16 @@
 
 extern int loglevel;
 extern char const* loglevelarg;
+extern FILE* logout;
 
-void loginit(void);
+void loginit(FILE* out);
 
 #define WARNING if(loglevel>=4)
 #define NOTICE if(loglevel>=5)
 #define INFO if(loglevel>=6)
 #define DEBUG if(loglevel>=7)
-#define warning(arg...) WARNING{printf(arg);}
-#define notice(arg...) NOTICE{printf(arg);}
-#define info(arg...) INFO{printf(arg);}
-#define debug(arg...) DEBUG{printf(arg);}
+#define logf(arg...) fprintf(logout, arg)
+#define warning(arg...) WARNING{logf(arg);}
+#define notice(arg...) NOTICE{logf(arg);}
+#define info(arg...) INFO{logf(arg);}
+#define debug(arg...) DEBUG{logf(arg);}

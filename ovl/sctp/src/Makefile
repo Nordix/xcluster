@@ -39,7 +39,7 @@ static: $(NFQLB_DIR) $(X)
 static: LDFLAGS := -static -Wl,--whole-archive -lpthread -Wl,--no-whole-archive
 
 $(X): $(OBJ)
-	$(CC) -o $(X) $(OBJ) $(LDFLAGS) -pthread -L$(NFQLB_DIR)/lib -lnfqlb -lsctp
+	$(CC) -o $(X) $(OBJ) $(LDFLAGS) -pthread -L$(NFQLB_DIR)/lib -lnfqlb -lsctp -lrt
 $(OBJ): | $(DIRS)
 
 $(DIRS):

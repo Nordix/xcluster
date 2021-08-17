@@ -88,7 +88,7 @@ void printAddrs(char const* prefix, struct sockaddr const* addrs, int cnt)
 		if (res == NULL) {
 			warning("inet_ntop %s\n", strerror(errno));
 		} else {
-			printf("%s%s,%d\n", prefix, res, port);
+			logf("%s%s,%d\n", prefix, res, port);
 		}
 	}
 }

@@ -21,7 +21,7 @@
 static int cmdClient(int argc, char **argv)
 {
 	char const* addr = "::1";
-	char const* laddr = "::";
+	char const* laddr = "::1";
 	char const* port = "6000";
 	struct Option options[] = {
 		{"help", NULL, 0,
@@ -29,12 +29,12 @@ static int cmdClient(int argc, char **argv)
 		 "  Start a client"},
 		{"log", &loglevelarg, 0, "Log level 0-7"},
 		{"addr", &addr, 0, "Server addresses (default ::1)"},
-		{"laddr", &laddr, 0, "Local addresses (default ::)"},
+		{"laddr", &laddr, 0, "Local addresses (default ::1)"},
 		{"port", &port, 0, "Port (default 6000)"},
 		{0, 0, 0, 0}
 	};
 	(void)parseOptionsOrDie(argc, argv, options);
-	loginit();
+	loginit(stderr);
 
 	if (atoi(port) == 0)
 		die("Invalid port [%s]\n", port);
@@ -58,19 +58,19 @@ static int cmdClient(int argc, char **argv)
 		die("sctp_connectx %s\n", strerror(errno));
 
 	INFO{
-		printf("Connected\n");
+		logf("Connected\n");
 		struct sockaddr* addrs;
 		int cnt;
 		cnt = sctp_getladdrs(sd, 0, &addrs);
 		if (cnt <= 0)
 			die("sctp_getladdrs %d\n", cnt);
-		printf("Local addresses\n");
+		logf("Local addresses\n");
 		printAddrs("  ", addrs, cnt);
 		sctp_freeladdrs(addrs);
 		cnt = sctp_getpaddrs(sd, 0, &addrs);
 		if (cnt <= 0)
 			die("sctp_getpaddrs %d\n", cnt);
-		printf("Peer addresses\n");
+		logf("Peer addresses\n");
 		printAddrs("  ", addrs, cnt);
 		sctp_freepaddrs(addrs);		
 	}
@@ -90,7 +90,7 @@ static int cmdClient(int argc, char **argv)
 		if (rc < 0)
 			die("recv %s\n", strerror(errno));
 		if (rc == 0) {
-			printf("Connection closed\n");
+			info("Connection closed\n");
 			break;
 		}
 		buf[rc - 1] = 0;
