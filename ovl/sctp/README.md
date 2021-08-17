@@ -53,6 +53,19 @@ iptables -A FORWARD -p sctp -j DROP
 iptables -D FORWARD 1
 ```
 
+UDP encapsulation with load-balancing;
+```
+./sctp.sh nfqlb_download
+xcluster_UDP_ENCAP=9899 xcluster_NETNS=yes ./sctp.sh test --no-stop nfqlb > $log
+# On vm-221
+sysctl -w net.sctp.encap_port=9899
+sysctl -w net.sctp.udp_port=9899
+sctpt client --log 6 --addr 10.0.0.1,1000::81 --laddr 192.168.2.221,1000::1:192.168.6.221
+# On vm 201
+iptables -A FORWARD -p udp --sport 9899 -j DROP
+iptables -D FORWARD 1
+```
+
 
 ## Virtual IP (VIP) and cluster
 

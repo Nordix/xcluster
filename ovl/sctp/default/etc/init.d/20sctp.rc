@@ -36,6 +36,7 @@ setup_veth() {
 }
 
 vm() {
+	modprobe sctp
 	if test "$NETNS" = "yes"; then
 		fwsetup
 		setup_netns
@@ -56,10 +57,16 @@ router() {
 }
 
 tester() {
+	modprobe sctp
 	if test "$NETNS" = "yes"; then
 		ip ro add 10.0.0.128/25 via 192.168.6.204
 		ip -6 ro add 1000::80/121 via 1000::1:192.168.6.204
 	fi
+	if test -n "$UDP_ENCAP"; then
+		sysctl -w net.sctp.encap_port=$UDP_ENCAP
+		sysctl -w net.sctp.udp_port=$UDP_ENCAP
+	fi
+
 }
 
 case $(hostname) in

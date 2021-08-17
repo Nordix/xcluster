@@ -65,7 +65,13 @@ cmd_tcase_vip_route() {
 }
 
 cmd_tcase_nfqlb_setup() {
-	tcase "Setup the nfqlb load-balancer"
+	local opt
+	if test -n "$UDP_ENCAP"; then
+		tcase "Setup the nfqlb load-balancer (udp-encap=$UDP_ENCAP)"
+		opt=--sctp_encap=$UDP_ENCAP
+	else
+		tcase "Setup the nfqlb load-balancer"
+	fi
 
 	# Disable HW offload
 	ethtool -K eth1 gro off gso off tso off
@@ -93,7 +99,7 @@ cmd_tcase_nfqlb_setup() {
 	
 	# Start the load-balancer
 	nfqlb init --M=900 --N=20
-    nfqlb lb $@ > /var/log/nfqlb.log 2>&1 &
+    nfqlb lb $opt $@ > /var/log/nfqlb.log 2>&1 &
 
 	# Activate targets
     for n in $(seq 1 $__nvm); do
@@ -101,6 +107,18 @@ cmd_tcase_nfqlb_setup() {
 	done
 }
 
+cmd_tcase_sctp_server() {
+	tcase "Start SCTP server in pod"
+	local addr="10.0.0.1,1000::81"
+	test -n "$1" && addr=$1
+	if test -n "$UDP_ENCAP"; then
+		ip netns exec pod sysctl -w net.sctp.encap_port=$UDP_ENCAP
+		ip netns exec pod sysctl -w net.sctp.udp_port=$UDP_ENCAP
+	fi
+	local cmd="sctpt server --log 6 --addr $addr"
+	local log=/var/log/sctpt.log
+	ip netns exec pod sh -c "exec $cmd > $log 2>&1 &"
+}
 
 . /etc/profile
 . /usr/lib/xctest

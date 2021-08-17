@@ -110,8 +110,9 @@ test_start() {
 
 test_nfqlb() {
 	test_start
-	otc 201 nfqlb_setup
-	otc 202 nfqlb_setup
+	otc 201 "nfqlb_setup --sctp_encap=9899"
+	otc 202 "nfqlb_setup --sctp_encap=9899"
+	otcw sctp_server
 	xcluster_stop
 }
 
