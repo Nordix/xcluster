@@ -13,7 +13,7 @@ struct Stats {
 	unsigned maxRtt;			/* In milli seconds */
 	/* Histogram */
 	unsigned nBuckets;
-	unsigned interval;			/* In milli seconds */
+	unsigned interval;			/* In micro seconds */
 	unsigned buckets[];
 };
 
@@ -30,11 +30,11 @@ void stats_packet_init(
 	struct Stats* stats, struct timespec const* now, void* packet, unsigned len);
 
 /*
-  Handle a received reply packet. The "received" counter is
-  incremented and histogram data is updated.
+  Handle a received reply packet. The "received" counter and rtt stats
+  are updated.
  */
 void stats_packet_record(
-	struct Stats* stats, struct timespec const* now, void* packet, unsigned len);
+	struct Stats* stats, struct timespec const* now, void const* packet, unsigned len);
 
 /* Print functions */
 void stats_print(FILE* out, struct Stats const* stats);

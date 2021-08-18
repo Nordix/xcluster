@@ -143,16 +143,16 @@ static int cmdCtraffic(int argc, char **argv)
 static int cmdStats(int argc, char **argv)
 {
 	char const* buckets = "16";
-	char const* interval = "50";
+	char const* interval = "1000";
 	char const* shm = "sctpstats";
 	struct Option options[] = {
 		{"help", NULL, 0,
-		 "stats [options] (init|clear|show)\n"
+		 "stats [options] (init|clear|show|json)\n"
 		 "  Handle continuous traffic statistics"},
 		{"log", &loglevelarg, 0, "Log level 0-7"},
 		{"shm", &shm, 0, "Stats shared mem"},
 		{"buckets", &buckets, 0, "Number of buckets for the histogram"},
-		{"interval", &interval, 0, "Interval in histogram (milli S)"},
+		{"interval", &interval, 0, "Interval in histogram (micro S)"},
 		{0, 0, 0, 0}
 	};
 	int nopt = parseOptionsOrDie(argc, argv, options);
@@ -162,7 +162,7 @@ static int cmdStats(int argc, char **argv)
 	debug("Cmd: %s\n", argc > 0 ? *argv : "(none)");
 	if (argc == 0 || strcmp(*argv, "show") == 0) {
 		struct Stats const* s = mapSharedDataOrDie(shm, O_RDONLY);
-		stats_print(stderr, s);
+		stats_print(stdout, s);
 		return 0;
 	}
 	if (strcmp(*argv, "init") == 0) {
@@ -184,6 +184,11 @@ static int cmdStats(int argc, char **argv)
 		if (delta < 1)
 			die("Too small interval\n");
 		stats_init(s, s->nBuckets, delta);
+		return 0;
+	}
+	if (strcmp(*argv, "json") == 0) {
+		struct Stats const* s = mapSharedDataOrDie(shm, O_RDONLY);
+		stats_print_json(stdout, s);
 		return 0;
 	}
 
