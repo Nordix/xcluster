@@ -24,10 +24,17 @@ struct Stats {
 void stats_init(void* buffer, unsigned nBuckets, unsigned interval);
 
 /*
-  Prepare a packet for sending. The "sent" counter is incremented.
+  Prepare a packet for sending.
  */
-void stats_packet_init(
-	struct Stats* stats, struct timespec const* now, void* packet, unsigned len);
+void stats_packet_prepare(
+	struct timespec const* now, void* packet, unsigned len);
+
+/*
+  Report that a packet is sent. The "sent" counter is updated.
+ */
+void stats_packet_sent(struct Stats* stats);
+
+
 
 /*
   Handle a received reply packet. The "received" counter and rtt stats

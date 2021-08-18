@@ -9,6 +9,7 @@
 #include <cmd.h>
 #include <die.h>
 #include <shmem.h>
+#include <throttler.h>
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -54,7 +55,7 @@ static int cmdCtraffic(int argc, char **argv)
 	char const* addr = "::1";
 	char const* laddr = "::1";
 	char const* port = "6000";
-	char const* rate = "1.0";
+	char const* rate = "100.0";
 	char const* clients = "1";
 	char const* duration = "10";
 	char const* shm = "sctpstats";
@@ -95,6 +96,7 @@ static int cmdCtraffic(int argc, char **argv)
 		die("No clients");
 	struct ThreadArg* targs = calloc(nclients, sizeof(struct ThreadArg));
 	if (targs == NULL) die("OOM");
+	float crate = atof(rate) / (float)nclients;
 	for (int i = 0; i < nclients; i++) {
 		struct ThreadArg* targ = targs + i;
 		targ->id = i;
@@ -103,6 +105,7 @@ static int cmdCtraffic(int argc, char **argv)
 		targ->nLaddr = lcnt;
 		targ->laddrs = laddrs;
 		targ->stats = stats;
+		targ->rate = crate;
 		if (pthread_create(&targ->tid, NULL, clientThread, targ) != 0)
 			die("pthread_create\n");
 		debug("Client %u started as tid=%lu\n", targ->id, targ->tid);
@@ -137,6 +140,7 @@ static int cmdCtraffic(int argc, char **argv)
 	}
 	debug("All client threads terminated\n");
 
+	stats_print_json(stdout, stats);
 	return 0;
 }
 
@@ -241,43 +245,80 @@ static void* clientThread(void* _arg)
 		sctp_freepaddrs(addrs);		
 	}
 
+	// Set non-blocking mode
+	if (fcntl(sd, F_SETFL, fcntl(sd, F_GETFL, 0) | O_NONBLOCK) != 0)
+		die("fcntl O_NONBLOCK %s\n", strerror(errno));
+
 	char buf[MAXMSG];
 	ssize_t rc;
 	struct pollfd pfd;
 	struct timespec now;
-	int timeout = 200; //throttle_init(arg->rate);
+	clock_gettime(CLOCK_MONOTONIC, &now);
+	struct Throttler* t = throttler_create(&now, arg->rate);
+	int timeout = throttler_delay(t, &now) / 1000;
+	int sendIsBlocked = 0;
+
 	for (;;) {
 		pfd.fd = sd;
 		pfd.events = POLLIN;
 		pfd.revents = 0;
 		rc = poll(&pfd, 1, timeout);
 		if (rc < 0) {
-			/* signal. Wait an extra 100mS for the last packet */
+			/* signal. Wait extra for the last packets */
 			timeout = 100;
+			usleep(100000);
 			continue;
 		}
 		clock_gettime(CLOCK_MONOTONIC, &now);
-		if (rc == 0) {
-			/* Timeout. Time to send a packet */
+
+		if (rc > 0) {
+			/*
+			  There may be more than one packets enqueued, so try to
+			  read until EWOULDBLOCK.
+			*/
+			rc = recv(sd, buf, sizeof(buf), 0);
+			while (rc > 0) {
+				stats_packet_record(arg->stats, &now, buf, rc);
+				rc = recv(sd, buf, sizeof(buf), 0);
+			}
 			if (quit)
 				break;			/* We are quitting */
-			stats_packet_init(arg->stats, &now, buf, 1024);
-			rc = send(sd, buf, 1024, 0);
-			if (rc < 0)
-				die("send %s\n", strerror(errno));
-			if (rc != 1024)
-				die("send incomplete %d expected %d\n", rc, 1024);
-		} else {
-			rc = recv(sd, buf, sizeof(buf), 0);
-			if (rc < 0)
-				die("recv %s\n", strerror(errno));
 			if (rc == 0) {
 				info("Connection closed\n");
 				break;
 			}
-			stats_packet_record(arg->stats, &now, buf, rc);
+			if (rc < 0 && errno != EWOULDBLOCK)
+				die("recv %s\n", strerror(errno));
+		} else {
+			/* Timeout. Time to send a packet */
 			if (quit)
 				break;			/* We are quitting */
+			stats_packet_prepare(&now, buf, 1024);
+			rc = send(sd, buf, 1024, 0);
+			if (rc < 0) {
+				if (errno == EAGAIN) {
+					if (!sendIsBlocked)
+						warning("Client %u: Send is blocked\n", arg->id);
+					sendIsBlocked = 1;
+				} else {
+					die("send %s\n", strerror(errno));
+				}
+			} else {
+				if (rc != 1024)
+					die("send incomplete %d expected %d\n", rc, 1024);
+				if (sendIsBlocked)
+					warning("Client %u: Send is un-blocked\n", arg->id);
+				sendIsBlocked = 0;
+				stats_packet_sent(arg->stats);
+				throttler_event(t);
+			}
+		}
+		if (sendIsBlocked) {
+			timeout = 100;
+		} else {
+			// Re-read the time since send/recv may take some time
+			clock_gettime(CLOCK_MONOTONIC, &now);
+			timeout = throttler_delay(t, &now) / 1000;
 		}
 	}
 

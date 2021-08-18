@@ -42,6 +42,17 @@ $(X): $(OBJ)
 	$(CC) -o $(X) $(OBJ) $(LDFLAGS) -pthread -L$(NFQLB_DIR)/lib -lnfqlb -lsctp -lrt
 $(OBJ): | $(DIRS)
 
+.PHONY: test test_progs
+LIB_SRC := $(wildcard lib/*.c)
+LIB_OBJ := $(LIB_SRC:%.c=$(O)/%.o)
+$(O)/lib/test/% : lib/test/%.c
+	$(CC) $(CFLAGS) -Wall -Ilib -pthread $< $(LIB_OBJ) -o $@ -L$(NFQLB_DIR)/lib -lnfqlb
+TEST_SRC := $(wildcard lib/test/*-test.c)
+TEST_PROGS := $(TEST_SRC:%.c=$(O)/%)
+test_progs: $(TEST_PROGS)
+test: $(TEST_PROGS)
+	@$(foreach p,$(TEST_PROGS),echo $(p);$(p);)
+
 $(DIRS):
 	@mkdir -p $(DIRS)
 

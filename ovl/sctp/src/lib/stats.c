@@ -35,14 +35,16 @@ void stats_init(void* buffer, unsigned nBuckets, unsigned interval)
 	}
 }
 
-void stats_packet_init(
-	struct Stats* stats, struct timespec const* now,
-	void* packet, unsigned len)
+void stats_packet_prepare(
+	struct timespec const* now, void* packet, unsigned len)
 {
-	CNTINC(stats->sent);
 	if (len >= sizeof(struct timespec)) {
 		memcpy(packet, now, sizeof(struct timespec));
 	}
+}
+void stats_packet_sent(struct Stats* stats)
+{
+	CNTINC(stats->sent);
 }
 
 void stats_packet_record(
