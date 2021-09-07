@@ -7,7 +7,7 @@ die() {
 hostname | grep -Eq 'vm-[0-9]+$' || die "Invalid hostname [$(hostname)]"
 i=$(hostname | cut -d- -f2 | sed -re 's,^0+,,')
 
-. ./etc/profile
+. /etc/profile
 test -n "$PREFIX" || PREFIX=1000::1
 
 echo 0 > /proc/sys/net/ipv6/conf/eth1/accept_dad
