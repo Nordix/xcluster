@@ -19,6 +19,23 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
+  name: sctp-cluster
+spec:
+  ipFamilyPolicy: PreferDualStack
+  selector:
+    app: sctp-test
+  ports:
+  - port: 7002
+    name: sctp-hostname
+    protocol: SCTP
+  - port: 7003
+    name: sctp-sh
+    protocol: SCTP
+  type: LoadBalancer
+---
+apiVersion: v1
+kind: Service
+metadata:
   name: sctp-hostnet
 spec:
   externalTrafficPolicy: Local

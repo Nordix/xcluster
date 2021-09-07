@@ -47,6 +47,7 @@ cmd_tcase_start_servers() {
 	tcase "Start servers"
 	apply_k8s $yamld
 	assign-lb-ip -svc sctp -ip 10.0.0.72,1000::72
+	assign-lb-ip -svc sctp-cluster -ip 10.0.0.74,1000::74
 	assign-lb-ip -svc sctp-hostnet -ip 10.0.0.73,1000::73
 	test_daemonset sctp-test 180
 	test_daemonset sctp-test-hostnet 180
