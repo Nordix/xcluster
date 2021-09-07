@@ -29,26 +29,5 @@ To setup the environment source the `Envsettings.k8s` file;
 Note: Assign extra memory to VMs. Otherwise you risk running into out-of-memory
 issues, where usually one of the VPP forwarder gets killed by the OS.
 
-```
-unset __mem1
-export __mem201=1024
-export __mem202=1024
-xc mkcdrom private-reg meridio; xc starts --nets_vm=0,1,2 --nvm=2 --mem=4096 --smp=4
-helm install Meridio/docs/demo/deployments/spire --generate-name
-Meridio/docs/demo/scripts/spire-config.sh
-helm install Meridio/docs/demo/deployments/nsm-vlan --generate-name
-# use eth1 interface between meridio and the gateways, and eth2 between gateways and tg
-helm install Meridio/deployments/helm --generate-name --namespace default --set vlan.interface=eth1,ipFamily=dualstack
-helm install xcluster/ovl/meridio/helm/gateway --generate-name --set masterItf=eth1,tgMasterItf=eth2
-# start targets
-helm install Meridio/examples/target/helm/ --generate-name --namespace default --set defaultTrench=default
-# test something...
-# edit VIPs through the config map
-kubectl edit configmaps meridio-configuration
-# remove gateway-2 POD
-kubectl scale --replicas 0 deployment/gateway-2
-# start gateway-2 POD again
-kubectl scale --replicas 1 deployment/gateway-2
-xc stop
-```
+Refer to [Meridio description](https://github.com/Nordix/Meridio/blob/master/docs/demo/xcluster.md) for details. 
 
