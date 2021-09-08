@@ -1,0 +1,28 @@
+diff --git a/usrsctplib/netinet/sctputil.c b/usrsctplib/netinet/sctputil.c
+index ece6918..89ac0b3 100755
+--- a/usrsctplib/netinet/sctputil.c
++++ b/usrsctplib/netinet/sctputil.c
+@@ -1075,6 +1075,8 @@ sctp_select_initial_TSN(struct sctp_pcb *inp)
+	return (x);
+ }
+
++uint32_t override_vtag = 0;
++
+ uint32_t
+ sctp_select_a_tag(struct sctp_inpcb *inp, uint16_t lport, uint16_t rport, int check)
+ {
+@@ -1094,6 +1096,15 @@ sctp_select_a_tag(struct sctp_inpcb *inp, uint16_t lport, uint16_t rport, int ch
+			break;
+		}
+	}
++	if (override_vtag != 0) {
++		if (check) {
++			int good = sctp_is_vtag_good(htonl(override_vtag), lport, rport, &now);
++			printf("VTAG; 0x%x -> 0x%x (good %d)\n", x, htonl(override_vtag), good);
++		} else {
++			printf("VTAG; 0x%x -> 0x%x (no check)\n", x, htonl(override_vtag));
++		}
++		x = htonl(override_vtag);
++	}
+	return (x);
+ }
