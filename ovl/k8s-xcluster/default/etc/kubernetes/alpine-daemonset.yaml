@@ -13,7 +13,7 @@ spec:
     spec:
       containers:
       - name: alpine
-        image: library/alpine:latest
+        image: docker.io/library/alpine:latest
         imagePullPolicy: IfNotPresent
         command: ["sh", "-f", "/pod-init/pod-init"]
         env:
