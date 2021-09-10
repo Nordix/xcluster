@@ -370,6 +370,7 @@ log_version() {
 	tlog "$(uname -s -r -v)"
 	tlog "CNI-plugin; $(cni_plugin_info)"
 	tlog "Proxy-$(grep mode /etc/kubernetes/kube-proxy.config)"
+	tlog $(crio -v 2> /dev/null | grep "crio version")
 	local baseFamily=IPv4
 	ipv6base && baseFamily=IPv6
 	local dualMode="old dual-stack API"
