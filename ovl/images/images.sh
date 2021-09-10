@@ -12,8 +12,6 @@ dir=$(dirname $0); dir=$(readlink -f $dir)
 me=$dir/$prg
 tmp=/tmp/${prg}_$$
 
-pause="k8s.gcr.io/pause:3.2"
-
 die() {
     echo "ERROR: $*" >&2
     rm -rf $tmp
@@ -352,7 +350,7 @@ cmd_make() {
 	test -n "$__tar" || __tar=$XCLUSTER_TMP/images.tar
 	local n rootfs img=''
 	mkdir -p $tmp
-	for n in $pause $@; do
+	for n in $@; do
 		if echo "$n" | grep -q : ; then
 			cmd_in_docker "$n" || docker pull "$n" || die "Pull failed [$n]"
 			img="$img $n"
