@@ -97,7 +97,6 @@ cmd_bin_add() {
 cmd_prepulled_images() {
 	echo docker.io/library/alpine:latest
 	echo registry.nordix.org/cloud-native/mconnect:latest
-	echo k8s.gcr.io/metrics-server/metrics-server:v0.3.7
 	echo k8s.gcr.io/pause:3.2
 }
 cmd_mkcache_ar() {
@@ -486,46 +485,6 @@ cmd_workspace_ar() {
 	mkdir -p $tmp
 	cmd_mkworkspace $tmp/workspace
 	tar -C $tmp --group=0 --owner=0 -cf "$1" workspace
-}
-
-##   mkplay [--name=xcplay] [--tar=/tmp/$__name.tar] [file/dir]
-##     Create a "xcluster-play" archive.
-##
-cmd_mkplay() {
-	test -n "$__name" || __name=xcplay
-	test -n "$__tar" || __tar=/tmp/$__name.tar
-	local O=$tmp/$__name
-	local W=$O/workspace
-
-	mkdir -p $O
-	if test -n "$1"; then
-		test -r "$1" || die "Not readable [$1]"
-		test -f "$1" && cp "$1" $O
-		test -d "$1" && cp -r "$1/*" $O
-	fi
-
-	mkdir -p $W
-	cp $dir/xcadmin.sh $dir/xcluster.sh $dir/LICENSE $dir/Envsettings.k8s \
-		$dir/Envsettings $O
-
-	mkdir -p $O/config
-	cp $dir/config/net-setup-userspace.sh $dir/config/kubeconfig* \
-		$dir/config/Corefile $O/config
-
-	cmd_bin_add $W/bin
-	rm -f $W/bin/assign-lb-ip $W/bin/mconnect
-
-	mkdir -p $W/xcluster
-	cp -L $__image $W/xcluster/hd-k8s.img
-	eval $($XCLUSTER env | grep __kbin=)
-	cp $__kbin $W/xcluster
-
-	rm -f $__tar.xz
-	cd $tmp
-	tar -cf $__tar $__name
-	cd - > /dev/null
-	nice xz -T0 $__tar
-	log "Created [$__tar.xz]"
 }
 
 ##   env_check
