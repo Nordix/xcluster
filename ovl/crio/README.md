@@ -39,7 +39,7 @@ cd $GOPATH/src/github.com/containers
 rm -rf conmon
 git clone --depth 1 https://github.com/containers/conmon.git
 cd conmon
-make
+make binaries
 ```
 
 ## Runtime

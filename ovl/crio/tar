@@ -16,14 +16,13 @@ log() {
 test -n "$1" || die "No out-file"
 mkdir -p $tmp/bin
 
-test -n "$__criover" || __criover=crio-v1.18.3
+test -n "$__criover" || __criover=crio-v1.22.0
 ar=$__criover.tar.gz
-if test -r $ARCHIVE/$ar; then
-	log "Using cri-o binary release $__criover"
-	tar -C $tmp --strip-components=1 -xf $ARCHIVE/$ar $__criover/bin
-	mv $tmp/bin/crio-static $tmp/bin/crio
-	mv $tmp/bin/crio-status-static $tmp/bin/crio-status
-else
+test -r $ARCHIVE/$ar || die "Not readable [$ARCHIVE/$ar]"
+log "Using cri-o binary release $__criover"
+tar -C $tmp --strip-components=1 -xf $ARCHIVE/$ar cri-o/bin
+
+if test "$CRIO_LOCAL" = "yes"; then
 	log "Using local built cri-o"
 	criod=$GOPATH/src/github.com/cri-o/cri-o
 	for n in crio pinns crio-status; do
@@ -31,20 +30,7 @@ else
 		test -x $f || die "Not executable [$f]"
 		cp $f $tmp/bin
 	done
-
-	f=$ARCHIVE/runc.amd64
-	test -x $f || die "Not executable [$f]"
-	cp $f $tmp/bin/runc
-
-	f=$GOPATH/src/github.com/containers/conmon/bin/conmon
-	test -x $f || die "Not executable [$f]"
-	cp $f $tmp/bin
 fi
-
-ver=v1.16.1
-ar=$ARCHIVE/crictl-$ver-linux-amd64.tar.gz
-test -r $ar || die "Not readable [$ar]"
-tar -C $tmp/bin -xf $ar
 
 # (until we have some hooks...)
 mkdir -p $tmp/usr/share/containers/oci/hooks.d
