@@ -191,7 +191,8 @@ cmd_tcase_pod_nslookup() {
 		pod=$(get_pod app=alpine $n)
 		echo $pod | grep -q alpine || continue
 		tlog "Nslookup from a POD on $n"
-		$kubectl exec $pod -- nslookup kubernetes 2>&1 || tdie
+		$kubectl exec $pod -- nslookup kubernetes 2>&1 \
+			| ogrep -E 'fd00:4000::1|12.0.0.1' || tdie
 	done
 	test -n "$pod" || tdie "No PODs (or nodes) were found"
 }
