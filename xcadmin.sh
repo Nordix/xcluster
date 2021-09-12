@@ -266,18 +266,19 @@ cmd_build_iptools() {
 
 
 ##   cache_refresh
-##     From "$ARCHIVE/xcluster-cache.tar" if ti exists otherwise
+##     From "$ARCHIVE/xcluster-cache.tar" if it exists otherwise
 ##     build. Build requires "sudo"!
 cmd_cache_refresh() {
 	local ar=$ARCHIVE/xcluster-cache.tar
 	if test -r $ar; then
+		log "cache_refresh from $ar"
 		eval $($XCLUSTER env | grep __cached)
 		rm -rf $__cached
 		mkdir -p  $__cached
-		tar -C $__cached -xf $ar || die
-		$XCLUSTER cache iptools
+		tar -C $__cached -xvf $ar || die
 		return 0
 	fi
+	log "cache_refresh rebuild"
 	$XCLUSTER cache --clear
 	local o
 	for o in iptools images crio; do
