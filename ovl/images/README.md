@@ -1,5 +1,4 @@
-Xcluster overlay - images
-=========================
+# Xcluster overlay - images
 
 Handles pre-pulled images in `xcluster`.
 
@@ -46,8 +45,8 @@ is created in the `$XCLUSTER_TMP` directory. The items may be;
 ```
 # ("images" alias defined in $h/Envsettings)
 # Requires "sudo"
-images make nordixorg/mconnect:v1.2 library/alpine:3.8 \
-  k8s.gcr.io/metrics-server-amd64:v0.3.6
+images make k8s.gcr.io/pause:3.6 \
+  registry.nordix.org/cloud-native/mconnect:latest docker.io/library/alpine:latest
 eval $($XCLUSTER env | grep XCLUSTER_TMP)
 ls $XCLUSTER_TMP/images.tar
 xc mkcdrom [overlays...] images

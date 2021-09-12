@@ -97,14 +97,14 @@ cmd_bin_add() {
 cmd_prepulled_images() {
 	echo docker.io/library/alpine:latest
 	echo registry.nordix.org/cloud-native/mconnect:latest
-	echo k8s.gcr.io/pause:3.2
+	echo k8s.gcr.io/pause:3.6
 }
 cmd_mkcache_ar() {
 	test -n "$XCLUSTER" || die 'Not set [$XCLUSTER]'
 	local ar=$ARCHIVE/xcluster-cache.tar
 	rm -f $ar
 	local images="$($XCLUSTER ovld images)/images.sh"
-	$images make $(cmd_prepulled_images)
+	$images make $(cmd_prepulled_images) || die
 	cmd_cache_refresh
 	eval $($XCLUSTER env | grep __cached)
 	cd $__cached

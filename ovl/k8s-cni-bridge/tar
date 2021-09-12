@@ -18,7 +18,7 @@ test -n "$1" || die "No out-file"
 mkdir -p $tmp
 cp -R $dir/default/* $tmp
 
-f=$ARCHIVE/cni-plugins-linux-amd64-v0.8.7.tgz
+f=$ARCHIVE/cni-plugins-linux-amd64-v1.0.1.tgz
 test -r $f || die "Not readable [$f]"
 mkdir -p $tmp/opt/cni/bin
 tar -C $tmp/opt/cni/bin -xf $f ./host-local ./bridge ./loopback
