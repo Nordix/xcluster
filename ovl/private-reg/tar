@@ -29,7 +29,7 @@ for s in $(echo "$SETUP" | tr ',' ' '); do
 done
 test "$setup_copied" != "yes" && test -d $dir/default && cp -R $dir/default/* $tmp
 
-sed -i -e "s,%localreg%,$regip," $tmp/etc/crio/crio.conf
+sed -i -e "s,%localreg%,$regip," $tmp/etc/init.d/28private-reg.rc
 echo "$regip example.com" >> $tmp/etc/spoofed-hosts
 if test -n "$__dns_spoof"; then
 	test -r "$__dns_spoof" || die "Not readable [$__dns_spoof]"

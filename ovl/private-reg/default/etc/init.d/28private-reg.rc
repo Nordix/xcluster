@@ -4,3 +4,9 @@ cat /etc/spoofed-hosts >> /etc/hosts
 for a in $(grep -v '^#' /etc/spoofed-hosts | cut -d' ' -f1 | sort | uniq); do
 	ip ro replace $a via 192.168.0.250
 done
+
+sed -i '/\[crio.image\]/a\
+insecure_registries = [\
+ "%localreg%/16",\
+ "192.168.0.0/24"\
+]' /etc/crio/crio.conf
