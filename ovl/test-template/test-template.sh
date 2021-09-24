@@ -79,7 +79,7 @@ cmd_test() {
 
 }
 
-test_start() {
+test_start_empty() {
 	test -n "$__mode" || __mode=dual-stack
 	xcluster_prep $__mode
 	xcluster_start test-template
@@ -88,9 +88,11 @@ test_start() {
 	otc 1 check_nodes
 	otc 201 set_vip_routes
 	otc 202 set_vip_routes
+}
+test_start() {
+	test_start_empty
 	otc 1 start_servers
 	otc 1 check_servers
-	#otc 1 check_metric_server (does not always work, e.g with kubeadm or cilum)
 }
 
 test_basic4() {
