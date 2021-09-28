@@ -42,7 +42,7 @@ cmd_env() {
 		return 0
 	fi
 
-	test -n "$__cniver" || __cniver=v0.8.7
+	test -n "$__cniver" || __cniver=v1.0.1
 	test -n "$xcluster_DOMAIN" || xcluster_DOMAIN=xcluster
 	test -n "$XCLUSTER" || die 'Not set [$XCLUSTER]'
 	test -x "$XCLUSTER" || die "Not executable [$XCLUSTER]"

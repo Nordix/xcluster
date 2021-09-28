@@ -1,13 +1,14 @@
 # Xcluster ovl - K8s with Multus
 
-Use [multus](https://github.com/intel/multus-cni) in a Kubernetes xcluster.
+Use [multus](https://github.com/k8snetworkplumbingwg/multus-cni) in a
+Kubernetes xcluster.
 
 
 ## Install
 
 The binary release contains only one binary;
 ```
-ver=3.6
+ver=3.8
 ar=$HOME/Downloads/multus-cni_${ver}_linux_amd64.tar.gz
 tar tf $ar
 tar -O -xf $ar multus-cni_${ver}_linux_amd64/multus-cni > $ARCHIVE/multus-cni

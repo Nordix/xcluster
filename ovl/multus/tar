@@ -23,7 +23,7 @@ test -x $f || die "Not executable [$f]"
 mkdir -p $tmp/opt/cni/bin
 cp $f $tmp/opt/cni/bin
 
-test -n "$__cniver" || __cniver=v0.8.7
+test -n "$__cniver" || __cniver=v1.0.1
 f=$ARCHIVE/cni-plugins-linux-amd64-$__cniver.tgz
 test -r "$f" || die "Not readable [$f]"
 tar -C $tmp/opt/cni/bin -xf $f
