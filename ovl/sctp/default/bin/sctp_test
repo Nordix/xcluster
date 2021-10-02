@@ -121,6 +121,14 @@ cmd_tcase_sctp_server() {
 	ip netns exec pod sh -c "exec $cmd > $log 2>&1 &"
 }
 
+cmd_tcase_usrsctp_echo_server() {
+	tcase "Start usrscto SCTP echo_server in pod"
+	test -x /bin/echo_server || tdie "Not executable [/bin/echo_server]"
+	local cmd="/bin/echo_server $UDP_ENCAP $UDP_ENCAP"
+	local log=/var/log/sctpt.log
+	ip netns exec pod sh -c "exec $cmd > $log 2>&1 &"
+}
+
 . /etc/profile
 . /usr/lib/xctest
 indent='  '

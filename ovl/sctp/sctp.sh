@@ -109,12 +109,19 @@ test_start() {
 	otc 204 "vip_route 192.168.5.202"
 }
 
-
 test_nfqlb() {
 	test_start
 	otc 201 "nfqlb_setup --sctp_encap=9899"
 	otc 202 "nfqlb_setup --sctp_encap=9899"
 	otcw sctp_server
+	xcluster_stop
+}
+
+test_nfqlb_usrsctp() {
+	test_start
+	otc 201 "nfqlb_setup --sctp_encap=9899"
+	otc 202 "nfqlb_setup --sctp_encap=9899"
+	otcw usrsctp_echo_server
 	xcluster_stop
 }
 

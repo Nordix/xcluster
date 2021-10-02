@@ -25,6 +25,13 @@ else
 	log "Nfqlb not included"
 fi
 
+d=$GOPATH/src/github.com/sctplab/usrsctp
+x=$d/programs/echo_server
+if test -x $x; then
+	log "Including; echo_server"
+	cp $x $tmp/bin
+fi
+
 make -s -C $dir/src clean > /dev/null 2>&1
 make -s -C $dir/src -j$(nproc) X=$tmp/bin/sctpt static > /dev/null 2>&1 || die make
 
