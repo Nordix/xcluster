@@ -76,34 +76,34 @@ cmd_tcase_nfqlb_setup() {
 
 	# Disable HW offload
 	ethtool -K eth1 gro off gso off tso off
-    ethtool -K eth2 gro off gso off tso off
+	ethtool -K eth2 gro off gso off tso off
 
 	# Setup iptables
-    iptables -t mangle -N VIP
-    iptables -t mangle -A VIP -j NFQUEUE --queue-num 2
-    iptables -t mangle -A PREROUTING -i eth2 -d 10.0.0.0/24 -j VIP
+	iptables -t mangle -N VIP
+	iptables -t mangle -A VIP -j NFQUEUE --queue-num 2
+	iptables -t mangle -A PREROUTING -i eth2 -d 10.0.0.0/24 -j VIP
 
-    ip6tables -t mangle -N VIP
-    ip6tables -t mangle -A VIP -j NFQUEUE --queue-num 2
-    ip6tables -t mangle -A PREROUTING -i eth2 -d 1000::/112 -j VIP
+	ip6tables -t mangle -N VIP
+	ip6tables -t mangle -A VIP -j NFQUEUE --queue-num 2
+	ip6tables -t mangle -A PREROUTING -i eth2 -d 1000::/112 -j VIP
 
 	# Setup routes
 	local n
 	local net=1
 	hostname | grep -q 201 || net=4
-    for n in $(seq 1 $__nvm); do
-        ip rule add fwmark $n table $n
-        ip route add default via 192.168.$net.$n table $n
-        ip -6 rule add fwmark $n table $n
-        ip -6 route add default via 1000::1:192.168.$net.$n table $n
-    done
+	for n in $(seq 1 $__nvm); do
+		ip rule add fwmark $n table $n
+		ip route add default via 192.168.$net.$n table $n
+		ip -6 rule add fwmark $n table $n
+		ip -6 route add default via 1000::1:192.168.$net.$n table $n
+	done
 	
 	# Start the load-balancer
 	nfqlb init --M=900 --N=20
-    nfqlb lb $opt $@ > /var/log/nfqlb.log 2>&1 &
+	nfqlb lb $opt $@ > /var/log/nfqlb.log 2>&1 &
 
 	# Activate targets
-    for n in $(seq 1 $__nvm); do
+	for n in $(seq 1 $__nvm); do
 		nfqlb activate --index=$n $n
 	done
 }
