@@ -82,3 +82,15 @@ else
 }
 EOF
 fi
+
+mkdir -p /etc/cni/net.d/whereabouts.d
+cat > /etc/cni/net.d/whereabouts.d/whereabouts.conf <<EOF
+{
+  "datastore": "kubernetes",
+  "kubernetes": {
+    "kubeconfig": "/etc/kubernetes/kubeconfig.token"
+  },
+  "log_file": "/var/log/whereabouts.log",
+  "log_level": "debug"
+}
+EOF

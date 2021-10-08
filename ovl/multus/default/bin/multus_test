@@ -42,6 +42,8 @@ cmd_tcase_start_multus() {
 	kubectl apply -f /etc/kubernetes/multus-crd-ipvlan.yaml || tdie
 	kubectl apply -f /etc/kubernetes/multus-crd-macvlan.yaml || tdie
 	kubectl apply -f /etc/kubernetes/multus-crd-host-device.yaml || tdie
+	kubectl apply -f /etc/kubernetes/whereabouts/whereabouts.cni.cncf.io_ippools.yaml || tdie
+	kubectl apply -f /etc/kubernetes/whereabouts/whereabouts.cni.cncf.io_overlappingrangeipreservations.yaml || tdie
 	kubectl apply -f /etc/kubernetes/multus-alpine.yaml || tdie
 	kubectl apply -f /etc/kubernetes/alpine.yaml || tdie
 	test_deployment alpine-deployment 180
@@ -63,7 +65,12 @@ cmd_tcase_ping() {
 	local pod i adr
 	for pod in $(kubectl get pods -l app=multus-alpine -o name); do
 		for i in 1 2 3 4; do
-			for adr in 15.0.$i.0 16.0.$i.0 4000::15.0.$i.0 4000::16.0.$i.0; do
+			for adr in 15.0.$i.0 4000::15.0.$i.0; do
+				kubectl exec $pod -- ping -c1 -W1 $adr || tdie "Ping $pod $adr"
+			done
+		done
+		for i in 1 2 3 4; do
+			for adr in 4000::16.0.0.$i; do
 				kubectl exec $pod -- ping -c1 -W1 $adr || tdie "Ping $pod $adr"
 			done
 		done

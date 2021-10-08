@@ -69,13 +69,7 @@ cmd_test() {
             test_$t
         done
     else
-		__mode=dual-stack
-		test_start
-		push __no_stop yes
-		__no_start=yes
 		test_basic
-		pop __no_stop
-		xcluster_stop
     fi      
 
     now=$(date +%s)

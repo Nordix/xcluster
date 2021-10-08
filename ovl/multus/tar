@@ -28,6 +28,14 @@ f=$ARCHIVE/cni-plugins-linux-amd64-$__cniver.tgz
 test -r "$f" || die "Not readable [$f]"
 tar -C $tmp/opt/cni/bin -xf $f
 
+test -n "$WHEREABOUTS_DIR" || WHEREABOUTS_DIR=$GOPATH/src/github.com/k8snetworkplumbingwg/whereabouts
+f=$WHEREABOUTS_DIR/bin/whereabouts
+test -x $f || die "Not executable [$f]"
+cp $f $tmp/opt/cni/bin
+mkdir -p $tmp/etc/kubernetes
+cp -r $WHEREABOUTS_DIR/doc/crds $tmp/etc/kubernetes/whereabouts
+
+
 cd $tmp
 tar cf "$1" *
 cd - > /dev/null

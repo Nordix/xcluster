@@ -1,7 +1,9 @@
 # Xcluster ovl - K8s with Multus
 
 Use [multus](https://github.com/k8snetworkplumbingwg/multus-cni) in a
-Kubernetes xcluster.
+Kubernetes xcluster. The
+[whereabouts](https://github.com/k8snetworkplumbingwg/whereabouts)
+IPAM is used for the `ipvlan` example only since it doesn't support dual-stack.
 
 
 ## Install
@@ -15,6 +17,14 @@ tar -O -xf $ar multus-cni_${ver}_linux_amd64/multus-cni > $ARCHIVE/multus-cni
 chmod a+x $ARCHIVE/multus-cni
 ```
 
+Whereabouts must be cloned and built locally;
+```
+export WHEREABOUTS_DIR=/path/to/your/whereabouts
+cd $(dirname $WHEREABOUTS_DIR)
+git clone --depth 1 https://github.com/k8snetworkplumbingwg/whereabouts.git
+cd $WHEREABOUTS_DIR
+./hack/build-go.sh
+```
 
 ## Usage
 
@@ -31,12 +41,18 @@ xcadmin k8s_test multus start > $log
 
 In the `alpine` pod to a `ifconfig -a` and check the interfaces;
 
- * net1 - ipvlan (master eth2)
+ * net1 - ipvlan (master eth2, only IPv6 because of IPAM whereabouts)
  * net2 - macvlan (master eth3)
  * net3 - host-device (eth4)
 
 
-## The ipam host-local problem
+## IPAM whereabouts
+
+IPAM [whereabouts](https://github.com/k8snetworkplumbingwg/whereabouts)
+does not support dual-stack so it is of limited use.
+
+
+## IPAM node-local
 
 If the ip ranges are defined in the CRD object all pods will get the
 same addresses on different nodes. To fix this a "glue" ipam is
