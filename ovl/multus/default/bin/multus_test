@@ -44,12 +44,34 @@ cmd_tcase_start_multus() {
 	kubectl apply -f /etc/kubernetes/multus-crd-host-device.yaml || tdie
 	kubectl apply -f /etc/kubernetes/whereabouts/whereabouts.cni.cncf.io_ippools.yaml || tdie
 	kubectl apply -f /etc/kubernetes/whereabouts/whereabouts.cni.cncf.io_overlappingrangeipreservations.yaml || tdie
+}
+
+cmd_tcase_alpine() {
+	tcase "Start alpine pods"
 	kubectl apply -f /etc/kubernetes/multus-alpine.yaml || tdie
 	kubectl apply -f /etc/kubernetes/alpine.yaml || tdie
 	test_deployment alpine-deployment 180
 	test_daemonset multus-alpine 180
 }
 
+cmd_tcase_multus_server() {
+	tcase "Start multus server/client"
+	kubectl apply -f /etc/kubernetes/multus-service/deployment.yaml || tdie
+	test_deployment multus-server 180
+	test_deployment multus-client 30
+}
+
+cmd_tcase_multus_proxy() {
+	tcase "Start multus-proxy"
+	multus-proxy --kubeconfig $KUBECONFIG \
+		--container-runtime-endpoint unix:///var/run/crio/crio.sock \
+		> /var/log/multus-proxy.log 2>&1 &
+}
+cmd_tcase_multus_service_controller() {
+	tcase "Start multus-service-controller"
+	multus-service-controller --kubeconfig $KUBECONFIG \
+		> /var/log/multus-service-controller.log 2>&1 &
+}
 cmd_tcase_check_interfaces() {
 	tcase "Check extra interfaces"
 	local pod dev

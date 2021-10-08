@@ -77,7 +77,7 @@ cmd_test() {
 
 }
 
-test_start() {
+test_start_empty() {
 	# Pre-checks
 	test -x $ARCHIVE/multus-cni || die "Not executable [$ARCHIVE/multus-cni]"
 	local ar=$ARCHIVE/cni-plugins-linux-amd64-$__cniver.tgz
@@ -97,6 +97,16 @@ test_start() {
 	otcr vip_routes
 	unset otcprog
 	otc 1 start_multus
+}
+test_start() {
+	test_start_empty
+	otc 1 alpine
+}
+test_start_server() {
+	test_start_empty
+	otc 2 multus_service_controller
+	otcw multus_proxy
+	otc 1 multus_server
 }
 
 test_basic() {

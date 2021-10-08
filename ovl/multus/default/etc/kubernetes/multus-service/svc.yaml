@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: multus-service
+  labels:
+    service.kubernetes.io/service-proxy-name: multus-proxy
+  annotations:
+    k8s.v1.cni.cncf.io/service-network: ipvlan
+spec:
+  ipFamilyPolicy: SingleStack
+  ipFamilies:
+  - IPv6
+  selector:
+    app: multus-server
+  ports:
+  - port: 5001

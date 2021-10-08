@@ -112,3 +112,26 @@ Place different configs for the new `node-local` ipam in
 
 The `.x` string is replaced by `node-local` to the node unique id.
 
+
+## Multus-service
+
+[Multus-service](https://github.com/k8snetworkplumbingwg/multus-service)
+implements ClusterIP services for multus networks. External traffic is
+not supported.
+
+Clone and build;
+```
+MSERVICE_DIR=/path/to/your/multus-service
+cd $(dirname $MSERVICE_DIR)
+git clone https://github.com/k8snetworkplumbingwg/multus-service.git
+cd $MSERVICE_DIR
+go install ./cmd/...
+ls -l $GOPATH/bin/multus-*
+```
+
+```
+log=/tmp/$USER/xcluster.log
+xcadmin k8s_test multus start_server > $log
+# On a node
+kubectl apply -f /etc/kubernetes/multus-service/svc.yaml
+```

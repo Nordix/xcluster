@@ -35,6 +35,10 @@ cp $f $tmp/opt/cni/bin
 mkdir -p $tmp/etc/kubernetes
 cp -r $WHEREABOUTS_DIR/doc/crds $tmp/etc/kubernetes/whereabouts
 
+for n in multus-proxy multus-service-controller; do
+	f=$GOPATH/bin/$n
+	test -x $f && cp $f $tmp/bin
+done
 
 cd $tmp
 tar cf "$1" *
