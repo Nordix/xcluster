@@ -12,7 +12,7 @@ spec:
       labels:
         app: multus-server
       annotations:
-        k8s.v1.cni.cncf.io/networks: ipvlan
+        k8s.v1.cni.cncf.io/networks: ipvlan2
     spec:
       containers:
       - name: alpine
@@ -39,7 +39,7 @@ spec:
       labels:
         app: multus-client
       annotations:
-        k8s.v1.cni.cncf.io/networks: ipvlan
+        k8s.v1.cni.cncf.io/networks: ipvlan2
     spec:
       containers:
       - name: alpine

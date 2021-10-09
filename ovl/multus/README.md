@@ -134,4 +134,8 @@ log=/tmp/$USER/xcluster.log
 xcadmin k8s_test multus start_server > $log
 # On a node
 kubectl apply -f /etc/kubernetes/multus-service/svc.yaml
+# In a POD
+nc -w 1 -v multus-service 5001
+apk add iptables ip6tables
+iptables -t nat -L -nv
 ```
