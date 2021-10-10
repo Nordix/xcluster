@@ -1,88 +1,69 @@
 # Xcluster/ovl - k8s-cni-cilium
 
-The [cilium](https://github.com/cilium/cilium) CNI-plugin for
-[k8s-xcluster](../k8s-xcluster/README.md).
+The [cilium](https://github.com/cilium/cilium) CNI-plugin,
 
-SCTP is not supported issue [#5719](https://github.com/cilium/cilium/issues/5719)
+SCTP is not supported, issue [#5719](https://github.com/cilium/cilium/issues/5719).
 
-## Usage
 
-```
-export __image=$XCLUSTER_WORKSPACE/xcluster/hd-k8s-xcluster.img
-export __nvm=5
-SETUP=ipv4 xc mkcdrom k8s-cni-cilium private-reg; xc starts
-```
+## Install
 
-## Build
-
-Upgrade
-```
-ver=1.8.6
-curl https://raw.githubusercontent.com/cilium/cilium/$ver/install/kubernetes/quick-install.yaml > quick-install-$ver.yaml
-meld quick-install.yaml default/etc/kubernetes/load/quick-install.yaml &
-meld quick-install-$ver.yaml default/etc/kubernetes/load/quick-install.yaml &
-cp quick-install-$ver.yaml quick-install-$ver-mod.yaml
-# Modify quick-install-$ver-mod.yaml
-cp quick-install-$ver-mod.yaml default/etc/kubernetes/load/quick-install.yaml
-images lreg_missingimages default
-# Update local-reg
-# TEST!
-```
+A manifest (yaml) is generated with `helm` and will be used by default;
 
 ```
+ver=v1.10.4
 mkdir -p $GOPATH/src/github.com/cilium
 cd $GOPATH/src/github.com/cilium
 rm -rf cilium
-git clone --depth 1 -b v1.8 https://github.com/cilium/cilium.git
+git clone --depth 1 -b $ver https://github.com/cilium/cilium.git
 cd $GOPATH/src/github.com/cilium/cilium/install/kubernetes
+#less cilium/values.yaml
 helm template cilium \
   --namespace kube-system \
-  --set global.containerRuntime.integration=crio \
-  --set global.ipvlan.masterDevice=eth1 \
-  --set global.tunnel=disabled \
-  --set global.masquerade=true \
-  --set global.installIptablesRules=false \
-  --set global.autoDirectNodeRoutes=true \
-  --set global.kubeProxyReplacement=strict \
-  --set global.k8sServiceHost=192.168.1.1 \
-  --set global.k8sServicePort=6443 \
-  --set global.device=eth1 \
-  --set config.ipam=kubernetes \
-  > cilium.yaml
+  --set containerRuntime.integration=crio \
+  --set kubeProxyReplacement=strict \
+  --set k8sServiceHost=192.168.1.1 \
+  --set k8sServicePort=6443 \
+  --set ipv6.enabled=true \
+  --set operator.replicas=1 \
+  --set ipam.mode=kubernetes \
+  --set bpf.masquerade=false \
+  --set nativeRoutingCIDR=12.0.0.0/16 \
+  > $($XCLUSTER ovld k8s-cni-cilium)/default/etc/kubernetes/load/quick-install.yaml
 #  --set global.datapathMode=ipvlan \
+#  --set global.ipvlan.masterDevice=eth1 \
 ```
 
-Check http://docs.cilium.io/en/stable/gettingstarted/k8s-install-default/
+You may also try the installation from the [quick-installation](https://docs.cilium.io/en/stable/gettingstarted/k8s-install-default/#quick-installation);
+```
+cd $HOME/Downloads
+curl -L --remote-name-all https://github.com/cilium/cilium-cli/releases/latest/download/cilium-linux-amd64.tar.gz{,.sha256sum}
+sha256sum --check cilium-linux-amd64.tar.gz.sha256sum
+tar -C /dir/in/path -xf cilium-linux-amd64.tar.gz
+export __mode=ipv4
+xcadmin k8s_test test-template start_empty > $log
+cilium install --restart-unmanaged-pods false --kube-proxy-replacement strict 
+cilium status
+__no_start=yes xcadmin k8s_test test-template basic > $log
+```
+Only IPv4 is supported at the moment (v1.10.4)
+
+
 
 
 
 ## Test
 
 ```
-export __image=$XCLUSTER_WORKSPACE/xcluster/hd-k8s-xcluster.img
-export XCTEST_HOOK=$($XCLUSTER ovld k8s-xcluster)/xctest-hook
-export __nvm=5
-export __mem=1024
-t=test-template
-XOVLS="k8s-cni-cilium private-reg" $($XCLUSTER ovld $t)/$t.sh test basic4 > $XCLUSTER_TMP/$t-test.log
-XOVLS="k8s-cni-cilium private-reg" $($XCLUSTER ovld $t)/$t.sh test basic_dual > $XCLUSTER_TMP/$t-test.log
-t=metallb
-XOVLS="k8s-cni-cilium private-reg" $($XCLUSTER ovld $t)/$t.sh test basic_dual > $XCLUSTER_TMP/$t-test.log
+xcadmin k8s_test --cni=cilium test-template basic > $log
 ```
 
-```
-eso k8s_test --cni=cilium --mode=ipv4 "test-template start"
-kubectl apply -f ./connectivity-check.yaml
-kubectl get pods   # All shall become ready
-```
 
 ## Debug
 
+* https://docs.cilium.io/en/stable/operations/troubleshooting/
+
 Use the "cilium" program inside a POD;
 ```
-#kubectl exec -it cilium-jv7w2 -- bash
-kubectl exec -it -n kube-system \
- $(kubectl get pod -n kube-system -l k8s-app=cilium -o name | head -1) -- bash
 pod=$(kubectl get pod -n kube-system -l k8s-app=cilium -o name | head -1)
 kubectl exec -it -n kube-system $pod -- bash
 kubectl logs $pod
