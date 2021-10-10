@@ -374,9 +374,10 @@ cmd_k8s_test() {
 	fi
 
 	if test "$__cni" = "cilium"; then
-		# Cilium is a horrible memory-hog
+		# Cilium is a horrible memory-hog and emulates kube-proxy
 		export __mem1=1024
 		export __mem=2560
+		export xcluster_PROXY_MODE=disabled
 	fi
 
 	local ovld="$($XCLUSTER ovld $1)"
