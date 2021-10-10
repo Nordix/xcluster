@@ -19,6 +19,7 @@ cd $GOPATH/src/github.com/cilium/cilium/install/kubernetes
 #less cilium/values.yaml
 helm template cilium \
   --namespace kube-system \
+  --set devices=eth1 \
   --set containerRuntime.integration=crio \
   --set kubeProxyReplacement=strict \
   --set k8sServiceHost=192.168.1.1 \
@@ -27,7 +28,7 @@ helm template cilium \
   --set operator.replicas=1 \
   --set ipam.mode=kubernetes \
   --set bpf.masquerade=false \
-  --set nativeRoutingCIDR=12.0.0.0/16 \
+  --set nativeRoutingCIDR=11.0.0.0/16 \
   > $($XCLUSTER ovld k8s-cni-cilium)/default/etc/kubernetes/load/quick-install.yaml
 #  --set global.datapathMode=ipvlan \
 #  --set global.ipvlan.masterDevice=eth1 \
