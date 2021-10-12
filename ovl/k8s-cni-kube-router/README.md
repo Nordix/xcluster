@@ -12,7 +12,7 @@ vi ipv4/etc/kubernetes/load/kuberouter.yaml
 # Set version v1.1.0
 # Alter kubeconfig to mimic ../kubernetes/default/etc/kubernetes/kubeconfig.token
 k8s checkimages k8s-cni-kube-router
-images lreg_cache docker.io/cloudnativelabs/kube-router:v1.1.0
+images lreg_cache docker.io/cloudnativelabs/kube-router:v1.3.1
 ```
 
 
@@ -20,6 +20,6 @@ images lreg_cache docker.io/cloudnativelabs/kube-router:v1.1.0
 
 ```
 log=/tmp/$USER/xcluster/test.log
-xcluster_PROXY_MODE=disabled ./xcadmin.sh k8s_test --cni=kube-router \
-  --k8sver=v1.18.5 test-template basic4 > $log
+xcluster_PROXY_MODE=disabled xcadmin k8s_test --cni=kube-router \
+  test-template basic4 > $log
 ```

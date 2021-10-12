@@ -24,7 +24,7 @@ for s in $(echo "$SETUP" | tr ',' ' '); do
 done
 test "$setup_copied" != "yes" && test -d $dir/default && cp -R $dir/default/* $tmp
 
-ver=v0.8.2
+ver=v1.0.1
 ar=$ARCHIVE/cni-plugins-linux-amd64-$ver.tgz
 test -r $ar || die "Not readable [$ar]"
 log "Cni-plugins; $ver"
