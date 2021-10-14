@@ -66,6 +66,13 @@ if test -d $d; then
 	$XCLUSTER cplib --dest=$tmp $d/sbin/ip
 fi
 
+f=$HOME/Downloads/iperf
+if test -x $f; then
+	cp $f $tmp/bin
+elif which iperf > /dev/null; then
+	$XCLUSTER install_prog --dest=$tmp iperf
+fi
+
 cd $tmp
 tar cf "$1" *
 cd - > /dev/null
