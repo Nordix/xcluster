@@ -58,6 +58,7 @@ build() {
 	local v ar d n
 	n=$1
 	local v=$(ver $n)
+	test "$n" = "ipset7" && n=ipset
 	test "$n" = "conntrack_tools" && n=conntrack-tools
 	d=$XCLUSTER_WORKSPACE/$n-$v
 	test "$__clean" = "yes" && rm -r $d
@@ -86,7 +87,9 @@ build() {
 	test "$n" = "nftables" && sed -ie 's,\tdoc,,' Makefile
 	la_fix
 	make -j$(nproc) || die "Make failed"
-	make DESTDIR=$sysd install || die "Install failed"
+	if test "$n" != "ipset7"; then
+		make DESTDIR=$sysd install || die "Install failed"
+	fi
 	echo "Built at [$d]"
 }
 build_ipvsadm() {
@@ -128,6 +131,9 @@ download() {
 		ipset)
 			ar=$n-$v.tar.bz2
 			u=http://ipset.netfilter.org/$ar;;
+		ipset7)
+			ar=ipset-$v.tar.bz2
+			u=http://ipset.netfilter.org/$ar;;
 		iproute2)
 			ar=iproute2-$v.tar.gz
 			u=https://git.kernel.org/pub/scm/network/iproute2/iproute2.git/snapshot/$ar;;
@@ -158,7 +164,8 @@ libnetfilter_cthelper_ver=1.0.0
 libnetfilter_queue_ver=1.0.3
 conntrack_tools_ver=1.4.5
 ipvsadm_ver=1.31
-ipset_ver=7.15
+ipset7_ver=7.15
+ipset_ver=6.38
 iproute2_ver=5.13.0
 ver() {
 	eval "echo \$${1}_ver"
