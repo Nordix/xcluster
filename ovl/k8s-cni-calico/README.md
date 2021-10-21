@@ -6,30 +6,23 @@ Use [project calico](https://www.projectcalico.org/) in `xcluster`.
 
 Pre-load the local registry;
 ```
-ver=v3.18.0
-for x in cni node kube-controllers pod2daemon-flexvol; do
-  images lreg_cache docker.io/calico/$x:$ver
+for x in $(images lreg_missingimages .); do
+  images lreg_cache $n
 done
 ```
 
 Start;
 ```
-export __image=$XCLUSTER_WORKSPACE/xcluster/hd-k8s-xcluster.img
-export __nvm=5
 # Ipv4-only, ipv6-only, dual-stack;
-SETUP=ipv4 xc mkcdrom k8s-xcluster k8s-cni-calico private-reg; xc starts
-SETUP=ipv6 xc mkcdrom k8s-xcluster k8s-cni-calico private-reg; xc starts
-xc mkcdrom k8s-cni-calico private-reg; xc starts
+xcadmin k8s_test --cni=calico test-template --mode=ipv4 start_empty > $log
+xcadmin k8s_test --cni=calico test-template --mode=ipv6 start_empty > $log
+xcadmin k8s_test --cni=calico test-template start_empty > $log
 ```
 
 ## Test
 
 ```
-export __image=$XCLUSTER_WORKSPACE/xcluster/hd-k8s-xcluster.img
-export XCTEST_HOOK=$($XCLUSTER ovld k8s-xcluster)/xctest-hook
-export __nvm=5
-t=test-template
-XOVLS="k8s-cni-calico private-reg" $($XCLUSTER ovld $t)/$t.sh test > $XCLUSTER_TMP/$t-test.log
+xcadmin k8s_test --cni=calico test-template > $log
 ```
 
 ## Upgrade

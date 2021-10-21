@@ -22,4 +22,6 @@ images lreg_cache docker.io/cloudnativelabs/kube-router:v1.3.1
 log=/tmp/$USER/xcluster/test.log
 xcluster_PROXY_MODE=disabled xcadmin k8s_test --cni=kube-router \
   test-template basic4 > $log
+xcluster_PROXY_MODE=disabled xcadmin k8s_test --cni=kube-router \
+  k8s-test ipv4 > $log
 ```
