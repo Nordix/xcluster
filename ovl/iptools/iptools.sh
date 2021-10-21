@@ -158,7 +158,7 @@ libnetfilter_cthelper_ver=1.0.0
 libnetfilter_queue_ver=1.0.3
 conntrack_tools_ver=1.4.5
 ipvsadm_ver=1.31
-ipset_ver=6.38
+ipset_ver=7.15
 iproute2_ver=5.13.0
 ver() {
 	eval "echo \$${1}_ver"
