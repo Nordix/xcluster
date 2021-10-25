@@ -73,6 +73,12 @@ elif which iperf > /dev/null; then
 	$XCLUSTER install_prog --dest=$tmp iperf
 fi
 
+f=$XCLUSTER_WORKSPACE/ipset-$ipset7/src/ipset
+if test -x $f; then
+	cp $f $tmp/usr/sbin/ipset7
+	log "ipset7 as ipset ver $ipset7"
+fi
+
 cd $tmp
 tar cf "$1" *
 cd - > /dev/null
