@@ -12,8 +12,11 @@ expensive HW.
 ## Build
 
 Qemu has not support for SR-IOV but is supported by
-https://github.com/knuto/qemu. This means you must build a local qemu;
+https://github.com/knuto/qemu. *NOTE* that actual packet handling is
+[not supported](https://github.com/knuto/qemu/issues/4#issuecomment-928006345)
+(yet).
 
+Build a local qemu;
 ```
 QEMUDIR=$GOPATH/src/github.com/knuto/qemu
 mkdir -p $(dirname $QEMUDIR)
