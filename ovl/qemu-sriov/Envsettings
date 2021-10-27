@@ -1,4 +1,4 @@
-export __kvm="/home/uablrek/go/src/github.com/knuto/qemu/build/qemu-system-x86_64 -enable-kvm"
+export __kvm="$QEMUDIR/build/qemu-system-x86_64 -enable-kvm"
 
 export __kcfg=$PWD/config/linux-5.14.2
 export __kobj=$XCLUSTER_WORKSPACE/xcluster/obj-linux-sriov

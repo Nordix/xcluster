@@ -37,6 +37,7 @@ The `xcluster` kernel must be re-built with support for the Intel
 
 ```
 cdo qemu-sriov
+QEMUDIR=$GOPATH/src/github.com/knuto/qemu
 . ./Envsettings
 xc kernel_build
 ```
@@ -46,6 +47,7 @@ xc kernel_build
 Basic test;
 ```
 cdo qemu-sriov
+QEMUDIR=$GOPATH/src/github.com/knuto/qemu
 . ./Envsettings
 #$__kvm -nic model=help
 XOVLS='' xc mkcdrom xnet iptools qemu-sriov
