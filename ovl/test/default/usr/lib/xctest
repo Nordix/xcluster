@@ -243,6 +243,22 @@ get_selector() {
 	jq -r '.spec.selector.matchLabels|to_entries[0]|.key + "=" + .value'
 }
 
+##  test_statefulset <statefulset> [timeout]
+##    Verify that all PODs in a statefulset are ready
+##
+test_statefulset() {
+	tcase "Check statefulset [$1]"
+	local replicas=$($kubectl get statefulset $1 -o json | jq .spec.replicas)
+	echo "statefulset $1, replicas $replicas"
+	test -n "$2" && pushv $2
+	tex "statefulset_ready $1 $replicas"
+	test -n "$2" && popv
+	return 0	
+}
+statefulset_ready() {
+	local ready=$($kubectl get statefulset $1 -o json | jq .status.readyReplicas)
+	test "$ready" = "$2"
+}
 
 ##  test_nodes
 ##    Wait for the k8s nodes to become available through the API
