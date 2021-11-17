@@ -16,7 +16,7 @@ log() {
 test -n "$1" || die "No out-file"
 
 mkdir -p $tmp
-cp -R $dir/default/* $tmp
+test "$SETUP" = "None" || cp -R $dir/default/* $tmp
 
 f=$ARCHIVE/multus-cni
 test -x $f || die "Not executable [$f]"
