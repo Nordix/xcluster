@@ -8,7 +8,7 @@ Dual-stack support was added in v0.15.0. Ipv6-only doesn't work.
 
 Pre-load the private registry;
 ```
-for n in $(images lreg_missingimages k8s-cni-flannel)
+for n in $(images lreg_missingimages k8s-cni-flannel); do
   images lreg_cache $n
 done
 ```
