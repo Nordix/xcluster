@@ -14,7 +14,6 @@ log() {
 }
 
 test -n "$1" || die "No out-file"
-echo "$SETUP" | grep -q ipv4 || die "Flannel only supports ipv4"
 
 mkdir -p $tmp
 for s in $(echo "$SETUP" | tr ',' ' '); do
@@ -25,7 +24,7 @@ done
 test "$setup_copied" != "yes" && test -d $dir/default && cp -R $dir/default/* $tmp
 mkdir -p $tmp/etc/cni/net.d
 
-ver=v0.8.2
+ver=v1.0.1
 ar=$ARCHIVE/cni-plugins-linux-amd64-$ver.tgz
 test -r $ar || die "Not readable [$ar]"
 log "Cni-plugins; $ver"

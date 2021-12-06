@@ -125,7 +125,10 @@ data:
     }
   net-conf.json: |
     {
-      "Network": "10.244.0.0/16",
+      "EnableIPv4": true,
+      "EnableIPv6": true,
+      "Network": "11.00.0.0/16",
+      "IPv6Network": "1100::/48",
       "Backend": {
         "Type": "vxlan"
       }
@@ -166,7 +169,7 @@ spec:
       serviceAccountName: flannel
       initContainers:
       - name: install-cni-plugin
-        image: rancher/mirrored-flannelcni-flannel-cni-plugin:v1.0.0
+        image: docker.io/rancher/mirrored-flannelcni-flannel-cni-plugin:v1.0.0
         command:
         - cp
         args:
@@ -217,6 +220,8 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: metadata.namespace
+        - name: FLANNELD_IFACE
+          value: eth1
         volumeMounts:
         - name: run
           mountPath: /run/flannel
