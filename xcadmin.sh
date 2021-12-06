@@ -338,7 +338,7 @@ cmd_k8s_build_images() {
 
 }
 
-##   k8s_test [--cni=[xcluster|calico|cilium|weave|flannel]] --k8sver=v1.18.3 \
+##   k8s_test [--cni=[xcluster|calico|cilium|flannel]] --k8sver=v1.18.3 \
 ##     [--list] [--no-stop] <ovl> [args]
 ##     Execute k8s test with xcluster.
 ##
