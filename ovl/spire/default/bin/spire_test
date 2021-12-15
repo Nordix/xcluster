@@ -1,0 +1,100 @@
+#! /bin/sh
+##
+## spire_test --
+##
+##   Test script for spire executed in xcluster.
+##
+## Commands;
+##
+
+prg=$(basename $0)
+dir=$(dirname $0); dir=$(readlink -f $dir)
+me=$dir/$prg
+tmp=/tmp/${prg}_$$
+test -n "$DOMAIN" || DOMAIN=xcluster
+yamld=/etc/kubernetes/spire
+
+die() {
+	echo "ERROR: $*" >&2
+	rm -rf $tmp
+	exit 1
+}
+help() {
+	grep '^##' $0 | cut -c3-
+	rm -rf $tmp
+	exit 0
+}
+test -n "$1" || help
+echo "$1" | grep -qi "^help\|-h" && help
+
+log() {
+	echo "$prg: $*" >&2
+}
+dbg() {
+	test -n "$__verbose" && echo "$prg: $*" >&2
+}
+
+cmd_tcase_check_namespaces() {
+	test_namespaces
+	tlog "$(kubectl version --short=true | grep Server)"
+}
+cmd_tcase_check_nodes() {
+	test_nodes
+}
+cmd_tcase_vip_routes() {
+	tcase "Set VIP routes (ECMP)"
+	vip_route
+}
+
+cmd_tcase_start_spire() {
+	tcase "Start spire"
+	test -r $yamld/spire.yaml || tdie "No manifest"
+	local ver=$(grep -E 'image:.*spire-server:' $yamld/spire.yaml | cut -d: -f3)
+	tlog "Spire version [$ver]"
+	kubectl create namespace spire
+	kubectl -n spire apply -f $yamld/spire.yaml || tdie
+	kubectl="kubectl -n spire"
+    test_statefulset spire-server 180
+    test_daemonset spire-agent 120
+}
+
+cmd_tcase_start_spire_registrar() {
+	tcase "Start spire registrar"
+	kubectl apply -f $yamld || tdie
+	kubectl="kubectl -n spire"
+    test_statefulset spire-server 180
+    test_daemonset spire-agent 120
+	kubectl apply -f /etc/kubernetes/default-spiffeid.yaml || tdie
+}
+
+
+. /etc/profile
+. /usr/lib/xctest
+indent='  '
+
+
+# Get the command
+cmd=$1
+shift
+grep -q "^cmd_$cmd()" $0 || die "Invalid command [$cmd]"
+
+while echo "$1" | grep -q '^--'; do
+	if echo $1 | grep -q =; then
+		o=$(echo "$1" | cut -d= -f1 | sed -e 's,-,_,g')
+		v=$(echo "$1" | cut -d= -f2-)
+		eval "$o=\"$v\""
+	else
+		o=$(echo "$1" | sed -e 's,-,_,g')
+		eval "$o=yes"
+	fi
+	shift
+done
+unset o v
+long_opts=`set | grep '^__' | cut -d= -f1`
+
+# Execute command
+trap "die Interrupted" INT TERM
+cmd_$cmd "$@"
+status=$?
+rm -rf $tmp
+exit $status
