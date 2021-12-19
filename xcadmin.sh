@@ -338,7 +338,7 @@ cmd_k8s_build_images() {
 
 }
 
-##   k8s_test [--cni=[xcluster|calico|cilium|flannel]] --k8sver=v1.18.3 \
+##   k8s_test [--cni=[xcluster|calico|cilium|flannel|antrea]] --k8sver=v1.23.1 \
 ##     [--list] [--no-stop] <ovl> [args]
 ##     Execute k8s test with xcluster.
 ##
@@ -378,6 +378,10 @@ cmd_k8s_test() {
 		export __mem1=1024
 		export __mem=2560
 		export xcluster_PROXY_MODE=disabled
+	fi
+	if test "$__cni" = "antrea"; then
+		# Antrea uses openvswitch
+		export XOVLS="$XOVLS ovs"
 	fi
 
 	local ovld="$($XCLUSTER ovld $1)"

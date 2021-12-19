@@ -1,0 +1,13 @@
+#! /bin/sh
+
+if test "$1" != "cni-conf-wait"; then
+	$0 cni-conf-wait > /dev/null 2>&1 &
+	exit 0
+fi
+
+while ! test -r /etc/cni/net.d/10-antrea.conflist; do
+	sleep 4
+done
+
+sleep 4
+touch /etc/cni/net.d/99-dummy.conf

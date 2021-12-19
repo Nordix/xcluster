@@ -446,6 +446,12 @@ cni_plugin_info() {
 		return 0
 	fi
 
+	f=$d/antrea.yaml
+	if test -r $f; then
+		grep '  image:' $f | grep -Eo "antrea-.*" | uniq
+		return 0
+	fi
+
 	if test -r /opt/cni/bin/node-local; then
 		echo "xcluster internal"
 		return 0

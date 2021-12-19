@@ -5,3 +5,4 @@ gcr.io
 registry.nordix.org
 quay.io
 ghcr.io
+projects.registry.vmware.com
