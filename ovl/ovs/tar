@@ -1,0 +1,45 @@
+#! /bin/sh
+# NOTE: A common pattern is to specify "-" (stdout) as out-file,
+#  so there must be NO log printouts to stdout!
+
+dir=$(dirname $0); dir=$(readlink -f $dir)
+tmp=/tmp/$USER/xcluster_$$
+die() {
+	echo "ERROR: $*" >&2
+	rm -rf $tmp
+	exit 1
+}
+log() {
+	echo "INFO: $*" >&2
+}
+
+test -n "$1" || die "No out-file"
+
+mkdir -p $tmp
+cp -R $dir/default/* $tmp
+
+eval $($dir/ovs.sh env | grep SYSD)
+OVSD=$SYSD/usr/local
+test -x $OVSD/bin/ovs-vsctl || die "Ovs not built?"
+$XCLUSTER install_prog --dest=$tmp $OVSD/sbin/ovs*
+$XCLUSTER install_prog --dest=$tmp $OVSD/bin/ovs*
+mkdir -p $tmp/usr/local/share
+cp -R $OVSD/share/openvswitch $tmp/usr/local/share
+rm -r $tmp/usr/local/share/openvswitch/python
+eval $($XCLUSTER env | grep __kobj)
+bpflibd=$(readlink -f $__kobj/source)/tools/lib/bpf/build/usr
+f=$bpflibd/lib64/libbpf.so.0
+if test -r $f; then
+	log "Including libbpf.so"
+	mkdir -p $tmp/usr/lib/x86_64-linux-gnu
+	cp -L $f $tmp/usr/lib/x86_64-linux-gnu
+else
+	log "NOT including libbpf.so"
+fi
+
+$XCLUSTER install_prog --dest=$tmp jq
+
+cd $tmp
+tar cf "$1" *
+cd - > /dev/null
+rm -rf $tmp

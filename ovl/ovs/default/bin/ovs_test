@@ -1,0 +1,115 @@
+#! /bin/sh
+##
+## ovs_test --
+##
+##   Test script for ovs executed in xcluster.
+##
+## Commands;
+##
+
+prg=$(basename $0)
+dir=$(dirname $0); dir=$(readlink -f $dir)
+me=$dir/$prg
+tmp=/tmp/${prg}_$$
+test -n "$DOMAIN" || DOMAIN=xcluster
+
+die() {
+	echo "ERROR: $*" >&2
+	rm -rf $tmp
+	exit 1
+}
+help() {
+	grep '^##' $0 | cut -c3-
+	rm -rf $tmp
+	exit 0
+}
+test -n "$1" || help
+echo "$1" | grep -qi "^help\|-h" && help
+
+log() {
+	echo "$prg: $*" >&2
+}
+dbg() {
+	test -n "$__verbose" && echo "$prg: $*" >&2
+}
+
+cmd_tcase_create_br0() {
+	tcase "Create ovs bridge; br0"
+	ovs-vsctl add-br br0
+	ovs-vsctl add-port br0 eth1
+}
+cmd_tcase_create_netns() {
+	tcase "Create netns; ns1, ns2"
+	create_netns ns1
+	create_netns ns2
+}
+create_netns() {
+	ip netns add $1
+	ip netns exec $1 ip link set up dev lo
+}
+cmd_tcase_add_ports() {
+	tcase "Add vanilla interfaces in netns's"
+	ovs-vsctl add-port br0 ns1 -- set Interface ns1 type=internal
+	ovs-vsctl add-port br0 ns2 -- set Interface ns2 type=internal
+	add_ports 1
+	add_ports 2
+}
+add_ports() {
+	local i=$(hostname | cut -d- -f2 | sed -re 's,^0+,,')
+	local ns=ns$1
+	local ip4=10.10.$i.$1
+	ip link set netns $ns $ns
+	ip netns exec $ns ip link set up dev $ns
+	ip netns exec $ns ip addr add $ip4/16 dev $ns
+	ip netns exec $ns ip -6 addr add 1100::$ip4/112 dev $ns
+}
+cmd_tcase_ping_all() {
+	tcase "Ping all from ns1 and ns2"
+	ping_all 1
+	ping_all 2
+}
+ping_all() {
+	local ns=ns$1
+	local i
+	for i in $(seq 1 $__nvm); do
+		ping_one $ns 10.10.$i.1 || tdie 10.10.$i.1
+		ping_one $ns 10.10.$i.2 || tdie 10.10.$i.2
+		tex ping_one $ns 1100::10.10.$i.1 || tdie 1100::10.10.$i.1
+		tex ping_one $ns 1100::10.10.$i.2 || tdie 1100::10.10.$i.2
+	done
+}
+ping_one() {
+	ip netns exec $1 ping -W1 -c1 $2
+}
+
+
+. /etc/profile
+. /usr/lib/xctest
+indent='  '
+
+
+# Get the command
+cmd=$1
+shift
+grep -q "^cmd_$cmd()" $0 || die "Invalid command [$cmd]"
+
+while echo "$1" | grep -q '^--'; do
+	if echo $1 | grep -q =; then
+		o=$(echo "$1" | cut -d= -f1 | sed -e 's,-,_,g')
+		v=$(echo "$1" | cut -d= -f2-)
+		eval "$o=\"$v\""
+	else
+		o=$(echo "$1" | sed -e 's,-,_,g')
+		eval "$o=yes"
+	fi
+	shift
+done
+unset o v
+long_opts=`set | grep '^__' | cut -d= -f1`
+
+# Execute command
+trap "die Interrupted" INT TERM
+cmd_$cmd "$@"
+status=$?
+rm -rf $tmp
+exit $status
