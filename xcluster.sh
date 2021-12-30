@@ -443,7 +443,7 @@ cmd_dropbear_build() {
 	test -x $d/dropbear && die "Already built at [$d]"
 	tar -C $XCLUSTER_WORKSPACE -xf $arpath
 	cd $d
-	sed -ie 's,"/usr/bin:/bin","/usr/bin:/bin:/sbin:/usr/sbin",' options.h
+	echo '#define DEFAULT_PATH "/usr/bin:/bin:/sbin:/usr/sbin"' > localoptions.h
 	./configure || die configure
 	print_compiler_flags
 	make -j $(nproc) PROGRAMS='dropbear scp dbclient' || die make

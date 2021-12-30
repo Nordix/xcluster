@@ -83,7 +83,7 @@ test_basic() {
 
 	tcase "Ssh/scp to from host"
 	local sshopt='-q -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no'
-	ssh $sshopt root@192.168.0.1 ls / || tdie ssh
+	ssh $sshopt root@192.168.0.1 'echo $PATH' | grep -q /sbin || tdie "ssh path"
 	scp $sshopt root@192.168.0.1:/etc/os-release /tmp || tdie "scp read"
 	grep ID=xcluster /tmp/os-release || tdie "scp file corrupted"
 	scp $sshopt $me root@192.168.0.1: || tdie "scp write"
