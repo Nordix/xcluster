@@ -118,7 +118,7 @@ cmd_env() {
 	test -n "$__base_libs" || __base_libs=$XCLUSTER_HOME/base-libs.txt
 
 	__ipver=5.7.0
-	__dropbearver=2016.74
+	__dropbearver=2020.81
 	__diskimver=v0.4.0
 	test -n "$DISKIM" || DISKIM=$XCLUSTER_WORKSPACE/diskim-$__diskimver/diskim.sh
 
@@ -440,13 +440,14 @@ cmd_dropbear_build() {
 	fi
 	local d=$XCLUSTER_WORKSPACE/dropbear-$__dropbearver
 	test "$__clean" = "yes" && rm -rf $d
-	test -x $d/sys/usr/local/sbin/dropbear && die "Already built at [$d]"
+	test -x $d/dropbear && die "Already built at [$d]"
 	tar -C $XCLUSTER_WORKSPACE -xf $arpath
 	cd $d
 	sed -ie 's,"/usr/bin:/bin","/usr/bin:/bin:/sbin:/usr/sbin",' options.h
 	./configure || die configure
 	print_compiler_flags
 	make -j $(nproc) PROGRAMS='dropbear scp dbclient' || die make
+	strip $d/dropbear $d/scp $d/dbclient
 }
 
 ##  Image functions;

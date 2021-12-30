@@ -80,6 +80,15 @@ test_basic() {
 	export __ntesters=1
 	xcluster_start xnet
 
+	tcase "Ssh/scp to from host"
+	local sshopt='-q -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no'
+	ssh $sshopt root@192.168.0.1 ls / || tdie ssh
+	scp $sshopt root@192.168.0.1:/etc/os-release /tmp || tdie "scp read"
+	grep ID=xcluster /tmp/os-release || tdie "scp file corrupted"
+	scp $sshopt $prg root@192.168.0.1: || tdie "scp write"
+	ssh $sshopt root@192.168.0.1 ls | grep $prg || tdie "scp write file"
+	otc 1 ssh
+	
 	otc 1 "nslookup www.google.se"
 	otc 201 "nslookup www.google.se"
 	otc 221 "nslookup www.google.se"
