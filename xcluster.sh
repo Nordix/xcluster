@@ -467,7 +467,7 @@ cmd_mkimage() {
 	test -x $XCLUSTER_WORKSPACE/iproute2-$__ipver/ip/ip || cmd_iproute2_build
 	test -x $XCLUSTER_WORKSPACE/dropbear-$__dropbearver/dropbear || cmd_dropbear_build
 
-	$DISKIM mkimage --image=$__image --bootable=$__bootable \
+	__version=$__version $DISKIM mkimage --image=$__image --bootable=$__bootable \
 		--format=$__format --size=$__size $dir/image
 
 	# Update base-libs

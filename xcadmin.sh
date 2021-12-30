@@ -228,7 +228,8 @@ cmd_build_base() {
 	$XCLUSTER iproute2_build || die "Failed to build iproute2"
 	cmd_mark "Iproute2 built"
 
-	$XCLUSTER mkimage --size=8G || die "Failed to build image"
+	__version=$__version $XCLUSTER mkimage --size=8G \
+		|| die "Failed to build image"
 	cmd_mark "Image built"
 
 	cat $__mark_file
@@ -402,6 +403,7 @@ cmd_k8s_test() {
 ##
 cmd_release() {
 	test -n "$__version" || die 'No version'
+	export __version
 	test -n "$__dest" || __dest=/tmp
 	test -n "$XCLUSTER" || die 'Not set [$XCLUSTER]'
 	eval $($XCLUSTER env)

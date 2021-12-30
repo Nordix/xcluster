@@ -34,6 +34,11 @@ dbg() {
 	test -n "$__verbose" && echo "$prg: $*" >&2
 }
 
+cmd_tcase_version() {
+	. /etc/os-release
+	tcase "Testing $NAME $VERSION_ID"
+}
+
 cmd_tcase_nslookup() {
 	tcase "Nslookup $1"
 	test -n "$1" || tdie "Nothing to lookup"
