@@ -382,6 +382,8 @@ do_mconnect() {
 ##    Log versions of various things
 ##
 log_version() {
+	. /etc/os-release
+	test "$VERSION" != "1.0" && tlog "Xcluster: $VERSION"
 	tlog "$(kubectl version --short=true | grep Server)"
 	tlog "$(uname -s -r -v)"
 	tlog "CNI-plugin; $(cni_plugin_info)"
@@ -667,11 +669,9 @@ xcluster_prep() {
 			SETUP="ipv6,$XSETUP"
 			BASEOVLS=kubernetes
 			;;
-		dual-stack)
-			SETUP=$XSETUP
-			;;
 		*)
-			die "Invalid mode [$1]"
+			SETUP=$XSETUP
+			__mode=dual-stack
 			;;
 	esac
 	export xcluster___mode=$1
