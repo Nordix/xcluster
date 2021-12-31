@@ -26,7 +26,7 @@ DIRS := $(O)/sctpt $(O)/lib/test
 SRC := $(wildcard sctpt/*.c lib/*.c)
 OBJ := $(SRC:%.c=$(O)/%.o)
 
-NFQLB_VER := 0.4.0
+NFQLB_VER := 0.6.0
 NFQLB_AR := $(HOME)/Downloads/nfqlb-$(NFQLB_VER).tar.xz
 NFQLB_DIR := $(O)/nfqlb-$(NFQLB_VER)
 
@@ -74,3 +74,4 @@ help:
 .PHONY: ver
 ver:
 	@echo "NFQLB_VER=$(NFQLB_VER)"
+	@echo "NFQLB_DIR=$(NFQLB_DIR)"

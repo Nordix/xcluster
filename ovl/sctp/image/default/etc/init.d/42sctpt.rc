@@ -1,0 +1,4 @@
+#! /bin/sh
+. /etc/profile
+test "$NO_SERVERS" = "yes" && exit 0
+sctpt server --log=6 --addr=:: --port=7002 &

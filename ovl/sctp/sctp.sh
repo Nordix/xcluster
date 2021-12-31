@@ -78,13 +78,11 @@ cmd_test() {
 
 }
 
-test_start_k8s() {
-	test -n "$__mode" || __mode=dual-stack
-	export xcluster___mode=$__mode
+test_start_k8s_dual_path() {
 	export TOPOLOGY=dual-path
 	. $($XCLUSTER ovld network-topology)/$TOPOLOGY/Envsettings
 	
-	xcluster_prep $__mode
+	xcluster_prep
 	xcluster_start sctp iptools network-topology
 
 	otc 1 check_namespaces
@@ -94,6 +92,25 @@ test_start_k8s() {
 	otc 203 "vip_route 192.168.3.201"
 	otc 202 "vip_ecmp_route 4"
 	otc 204 "vip_route 192.168.5.202"
+}
+
+test_start_k8s() {
+	ip netns id | grep -q _xcluster || die "Must run in an xcluster netns"
+	ip link show xcbr3 > /dev/null 2>&1 || $XCLUSTER br_setup 3
+	test -n "$__nrouters" ||  __nrouters=1
+	export __nrouters
+	export xcluster___nrouters=$__nrouters
+	export __ntesters=1
+	export __nets_router=0,1,2,3
+	export __nets221=0,2,3
+	xcluster_prep
+	xcluster_start sctp iptools network-topology
+	otcr 2testnet
+	otct 2testnet
+	otc 1 check_namespaces
+	otc 1 check_nodes
+	otc 1 start_servers
+	otcr "vip_route 192.168.1.2"
 }
 
 test_start() {

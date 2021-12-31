@@ -61,8 +61,9 @@ cmd_tcase_vip_ecmp_route() {
 }
 cmd_tcase_vip_route() {
 	tcase "Setup VIP route to [$1]"
-	ip ro add 10.0.0.0/24 via $1
-	ip -6 ro add 1000::/120 via $PREFIX:$1
+	ip ro replace 10.0.0.0/24 via $1
+	ip -6 ro replace 1000::/120 via $PREFIX:$1
+	ip -6 ro replace $PREFIX:10.0.0.0/120 via $PREFIX:$1
 }
 
 cmd_tcase_nfqlb_setup() {
@@ -128,6 +129,36 @@ cmd_tcase_usrsctp_echo_server() {
 	local log=/var/log/sctpt.log
 	ip netns exec pod sh -c "exec $cmd > $log 2>&1 &"
 }
+
+cmd_tcase_2testnet() {
+	tcase "Setup the second test-network"
+	. /usr/lib/network-topology.sh
+	if test $i -gt 220; then
+		ifsetup eth2 3
+		routesetup eth2 3
+	else
+		ifsetup eth3 3
+	fi
+}
+
+routesetup() {
+	local iface=$1
+	local net=$2
+	tcase "Setup default route on $iface net $net ($__nrouters)"
+	test -n "$PREFIX" || PREFIX=1000::1
+	local last_router=$((200 + __nrouters))
+	local hops4 hops6 i
+	for i in $(seq 201 $last_router); do
+		hops4="$hops4 nexthop via 192.168.$net.$i"
+		hops6="$hops6 nexthop via $PREFIX:192.168.$net.$i"
+	done
+	ip ro replace table $net default $hops4 || tdie "Ipv4 routes"
+	ip -6 ro replace table $net default $hops6 || tdie "Ipv6 routes"
+	i=$(mynode)
+	ip ru add from 192.168.$net.$i table $net
+	ip -6 ru add from $PREFIX:192.168.$net.$i table $net
+}
+
 
 . /etc/profile
 . /usr/lib/xctest
