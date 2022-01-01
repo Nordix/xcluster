@@ -212,10 +212,15 @@ basicfwd_main(int argc, char *argv[])
 /* ======== END OF dpdk-20.11/examples/skeleton/
    From now on;
    SPDX-License-Identifier: MIT License
-   Copyright (c) 2021 Nordix Foundation
+   Copyright (c) 2021-2022 Nordix Foundation
 */
 
-#include "util.h"
+#include "../util/util.h"
+#include <cmd.h>
+#include <shmem.h>
+#include <maglev.h>
+#include <iputils.h>
+#include <netinet/ether.h>
 
 #define IP_HEADER(b) rte_pktmbuf_mtod_offset(b, uint8_t*, RTE_ETHER_HDR_LEN)
 #define IP_LEN(b) (b)->data_len - RTE_ETHER_HDR_LEN
@@ -408,7 +413,7 @@ static int cmdInit(int argc, char* argv[])
 
 	struct SharedData sh;
 	memset(&sh, 0, sizeof(sh));
-	maglevInit(&sh.m);
+	initMagData(&sh.m, 997, 20);
 	createSharedDataOrDie(shmName, &sh, sizeof(sh)); 
 	return 0;
 }
@@ -426,8 +431,7 @@ static int cmdShow(int argc, char* argv[])
 	int nopt = parseOptions(argc, argv, options);
 	if (nopt < 1) return nopt;
 
-	struct SharedData* sh = mapSharedDataOrDie(
-		shmName, sizeof(struct SharedData), O_RDONLY);
+	struct SharedData* sh = mapSharedDataOrDie(shmName, O_RDONLY);
 	printf("M=%u, N=%u, lookup;\n", sh->m.M, sh->m.N);
 	for (int i = 0; i < 24; i++) {
 		printf("%d ", sh->m.lookup[i]);
@@ -465,8 +469,7 @@ static int setActive(int argc, char* argv[], int v)
 	}
 	unsigned i = atoi(argv[0]);
 
-	struct SharedData* sh = mapSharedDataOrDie(
-		shmName, sizeof(struct SharedData), O_RDWR);
+	struct SharedData* sh = mapSharedDataOrDie(shmName, O_RDWR);
 
 	if (i >= sh->m.N) {
 		printf("Invalid index [%u]\n", i);
@@ -523,8 +526,7 @@ static int cmdLb(int argc, char* argv[])
 	struct rte_ether_addr dst1;
 	macParseOrDie(mac1, dst1.addr_bytes);
 
-	struct SharedData* sh = mapSharedDataOrDie(
-		shmName, sizeof(struct SharedData), O_RDONLY);
+	struct SharedData* sh = mapSharedDataOrDie(shmName, O_RDONLY);
 
 	// Get the source MAC addresses
 	struct rte_ether_addr src0, src1;
@@ -563,10 +565,14 @@ static int cmdLb(int argc, char* argv[])
 				} else {
 					// We shall load_balance
 					rte_ether_addr_copy(&src0, &eth->s_addr);
-					unsigned hash = 0;
 					uint16_t type = ntohs(eth->ether_type);
-					if (type == RTE_ETHER_TYPE_IPV4)
-						hash = ipv4Hash(IP_LEN(b), IP_HEADER(b));
+					unsigned hash = 0;
+					struct ctKey key = {0};
+					if (type == RTE_ETHER_TYPE_IPV4) {
+						if (getHashKey(&key, 0, NULL, ETH_P_IP, IP_HEADER(b), IP_LEN(b)) >= 0)
+							hash = hashKey(&key);
+					} else if (type == RTE_ETHER_TYPE_IPV6) {
+					}
 					int i = sh->m.lookup[hash % sh->m.M];
 					if (i >= 0) {
 						rte_ether_addr_copy(&sh->target[i], &eth->d_addr);

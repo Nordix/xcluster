@@ -1,9 +1,10 @@
 /*
    SPDX-License-Identifier: MIT License
-   Copyright (c) 2021 Nordix Foundation
+   Copyright (c) 2021-2022 Nordix Foundation
 */
 
 #include "util.h"
+#include <die.h>
 #include <stdio.h>
 #include <stdarg.h>
 #include <stdlib.h>
@@ -11,15 +12,24 @@
 #include <time.h>
 #include <netinet/ether.h>
 #include <arpa/inet.h>			/* htons */
+#include <unistd.h>
+#include <netinet/ip6.h>
+#include <arpa/inet.h>
+#include <netinet/ip.h>
 
-void die(char const* fmt, ...)
+char const* protocolString(unsigned p)
 {
-	va_list ap;
-	va_start(ap, fmt);
-	vfprintf(stderr, fmt, ap);
-	exit(EXIT_FAILURE);
+	static char buf[8];
+	switch (p) {
+	case IPPROTO_ICMP: return "ICMP";
+	case IPPROTO_TCP: return "TCP";
+	case IPPROTO_UDP: return "UDP";
+	case IPPROTO_ICMPV6: return "ICMPV6";
+	default:
+		sprintf(buf, "%u", p);
+	}
+	return buf;
 }
-
 int macParse(char const* str, uint8_t* mac)
 {
 	int values[6];
@@ -55,96 +65,6 @@ char const* macToString(uint8_t const* mac)
 	return buf[bindex];
 }
 
-static int verifyRequiredOptions(
-	struct option const* long_options, unsigned required, unsigned got)
-{
-	got = got & required;
-	if (required == got) return 0;
-	unsigned i, m;
-	for (i = 0; i < 32; i++) {
-		m = (1 << i);
-		if ((required & m) != (got & m)) {
-			char const* opt = "(unknown)";
-			struct option const* o;
-			for (o = long_options; o->name != NULL; o++) {
-				if (o->val == i) {
-					opt = o->name;
-					break;
-				}
-			}
-			fprintf(stderr, "Missing option [--%s]\n", opt);
-		}
-	}
-	return -1;
-}
-
-static void printUsage(struct Option const* options)
-{
-	struct Option const* o;
-	for (o = options; o->name != NULL; o++) {
-		if (strcmp(o->name, "help") == 0) {
-			puts(o->help);
-			break;
-		}
-	}
-	for (o = options; o->name != NULL; o++) {
-		if (strcmp(o->name, "help") == 0)
-			continue;
-		printf(
-			"  --%s= %s %s\n",
-			o->name, o->help, o->required ? "(required)":"");
-	}
-}
-
-int parseOptions(int argc, char* argv[], struct Option const* options)
-{
-	unsigned required = 0;
-	int i, len = 0;
-	struct Option const* o;
-	for (o = options; o->name != NULL; o++)
-		len++;
-	if (len >= 32)
-		die("Too many options %d (max 31)\n", len);
-	struct option long_options[len+1];
-	memset(long_options, 0, sizeof(long_options));
-	for (i = 0; i < len; i++) {
-		o = options + i;
-		struct option* lo = long_options + i;
-		lo->name = o->name;
-		lo->has_arg = o->arg == NULL ? no_argument : required_argument;
-		lo->val = i;
-		if (o->required == REQUIRED)
-			required |= (1 << i);
-	}
-
-	int option_index = 0;
-	unsigned got = 0;
-	i = getopt_long_only(argc, argv, "", long_options, &option_index);
-	while (i >= 0) {
-		if (i >= 32)
-			return -1;
-		got |= (1 << i);
-		o = options + i;
-		if (strcmp(o->name, "help") == 0) {
-			printUsage(options);
-			return 0;
-		}
-		if (o->arg != NULL)
-			*(o->arg) = optarg;
-		i = getopt_long_only(argc, argv, "", long_options, &option_index);
-	}
-	if (verifyRequiredOptions(long_options, required, got) != 0)
-		return -1;
-	return optind;
-}
-
-int parseOptionsOrDie(int argc, char* argv[], struct Option const* options)
-{
-	int nopt = parseOptions(argc, argv, options);
-	if (nopt > 0)
-		return nopt;
-	exit(nopt == 0 ? EXIT_SUCCESS : EXIT_FAILURE);
-}
 
 #include <sys/ioctl.h>
 #include <net/if.h>	//ifreq
@@ -167,6 +87,32 @@ int getMAC(char const* iface, /*out*/ unsigned char* mac)
 	return 0;
 }
 
+void ipv4Print(unsigned len, uint8_t const* pkt)
+{
+	struct iphdr* hdr = (struct iphdr*)pkt;
+	char src[16], dst[16];
+	char const* frag = "";
+	if (ntohs(hdr->frag_off) & (IP_OFFMASK|IP_MF))
+		frag = "frag";
+	printf(
+		"  IPv4: %s -> %s, %s %s\n",
+		inet_ntop(AF_INET, &hdr->saddr, src, sizeof(src)),
+		inet_ntop(AF_INET, &hdr->daddr, dst, sizeof(dst)),
+		protocolString(hdr->protocol), frag);
+}
+
+void ipv6Print(unsigned len, uint8_t const* pkt)
+{
+	struct ip6_hdr* hdr = (struct ip6_hdr*)pkt;
+	char src[42], dst[42];
+	char const* frag = "";
+	printf(
+		"  IPv6: %s -> %s, %s %s\n",
+		inet_ntop(AF_INET6, &hdr->ip6_src, src, sizeof(src)),
+		inet_ntop(AF_INET6, &hdr->ip6_dst, dst, sizeof(dst)),
+		protocolString(hdr->ip6_nxt), frag);
+}
+
 void framePrint(unsigned len, uint8_t const* pkt)
 {
 	if (len < sizeof(struct ethhdr)) {
@@ -187,31 +133,4 @@ void framePrint(unsigned len, uint8_t const* pkt)
 		break;
 	default:;
 	}
-}
-
-// Limiter
-struct limiter {
-	unsigned intervalCount;
-	unsigned intervalMillis;
-	unsigned count;
-	uint64_t lastGoMillis;
-};
-struct limiter* limiterCreate(unsigned intervalCount, unsigned intervalMillis)
-{
-	struct limiter* l = calloc(1,sizeof(*l));
-	l->intervalCount = intervalCount;
-	l->intervalMillis = intervalMillis;
-	return l;
-}
-int limiterGo(struct timespec* now, struct limiter* l)
-{
-	uint64_t nowMillis = now->tv_sec * 1000 + now->tv_nsec / 1000000;
-	l->count++;
-	if ((nowMillis - l->lastGoMillis) >= l->intervalMillis
-		|| l->count >= l->intervalCount) {
-		l->lastGoMillis = nowMillis;
-		l->count = 0;
-		return 1;
-	}
-	return 0;
 }

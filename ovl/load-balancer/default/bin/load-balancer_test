@@ -125,12 +125,12 @@ cmd_tcase_nfqueue_activate_all() {
 	tcase "nfqueue activate all"
 	local n
 	for n in $(seq 1 $__nvm); do
-		nfqlb activate --lookup=$n $((n + 100))
+		nfqlb activate --index=$n $((n + 100))
 	done
 	nfqlb show --shm=nfqlbLb > /dev/null 2&>1 || return 0
 	test -n "$__nrouters" || __nrouters=1
 	for n in $(seq 1 $__nrouters); do
-		nfqlb activate --shm=nfqlbLb --lookup=$n $((n + 200))
+		nfqlb activate --shm=nfqlbLb --index=$n $((n + 200))
 	done
 }
 
@@ -142,7 +142,7 @@ cmd_tcase_nfqueue_scale_in() {
 	fi
 	local n
 	for n in $@; do
-		nfqlb deactivate --lookup=$n
+		nfqlb deactivate --index=$n
 	done
 }
 
@@ -154,7 +154,7 @@ cmd_tcase_nfqueue_scale_out() {
 	fi
 	local n
 	for n in $@; do
-		nfqlb activate --lookup=$n $((n + 100))
+		nfqlb activate --index=$n $((n + 100))
 	done
 }
 

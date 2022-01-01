@@ -46,16 +46,11 @@ f=$XCLUSTER_WORKSPACE/libnetfilter_queue-1.0.3/examples/.libs/nf-queue
 test -x $f && $XCLUSTER install_prog --dest=$tmp $f
 
 if echo $SETUP | grep -q nfqueue; then
-	d=$GOPATH/src/github.com/Nordix/nfqueue-loadbalancer/src
-	if test -d $d; then
-		make -C $d clean > /dev/null
-		make -j8 -C $d X=$tmp/bin/nfqlb static > /dev/null || die "Make nfqlb"
-	else
-		ar=$(find $ARCHIVE -name 'nfqlb-*.tar.xz' | sort -rV | head -1)
-		test -n "$ar" || die 'Could not find: $ARCHIVE/nfqlb-*.tar.xz'
-		tar -xO --wildcards -f $ar '*/bin/nfqlb' > $tmp/bin/nfqlb
-		chmod a+x $tmp/bin/nfqlb
-	fi
+	ar=$(find $HOME/Downloads -name 'nfqlb-*.tar.xz' | sort -rV | head -1)
+	test -n "$ar" || die 'Could not find: ~/Downloads/nfqlb-*.tar.xz'
+	log "Using $(echo $ar | grep -Eo 'nfqlb-[0-9\.]+')"
+	tar -xO --wildcards -f $ar '*/bin/nfqlb' > $tmp/bin/nfqlb
+	chmod a+x $tmp/bin/nfqlb
 fi
 
 if echo $SETUP | grep -q dpdk; then
@@ -64,6 +59,9 @@ if echo $SETUP | grep -q dpdk; then
 		2>&1 > /dev/null || die "make l2lb"
 	mkdir -p $tmp/usr/local/lib
     cp -R $__dpdk_src/build/sys/usr/local/lib/x86_64-linux-gnu $tmp/usr/local/lib
+	for n in libbsd.so.0 libfdt.so.1 libisal.so.2; do
+		cp -L /usr/lib/x86_64-linux-gnu/$n $tmp/usr/local/lib/x86_64-linux-gnu
+	done
 fi
 
 if echo $SETUP | grep -q xdp; then

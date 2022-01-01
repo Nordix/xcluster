@@ -92,7 +92,7 @@ __nvm=10 ./load-balancer.sh test --view ipvs_scale > $log
 ```
 
 There are no individual scale_out and scale_in tests for ipvs since it
-is steteful so scale_out will not affect established connection and a
+is stateful so scale_out will not affect established connection and a
 scale in will only affect the connections on the scaled backends.
 
 
