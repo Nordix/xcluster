@@ -3,7 +3,8 @@
    Copyright (c) Nordix Foundation
 */
 
-#include <xcutil.h>
+#include <cmd.h>
+#include <die.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <errno.h>
@@ -67,9 +68,9 @@ static int cmdReceive(int argc, char **argv)
 		 "  Use an AF_XDP socket to receive packets"},
 		{"dev", &dev, REQUIRED,
 		 "The device to use"},
-		{"queue", &queue, OPTIONAL,
+		{"queue", &queue, 0,
 		 "The RX queue to use. Default 0"},
-		{"fillq", &fillq, OPTIONAL,
+		{"fillq", &fillq, 0,
 		 "UMEM buffers in the fill queue. Default 512"},
 		{0, 0, 0, 0}
 	};
