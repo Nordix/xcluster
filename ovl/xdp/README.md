@@ -31,6 +31,11 @@ cdo xdp
 ./xdp.sh perf_build
 ```
 
+This is suddenly needed on Ubuntu 20;
+```
+sudo chmod u+s /usr/lib/qemu/qemu-bridge-helper
+sudo chmod u+s /usr/bin/qemu-system-x86_64
+```
 
 ## xdp-tutorial
 
