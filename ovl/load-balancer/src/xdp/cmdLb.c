@@ -3,8 +3,12 @@
    Copyright (c) Nordix Foundation
 */
 
-#include <util.h>
 #include "shm.h"
+#include <util.h>
+#include <die.h>
+#include <cmd.h>
+#include <shmem.h>
+#include <iputils.h>
 #include <stdlib.h>
 #include <errno.h>
 #include <string.h>
@@ -12,6 +16,7 @@
 #include <bpf/xsk.h>
 #include <net/if.h>
 #include <arpa/inet.h>
+#include <unistd.h>
 
 #define D(x)
 #define Dx(x) x
@@ -135,8 +140,7 @@ static int cmdLb(int argc, char **argv)
 		return EXIT_FAILURE;
 	argc -= nopt;
 	argv += nopt;
-	struct SharedData* sh = mapSharedDataOrDie(
-		shmName, sizeof(struct SharedData), O_RDONLY);
+	struct SharedData* sh = mapSharedDataOrDie(shmName, O_RDONLY);
 	unsigned int iifindex = if_nametoindex(idev);
 	if (iifindex == 0)
 		die("Unknown interface [%s]\n", idev);
@@ -257,7 +261,10 @@ getDestMAC(struct SharedData* sh, uint8_t const* pkt, unsigned len)
 	if (len > ETH_HLEN) {
 		struct ethhdr* h = (struct ethhdr*)pkt;
 		if (ntohs(h->h_proto) == ETH_P_IP) {
-			hash = ipv4Hash(len - ETH_HLEN, pkt + ETH_HLEN);
+			struct ctKey key = {0};
+			if (getHashKey(&key, 0, NULL, ETH_P_IP, pkt + ETH_HLEN, len - ETH_HLEN) >= 0)
+				hash = hashKey(&key);
+			//hash = ipv4Hash(len - ETH_HLEN, pkt + ETH_HLEN);
 		}
 	}
 	unsigned t = sh->m.lookup[hash % sh->m.M];

@@ -4,11 +4,14 @@
 */
 
 #include <util.h>
+#include <die.h>
+#include <cmd.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <bpf/libbpf.h>
 //#include <bpf/bpf.h>
 #include <net/if.h>
+#include <unistd.h>
 
 static int cmdLoadBpf(int argc, char **argv)
 {

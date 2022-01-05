@@ -3,8 +3,11 @@
    Copyright 2021 (c) Nordix Foundation
 */
 
-#include "util.h"
 #include "shm.h"
+#include <util.h>
+#include <die.h>
+#include <cmd.h>
+#include <shmem.h>
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -26,7 +29,7 @@ static int cmdInit(int argc, char* argv[])
 
 	struct SharedData sh;
 	memset(&sh, 0, sizeof(sh));
-	maglevInit(&sh.m);
+	initMagData(&sh.m, 997, 20);
 	createSharedDataOrDie(shmName, &sh, sizeof(sh)); 
 	return 0;
 }
@@ -44,8 +47,7 @@ static int cmdShow(int argc, char* argv[])
 	int nopt = parseOptions(argc, argv, options);
 	if (nopt < 1) return nopt;
 
-	struct SharedData* sh = mapSharedDataOrDie(
-		shmName, sizeof(struct SharedData), O_RDONLY);
+	struct SharedData* sh = mapSharedDataOrDie(shmName, O_RDONLY);
 	printf("M=%u, N=%u, lookup;\n", sh->m.M, sh->m.N);
 	for (int i = 0; i < 24; i++) {
 		printf("%d ", sh->m.lookup[i]);
@@ -83,8 +85,7 @@ static int setActive(int argc, char* argv[], int v)
 	}
 	unsigned i = atoi(argv[0]);
 
-	struct SharedData* sh = mapSharedDataOrDie(
-		shmName, sizeof(struct SharedData), O_RDWR);
+	struct SharedData* sh = mapSharedDataOrDie(shmName, O_RDWR);
 
 	if (i >= sh->m.N) {
 		printf("Invalid index [%u]\n", i);

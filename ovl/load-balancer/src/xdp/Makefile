@@ -12,13 +12,13 @@ NFQLB_AR := $(HOME)/Downloads/nfqlb-$(NFQLB_VER).tar.xz
 NFQLB_DIR := /tmp/$(USER)/nfqlb-$(NFQLB_VER)
 
 O ?= .
-SRC := main.c ../util/util.c
+SRC := main.c ../util/util.c ../util/tcpcsum.c $(wildcard cmd*.c)
 XDP_OBJ := $(O)/xdp_vip_kern.o
 KSRC := $(shell readlink -f $(__kobj)/source)
 BPFD := $(KSRC)/tools/lib/bpf/build
 
-CFLAGS := -I$(BPFD)/usr/include -I$(KSRC)/tools/include -I$(NFQLB_DIR)/include
-LDFLAGS := $(BPFD)/usr/lib64/libbpf.a -L$(NFQLB_DIR)/lib -lrt -lelf -lz -lnfqlb
+CFLAGS := -I$(BPFD)/usr/include -I$(KSRC)/tools/include -I../util -I$(NFQLB_DIR)/include
+LDFLAGS := $(BPFD)/usr/lib64/libbpf.a -L$(NFQLB_DIR)/lib -lelf -lz -lnfqlb -lrt
 BPF_CFLAGS ?= -I$(BPFD)/usr/include
 
 all: $(NFQLB_DIR) $(O) $(O)/xdplb $(XDP_OBJ)

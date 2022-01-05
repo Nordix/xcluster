@@ -3,6 +3,7 @@
    Copyright 2021 (c) Nordix Foundation
 */
 
+#include <maglev.h>
 #include <linux/if_ether.h>
 
 struct SharedData {
