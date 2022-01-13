@@ -21,16 +21,17 @@ mkdir -p $tmp
 cp -R $dir/default/* $tmp
 $XCLUSTER cploader --dest=$tmp
 
+v=$(date +%y.%j)
+sed -i -e "s,1.0,$v," $tmp/etc/os-release
+
 f=$XCLUSTER_WORKSPACE/$__bbver/busybox
 test -x $f || die "Not executable [$f]"
 
-# Include the real ip program
-eval $($XCLUSTER env | grep __ipver=)
-ipx=$XCLUSTER_WORKSPACE/iproute2-$__ipver/ip/ip
-test -x $ipx || die "Not executable [$ipx]"
+ip=$XCLUSTER_WORKSPACE/iproute2-$__ipver/ip/ip
+test -x $ip || die "Not executable [$ip]"
 
 # This will install all libs. Note that we don't want to exclude the base-libs!
-__base_libs=/dev/null $XCLUSTER install_prog --dest=$tmp $f strace $ipx	
+__base_libs=/dev/null $XCLUSTER install_prog --dest=$tmp $f $ip strace tcpdump jq
 
 # libnss_files.so is needed for /etc/services parsing
 mkdir -p $tmp/lib/x86_64-linux-gnu
@@ -40,6 +41,8 @@ for n in libnss_files.so.2 libnss_dns.so.2 libresolv.so.2 libpthread.so.0; do
     cp -L $f $tmp/lib/x86_64-linux-gnu
 done
 
+iptoolsd=$($XCLUSTER ovld iptools)
+$iptoolsd/tar - | tar -C $tmp -x
 
 ln -s busybox $tmp/bin/sh
 

@@ -4,12 +4,15 @@ PATH="/bin:/sbin:/usr/bin:/usr/sbin"
 export PATH
 
 # Make syslog use local (Swedish/Hungarian) time
-TZ=CET-1CEST-2,M3.5.0,M10.5.0/3
+test -n "$TZ" || TZ=CET-1CEST-2,M3.5.0,M10.5.0/3
 export TZ
 
 # Start syslog
 klogd -c 4
 syslogd -s 1000 -b 10
+
+ln -s /var/run /run
+rm -f /sbin/ip
 
 # Start other services
 for n in `find /etc/init.d -name "*.rc" | sort`; do

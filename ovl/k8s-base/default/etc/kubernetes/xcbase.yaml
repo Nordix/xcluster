@@ -1,28 +1,19 @@
-apiVersion: v1
-kind: Service
-metadata:
-  name: xcbase
-spec:
-  selector:
-    app: xcbase
-  ports:
-  - protocol: TCP
-    port: 80
----
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: xcbase-deployment
+  name: xcluster-base
 spec:
   selector:
     matchLabels:
-      app: xcbase
+      app: xcluster-base
   replicas: 4
   template:
     metadata:
       labels:
-        app: xcbase
+        app: xcluster-base
     spec:
       containers:
-      - name: xcbase
-        image: library/xcbase:v1.0
+      - name: xcluster-base
+        image: registry.nordix.org/cloud-native/xcluster-base:latest
+        securityContext:
+          privileged: true
