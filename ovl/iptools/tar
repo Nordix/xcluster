@@ -37,7 +37,7 @@ cp -R $sysd/usr/sbin $tmp/usr
 cp -R $sysd/usr/lib $tmp/usr
 $XCLUSTER cplib --dest=$tmp $tmp/usr/sbin/ipvsadm
 
-$XCLUSTER install_prog --dest=$tmp socat curl ethtool
+$XCLUSTER install_prog --dest=$tmp socat curl ethtool nstat
 
 # Lib-to-lib dependecies enforces this;
 LD_LIBRARY_PATH=$XCLUSTER_WORKSPACE/sys/usr/lib \
