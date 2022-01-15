@@ -53,7 +53,7 @@ for n in libnss_files.so.2 libnss_dns.so.2 libresolv.so.2 libpthread.so.0; do
 done
 
 # NOTE; base-libs MUST be disabled to prevent infinite recursion!
-__base_libs=/dev/null $XCLUSTER install_prog --root=$tmp tcpdump netstat strace
+__base_libs=/dev/null $XCLUSTER install_prog --root=$tmp tcpdump netstat strace jq
 
 if test "$__bootable" = "yes"; then
 	test -r $__kbin || die "Not readable [$__kbin]"
