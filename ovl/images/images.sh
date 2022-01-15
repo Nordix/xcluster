@@ -219,6 +219,8 @@ cmd_lreg_missingimages() {
 	done
 	test "$ok" = "yes"
 }
+##   getimages <dir/ovl>
+##     List images.
 cmd_getimages() {
 	local d
 	if test -d "$1"; then
