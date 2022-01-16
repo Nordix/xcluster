@@ -39,6 +39,7 @@ for x in mconnect ctraffic; do
 		fi
 		$unpack -dc $ar > $tmp/bin/$x
 		chmod a+x $tmp/bin/$x
+		log "Use $x $($tmp/bin/$x -version)"
 	fi
 done
 

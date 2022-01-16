@@ -39,7 +39,7 @@ cmd_env() {
 
 	if test "$cmd" = "env"; then
 		set | grep -E '^(__.*)='
-		retrun 0
+		return 0
 	fi
 
 	test -n "$XCLUSTER" || die 'Not set [$XCLUSTER]'
@@ -47,8 +47,21 @@ cmd_env() {
 	eval $($XCLUSTER env)
 	test -n "$__nrouters" || __nrouters=2
 	test -n "$__nvm" || __nvm=4
-	plot=$GOPATH/src/github.com/Nordix/ctraffic/scripts/plot.sh
-	ctraffic=$GOPATH/src/github.com/Nordix/ctraffic/image/ctraffic
+	if which ctraffic > /dev/null; then
+		ctraffic=$(which ctraffic)
+	else
+		ctraffic=$GOPATH/src/github.com/Nordix/ctraffic/image/ctraffic
+		if ! test -x $ctraffic; then
+			ctraffic=/tmp/$USER/bin/ctraffic
+			if ! test -x $ctraffic; then
+				local ar=$ARCHIVE/ctraffic.gz
+				test -r $ar || die "Not readable [$ar]"
+				mkdir -p /tmp/$USER/bin
+				gzip -dc $ar > $ctraffic
+				chmod a+x $ctraffic
+			fi
+		fi
+	fi
 }
 
 ##   test --list
@@ -108,7 +121,7 @@ scale_lb() {
 	otc 221 "ctraffic_wait --timeout=30"
 	rcp 221 /tmp/ctraffic.out /tmp/scale_lb.out
 	xcluster_stop
-	$plot connections --stats=/tmp/scale_lb.out > /tmp/scale_lb.svg
+	plot /tmp/scale_lb.out > /tmp/scale_lb.svg
 	$ctraffic -analyze hosts -stat_file /tmp/scale_lb.out >&2
 	test "$__view" = "yes" && inkview /tmp/scale.svg
 }
@@ -121,8 +134,9 @@ test_start_ecmp() {
 }
 
 test_ecmp() {
-	tlog "=== load-balancer: ECMP test"
-	test_start_ecmp
+	tlog "=== load-balancer: ECMP test, kernel $__kver"
+	export SETUP=ecmp
+	test_start
 	otc 221 "mconnect 10.0.0.0:5001"
 	otc 221 "mconnect [1000::]:5001"
 	xcluster_stop
@@ -146,7 +160,7 @@ test_ecmp_scale() {
 	rcp 221 /tmp/ctraffic.out /tmp/scale.out
 	xcluster_stop
 
-	$plot connections --stats=/tmp/scale.out > /tmp/scale.svg
+	plot /tmp/scale.out > /tmp/scale.svg
 	$ctraffic -analyze hosts -stat_file /tmp/scale.out >&2
 	test "$__view" = "yes" && inkview /tmp/scale.svg	
 }
@@ -163,7 +177,7 @@ test_ecmp_scale_out() {
 	rcp 221 /tmp/ctraffic.out /tmp/scale.out
 	xcluster_stop
 
-	$plot connections --stats=/tmp/scale.out > /tmp/scale.svg
+	plot /tmp/scale.out > /tmp/scale.svg
 	$ctraffic -analyze hosts -stat_file /tmp/scale.out >&2
 	test "$__view" = "yes" && inkview /tmp/scale.svg	
 }
@@ -179,7 +193,7 @@ test_ecmp_scale_in() {
 	rcp 221 /tmp/ctraffic.out /tmp/scale.out
 	xcluster_stop
 
-	$plot connections --stats=/tmp/scale.out > /tmp/scale.svg
+	plot /tmp/scale.out > /tmp/scale.svg
 	$ctraffic -analyze hosts -stat_file /tmp/scale.out >&2
 	test "$__view" = "yes" && inkview /tmp/scale.svg	
 }
@@ -222,7 +236,7 @@ test_nfqueue_scale() {
 	otcr "nfqueue_scale_out $__scale"
 	otc 221 "ctraffic_wait --timeout=30"
 	rcp 221 /tmp/ctraffic.out /tmp/scale.out
-	$plot connections --stats=/tmp/scale.out > /tmp/scale.svg
+	plot /tmp/scale.out > /tmp/scale.svg
 	xcluster_stop
 	$ctraffic -analyze hosts -stat_file /tmp/scale.out >&2
 	test "$__view" = "yes" && inkview /tmp/scale.svg
@@ -238,7 +252,7 @@ test_nfqueue_scale_out() {
 	otcr nfqueue_activate_all
 	otc 221 "ctraffic_wait --timeout=30"
 	rcp 221 /tmp/ctraffic.out /tmp/scale.out
-	$plot connections --stats=/tmp/scale.out > /tmp/scale.svg
+	plot /tmp/scale.out > /tmp/scale.svg
 	xcluster_stop
 	$ctraffic -analyze hosts -stat_file /tmp/scale.out >&2
 	test "$__view" = "yes" && inkview /tmp/scale.svg	
@@ -253,7 +267,7 @@ test_nfqueue_scale_in() {
 	otcr "nfqueue_scale_in $__scale"
 	otc 221 "ctraffic_wait --timeout=30"
 	rcp 221 /tmp/ctraffic.out /tmp/scale.out
-	$plot connections --stats=/tmp/scale.out > /tmp/scale.svg
+	plot /tmp/scale.out > /tmp/scale.svg
 	xcluster_stop
 	$ctraffic -analyze hosts -stat_file /tmp/scale.out >&2
 	test "$__view" = "yes" && inkview /tmp/scale.svg	
@@ -287,7 +301,7 @@ test_ipvs_scale() {
 	otcr "ipvs_scale_out $__scale"
 	otc 221 "ctraffic_wait --timeout=30"
 	rcp 221 /tmp/ctraffic.out /tmp/scale.out
-	$plot connections --stats=/tmp/scale.out > /tmp/scale.svg
+	plot /tmp/scale.out > /tmp/scale.svg
 	xcluster_stop
 	$ctraffic -analyze hosts -stat_file /tmp/scale.out >&2
 	test "$__view" = "yes" && inkview /tmp/scale.svg
@@ -368,6 +382,16 @@ cmd_rexec() {
 		XXTERM=XCLUSTER xterm -T "Router $i $1" -bg '#400' $geometry -e \
 			$rsh root@192.168.0.$((200 + i)) -- $1 &
 	done
+}
+
+plot() {
+	plotsh=$GOPATH/src/github.com/Nordix/ctraffic/scripts/plot.sh
+	if ! test -x $plotsh; then
+	   log "Plot requires installed github.com/Nordix/ctraffic"
+	   return 0
+	fi
+	which ctraffic > /dev/null || export PATH=$PATH:$(dirname $ctraffic)
+	$plotsh connections --stats=$1
 }
 
 . $($XCLUSTER ovld test)/default/usr/lib/xctest

@@ -40,7 +40,7 @@ cmd_tcase_mconnect() {
 	mkdir -p $tmp
     local out=$tmp/out
 	if ! tex "send_traffic $1 $srccidr $out"; then
-		cat $out
+		cat $out >&2
 		tdie send_traffic
 	fi
 	check_mconnect_result $out || tdie

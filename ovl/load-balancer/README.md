@@ -1,9 +1,7 @@
 # Xcluster/ovl - load-balancer
 
-* Test setup for load-balancers
-
-This ovl provides a setup for testing different load-balancers
-(without K8s). The default xcluster network-topology is used;
+This tests different load-balancers (without K8s). The default
+xcluster network-topology is used;
 
 <img src="../network-topology/xnet.svg" alt="Default network topology" width="60%" />
 
@@ -11,65 +9,47 @@ The routers (vm-201--vm-220) are used as load-balancing machines.
 Only one tester is used (vm-221). The number of server VMs and
 load-balancer VMs can be varied.
 
+
+Example; install the dependencies then;
+```
+__nvm=10 ./load-balancer.sh test --scale="1 2" --view nfqueue_scale > $log
+```
+
+This tests uses [nfqueue-loadbalancer/](https://github.com/Nordix/nfqueue-loadbalancer/)
+which is a stateless load-balancer based on google `maglev`. 100 connections are
+setup to 10 real-targets. Then real-targets 1 and 2 are removed and
+re-added. The lost connections are printed and a plot is shown.
+
+<img src="scale.svg" alt="Scale graph" width="50%" />
+
+
+## Dependencies
+
+* [ctraffic](https://github.com/Nordix/ctraffic) -- Used in traffic tests
+* [mconnect](https://github.com/Nordix/mconnect) -- Fast connect tests
+* [nfqueue-loadbalancer/](https://github.com/Nordix/nfqueue-loadbalancer/) -- In nfqlb tests
+* `apt install -y libnl-3-dev libnl-genl-3-dev libnetfilter-queue1` -- needed by nfqueue-loadbalancer
+* [gnuplot](http://www.gnuplot.info/) -- For plots (optional)
+* [inkscape](https://inkscape.org/) -- To view plots (optional)
+* Clone [ctraffic](https://github.com/Nordix/ctraffic) to $GOPATH/src/github.com/Nordix/ctraffic -- For plots (optional)
+
+Ctraffic, mconnect and nfqueue-loadbalancer archives should be
+downloaded to `$ARCHIVE` (defaults to ~/Downloads).
+
+
+## ECMP load-balancer
+
 Ecmp does not work with linux > 5.4.x so download;
 ```
 curl https://artifactory.nordix.org/artifactory/cloud-native/xcluster/images/bzImage-linux-5.4.35 > \
   $XCLUSTER_WORKSPACE/xcluster/bzImage-linux-5.4.35
 ```
 
-Scaling tests requires [ctraffic](https://github.com/Nordix/ctraffic);
-```
-mkdir -p $GOPATH/src/github.com/Nordix
-cd $GOPATH/src/github.com/Nordix
-git clone --depth 1 https://github.com/Nordix/ctraffic.git
-cd ctraffic
-__image= ./build.sh image
-```
-
-Scaling tests and show a graph;
-```
-LB=nfqueue
-__nvm=10 ./load-balancer.sh test --view ${LB}_scale > $log
-__nvm=10 ./load-balancer.sh test ${LB}_scale_in > $log
-__nvm=10 ./load-balancer.sh test ${LB}_scale_out > $log
-__nvm=10 ./load-balancer.sh test --scale="1 2 3" ${LB}_scale_in > $log
-```
-
-Start using the `load-balancer.sh` script;
-```
-LB=ecmp
-# Basic test and leave the cluster running;
-./load-balancer.sh test --no-stop $LB > $log
-# Or to just start;
-./load-balancer.sh test start_$LB > $log
-```
-
-You can start manually;
-```
-LB=ecmp
-SETUP=$LB xc mkcdrom env network-topology iptools load-balancer
-__kver=linux-5.4.35 xc starts --ntesters=1 --nrouters=1
-```
-However some additional settings may be needed for some load-balancers.
-
-Manual tests on the tester (vm-221);
-```
-mconnect -address 10.0.0.0:5001 -nconn 100 -srccidr 50.0.0.0/16
-mconnect -address [1000::]:5001 -nconn 100 -srccidr 2000::/112
-ctraffic -address 10.0.0.0:5003 -nconn 100 -rate 100 -monitor -timeout 10s \
-  -stats all -srccidr 50.0.0.0/16 | jq .
-ctraffic -address [1000::]:5003 -nconn 100 -rate 100 -monitor -timeout 10s \
-  -stats all -srccidr 2000::/112 | jq .
-```
-
-## ECMP load-balancer
-
 This is the simplest form of load-balancer. Due to some kernel bug
 linux-5.5.x and above sprays packets regardless of hash so
 `linux-5.4.35` is used in tests.
 
 ```
-./load-balancer.sh test ecmp > $log
 __nrouters=1 __nvm=10 ./load-balancer.sh test --scale=1 ecmp_scale_in > $log
 __nrouters=1 __nvm=10 ./load-balancer.sh test --scale=5 ecmp_scale_in > $log
 ```
@@ -130,12 +110,11 @@ nfqlb deactivate 101
 Scaling test;
 ```
 #sudo apt install -y libnl-3-dev libnl-genl-3-dev libnetfilter-queue1
-__nvm=10 __nrouters=1 ./load-balancer.sh test --view --scale="1 2" nfqueue_scale > $log
+__nvm=10 ./load-balancer.sh test --view --scale="1 2" nfqueue_scale > $log
 ```
 
-In this test the maximum vms are used (10) and just one load-balancer
-(for no good reason). VMs 1 and 2 are scaled out and scaled in again
-and a graph is presented. Example;
+In this test the maximum vms are used (10).  VMs 1 and 2 are scaled
+out and scaled in again and a graph is presented. Example;
 
 <img src="scale.svg" alt="Scale graph" width="50%" />
 
@@ -158,6 +137,7 @@ __nrouters=1 ./load-balancer.sh test start_nfqueue > $log
 ctraffic -address [1000::]:5003 -nconn 100 -srccidr 2000::/112 -timeout 30s -monitor -rate 100
 # On vm-201
 ip6tables -t mangle -vnL
+# Note only 100 hits on the NFQUEUE rule
 ```
 
 
@@ -186,6 +166,8 @@ cdo load-balancer
 ./load-balancer.sh test start_dpdk > $log
 # On vm-201 (router)
 l2lb show
+# On vm 221
+mconnect -address 10.0.0.0:5001 -nconn 100
 ```
 
 
@@ -232,7 +214,6 @@ Prepare and test-build;
 cdo xdp
 . ./Envsettings
 cdo load-balancer
-eval $($XCLUSTER env | grep __kobj); export __kobj
 make -C ./src/xdp O=/tmp/$USER/tmp
 ```
 
