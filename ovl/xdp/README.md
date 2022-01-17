@@ -18,6 +18,7 @@ xc kernel_build
 Now the `libbpf` can be build from the kernel source;
 
 ```
+#sudo apt install libbfd-dev
 cdo xdp
 ./xdp.sh libbpf_build
 ```
@@ -96,6 +97,7 @@ Combined:       2
 there will be just 1, and examples may fail with something like;
 
 ```
+# cd basic01-xdp-pass
 # ./xdp_pass_user --dev eth1
 libbpf: Kernel error message: virtio_net: Too few free TX rings available
 ERR: ifindex(3) link set xdp fd failed (12): Cannot allocate memory
@@ -128,10 +130,18 @@ cd /root/basic01-xdp-pass
 ping 192.168.1.2
 ```
 
+
 ## Local examples
 
-These examples focus on the xdp functions and uses `bpftool` and `ip`
-to load bpf programs and attach them to devices.
+These examples used `bpftool` and `ip` to load bpf programs and attach
+them to devices, but after [linux-5.13](https://github.com/torvalds/linux/commit/10397994d30f2de51bfd9321ed9ddb789464f572)
+that is not possible. You will get;
+
+```
+libbpf: Netlink-based XDP prog detected, please unload it in order to launch AF_XDP prog
+Failed xsk_socket__create (ingress); Invalid argument
+```
+
 
 Test build;
 ```

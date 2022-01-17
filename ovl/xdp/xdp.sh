@@ -112,10 +112,10 @@ cmd_libbpf_build() {
 	local kdir=$KERNELDIR/$__kver
 	test -d "$kdir" || die "Not a directory [$kdir]"
 	cd $kdir/tools/lib/bpf || die cd
-	make || die "Make libbpf"
+	make -j$(nproc) || die "Make libbpf"
 	make DESTDIR=build prefix=/usr install || die "Make libbpf install"
 	cd $kdir/tools/bpf/bpftool
-	make || die "Make bpftool"
+	CLANG=Nope make -j$(nproc) || die "Make bpftool"
 }
 
 ##  libbpf_link
