@@ -17,3 +17,6 @@ spec:
         image: registry.nordix.org/cloud-native/xcluster-base:latest
         securityContext:
           privileged: true
+        env:
+        - name: TZ
+          value: "NZST-12:00:00NZDT-13:00:00,M10.1.0,M3.3.0"

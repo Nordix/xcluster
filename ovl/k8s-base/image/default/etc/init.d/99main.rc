@@ -1,7 +1,0 @@
-#! /bin/sh
-inetd
-# Sit in a loop forever
-while true; do
-	echo "$(date) xcbase alive"
-	sleep 900
-done

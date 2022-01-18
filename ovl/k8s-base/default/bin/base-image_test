@@ -39,6 +39,11 @@ cmd_tcase_start_base_image() {
 	test_deployment xcluster-base
 }
 
+cmd_tcase_tz() {
+	tcase "Test time-zone (NZST|NZDT)"
+	local pod=$(kubectl get pods -l app=xcluster-base -o name | head -1)
+	kubectl exec $pod -- date | grep -E 'NZDT|NZST' || tdie "Invalid TZ"
+}
 
 . /etc/profile
 . /usr/lib/xctest

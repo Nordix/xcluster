@@ -94,6 +94,7 @@ test_start() {
 test_default() {
 	tlog "=== base-image: Basic test"
 	test_start
+	otc 1 tz
 	xcluster_stop
 }
 

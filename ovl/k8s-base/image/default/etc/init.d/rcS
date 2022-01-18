@@ -6,6 +6,7 @@ export PATH
 # Make syslog use local (Swedish/Hungarian) time
 test -n "$TZ" || TZ=CET-1CEST-2,M3.5.0,M10.5.0/3
 export TZ
+echo $TZ > /etc/TZ
 
 # Start syslog
 klogd -c 4
@@ -17,4 +18,13 @@ rm -f /sbin/ip
 # Start other services
 for n in `find /etc/init.d -name "*.rc" | sort`; do
     $n start
+done
+
+. /etc/profile
+test "$RC_QUIT" = "yes" && exit 0
+
+# Sit in a loop forever
+while true; do
+	sleep 900
+	date
 done
