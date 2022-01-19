@@ -36,11 +36,11 @@ if kubectl version --short --client | grep -q v1.1; then
 	test "$BASE_FAMILY" = "IPv6" && NODE_IP=${IPV6_PREFIX}192.168.1.$i
 fi
 
+# --network-plugin=cni removed in v1.24!!
 run_kubelet() {
 	kubelet --address=:: $CRI_OPTS --node-ip=$NODE_IP \
 		--register-node=true --kubeconfig $KUBECONFIG \
 		--feature-gates $FEATURE_GATES \
-		--network-plugin=cni \
 		--cluster-dns=$DNS_ADR \
 		--cluster-domain=$DOMAIN \
 		--runtime-cgroups=/systemd/system.slice \

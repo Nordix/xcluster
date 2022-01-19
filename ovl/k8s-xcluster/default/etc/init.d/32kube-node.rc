@@ -39,12 +39,12 @@ fi
 # Read $CRI_OPTS;
 test -r /etc/cri-plugin.rc && . /etc/cri-plugin.rc
 
+# --network-plugin=cni \ removed in v1.24!!
 run_kubelet() {
 	kubelet --address=:: \
 		--node-ip=$NODE_IP $CRI_OPTS \
 		--feature-gates $FEATURE_GATES \
 		--register-node=true --kubeconfig $KUBECONFIG \
-		--network-plugin=cni \
 		--cluster-dns=$DNS_ADR --cluster-domain=$DOMAIN \
 		--runtime-cgroups=/systemd/system.slice \
 		--kubelet-cgroups=/systemd/system.slice > /var/log/kubelet.log 2>&1
