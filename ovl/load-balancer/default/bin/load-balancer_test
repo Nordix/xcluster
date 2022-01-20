@@ -92,6 +92,12 @@ cmd_tcase_scale_lb() {
 	ip -6 ro change default $targets
 }
 
+cmd_tcase_txcksum_off() {
+	local iface=eth1
+	test -n "$1" && iface=eth1
+	tcase "Disable tx cksum offload on [$iface]"
+	ethtool -K $iface tx off
+}
 
 # ----------------------------------------------------------------------
 # Ecmp

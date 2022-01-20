@@ -1,6 +1,6 @@
 # Xcluster/ovl - load-balancer
 
-This tests different load-balancers (without K8s). The default
+This ovl tests different load-balancers (without K8s). The default
 xcluster network-topology is used;
 
 <img src="../network-topology/xnet.svg" alt="Default network topology" width="60%" />
@@ -15,7 +15,7 @@ Example; install the dependencies then;
 __nvm=10 ./load-balancer.sh test --scale="1 2" --view nfqueue_scale > $log
 ```
 
-This tests uses [nfqueue-loadbalancer/](https://github.com/Nordix/nfqueue-loadbalancer/)
+This tests uses [nfqueue-loadbalancer](https://github.com/Nordix/nfqueue-loadbalancer/)
 which is a stateless load-balancer based on google `maglev`. 100 connections are
 setup to 10 real-targets. Then real-targets 1 and 2 are removed and
 re-added. The lost connections are printed and a plot is shown.
@@ -27,7 +27,7 @@ re-added. The lost connections are printed and a plot is shown.
 
 * [ctraffic](https://github.com/Nordix/ctraffic) -- Used in traffic tests
 * [mconnect](https://github.com/Nordix/mconnect) -- Fast connect tests
-* [nfqueue-loadbalancer/](https://github.com/Nordix/nfqueue-loadbalancer/) -- In nfqlb tests
+* [nfqueue-loadbalancer](https://github.com/Nordix/nfqueue-loadbalancer/) -- In nfqlb tests
 * `apt install -y libnl-3-dev libnl-genl-3-dev libnetfilter-queue1` -- needed by nfqueue-loadbalancer
 * [gnuplot](http://www.gnuplot.info/) -- For plots (optional)
 * [inkscape](https://inkscape.org/) -- To view plots (optional)
@@ -58,6 +58,14 @@ The scaling tests shows the Hash-Threshold used by the Linux kernel
 ([rfc2992](https://tools.ietf.org/html/rfc2992)). When scaling an
 "edge" target ~50% traffic is lost but only ~25% when a "middle"
 target is scaled.
+
+Manual test;
+```
+./load-balancer.sh test start_ecmp > $log
+# On vm-221
+mconnect -address 10.0.0.0:5001 -nconn 100 -srccidr 50.0.0.0/16
+mconnect -address [1000::]:5001 -nconn 100 -srccidr 2000::/112
+```
 
 
 ## IPVS

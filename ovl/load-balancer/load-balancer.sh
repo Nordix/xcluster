@@ -137,6 +137,9 @@ test_ecmp() {
 	tlog "=== load-balancer: ECMP test, kernel $__kver"
 	export SETUP=ecmp
 	test_start
+	otcw txcksum_off
+	otcr txcksum_off
+	otc 221 txcksum_off
 	otc 221 "mconnect 10.0.0.0:5001"
 	otc 221 "mconnect [1000::]:5001"
 	xcluster_stop
