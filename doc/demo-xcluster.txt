@@ -1,0 +1,75 @@
+# Commands used for demo-xcluster
+
+# Optional xterm layout
+#export XCLUSTER_LAYOUT="dx=900;dy=250;sz=80x10"
+#export XCLUSTER_OFFSET="xo=2000;yo=50"
+#export xtermopt="-fs 11"
+
+# Download dependencies to ~/Downloads for the load-balancer test;
+https://github.com/Nordix/ctraffic/releases/download/v1.7.0/ctraffic.gz
+https://github.com/Nordix/mconnect/releases/download/v2.2.0/mconnect.xz
+
+# Setup without K8s;
+cd xcluster
+. ./Envsettings
+
+# Start with xterms
+xc mkcdrom    # No overlays. Clean older setting
+xc start      # Only basic functionality. eth0 for host communication only
+vm 201
+xc stop
+
+
+# https://github.com/Nordix/xcluster/tree/master/ovl/network-topology
+xc mkcdrom iptools network-topology
+xc start --ntesters=2
+# On vm-221
+ping 192.168.1.1
+ping -6 vm-002
+telnet vm-003
+# Back on host
+xc stop
+
+
+# ovl/load-balancer. Automatic ecmp test
+cdo load-balancer
+curl https://artifactory.nordix.org/artifactory/cloud-native/xcluster/images/bzImage-linux-5.4.35 > \
+  $XCLUSTER_WORKSPACE/xcluster/bzImage-linux-5.4.35
+mkdir -p /tmp/$USER
+log=/tmp/$USER/xcluster.log
+__nrouters=1 __nvm=10 ./load-balancer.sh test --scale=1 ecmp_scale_in > $log
+__nrouters=1 __nvm=10 ./load-balancer.sh test --scale=5 ecmp_scale_in > $log
+
+
+# Kubernetes
+cd xcluster
+. ./Envsettings.k8s
+# (download the image if needed)
+xc mkcdrom
+xc start
+echo $KUBECONFIG
+alias kubectl=$PWD/workspace/bin/kubectl
+kubectl version --short
+vm 1
+# On vm-001
+kubectl get pods -A   # No pods. K8s programs started directly on the node
+ps www
+images                # Pre-pulled images
+kubectl apply -f /etc/kubernetes/alpine.yaml
+nslookup kubernetes.default.svc.xcluster  # Local CoreDNS on all nodes
+
+
+# WoW;
+# Don't keep an xcluster running and add things to it!
+# Instead make an ovl and re-start.
+# Use the ovl/test.
+
+cdo test-template
+./test-template.sh test start > $log
+vm 201
+# On vm 201
+pods
+kubectl get svc
+mconnect -address [1000::2]:5001 -nconn 100
+# Back on host
+./test-template.sh test basic > $log
