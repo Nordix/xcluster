@@ -21,8 +21,8 @@ cp -R $dir/default/* $tmp
 eval $($dir/ovs.sh env | grep SYSD)
 OVSD=$SYSD/usr/local
 test -x $OVSD/bin/ovs-vsctl || die "Ovs not built?"
-$XCLUSTER install_prog --dest=$tmp $OVSD/sbin/ovs*
-$XCLUSTER install_prog --dest=$tmp $OVSD/bin/ovs*
+$XCLUSTER install_prog --dest=$tmp $OVSD/sbin/ovs* 2> /dev/null
+$XCLUSTER install_prog --dest=$tmp $OVSD/bin/ovs* 2> /dev/null
 mkdir -p $tmp/usr/local/share
 cp -R $OVSD/share/openvswitch $tmp/usr/local/share
 rm -r $tmp/usr/local/share/openvswitch/python

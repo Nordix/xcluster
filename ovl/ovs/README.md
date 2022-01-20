@@ -32,6 +32,8 @@ ping -c1 3000::$i
 
 ## Build
 
+Prerequisite; autoconf and libtool installed.
+
 ```
 # Clone;
 mkdir -p $GOPATH/src/github.com/openvswitch
