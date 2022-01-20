@@ -562,7 +562,7 @@ rcp() {
 	if ip link show xcbr1 > /dev/null 2>&1; then
 		scp -q $sshopt root@192.168.0.$vm:$1 $2
 	else
-		ssh -q $sshopt -p $((12300+vm)) root@127.0.0.1:$1 $2
+		scp -q $sshopt -P $((12300+vm)) root@127.0.0.1:$1 $2
 	fi
 }
 
