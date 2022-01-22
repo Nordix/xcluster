@@ -19,12 +19,3 @@ rm -f /sbin/ip
 for n in `find /etc/init.d -name "*.rc" | sort`; do
     $n start
 done
-
-. /etc/profile
-test "$RC_QUIT" = "yes" && exit 0
-
-# Sit in a loop forever
-while true; do
-	sleep 900
-	date
-done
