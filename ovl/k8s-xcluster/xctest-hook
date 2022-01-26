@@ -2,21 +2,21 @@
 xcluster_prep() {
 	case $1 in
 		ipv4)
+			__mode=ipv4
 			SETUP="ipv4,$XSETUP"
 			BASEOVLS=k8s-xcluster
 			;;
 		ipv6)
+			__mode=ipv6
 			SETUP="ipv6,$XSETUP"
 			BASEOVLS=k8s-xcluster
 			;;
-		dual-stack)
+		*)
+			__mode=dual-stack
 			SETUP=$XSETUP
 			;;
-		*) 
-			die "Invalid mode [$1]"
-			;;
 	esac
-	export xcluster___mode=$1
+	export xcluster___mode=$__mode
 	test -n "$xcluster_DOMAIN" || xcluster_DOMAIN=xcluster
 	export xcluster_DOMAIN
 	test -n "$xcluster_KUBECONFIG" || xcluster_KUBECONFIG=/etc/kubernetes/kubeconfig.token
