@@ -127,7 +127,7 @@ data:
     {
       "EnableIPv4": true,
       "EnableIPv6": true,
-      "Network": "11.00.0.0/16",
+      "Network": "11.0.0.0/16",
       "IPv6Network": "1100::/48",
       "Backend": {
         "Type": "vxlan"
@@ -169,7 +169,7 @@ spec:
       serviceAccountName: flannel
       initContainers:
       - name: install-cni-plugin
-        image: docker.io/rancher/mirrored-flannelcni-flannel-cni-plugin:v1.0.0
+        image: docker.io/rancher/mirrored-flannelcni-flannel-cni-plugin:v1.0.1
         command:
         - cp
         args:
@@ -180,7 +180,7 @@ spec:
         - name: cni-plugin
           mountPath: /opt/cni/bin
       - name: install-cni
-        image: quay.io/coreos/flannel:v0.15.1
+        image: docker.io/rancher/mirrored-flannelcni-flannel:v0.16.1
         command:
         - cp
         args:
@@ -194,7 +194,7 @@ spec:
           mountPath: /etc/kube-flannel/
       containers:
       - name: kube-flannel
-        image: quay.io/coreos/flannel:v0.15.1
+        image: docker.io/rancher/mirrored-flannelcni-flannel:v0.16.1
         command:
         - /opt/bin/flanneld
         args:
@@ -227,6 +227,8 @@ spec:
           mountPath: /run/flannel
         - name: flannel-cfg
           mountPath: /etc/kube-flannel/
+        - name: xtables-lock
+          mountPath: /run/xtables.lock
       volumes:
       - name: run
         hostPath:
@@ -240,3 +242,7 @@ spec:
       - name: flannel-cfg
         configMap:
           name: kube-flannel-cfg
+      - name: xtables-lock
+        hostPath:
+          path: /run/xtables.lock
+          type: FileOrCreate

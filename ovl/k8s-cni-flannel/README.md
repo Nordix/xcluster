@@ -1,6 +1,7 @@
 # Xcluster - ovl/k8s-cni-flannel
 
-Use the `flannel` CNI-plugin in `xcluster`.
+Use the [flannel](https://github.com/flannel-io/flannel)
+CNI-plugin in `xcluster`.
 
 Dual-stack support was added in v0.15.0. Ipv6-only doesn't work.
 
