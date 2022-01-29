@@ -16,29 +16,50 @@ log() {
 test -n "$1" || die "No out-file"
 
 mkdir -p $tmp
-test "$SETUP" = "None" || cp -R $dir/default/* $tmp
+if test "$SETUP" = "None"; then
+	mkdir -p $tmp/etc/kubernetes
+	cp $dir/default/etc/kubernetes/multus-crd.yml $tmp/etc/kubernetes
+	mkdir -p $tmp/etc/init.d
+	cp $dir/default/etc/init.d/25multus.rc $tmp/etc/init.d
+	mkdir -p $tmp/opt/cni/bin
+	cp $dir/default/opt/cni/bin/node-local $tmp/opt/cni/bin
+else
+	cp -R $dir/default/* $tmp
+fi
 
-f=$ARCHIVE/multus-cni
-test -x $f || die "Not executable [$f]"
+find_ar() {
+	ar=$HOME/Downloads/$1
+	test -r $ar && return 0
+	ar=$ARCHIVE/$1
+	test -r $ar && return 0
+	die "Archive not found [$1]"
+}
+
+__multusver=3.8
+log "Using Multus $__multusver"
+find_ar multus-cni_${__multusver}_linux_amd64.tar.gz
 mkdir -p $tmp/opt/cni/bin
-cp $f $tmp/opt/cni/bin
+tar -C $tmp/opt/cni/bin --strip-components=1 -xf $ar multus-cni_${__multusver}_linux_amd64/multus-cni
 
 test -n "$__cniver" || __cniver=v1.0.1
-f=$ARCHIVE/cni-plugins-linux-amd64-$__cniver.tgz
-test -r "$f" || die "Not readable [$f]"
-tar -C $tmp/opt/cni/bin -xf $f
+log "Using cni $__cniver"
+find_ar cni-plugins-linux-amd64-$__cniver.tgz
+tar -C $tmp/opt/cni/bin -xf $ar
 
 test -n "$WHEREABOUTS_DIR" || WHEREABOUTS_DIR=$GOPATH/src/github.com/k8snetworkplumbingwg/whereabouts
 f=$WHEREABOUTS_DIR/bin/whereabouts
-test -x $f || die "Not executable [$f]"
-cp $f $tmp/opt/cni/bin
-mkdir -p $tmp/etc/kubernetes
-cp -r $WHEREABOUTS_DIR/doc/crds $tmp/etc/kubernetes/whereabouts
+if test -x $f; then
+	cp $f $tmp/opt/cni/bin
+	mkdir -p $tmp/etc/kubernetes
+	cp -r $WHEREABOUTS_DIR/doc/crds $tmp/etc/kubernetes/whereabouts
+fi
 
+mkdir -p $tmp/bin
 for n in multus-proxy multus-service-controller; do
 	f=$GOPATH/bin/$n
 	test -x $f && cp $f $tmp/bin
 done
+
 
 cd $tmp
 tar cf "$1" *

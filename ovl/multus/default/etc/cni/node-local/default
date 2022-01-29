@@ -2,10 +2,10 @@
   "cniVersion": "0.4.0",
   "name": "default",
   "ipam": {
-		"type": "host-local",
-		"ranges": [
-          [ { "subnet": "11.0.x.0/24" } ],
-          [ { "subnet": "1100::11.0.x.0/120" } ]
-		]
-	}
+        "type": "host-local",
+        "ranges": [
+          [ { "subnet": "11.0.%.0/24" } ],
+          [ { "subnet": "1100::11.0.%.0/120" } ]
+        ]
+    }
 }

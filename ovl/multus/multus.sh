@@ -77,6 +77,8 @@ cmd_test() {
 
 }
 
+##   test start_empty
+##     Start without PODs
 test_start_empty() {
 	# Pre-checks
 	test -x $ARCHIVE/multus-cni || die "Not executable [$ARCHIVE/multus-cni]"
@@ -98,10 +100,14 @@ test_start_empty() {
 	unset otcprog
 	otc 1 start_multus
 }
+##   test start_empty
+##     Start with Alpine POD
 test_start() {
 	test_start_empty
 	otc 1 alpine
 }
+##   test start_server
+##     Start with multus_proxy and multus_service_controller
 test_start_server() {
 	test_start_empty
 	otc 2 multus_service_controller
@@ -109,16 +115,18 @@ test_start_server() {
 	otc 1 multus_server
 }
 
+##   test basic (default)
+##     Execute basic tests
 test_basic() {
 	test -n "$__mode" || __mode=dual-stack
-	tlog "=== multus: Basic test on $__mode"
+	tlog "=== multus: Basic test"
 	test_start
 	otc 1 check_interfaces
 	otc 1 ping
 	xcluster_stop
 }
 
-
+##
 . $($XCLUSTER ovld test)/default/usr/lib/xctest
 indent=''
 

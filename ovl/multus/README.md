@@ -8,14 +8,10 @@ IPAM is used for the `ipvlan` example only since it doesn't support dual-stack.
 
 ## Install
 
-The binary release contains only one binary;
-```
-ver=3.8
-ar=$HOME/Downloads/multus-cni_${ver}_linux_amd64.tar.gz
-tar tf $ar
-tar -O -xf $ar multus-cni_${ver}_linux_amd64/multus-cni > $ARCHIVE/multus-cni
-chmod a+x $ARCHIVE/multus-cni
-```
+Download multus and the cni-plugins to $HOME/Downloads or $ARCHIVE.
+
+* multus-cni_3.8_linux_amd64.tar.gz
+* cni-plugins-linux-amd64-v1.0.1.tgz
 
 Whereabouts must be cloned and built locally;
 ```
@@ -45,6 +41,13 @@ In the `alpine` pod to a `ifconfig -a` and check the interfaces;
  * net2 - macvlan (master eth3)
  * net3 - host-device (eth4)
 
+
+## Usage from another ovl
+
+```
+ovl_multus=$($XCLUSTER ovld multus)
+SETUP=None WHEREABOUTS_DIR=/ $ovl_multus/tar - | tar -C $tmp -x
+```
 
 ## IPAM whereabouts
 
