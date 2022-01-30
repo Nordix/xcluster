@@ -231,22 +231,27 @@ cmd_getimages() {
 	fi
 	grep -hs ' image:' $(find $d -name '*.yaml') | sort | uniq | sed -E 's,.*image: *,,' | tr -d "\"'"
 }
-##   lreg_preload [--force] <dir/ovl>
-##     Pre-load images for an ovl. --force loads already-loaded images
+##   lreg_preload [--force] [--keep-going] <dir/ovl>
+##     Pre-load images for an ovl. --force loads already-loaded images.
 cmd_lreg_preload() {
 	test -n "$1" || die 'No dir/ovl'
 	local img
+	local images
 	if test "$__force" = "yes"; then
-		for img in $(cmd_getimages $1); do
-			echo "=== $img"
-			cmd_lreg_cache $img
-		done
+		images="$(cmd_getimages $1)"
 	else
-		for img in $(cmd_lreg_missingimages $1); do
-			echo "=== $img"
-			cmd_lreg_cache $img
-		done
+		images="$(cmd_lreg_missingimages $1)"
 	fi
+
+	for img in $images; do
+		echo $img | grep -q ':local' && continue
+		echo "=== $img"
+		if test "$__keep_going" = "yes"; then
+			cmd_lreg_cache $img || true
+		else
+			cmd_lreg_cache $img || die "Load FAILED: $img"
+		fi
+	done
 }
 
 
