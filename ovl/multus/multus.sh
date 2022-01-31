@@ -91,13 +91,14 @@ test_start_empty() {
 	export TOPOLOGY=multilan
 	. $($XCLUSTER ovld network-topology)/$TOPOLOGY/Envsettings
 	xcluster_prep $__mode
-	xcluster_start k8s-test multus
+	xcluster_start multus
 
-	otcprog=k8s-test_test
 	otc 1 check_namespaces
 	otc 1 check_nodes
 	otcr vip_routes
-	unset otcprog
+	otcw "ifup eth2"
+	otcw "ifup eth3"
+	otcw "ifup eth4"
 	otc 1 start_multus
 }
 ##   test start_empty

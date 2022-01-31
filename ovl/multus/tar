@@ -17,8 +17,10 @@ test -n "$1" || die "No out-file"
 
 mkdir -p $tmp
 if test "$SETUP" = "None"; then
-	mkdir -p $tmp/etc/kubernetes
-	cp $dir/default/etc/kubernetes/multus-crd.yml $tmp/etc/kubernetes
+	yamld=$dir/default/etc/kubernetes/multus
+	mkdir -p $tmp/etc/kubernetes/multus
+	cp $yamld/multus-crd.yaml $tmp/etc/kubernetes/multus
+	cp $yamld/multus-crd-bridge.yaml $tmp/etc/kubernetes/multus
 	mkdir -p $tmp/etc/init.d
 	cp $dir/default/etc/init.d/25multus.rc $tmp/etc/init.d
 	mkdir -p $tmp/opt/cni/bin
@@ -46,9 +48,10 @@ log "Using cni $__cniver"
 find_ar cni-plugins-linux-amd64-$__cniver.tgz
 tar -C $tmp/opt/cni/bin -xf $ar
 
-test -n "$WHEREABOUTS_DIR" || WHEREABOUTS_DIR=$GOPATH/src/github.com/k8snetworkplumbingwg/whereabouts
-f=$WHEREABOUTS_DIR/bin/whereabouts
-if test -x $f; then
+if test "$SETUP" != "None"; then
+	test -n "$WHEREABOUTS_DIR" || WHEREABOUTS_DIR=$GOPATH/src/github.com/k8snetworkplumbingwg/whereabouts
+	f=$WHEREABOUTS_DIR/bin/whereabouts
+	test -x $f || die "Can't find whereabouts"
 	cp $f $tmp/opt/cni/bin
 	mkdir -p $tmp/etc/kubernetes
 	cp -r $WHEREABOUTS_DIR/doc/crds $tmp/etc/kubernetes/whereabouts

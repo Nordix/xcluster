@@ -30,10 +30,6 @@ else
 	sed -i -E "s,CNI_INFO=.+,CNI_INFO=multus+$BASE_CNI," /etc/profile
 fi
 
-ip link set up dev eth2
-ip link set up dev eth3
-ip link set up dev eth4
-
 if test "$DELEGATES" = "yes"; then
 	cat > /etc/cni/net.d/10-multus.conf <<EOF
 {
@@ -82,15 +78,3 @@ else
 }
 EOF
 fi
-
-mkdir -p /etc/cni/net.d/whereabouts.d
-cat > /etc/cni/net.d/whereabouts.d/whereabouts.conf <<EOF
-{
-  "datastore": "kubernetes",
-  "kubernetes": {
-    "kubeconfig": "/etc/kubernetes/kubeconfig.token"
-  },
-  "log_file": "/var/log/whereabouts.log",
-  "log_level": "debug"
-}
-EOF

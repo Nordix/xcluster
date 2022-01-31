@@ -34,21 +34,33 @@ dbg() {
 	test -n "$__verbose" && echo "$prg: $*" >&2
 }
 
+cmd_tcase_check_namespaces() {
+	test_namespaces
+	tlog "$(kubectl version --short=true | grep Server)"
+}
+cmd_tcase_check_nodes() {
+	test_nodes
+}
+cmd_tcase_vip_routes() {
+	tcase "Set VIP routes (ECMP)"
+	vip_route
+}
+
 cmd_tcase_start_multus() {
 	tcase "Start multus"
-	kubectl apply -f /etc/kubernetes/multus-crd.yml || tdie
-	kubectl apply -n kube-system -f /etc/kubernetes/multus-crd-bridge.yaml || tdie
-	#kubectl apply -n kube-system -f /etc/kubernetes/multus-crd-bridge-spec.yaml || tdie
-	kubectl apply -f /etc/kubernetes/multus-crd-ipvlan.yaml || tdie
-	kubectl apply -f /etc/kubernetes/multus-crd-macvlan.yaml || tdie
-	kubectl apply -f /etc/kubernetes/multus-crd-host-device.yaml || tdie
+	kubectl apply -f $yamld/multus-crd.yaml || tdie
+	kubectl apply -n kube-system -f $yamld/multus-crd-bridge.yaml || tdie
+	#kubectl apply -n kube-system -f $yamld/multus-crd-bridge-spec.yaml || tdie
+	kubectl apply -f $yamld/multus-crd-ipvlan.yaml || tdie
+	kubectl apply -f $yamld/multus-crd-macvlan.yaml || tdie
+	kubectl apply -f $yamld/multus-crd-host-device.yaml || tdie
 	kubectl apply -f /etc/kubernetes/whereabouts/whereabouts.cni.cncf.io_ippools.yaml || tdie
 	kubectl apply -f /etc/kubernetes/whereabouts/whereabouts.cni.cncf.io_overlappingrangeipreservations.yaml || tdie
 }
 
 cmd_tcase_alpine() {
 	tcase "Start alpine pods"
-	kubectl apply -f /etc/kubernetes/multus-alpine.yaml || tdie
+	kubectl apply -f $yamld/multus-alpine.yaml || tdie
 	kubectl apply -f /etc/kubernetes/alpine.yaml || tdie
 	test_deployment alpine-deployment 180
 	test_daemonset multus-alpine 180
@@ -97,6 +109,12 @@ cmd_tcase_ping() {
 			done
 		done
 	done
+}
+
+cmd_tcase_ifup() {
+	tcase "Interface up [$1]"
+	test -n "$1" || tdie "No interface"
+	ip link set up dev $1 || tdie
 }
 
 
