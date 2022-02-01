@@ -45,6 +45,7 @@ mount --make-rshared /
 
 mkdir -p /var/lib/kubelet
 
+echo 1 > /proc/sys/net/core/fb_tunnels_only_for_init_net
 echo 1 > /proc/sys/net/ipv6/conf/all/forwarding
 echo 1 > /proc/sys/net/ipv4/ip_forward
 ip link add name cbr0 type bridge
