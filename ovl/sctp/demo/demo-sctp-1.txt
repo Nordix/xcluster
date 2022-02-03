@@ -1,0 +1,104 @@
+# Demo SCTP
+
+### Prep
+
+```
+cd $GOPATH/src/github.com/Nordix/nfqueue-loadbalancer
+./nfqlb.sh libnfqueue_unpack
+./nfqlb.sh libnfqueue_build
+cd src
+make clean; CFLAGS="-DVERBOSE -DSANITY_CHECK -Werror" make -j8 static
+```
+
+
+### Slides
+
+* TELCO heritage
+
+* Multihoming for redundancy. Not load-sharing
+
+* INIT trace is in the Ref section
+
+* No "intelligent" SCTP ALG could be found for Linux
+* Checksum must be re-computed
+* K8s services does not handle multiple interfaces
+
+
+### Demo
+
+* Show the demo setup slides (2)
+
+```
+# Start
+cdo sctp
+make -C src
+xcluster_NETNS=yes ./sctp.sh test --no-stop nfqlb > $log
+
+# On vm's;
+tail -f /var/log/sctpt.log 
+#ip netns exec pod sh -c "sctpt server --log 6 --addr 10.0.0.1,1000::81 > /var/log/sctpt.log 2>&1 &"
+
+# On routers;
+tcpdump -ni eth1 sctp
+
+# On vm-221
+sctpt client --log 6 --addr 10.0.0.1,1000::81 --laddr 192.168.2.221,1000::1:192.168.6.221
+# NOTE; IPv4/IPv6 mix!
+
+# On vm-201 (in a new terminal)
+iptables -A FORWARD -p sctp -j DROP
+iptables -D FORWARD 1
+
+# On vm-221 and vm-001
+ip rule
+ip route show table 300
+# Source based policy routing does NOT work!
+# The Linux SCTP does not bind the source address for secondary paths.
+ip route
+# We must set explicit destination (normal) routes
+```
+
+
+
+
+SCTP-over-UDP;
+```
+xcluster_UDP_ENCAP=9899 xcluster_NETNS=yes ./sctp.sh test --no-stop nfqlb > $log
+eso vm 1 2 3 4 201 201 202 221
+# (two vm-201)
+
+# On vm's;
+tail -f /var/log/sctpt.log 
+
+# On routers;
+tcpdump -ni eth1 udp
+
+# On vm-221
+sysctl -w net.sctp.encap_port=9899
+sysctl -w net.sctp.udp_port=9899
+sctpt client --log 6 --addr 10.0.0.1,1000::81 --laddr 192.168.2.221,1000::1:192.168.6.221
+
+# On vm-201 (in a new terminal)
+iptables -A FORWARD -p udp --sport 9899 -j DROP
+iptables -D FORWARD 1
+```
+
+Use usrsctp/echo_server;
+```
+xcluster_UDP_ENCAP=9899 xcluster_NETNS=yes ./sctp.sh test --no-stop nfqlb_usrsctp > $log
+# On vm-221;
+sctpt client --log 6 --port 7 --addr 10.0.0.1,1000::81 --laddr 192.168.2.221,1000::1:192.168.6.221
+```
+
+
+Ctraffic;
+```
+# On vm-221
+sctpt stats init
+watch sctpt stats  # In a new terminal
+sctpt ctraffic --log 6 --addr 10.0.0.1,1000::81 --laddr 192.168.2.221,1000::1:192.168.6.221 --duration=60 --clients 4 --rate=100.0
+# On vm-201
+tcpdump -ni eth1 sctp
+iptables -A FORWARD -p sctp -j DROP
+iptables -D FORWARD 1
+```
