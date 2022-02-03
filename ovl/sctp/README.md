@@ -152,6 +152,13 @@ basically makes multihoming impossible, or at least
 
 <img src="k8s-node.svg" alt="K8s node" width="70%" />
 
+Make sure to build the sctp-test and upload to local registry first;
+```
+./sctp.sh mkimage
+images lreg_upload registry.nordix.org/cloud-native/sctp-test:latest
+```
+
+
 Multihoming to a single-homed K8s POD (fails);
 ```
 ./sctp.sh test start_k8s > $log
