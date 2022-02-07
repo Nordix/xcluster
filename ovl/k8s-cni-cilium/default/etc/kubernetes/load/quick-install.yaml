@@ -126,7 +126,7 @@ data:
   install-no-conntrack-iptables-rules: "false"
 
   auto-direct-node-routes: "false"
-  enable-bandwidth-manager: "false"
+  enable-bandwidth-manager: "true"
   enable-local-redirect-policy: "false"
   native-routing-cidr: 11.0.0.0/16
   # List of devices used to attach bpf_host.o (implements BPF NodePort,

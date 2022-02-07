@@ -49,7 +49,7 @@ cmd_tcase_iperf_start() {
 	tcase "Start iperf"
 	kubectl apply -f $yamld/iperf.yaml
 	assign-lb-ip -svc iperf -ip 1000::1:10.0.0.52,10.0.0.52
-	test_deployment iperf 120
+	test_deployment iperf 180
 }
 
 cmd_tcase_connect() {
@@ -59,6 +59,27 @@ cmd_tcase_connect() {
 	iperf -p $port -P8 -c $vip -e --connect-only -X || tdie "$vip"
 	iperf -p $port -P8 -V -c 1000::1:$vip -e --connect-only -X || tdie "1000::1:$vip"
 }
+
+cmd_tcase_start_iperf_server() {
+	tcase "Start an iperf server"
+	iperf -s -p 5002 -V > /var/log/iperf 2>&1 &
+}
+
+cmd_tcase_egress() {
+	tcase "Test egress K8s bandwidth limitation"
+	local pod=$($kubectl get pod -l app=iperf -o name | head -1)
+	mkdir -p $tmp
+	local out=$tmp/out
+	log "Egress iperf from $pod ..."
+	$kubectl exec $pod -- \
+		iperf -c 192.168.1.201 -p 5002 --reportstyle C > $out
+	cat $out
+	local rate=$(cat $out | cut -d, -f9)
+	local mbit=$(echo $rate / 1000000 | bc -q)
+	log "Rate $mbit mbit"
+	test $mbit -lt 13 || tdie "Expected rate < 13 mbit"
+}
+
 
 . /etc/profile
 . /usr/lib/xctest

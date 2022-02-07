@@ -15,9 +15,9 @@ the feature.
 
 #### About iperf3
 
-`Iperf3` is not used since it [https://github.com/esnet/iperf/issues/823](
-doesn't work with load-balancing) (and likely never will). `Iperf3` is not
-a development of `iperf2` (or iperf) but a different project.
+`Iperf3` is not used since it [doesn't work with load-balancing](
+https://github.com/esnet/iperf/issues/823) (and likely never will).
+`Iperf3` is not a development of `iperf2` (or iperf) but a different project.
 
 
 ## Usage
@@ -34,7 +34,26 @@ xcadmin k8s_test --cni=cilium iperf > $log
 ```
 
 
-## [WIP] K8s bandwidth limitation
+## K8s bandwidth limitation
 
 a PR for a [KEP](https://github.com/kubernetes/enhancements/pull/2808),
 but several CNI-plugins has already implemented the feature.
+
+```
+# Without bandwidth limitation;
+./iperf.sh test k8s_bandwidth > $log
+# With bandwidth limitation;
+xcadmin k8s_test --cni=cilium iperf k8s_bandwidth > $log
+```
+
+## Trouble-shooting
+
+Cilium crashed in `xcluster` with;
+```
+level=info msg="Setting sysctl" subsys=bandwidth-manager sysParamName=net.core.default_qdisc sysParamValue=fq
+level=fatal msg="Failed to set sysctl needed by BPF bandwidth manager." error="could not write to the systctl file /proc/sys/net/core/default_qdisc: write /proc/sys/net/core/default_qdisc: no such file or directory" subsys=bandwidth-manager sysParamName=net.core.default_qdisc sysParamValue=fq
+```
+Kernel update;
+```
+CONFIG_NET_SCH_FQ=y
+```

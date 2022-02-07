@@ -109,6 +109,8 @@ test_connect() {
 test_k8s_bandwidth() {
 	tlog "=== iperf: Test bandwidth egress limitation in K8s"
 	test_start
+	otc 201 start_iperf_server
+	otc 2 egress
 	xcluster_stop
 }
 
