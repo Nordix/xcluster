@@ -16,23 +16,12 @@ log() {
 test -n "$1" || die "No out-file"
 
 mkdir -p $tmp
-for s in $(echo "$SETUP" | tr ',' ' '); do
-	test -d $dir/$s || continue
-	cp -R $dir/$s/* $tmp
-	setup_copied=yes
-done
-test "$setup_copied" != "yes" && test -d $dir/default && cp -R $dir/default/* $tmp
+cp -R $dir/default/* $tmp
 
-mkdir -p $tmp/sbin $tmp/lib
-d=$GOPATH/src/github.com/esnet/iperf
-f=$d/src/iperf3
-test -x $f || die "Not executable [$f]"
-cp $f $tmp/sbin
-
-f=$XCLUSTER_WORKSPACE/iperf-2.0.12/src/iperf
-test -x $f || die "Not executable [$f]"
-cp $f $tmp/sbin/iperf2
-$XCLUSTER cplib --dest=$tmp $tmp/sbin/iperf2
+test -n "$IPERF_WORKSPACE" || IPERF_WORKSPACE=/tmp/$USER/iperf
+x=$IPERF_WORKSPACE/bin/iperf
+test -x $x || die "Not executable [$x]"
+cp $x $tmp/bin
 
 cd $tmp
 tar cf "$1" *

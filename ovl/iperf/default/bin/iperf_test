@@ -1,0 +1,92 @@
+#! /bin/sh
+##
+## iperf_test --
+##
+##   Test script for iperf executed in xcluster.
+##
+## Commands;
+##
+
+prg=$(basename $0)
+dir=$(dirname $0); dir=$(readlink -f $dir)
+me=$dir/$prg
+tmp=/tmp/${prg}_$$
+test -n "$DOMAIN" || DOMAIN=xcluster
+yamld=/etc/kubernetes/iperf
+
+die() {
+	echo "ERROR: $*" >&2
+	rm -rf $tmp
+	exit 1
+}
+help() {
+	grep '^##' $0 | cut -c3-
+	rm -rf $tmp
+	exit 0
+}
+test -n "$1" || help
+echo "$1" | grep -qi "^help\|-h" && help
+
+log() {
+	echo "$prg: $*" >&2
+}
+dbg() {
+	test -n "$__verbose" && echo "$prg: $*" >&2
+}
+
+cmd_tcase_check_namespaces() {
+	test_namespaces
+	tlog "$(kubectl version --short=true | grep Server)"
+}
+cmd_tcase_check_nodes() {
+	test_nodes
+}
+cmd_tcase_vip_routes() {
+	tcase "Set VIP routes (ECMP)"
+	vip_route
+}
+cmd_tcase_iperf_start() {
+	tcase "Start iperf"
+	kubectl apply -f $yamld/iperf.yaml
+	assign-lb-ip -svc iperf -ip 1000::1:10.0.0.52,10.0.0.52
+	test_deployment iperf 120
+}
+
+cmd_tcase_connect() {
+	tcase "Connect-only test to the VIP addresses"
+	local vip=10.0.0.52
+	local port=5002
+	iperf -p $port -P8 -c $vip -e --connect-only -X || tdie "$vip"
+	iperf -p $port -P8 -V -c 1000::1:$vip -e --connect-only -X || tdie "1000::1:$vip"
+}
+
+. /etc/profile
+. /usr/lib/xctest
+indent='  '
+
+
+# Get the command
+cmd=$1
+shift
+grep -q "^cmd_$cmd()" $0 || die "Invalid command [$cmd]"
+
+while echo "$1" | grep -q '^--'; do
+	if echo $1 | grep -q =; then
+		o=$(echo "$1" | cut -d= -f1 | sed -e 's,-,_,g')
+		v=$(echo "$1" | cut -d= -f2-)
+		eval "$o=\"$v\""
+	else
+		o=$(echo "$1" | sed -e 's,-,_,g')
+		eval "$o=yes"
+	fi
+	shift
+done
+unset o v
+long_opts=`set | grep '^__' | cut -d= -f1`
+
+# Execute command
+trap "die Interrupted" INT TERM
+cmd_$cmd "$@"
+status=$?
+rm -rf $tmp
+exit $status

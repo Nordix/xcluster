@@ -1,78 +1,40 @@
-# Xcluster ovl - iperf3
+# Xcluster ovl - iperf
 
-Use [iperf3](https://github.com/esnet/iperf) in xcluster-
+Test with [iperf2](https://sourceforge.net/projects/iperf2/) on `xcluster`.
+
+To test performance in `xcluster` has limited use. Max bandwidth
+itself is probably not interresting, but to compare bandwidth in
+different configurations, e.g with and without encryption, may be useful.
+
+Current focus is to test bandwidth limitation in Kubernetes. There is
+a PR for a [KEP](https://github.com/kubernetes/enhancements/pull/2808), but several CNI-plugins has already implemented
+the feature.
+
+
+
+
+#### About iperf3
+
+`Iperf3` is not used since it [https://github.com/esnet/iperf/issues/823](
+doesn't work with load-balancing) (and likely never will). `Iperf3` is not
+a development of `iperf2` (or iperf) but a different project.
+
 
 ## Usage
 
 ```
-# Use the normal image (no k8s);
-eval $($XCLUSTER env | grep XCLUSTER_HOME)
-export __image=$XCLUSTER_HOME/hd.img
-# Start
-SETUP=test xc mkcdrom ecmp iperf; xc start
-# On router;
-/sbin/sysctl net.ipv4.tcp_available_congestion_control
-iperf3 -i0 -d -k1 -c 10.0.0.2 -C reno  # Does NOT work!
-iperf3 -i0 -t 5 -c 192.168.1.3
-# iperf2 works fine;
-iperf2 -p 5002 -c 10.0.0.2 -t 1 -P 12
-iperf2 -p 5002 -t 5 -c 192.168.1.3
-```
-
-With Kubernetes;
-```
-xc mkcdrom private-reg iperf; xc start
-# On cluster;
-kubectl apply -f /etc/kubernetes/iperf.yaml
-kubectl get pods -o wide
-# Test
-iperf2 -p 5002 -t5 -c 11.0.4.2
-iperf2 -p 5002 -t5 -c iperf2.default.svc.xcluster
-```
-
-With Kubernetes and encryption;
-```
-# With IPSec;
-xc mkcdrom private-reg podsec iperf; xc start
-# With WireGuard;
-SETUP=wireguard xc mkcdrom wireguard private-reg podsec iperf; xc start
+./iperf.sh    # Help printout
+# If needed;
+#export IPERF_WORKSPACE=/tmp/$USER/iperf
+#./iperf.sh build
+#./iperf.sh mkimage
+./iperf.sh test connect > $log
+# Or;
+xcadmin k8s_test --cni=cilium iperf > $log
 ```
 
 
-## Build
+## [WIP] K8s bandwidth limitation
 
-### Iperf3
-
-```
-# Download;
-mkdir -p $GOPATH/src/github.com/esnet
-cd $GOPATH/src/github.com/esnet
-git clone git@github.com:esnet/iperf.git
-# Build;
-cd $GOPATH/src/github.com/esnet/iperf
-git clean -xdf
-./configure --enable-static --disable-shared
-make -j$(nproc)
-strip src/.libs/iperf3
-#(git status --ignored)
-```
-
-### Iperf2
-
-```
-ar=$ARCHIVE/iperf-2.0.12.tar.gz
-cd $XCLUSTER_WORKSPACE
-tar xf $ar
-cd iperf-2.0.12
-./configure
-make -j$(nproc)
-strip src/iperf
-```
-
-### K8s Image
-
-```
-images mkimage --force $($XCLUSTER ovld iperf)/image
-img=library/iperf:0.1
-skopeo copy --dest-tls-verify=false docker-daemon:$img docker://172.17.0.2:5000/$img
-```
+a PR for a [KEP](https://github.com/kubernetes/enhancements/pull/2808),
+but several CNI-plugins has already implemented the feature.

@@ -1,0 +1,43 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: iperf
+spec:
+  replicas: 4
+  selector:
+    matchLabels:
+      app: iperf
+  template:
+    metadata:
+      labels:
+        app: iperf
+      annotations:
+        # Limits egress bandwidth to 10Mbit/s.
+        kubernetes.io/egress-bandwidth: "10M"
+    spec:
+      containers:
+      - name: iperf
+        image: registry.nordix.org/cloud-native/iperf:local
+        command:
+          - "/bin/iperf"
+          - "-s"
+          - "-p"
+          - "5002"
+          - "-V"
+        ports:
+        - containerPort: 5002
+          name: iperf2
+          protocol: TCP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: iperf
+spec:
+  ipFamilyPolicy: RequireDualStack
+  selector:
+    app: iperf
+  ports:
+  - port: 5002
+  type: LoadBalancer
+
