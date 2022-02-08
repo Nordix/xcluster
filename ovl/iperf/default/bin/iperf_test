@@ -80,6 +80,43 @@ cmd_tcase_egress() {
 	test $mbit -lt 13 || tdie "Expected rate < 13 mbit"
 }
 
+cmd_tcase_create_netns() {
+	local ns=test-ns
+	test -n "$1" && ns=$1
+	tcase "Create netns [$ns]"
+	ip netns add $ns
+	export CNI_PATH=/opt/cni/bin
+	CNI_CONTAINERID=$ns CNI_NETNS=/var/run/netns/$ns CNI_IFNAME=lo \
+		CNI_COMMAND=ADD $CNI_PATH/loopback <<EOF
+{
+  "cniVersion": "1.0.0",
+  "name": "$ns",
+  "type": "loopback"
+}
+EOF
+}
+cmd_tcase_bridge() {
+	local ns=test-ns
+	test -n "$1" && ns=$1
+	tcase "Create a bridge device in [$ns]"
+	export CNI_PATH=/opt/cni/bin
+	test -x $CNI_PATH/bridge || die "Not executable [$CNI_PATH/bridge]"
+	CNI_CONTAINERID=$ns CNI_NETNS=/var/run/netns/$ns CNI_IFNAME=net1 \
+		CNI_COMMAND=ADD $CNI_PATH/bridge < /etc/bridge.conf > /tmp/bridge.json \
+		|| tdie "bridge"
+}
+cmd_tcase_bandwidth() {
+	local ns=test-ns
+	test -n "$1" && ns=$1
+	tcase "Set bandwidth in [$ns]"
+	export CNI_PATH=/opt/cni/bin
+	test -x $CNI_PATH/bandwidth || die "Not executable [$CNI_PATH/bandwidth]"
+	sed -e '/prevResult/r /tmp/bridge.json' < /etc/bandwidth.conf | \
+		CNI_CONTAINERID=$ns CNI_NETNS=/var/run/netns/$ns CNI_IFNAME=net1 \
+		CNI_COMMAND=ADD $CNI_PATH/bandwidth || tdie "bandwidth"
+}
+
+
 
 . /etc/profile
 . /usr/lib/xctest

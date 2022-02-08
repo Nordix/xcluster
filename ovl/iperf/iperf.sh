@@ -79,9 +79,19 @@ cmd_test() {
 
 }
 
+##   test start_no_k8s
+##     Start without K8s
+test_start_no_k8s() {
+	test -n "$__nrouters" || export __nrouters=0
+	test -n "$__vms" || __vms=1
+	export __image=$XCLUSTER_HOME/hd.img
+	echo "$XOVLS" | grep -q private-reg && unset XOVLS
+	xcluster_start network-topology iptools iperf
+}
+
 ##   test start
 ##     Start cluster and the iperf deployment
-test_start_empty() {
+test_start() {
 	test -n "$__nrouters" || export __nrouters=1
 	xcluster_prep dual-stack
 	xcluster_start iperf
@@ -89,10 +99,18 @@ test_start_empty() {
 	otc 1 check_namespaces
 	otc 1 check_nodes
 	otcr vip_routes
-}
-test_start() {
-	test_start_empty
 	otc 1 iperf_start
+}
+
+##   test bandwidth
+##     Test the bandwidth cni-plugin stand-alone
+test_bandwidth() {
+	tlog "=== iperf: Test the bandwidth cni-plugin stand-alone"
+	test_start_no_k8s
+	otc 1 start_iperf_server
+	otc 1 create_netns
+	otc 1 bridge
+	otc 1 bandwidth
 }
 
 ##   test connect (default)
@@ -113,6 +131,7 @@ test_k8s_bandwidth() {
 	otc 2 egress
 	xcluster_stop
 }
+
 
 ##
 ##   IPERF_WORKSPACE=/tmp/$USER/iperf [--force] build

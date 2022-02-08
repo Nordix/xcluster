@@ -2,6 +2,8 @@
 
 Test with [iperf2](https://sourceforge.net/projects/iperf2/) on `xcluster`.
 
+Keywords: bandwidth limitation
+
 To test performance in `xcluster` has limited use. Max bandwidth
 itself is probably not interresting, but to compare bandwidth in
 different configurations, e.g with and without encryption, may be useful.
@@ -36,7 +38,7 @@ xcadmin k8s_test --cni=cilium iperf > $log
 
 ## K8s bandwidth limitation
 
-a PR for a [KEP](https://github.com/kubernetes/enhancements/pull/2808),
+There is a PR for a [KEP](https://github.com/kubernetes/enhancements/pull/2808),
 but several CNI-plugins has already implemented the feature.
 
 ```
@@ -48,12 +50,23 @@ xcadmin k8s_test --cni=cilium iperf k8s_bandwidth > $log
 
 ## Trouble-shooting
 
-Cilium crashed in `xcluster` with;
+Calico and Antrea uses the `bandwidth` CNI-plugin. If they don't work,
+test `bandwidth` stand-alone;
+
 ```
-level=info msg="Setting sysctl" subsys=bandwidth-manager sysParamName=net.core.default_qdisc sysParamValue=fq
-level=fatal msg="Failed to set sysctl needed by BPF bandwidth manager." error="could not write to the systctl file /proc/sys/net/core/default_qdisc: write /proc/sys/net/core/default_qdisc: no such file or directory" subsys=bandwidth-manager sysParamName=net.core.default_qdisc sysParamValue=fq
+CNIBIN=yes ./iperf.sh test bandwidth > $log
+# On vm-001
+ns=test-ns
+export CNI_PATH=/opt/cni/bin
+sed -e '/prevResult/r /tmp/bridge.json' < /etc/bandwidth.conf | \
+ CNI_CONTAINERID=$ns CNI_NETNS=/var/run/netns/$ns CNI_IFNAME=net1 \
+ CNI_COMMAND=ADD strace $CNI_PATH/bandwidth
+
+tc qdisc show
 ```
-Kernel update;
+
+Kernel updates in;
+`Networking support > Networking options > QoS and/or fair queueing`
 ```
 CONFIG_NET_SCH_FQ=y
 ```
