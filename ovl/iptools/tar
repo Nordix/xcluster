@@ -37,7 +37,7 @@ cp -R $sysd/usr/sbin $tmp/usr
 cp -R $sysd/usr/lib $tmp/usr
 $XCLUSTER cplib --dest=$tmp $tmp/usr/sbin/ipvsadm
 
-$XCLUSTER install_prog --dest=$tmp socat curl ethtool nstat
+$XCLUSTER install_prog --dest=$tmp socat curl ethtool
 
 # Lib-to-lib dependecies enforces this;
 LD_LIBRARY_PATH=$XCLUSTER_WORKSPACE/sys/usr/lib \
@@ -60,11 +60,11 @@ if which nmap > /dev/null; then
 fi
 
 d=$XCLUSTER_WORKSPACE/iproute2-$iproute2/sys
-if test -d $d; then
-	log "Including iproute2-$iproute2..."
-	cp -R $d/sbin $tmp
-	$XCLUSTER cplib --dest=$tmp $d/sbin/ip
-fi
+test -d $d || die "Not a directory [$d]"
+log "Including iproute2-$iproute2..."
+cp -R $d/sbin $tmp
+$XCLUSTER cplib --dest=$tmp $d/sbin/ip
+
 
 f=$HOME/Downloads/iperf
 if test -x $f; then

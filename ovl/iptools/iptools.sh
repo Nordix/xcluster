@@ -109,7 +109,6 @@ build_iproute2() {
 	local ar d libs
 	d=$XCLUSTER_WORKSPACE/$1
 	test -d $__kobj/sys/include || cmd_build_kernel_headers
-	return
 	rm -fr $d
 	ar=$1.tar.gz
 	tar -C $XCLUSTER_WORKSPACE -xf $ARCHIVE/$ar || die tar
