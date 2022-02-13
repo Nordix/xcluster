@@ -4,3 +4,4 @@ test "$NO_SERVERS" = "yes" && exit 0
 inetd
 ctraffic -server -udp -address [::]:5003 &
 mconnect -server -udp -address [::]:5001 &
+kahttp -server -address :8080 -https_addr :8443 -https_cert /etc/cert/server.crt -https_key /etc/cert/server.key &

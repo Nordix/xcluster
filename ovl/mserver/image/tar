@@ -15,31 +15,45 @@ log() {
 
 test -n "$1" || die "No out-file"
 
+findar() {
+	ar=$ARCHIVE/$1
+	test -r $ar && return 0
+	ar=$HOME/Downloads/$1
+	test -r $ar || die "Not readable [$ar]"
+}
+
 mkdir -p $tmp
 cp -R $dir/default/* $tmp
 
 $XCLUSTER install_prog --base-libs=/dev/null --dest=$tmp \
 	wget ping tracepath hping3
 
-nordixd=$GOPATH/src/github.com/Nordix
-for n in mconnect ctraffic kahttp; do
-	f=$nordixd/$n/image/$n
-	if test -x $f; then
-		log "Local $n"
-		cp $f $tmp/bin
-		continue
-	fi
-	unpack="xzcat"
-	ar=$n.xz
-	test "$n" = "ctraffic" && unpack="zcat" &&  ar=$n.gz
-	if test -r $ARCHIVE/$ar; then
-		$unpack $ARCHIVE/$ar > $tmp/bin/$n
-	else
-		test -r $HOME/Downloads/$ar || die "Not readable [$HOME/Downloads/$ar]"
-		$unpack $HOME/Downloads/$ar > $tmp/bin/$n
-	fi
-	chmod a+x $tmp/bin/$n
+findar mconnect.xz
+xzcat $ar > $tmp/bin/mconnect
+chmod a+x $tmp/bin/mconnect
+
+findar ctraffic.gz
+zcat $ar > $tmp/bin/ctraffic
+chmod a+x $tmp/bin/ctraffic
+
+findar kahttp.xz
+xzcat $ar > $tmp/bin/kahttp
+chmod a+x $tmp/bin/kahttp
+
+for n in ctraffic mconnect kahttp; do
+	f=$GOPATH/src/github.com/Nordix/$n/image/$n
+	test -x $f || continue
+	cp $f $tmp/bin
 done
+d=$GOPATH/src/github.com/Nordix/kahttp
+test -d $d || die "Not a directory [$d]"
+mkdir -p $tmp/etc
+cp -r $d/image/etc/cert $tmp/etc
+
+for n in ctraffic mconnect kahttp; do
+	echo "$n:$($tmp/bin/$n -version)" >&2
+done
+
 
 cd $tmp
 tar cf "$1" *

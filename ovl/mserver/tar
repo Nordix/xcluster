@@ -19,27 +19,42 @@ findar() {
 	ar=$ARCHIVE/$1
 	test -r $ar && return 0
 	ar=$HOME/Downloads/$1
-	test -r $ar || die "Not readable [$ar]"
+	test -r $ar || return 1
 }
 
 mkdir -p $tmp/bin
 cp -R $dir/default/* $tmp
 
-findar mconnect.xz
+findar mconnect.xz || die "Can't find mconnect.xz"
 xzcat $ar > $tmp/bin/mconnect
 chmod a+x $tmp/bin/mconnect
 
-findar ctraffic.gz
+findar ctraffic.gz || die "Can't find ctraffic.gz"
 zcat $ar > $tmp/bin/ctraffic
 chmod a+x $tmp/bin/ctraffic
 
-for n in ctraffic mconnect; do
+if findar kahttp.xz; then
+	xzcat $ar > $tmp/bin/kahttp
+	chmod a+x $tmp/bin/kahttp
+	if findar server.crt; then
+		mkdir -p $tmp/root
+		cp $ar $tmp/root
+	else
+		log "WARNING: kahttp server.crt not included"
+	fi
+else
+	log "WARNING: kahttp not included"
+fi
+
+# Use locally built executables if they exist
+for n in ctraffic mconnect kahttp; do
 	f=$GOPATH/src/github.com/Nordix/$n/image/$n
 	test -x $f || continue
 	cp $f $tmp/bin
 done
 
-for n in ctraffic mconnect; do
+for n in ctraffic mconnect kahttp; do
+	test -x $tmp/bin/$n || continue
 	echo "$n:$($tmp/bin/$n -version)" >&2
 done
 

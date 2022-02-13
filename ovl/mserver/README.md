@@ -5,8 +5,8 @@ iptools and some servers;
 
 * [mconnect](https://github.com/Nordix/mconnect)
 * [ctraffic](https://github.com/Nordix/ctraffic)
-* (WIP [kahttp](https://github.com/Nordix/kahttp))
-* (WIP [sctpt](https://github.com/Nordix/xcluster/tree/master/ovl/sctp#the-sctpt-test-program)
+* [kahttp](https://github.com/Nordix/kahttp)
+* (WIP [sctpt](https://github.com/Nordix/xcluster/tree/master/ovl/sctp#the-sctpt-test-program))
 
 ## Usage
 
@@ -56,13 +56,33 @@ spec:
 
 ## Tests
 
+The default test requires that `mconnect.xz` and `ctraffic.gz` release
+files are downloaded to `$ARCHIVE` or `$HOME/Downloads`.
+
 ```
+./mserver.sh   # help printout
 log=/tmp/$USER/xcluster.log
 ./mserver.sh test > $log
 ```
 
+### Kahttp
+
+The kahttp test requires that `kahttp.xz` (and optionally
+`server.crt`) is downloaded to `$ARCHIVE` or `$HOME/Downloads`.
+
+```
+./mserver.sh test kahttp > $log
+```
+
 
 ## Build image
+
+Prerequisites;
+
+* `mconnect.xz`, `ctraffic.gz` and `kahttp.xz` downloaded
+
+* [kahttp](https://github.com/Nordix/kahttp) cloned
+
 
 ```
 ./mserver.sh mkimage

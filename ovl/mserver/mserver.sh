@@ -99,8 +99,18 @@ test_connectivity() {
 	otc 201 http
 	xcluster_stop
 }
-##
 
+##   test kahttp
+##     Http access with kahttp
+test_kahttp() {
+	log "==== test kahttp"
+	test_start
+	otc 1 start_services
+	otc 201 kahttp
+	xcluster_stop
+}
+
+##
 ##   mkimage [--tag=registry.nordix.org/cloud-native/mserver:latest]
 ##     Create image and upload to local regisytry
 cmd_mkimage() {

@@ -80,6 +80,64 @@ cmd_tcase_http() {
 	test $cnt -eq 3688 || tdie "$ipv6prefix:$ip: Got $cnt, expected 3688"
 }
 
+cmd_tcase_kahttp() {
+	mkdir -p $tmp
+	local out=$tmp/out
+	local ip=10.0.0.0
+
+	tcase "Kahttp check server"
+	tex "curl -m 2 -sS http://$ip:8080/" || tdie
+	tex "curl -m 2 -sS http://[$ipv6prefix:$ip]:8080/" || tdie
+
+	tcase "Kahttp http access"
+
+	curl -D- -sS http://$ip:8080/ > $out
+	grep -F 'HTTP/1.1 200 OK' $out || tdie "curl $ip"
+	curl -D- -sS http://[$ipv6prefix:$ip]:8080/ > $out
+	grep -F 'HTTP/1.1 200 OK' $out || tdie "curl $ipv6prefix:$ip"
+
+	kahttp -nclients 10 -address http://$ip:8080/ \
+		-host_stats -disable_ka > $out || tdie
+	check_kahttp $out
+	kahttp -nclients 10 -address http://[$ipv6prefix:$ip]:8080/ \
+		-host_stats -disable_ka > $out || tdie
+	check_kahttp $out
+
+	tcase "Kahttp insecure https access"
+
+	kahttp -nclients 10 -address https://$ip:8443/ \
+		-host_stats -disable_ka > $out || tdie
+	check_kahttp $out
+	kahttp -nclients 10 -address https://[$ipv6prefix:$ip]:8443/ \
+		-host_stats -disable_ka > $out || tdie
+	check_kahttp $out
+
+	if ! test -r /root/server.crt; then
+		tlog "No [/root/server.crt], secure access test SKIPPED"
+		return 0
+	fi
+	tcase "Kahttp secure https access"
+	curl -D- -sS --cacert /root/server.crt \
+		--resolv kahttp.localdomain:8443:10.0.0.0 \
+		https://kahttp.localdomain:8443 > $out 2>&1
+	if ! grep -F 'HTTP/2 200' $out; then
+		cat $out
+		tdie "No HTTP/2 200"
+	fi
+	return 0
+}
+check_kahttp() {
+	jq . < $1
+	local k v
+	for k in FailedConnections Dropped FailedConnects NotOK; do
+		v=$(cat $1 | jq .$k)
+		test $v -eq 0 || tdie "$k $v"
+	done
+	k=Received
+	v=$(cat $1 | jq .$k)
+	test $v -ge 98 || tdie "$k $v"
+}
+
 . /etc/profile
 . /usr/lib/xctest
 indent='  '
