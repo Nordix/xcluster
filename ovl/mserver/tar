@@ -1,0 +1,50 @@
+#! /bin/sh
+# NOTE: A common pattern is to specify "-" (stdout) as out-file,
+#  so there must be NO log printouts to stdout!
+
+dir=$(dirname $0); dir=$(readlink -f $dir)
+tmp=/tmp/$USER/xcluster_$$
+die() {
+	echo "ERROR: $*" >&2
+	rm -rf $tmp
+	exit 1
+}
+log() {
+	echo "INFO: $*" >&2
+}
+
+test -n "$1" || die "No out-file"
+
+findar() {
+	ar=$ARCHIVE/$1
+	test -r $ar && return 0
+	ar=$HOME/Downloads/$1
+	test -r $ar || die "Not readable [$ar]"
+}
+
+mkdir -p $tmp/bin
+cp -R $dir/default/* $tmp
+
+findar mconnect.xz
+xzcat $ar > $tmp/bin/mconnect
+chmod a+x $tmp/bin/mconnect
+
+findar ctraffic.gz
+zcat $ar > $tmp/bin/ctraffic
+chmod a+x $tmp/bin/ctraffic
+
+for n in ctraffic mconnect; do
+	f=$GOPATH/src/github.com/Nordix/$n/image/$n
+	test -x $f || continue
+	cp $f $tmp/bin
+done
+
+for n in ctraffic mconnect; do
+	echo "$n:$($tmp/bin/$n -version)" >&2
+done
+
+
+cd $tmp
+tar cf "$1" *
+cd - > /dev/null
+rm -rf $tmp

@@ -1,0 +1,35 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: mserver-configmap
+spec:
+  selector:
+    matchLabels:
+      app: mserver-configmap
+  template:
+    metadata:
+      labels:
+        app: mserver-configmap
+    spec:
+      serviceAccount: default
+      containers:
+      - name: mserver
+        image: registry.nordix.org/cloud-native/mserver:latest
+        securityContext:
+          privileged: true
+        volumeMounts:
+          - mountPath: /pod-init
+            name: pod-init
+      volumes:
+        - name: pod-init
+          configMap:
+            name: mserver-init
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mserver-init
+data:
+  pod-init: |
+    echo "Starting POD $(hostname)"
+    tail -f /dev/null

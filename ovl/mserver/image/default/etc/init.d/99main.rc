@@ -1,0 +1,6 @@
+#! /bin/sh
+. /etc/profile
+test -n "$MSERVER_CMD" || MSERVER_CMD="tail -f /dev/null"
+echo "Executing [$MSERVER_CMD]"
+exec $MSERVER_CMD
+

@@ -1,0 +1,6 @@
+#! /bin/sh
+. /etc/profile
+test "$NO_SERVERS" = "yes" && exit 0
+inetd
+ctraffic -server -udp -address [::]:5003 &
+mconnect -server -udp -address [::]:5001 &

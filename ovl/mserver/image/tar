@@ -1,0 +1,47 @@
+#! /bin/sh
+# NOTE: A common pattern is to specify "-" (stdout) as out-file,
+#  so there must be NO log printouts to stdout!
+
+dir=$(dirname $0); dir=$(readlink -f $dir)
+tmp=/tmp/$USER/xcluster_$$
+die() {
+	echo "ERROR: $*" >&2
+	rm -rf $tmp
+	exit 1
+}
+log() {
+	echo "INFO: $*" >&2
+}
+
+test -n "$1" || die "No out-file"
+
+mkdir -p $tmp
+cp -R $dir/default/* $tmp
+
+$XCLUSTER install_prog --base-libs=/dev/null --dest=$tmp \
+	wget ping tracepath hping3
+
+nordixd=$GOPATH/src/github.com/Nordix
+for n in mconnect ctraffic kahttp; do
+	f=$nordixd/$n/image/$n
+	if test -x $f; then
+		log "Local $n"
+		cp $f $tmp/bin
+		continue
+	fi
+	unpack="xzcat"
+	ar=$n.xz
+	test "$n" = "ctraffic" && unpack="zcat" &&  ar=$n.gz
+	if test -r $ARCHIVE/$ar; then
+		$unpack $ARCHIVE/$ar > $tmp/bin/$n
+	else
+		test -r $HOME/Downloads/$ar || die "Not readable [$HOME/Downloads/$ar]"
+		$unpack $HOME/Downloads/$ar > $tmp/bin/$n
+	fi
+	chmod a+x $tmp/bin/$n
+done
+
+cd $tmp
+tar cf "$1" *
+cd - > /dev/null
+rm -rf $tmp

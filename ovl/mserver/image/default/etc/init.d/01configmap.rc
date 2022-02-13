@@ -1,0 +1,4 @@
+#! /bin/sh
+test -r /pod-init/pod-init || exit 0
+sh -f /pod-init/pod-init
+

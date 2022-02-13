@@ -1,0 +1,38 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: mserver
+spec:
+  selector:
+    matchLabels:
+      app: mserver
+  template:
+    metadata:
+      labels:
+        app: mserver
+    spec:
+      containers:
+      - name: mserver
+        image: registry.nordix.org/cloud-native/mserver:latest
+        securityContext:
+          privileged: true
+        ports:
+        - name: mconnect
+          containerPort: 5001
+        - name: ctraffic
+          containerPort: 5003
+        - name: mconnect-udp
+          protocol: UDP
+          containerPort: 5001
+        - name: ctraffic-udp
+          protocol: UDP
+          containerPort: 5003
+        - name: "http"
+          containerPort: 80
+        - name: "kahttp"
+          containerPort: 8080
+        - name: "kahttps"
+          containerPort: 8443
+        - name: "sctpt"
+          protocol: SCTP
+          containerPort: 6000
