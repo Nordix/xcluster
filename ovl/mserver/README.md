@@ -6,7 +6,7 @@ iptools and some servers;
 * [mconnect](https://github.com/Nordix/mconnect)
 * [ctraffic](https://github.com/Nordix/ctraffic)
 * [kahttp](https://github.com/Nordix/kahttp)
-* (WIP [sctpt](https://github.com/Nordix/xcluster/tree/master/ovl/sctp#the-sctpt-test-program))
+* [sctpt](https://github.com/Nordix/xcluster/tree/master/ovl/sctp#the-sctpt-test-program)
 
 ## Usage
 
@@ -76,7 +76,7 @@ The kahttp test requires that `kahttp.xz` (and optionally
 
 ### Sctpt
 
-The sctpt test requires nfqlb (for build only).
+The sctpt test requires `nfqlb` (for build of `sctpt` only).
 
 ```
 $($XCLUSTER ovld sctp)/sctp.sh nfqlb_download
