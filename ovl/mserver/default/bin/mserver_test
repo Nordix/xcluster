@@ -55,8 +55,9 @@ cmd_tcase_start_daemonset() {
 cmd_tcase_start_services() {
 	tcase "Start mserver services"
 	kubectl apply -f $yamld/services.yaml || tdie "kubectl apply"
-	assign-lb-ip -svc mserver -ip 10.0.0.0,1000::1:10.0.0.0 || tdie
-	assign-lb-ip -svc mserver-udp -ip 10.0.0.0,1000::1:10.0.0.0 || tdie
+	assign-lb-ip -svc mserver -ip 10.0.0.0,1000::1:10.0.0.0 || tdie tcp
+	assign-lb-ip -svc mserver-udp -ip 10.0.0.0,1000::1:10.0.0.0 || tdie udp
+	assign-lb-ip -svc mserver-sctp -ip 10.0.0.0,1000::1:10.0.0.0 || tdie sctp
 }
 ##   tcase_mconnect
 cmd_tcase_mconnect() {
@@ -160,6 +161,36 @@ check_kahttp() {
 	k=Received
 	v=$(cat $1 | jq .$k)
 	test $v -ge 98 || tdie "$k $v"
+}
+
+cmd_tcase_sctpt() {
+	which sctpt || tdie "sctpt not found"
+	mkdir -p $tmp
+	local out=$tmp/out
+	local ip=10.0.0.0
+
+	tcase "sctpt check server"
+	tex "echo Hi | sctpt client --addr=10.0.0.0 --laddr=192.168.1.201" || tdie
+
+	tcase "sctpt $ip"
+	sctpt stats init || tdie "sctpt stats"
+	sctpt ctraffic --clients=40 --rate=120 --addr=$ip \
+		--laddr=192.168.1.201 > $out || tdie $ip
+	check_sctpt $out
+
+	tcase "sctpt $ipv6prefix:$ip"
+	sctpt stats init || tdie "sctpt stats"
+	sctpt ctraffic --clients=40 --rate=120 --addr=$ipv6prefix:$ip \
+		--laddr=$ipv6prefix:192.168.1.201 > $out || tdie $ipv6prefix:$ip
+	check_sctpt $out
+}
+check_sctpt() {
+	jq . < $1
+	local s r
+	s=$(cat $1 | jq .sent)
+	test $s -ge 1150 || tdie "sent $s"
+	r=$(cat $1 | jq .received)
+	test $s -eq $r || tdie "sent $s, received $r"
 }
 
 . /etc/profile

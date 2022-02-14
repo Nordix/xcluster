@@ -54,6 +54,10 @@ for n in ctraffic mconnect kahttp; do
 	echo "$n:$($tmp/bin/$n -version)" >&2
 done
 
+sctpd=$($XCLUSTER ovld sctp)
+make -s -C $sctpd/src clean > /dev/null 2>&1
+make -s -C $sctpd/src -j$(nproc) X=$tmp/bin/sctpt static > /dev/null 2>&1 || die make
+
 
 cd $tmp
 tar cf "$1" *

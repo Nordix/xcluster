@@ -35,3 +35,17 @@ spec:
   - port: 5003
     name: ctraffic
     protocol: UDP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mserver-sctp
+spec:
+  ipFamilyPolicy: RequireDualStack
+  selector:
+    app: mserver
+  type: LoadBalancer
+  ports:
+  - port: 6000
+    protocol: SCTP
+    name: sctpt

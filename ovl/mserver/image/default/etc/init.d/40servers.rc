@@ -9,3 +9,20 @@ mconnect -server $MCONNECT_PARAMS &
 test -n "$KAHTTP_PARAMS" || KAHTTP_PARAMS="-address :8080 -https_addr :8443"
 kahttp -server -https_cert /etc/cert/server.crt -https_key /etc/cert/server.key\
 	$KAHTTP_PARAMS &
+
+test -n "$SCTPT_INTERFACES" || SCTPT_INTERFACES=eth0
+test -n "$SCTPT_PARAMS" || SCTPT_PARAMS="--log=5 --port=6000"
+
+for i in $(echo $SCTPT_INTERFACES | tr , ' '); do
+	ip link show $i || continue
+	for a in $(ip -j addr show dev $i | jq -r '.[]|select(.addr_info)|.addr_info[]|select(.scope == "global")|.local'); do
+		if test -z "$addr"; then
+			addr=$a
+		else
+			addr="$addr,$a"
+		fi
+	done
+done
+
+echo "Start; sctpt server --addr=$addr $SCTPT_PARAMS"
+sctpt server --addr=$addr $SCTPT_PARAMS &

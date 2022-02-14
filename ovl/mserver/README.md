@@ -74,6 +74,15 @@ The kahttp test requires that `kahttp.xz` (and optionally
 ./mserver.sh test kahttp > $log
 ```
 
+### Sctpt
+
+The sctpt test requires nfqlb (for build only).
+
+```
+$($XCLUSTER ovld sctp)/sctp.sh nfqlb_download
+./mserver.sh test sctpt > $log
+```
+
 ## Configuration
 
 The parameters to the servers can be specified in environment
@@ -85,6 +94,22 @@ CTRAFFIC_PARAMS="-udp -address [::]:5003"
 KAHTTP_PARAMS="-address :8080 -https_addr :8443"
 ```
 
+### Sctpt
+
+Because of multihoming the `sctpt` configuration is a bit
+different. The parameters can be specified, but *not*
+`--addr`. Instead the interfaces can be specified. Defaults;
+
+```
+SCTPT_INTERFACES=eth0
+SCTPT_PARAMS="--log=5 --port=6000"
+```
+
+For multihoming two interfaces should be specified;
+```
+SCTPT_INTERFACES=net1,net2
+```
+
 
 ## Build image
 
@@ -94,8 +119,10 @@ Prerequisites;
 
 * [kahttp](https://github.com/Nordix/kahttp) cloned
 
+* [nfqueue-loadbalancer](https://github.com/Nordix/nfqueue-loadbalancer) downloaded
 
 ```
+$($XCLUSTER ovld sctp)/sctp.sh nfqlb_download
 ./mserver.sh mkimage
 ```
 

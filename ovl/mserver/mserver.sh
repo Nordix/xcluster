@@ -78,7 +78,7 @@ cmd_test() {
 }
 
 ##   test start
-##     Start the cluster and the mserver DaemonSet
+##     Start the cluster and the mserver DaemonSet and services
 test_start() {
 	test -n "$__nrouters" || __nrouters=1
 	xcluster_prep
@@ -87,6 +87,7 @@ test_start() {
 	otc 1 check_nodes
 	otcr vip_routes
 	otc 1 start_daemonset
+	otc 1 start_services
 }
 
 ##   test connectivity (default)
@@ -94,7 +95,6 @@ test_start() {
 test_connectivity() {
 	log "==== test connectivity"
 	test_start
-	otc 1 start_services
 	otc 201 mconnect
 	otc 201 ctraffic
 	otc 201 http
@@ -106,8 +106,18 @@ test_connectivity() {
 test_kahttp() {
 	log "==== test kahttp"
 	test_start
-	otc 1 start_services
 	otc 201 kahttp
+	xcluster_stop
+}
+
+##   test sctpt
+##     SCTP test with sctpt
+test_sctpt() {
+	log "==== test sctpt"
+	test_start
+	tcase "Sleep 4..."
+	sleep 4
+	otc 201 sctpt
 	xcluster_stop
 }
 
