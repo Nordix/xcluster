@@ -74,6 +74,17 @@ The kahttp test requires that `kahttp.xz` (and optionally
 ./mserver.sh test kahttp > $log
 ```
 
+## Configuration
+
+The parameters to the servers can be specified in environment
+variables. The defaults are;
+
+```bash
+MCONNECT_PARAMS="-udp -address [::]:5001"
+CTRAFFIC_PARAMS="-udp -address [::]:5003"
+KAHTTP_PARAMS="-address :8080 -https_addr :8443"
+```
+
 
 ## Build image
 

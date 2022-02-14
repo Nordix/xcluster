@@ -2,6 +2,10 @@
 . /etc/profile
 test "$NO_SERVERS" = "yes" && exit 0
 inetd
-ctraffic -server -udp -address [::]:5003 &
-mconnect -server -udp -address [::]:5001 &
-kahttp -server -address :8080 -https_addr :8443 -https_cert /etc/cert/server.crt -https_key /etc/cert/server.key &
+test -n "$CTRAFFIC_PARAMS" || CTRAFFIC_PARAMS="-udp -address [::]:5003"
+ctraffic -server $CTRAFFIC_PARAMS &
+test -n "$MCONNECT_PARAMS" || MCONNECT_PARAMS="-udp -address [::]:5001"
+mconnect -server $MCONNECT_PARAMS &
+test -n "$KAHTTP_PARAMS" || KAHTTP_PARAMS="-address :8080 -https_addr :8443"
+kahttp -server -https_cert /etc/cert/server.crt -https_key /etc/cert/server.key\
+	$KAHTTP_PARAMS &

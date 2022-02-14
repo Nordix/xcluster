@@ -96,6 +96,7 @@ test_connectivity() {
 	test_start
 	otc 1 start_services
 	otc 201 mconnect
+	otc 201 ctraffic
 	otc 201 http
 	xcluster_stop
 }

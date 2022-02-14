@@ -80,6 +80,30 @@ cmd_tcase_http() {
 	test $cnt -eq 3688 || tdie "$ipv6prefix:$ip: Got $cnt, expected 3688"
 }
 
+cmd_tcase_ctraffic() {
+	local ip=10.0.0.0
+	mkdir -p $tmp
+	local out=$tmp/out
+	tcase "Ctraffic $ip"
+	ctraffic -address $ip:5003 -nconn 100 -rate 100 > $out || tdie $ip
+	check_ctraffic $out
+	tcase "Ctraffic $ipv6prefix:$ip"
+	ctraffic -address [$ipv6prefix:$ip]:5003 -nconn 100 -rate 100 > $out || \
+		tdie $ipv6prefix:$ip
+	check_ctraffic $out
+}
+check_ctraffic() {
+	jq . < $1
+	local k v
+	for k in FailedConnections Dropped FailedConnects Retransmits; do
+		v=$(cat $1 | jq .$k)
+		test $v -eq 0 || tdie "$k $v"
+	done
+	k=Received
+	v=$(cat $1 | jq .$k)
+	test $v -ge 980 || tdie "$k $v"
+}
+
 cmd_tcase_kahttp() {
 	mkdir -p $tmp
 	local out=$tmp/out
