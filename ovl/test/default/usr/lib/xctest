@@ -18,10 +18,11 @@ kubectl=kubectl
 sshopt="-o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no"
 
 ##  tlog message...
-##    Logs to stderr with time stamp.
+##    Logs to stdout and stderr with time stamp.
 ##
 tlog() {
 	echo "$indent$(date +%T) $*" >&2
+	echo "$indent$(date +%T) $*"
 }
 
 ##  tcase slogan...
@@ -138,18 +139,22 @@ mynode() {
 }
 
 ##  npods <pattern> <expected-replicas>
-##    Returns true if the expected number of pods are "Running".
+##    Returns true if the expected number of pods are "Running",
+##    and there are no "Terminating" pods.
 ##    Example; tex "npods mconnect-deployment- 4" || tdie
 ##
 npods() {
-	local n
+	local n t
 	$kubectl get pods 2>&1 | ogrep 'No resources' && return 1
 	if echo "$1" | grep -q '='; then
 		# Use a match label
 		n=$($kubectl get pods -l $1 | grep "Running" | wc -l)
+		t=$($kubectl get pods -l $1 | grep "Terminating" | wc -l)
 	else
 		n=$($kubectl get pods | grep -E "^$1.*Running" | wc -l)
+		t=$($kubectl get pods | grep -E "^$1.*Terminating" | wc -l)
 	fi
+	test $t -eq 0 || return 1
 	test $n -eq $2
 }
 
