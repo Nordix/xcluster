@@ -33,12 +33,16 @@ test -x $ip || die "Not executable [$ip]"
 # This will install all libs. Note that we don't want to exclude the base-libs!
 __base_libs=/dev/null $XCLUSTER install_prog --dest=$tmp $f $ip strace tcpdump jq
 
-# libnss_files.so is needed for /etc/services parsing
+# Copy all base-libs;
 mkdir -p $tmp/lib/x86_64-linux-gnu
-for n in libnss_files.so.2 libnss_dns.so.2 libresolv.so.2 libpthread.so.0; do
-    f=/lib/x86_64-linux-gnu/$n
+for f in $(grep '^/lib/x86_64-linux-gnu' $__base_libs); do
     test -r $f || die "Not readable [$f]"
     cp -L $f $tmp/lib/x86_64-linux-gnu
+done
+mkdir -p $tmp/usr/lib/x86_64-linux-gnu
+for f in $(grep '^/usr/lib/x86_64-linux-gnu' $__base_libs); do
+    test -r $f || die "Not readable [$f]"
+    cp -L $f $tmp/usr/lib/x86_64-linux-gnu
 done
 
 iptoolsd=$($XCLUSTER ovld iptools)

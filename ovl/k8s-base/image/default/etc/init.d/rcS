@@ -15,7 +15,19 @@ syslogd -s 1000 -b 10
 ln -s /var/run /run
 rm -f /sbin/ip
 
+_term() { 
+	kill -TERM "$child" 2>/dev/null
+	wait "$child"
+}
+
+trap _term SIGTERM
+
 # Start other services
 for n in `find /etc/init.d -name "*.rc" | sort`; do
-    $n start
+	# Start in background and wait to be able to forward signals
+	# https://unix.stackexchange.com/questions/146756/forward-sigterm-to-child-in-bash
+	test -x $n || continue
+	$n start &
+	child=$! 
+	wait "$child"
 done
