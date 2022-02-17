@@ -7,6 +7,7 @@ spec:
   selector:
     app: mserver
   type: LoadBalancer
+  allocateLoadBalancerNodePorts: false
   ports:
   - port: 5001
     name: mconnect
@@ -28,6 +29,7 @@ spec:
   selector:
     app: mserver
   type: LoadBalancer
+  allocateLoadBalancerNodePorts: false
   ports:
   - port: 5001
     protocol: UDP
@@ -45,6 +47,7 @@ spec:
   selector:
     app: mserver
   type: LoadBalancer
+  allocateLoadBalancerNodePorts: false
   ports:
   - port: 6000
     protocol: SCTP
