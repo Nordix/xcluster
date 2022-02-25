@@ -15,6 +15,8 @@
 #include <errno.h>
 #include <netinet/sctp.h>
 #include <unistd.h>
+#include <fcntl.h>
+#include <poll.h>
 
 #define MAXMSG (1024*16)
 
@@ -54,8 +56,36 @@ static int cmdClient(int argc, char **argv)
 	if (sctp_bindx(sd, laddrs, lcnt, SCTP_BINDX_ADD_ADDR) != 0)
 		die("sctp_bindx %s\n", strerror(errno));
 
-	if (sctp_connectx(sd, addrs, cnt, NULL) != 0)
-		die("sctp_connectx %s\n", strerror(errno));
+	// Set non-blocking mode for sctp_connectx timeout
+	if (fcntl(sd, F_SETFL, fcntl(sd, F_GETFL, 0) | O_NONBLOCK) != 0)
+		die("fcntl O_NONBLOCK %s\n", strerror(errno));
+
+	if (sctp_connectx(sd, addrs, cnt, NULL) != 0) {
+		if (errno != EINPROGRESS)
+			die("sctp_connectx %s\n", strerror(errno));
+	}
+
+	// Wait for completion or timeout
+	struct pollfd pollfd = {sd, POLLOUT, 0};
+	switch (poll(&pollfd, 1, 2000)) {
+	case 0:
+		die("sctp_connectx timeout\n");
+	case -1:
+		die("poll %s\n", strerror(errno));
+	default:;
+	}
+
+    int error = 0;
+	socklen_t len = sizeof(error);
+	if (getsockopt(sd, SOL_SOCKET, SO_ERROR, &error, &len) < 0)
+		die("getsockopt %s\n", strerror(errno));
+
+	if (error != 0)
+		die("sctp_connectx (getsockopt) %s\n", strerror(error));
+
+	// Re-set blocking mode
+	if (fcntl(sd, F_SETFL, fcntl(sd, F_GETFL, 0) & ~O_NONBLOCK) != 0)
+		die("fcntl O_NONBLOCK %s\n", strerror(errno));
 
 	INFO{
 		logf("Connected\n");
