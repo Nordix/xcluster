@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: usrsctp
+spec:
+  externalTrafficPolicy: Local
+  ipFamilyPolicy: PreferDualStack
+  selector:
+    app: usrsctp-test
+  ports:
+  - port: 7002
+    name: usrsctpt-server
+    protocol: SCTP
+  - port: 7003
+    name: usrsctpt-usrserver
+    protocol: SCTP
+  type: LoadBalancer

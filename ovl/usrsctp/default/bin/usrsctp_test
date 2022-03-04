@@ -1,0 +1,135 @@
+#! /bin/sh
+##
+## sctp_test --
+##
+##   Test script for sctp executed in xcluster.
+##
+## Commands;
+##
+
+prg=$(basename $0)
+dir=$(dirname $0); dir=$(readlink -f $dir)
+me=$dir/$prg
+tmp=/tmp/${prg}_$$
+test -n "$DOMAIN" || DOMAIN=xcluster
+test -n "$PREFIX" || PREFIX=1000::1
+test -n "$FIRST_WORKER" || FIRST_WORKER=1
+yamld=/etc/kubernetes/usrsctp
+
+die() {
+	echo "ERROR: $*" >&2
+	rm -rf $tmp
+	exit 1
+}
+help() {
+	grep '^##' $0 | cut -c3-
+	rm -rf $tmp
+	exit 0
+}
+test -n "$1" || help
+echo "$1" | grep -qi "^help\|-h" && help
+
+log() {
+	echo "$prg: $*" >&2
+}
+dbg() {
+	test -n "$__verbose" && echo "$prg: $*" >&2
+}
+
+cmd_tcase_check_namespaces() {
+    test_namespaces $1
+}
+cmd_tcase_check_nodes() {
+    test_nodes
+}
+
+cmd_tcase_deploy_test_pods() {
+	tcase "Deploy test pods"
+	apply_k8s $yamld
+	test_deployment usrsctp-test 180
+	assign-lb-ip -svc usrsctp -ip 10.0.0.72,1000::72
+}
+
+cmd_tcase_start_server() {
+	tcase "Start server"
+	local cmd="usrsctpt server --log=7 --addr=192.168.3.221,192.168.4.221 --port=7003"
+	local log=/var/log/usrsctp.log
+	tlog $cmd
+	nohup $cmd > $log 2>&1 &
+	tlog "Check usrsctpt has started"
+	tex "pgrep usrsctpt" || tdie
+}
+
+cmd_tcase_start_client_interactive() {
+	tcase "Start client"
+	#local cmd="usrsctpt client --log=7 --addr=192.168.3.221,192.168.4.221 --port=7003 --laddr=11.0.2.2"
+	local app="app=usrsctp-test"
+	#kubectl_exec $app -- $cmd
+	kubectl_exec $app --stdin -i -- bash
+}
+
+cmd_tcase_vip_ecmp_route() {
+	local net=1
+	test -n "$1" && net=$1
+	tcase "Setup VIP ECMP routes. net=$net"
+	vip_route $net
+}
+cmd_tcase_vip_route() {
+	tcase "Setup VIP route to [$1]"
+	ip ro replace 10.0.0.0/24 via $1
+	ip -6 ro replace 1000::/120 via $PREFIX:$1
+	ip -6 ro replace $PREFIX:10.0.0.0/120 via $PREFIX:$1
+}
+
+cmd_tcase_start_tcpdump() {
+	local dev=eth1
+	test -n "$1" && dev=$1
+
+	tcase "Start tcpdump on dev=$1"
+	local pcap=/var/log/usrsctp-$(hostname)-$1.pcap
+	local cmd="tcpdump -i $dev sctp -w $pcap"
+	tlog $cmd
+	nohup $cmd 2>&1 &
+	# tcpdump takes a couple of seconds to start
+	sleep 2
+	tex "pgrep -P $$ tcpdump > /dev/null" || tdie
+}
+
+cmd_tcase_stop_all_tcpdump() {
+	tcase "Stop all instances of tcpdump"
+	local cmd="pkill tcpdump"
+	tlog $cmd
+	$cmd
+	tex "! pgrep tcpdump" || tdie
+}
+
+. /etc/profile
+. /usr/lib/xctest
+indent='  '
+
+
+# Get the command
+cmd=$1
+shift
+grep -q "^cmd_$cmd()" $0 || die "Invalid command [$cmd]"
+
+while echo "$1" | grep -q '^--'; do
+	if echo $1 | grep -q =; then
+		o=$(echo "$1" | cut -d= -f1 | sed -e 's,-,_,g')
+		v=$(echo "$1" | cut -d= -f2-)
+		eval "$o=\"$v\""
+	else
+		o=$(echo "$1" | sed -e 's,-,_,g')
+		eval "$o=yes"
+	fi
+	shift
+done
+unset o v
+long_opts=`set | grep '^__' | cut -d= -f1`
+
+# Execute command
+trap "die Interrupted" INT TERM
+cmd_$cmd "$@"
+status=$?
+rm -rf $tmp
+exit $status
