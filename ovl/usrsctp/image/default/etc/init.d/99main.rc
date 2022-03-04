@@ -1,0 +1,6 @@
+#! /bin/sh
+. /etc/profile
+test -n "$USRSCTP_CMD" || USRSCTP_CMD="tail -f /dev/null"
+echo "Executing [$USRSCTP_CMD]"
+exec $USRSCTP_CMD
+

@@ -1,0 +1,25 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: usrsctp-test
+spec:
+  selector:
+    matchLabels:
+      app: usrsctp-test
+  template:
+    metadata:
+      labels:
+        app: usrsctp-test
+    spec:
+      serviceAccount: default
+      nodeSelector:
+        kubernetes.io/hostname: vm-002
+      containers:
+      - name: usrsctp-test
+        imagePullPolicy: Always
+        image: registry.nordix.org/cloud-native/usrsctp-test:latest
+        ports:
+        - containerPort: 7002
+        - containerPort: 7003
+        securityContext:
+          privileged: true
