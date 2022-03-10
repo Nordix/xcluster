@@ -40,6 +40,9 @@ data:
           },
           "kubernetes": {
               "kubeconfig": "__KUBECONFIG_FILEPATH__"
+          },
+          "feature_control": {
+              "floating_ips": true
           }
         },
         {
