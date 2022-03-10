@@ -48,7 +48,7 @@ mv -f calico.yaml calico-orig.yaml
 
 Build an image with dual-stack and calico pre-pulled;
 ```
-ver=v3.16.0
+ver=v3.22.1
 docker pull calico/cni:$ver
 docker pull calico/node:$ver
 docker pull calico/kube-controllers:$ver
@@ -69,7 +69,7 @@ $($XCLUSTER ovld $t)/$t.sh test basic_dual > /dev/null
 ### Install calicoctl
 
 ```
-ver=v3.16.0
+ver=v3.22.1
 curl -L \
  https://github.com/projectcalico/calicoctl/releases/download/$ver/calicoctl \
  > $GOPATH/bin/calicoctl
