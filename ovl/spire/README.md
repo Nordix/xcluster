@@ -34,15 +34,10 @@ spec:
 
 ## Usage
 
-Load the local registry;
-```
-for n in $(images lreg_missingimages .); do
-  images lreg_cache $n
-done
-```
 
 Manual test;
 ```
+#images lreg_preload ./default   # (if needed)
 ./spire.sh test start_registrar > $log
 # On a vm;
 kubectl get spiffeid -A
@@ -60,3 +55,15 @@ otc 1 start_spire_registrar
 unset otcprog
 ```
 
+## Update
+
+```
+git fetch --tags
+git branch -a
+git checkout v1.2.1
+meld $GOPATH/src/github.com/spiffe/spire/support/k8s/k8s-workload-registrar/mode-crd/config default/etc/kubernetes/spire
+images getimages default/
+grep :1.1.0 default/etc/kubernetes/spire/*
+sed -i -e 's,:1.1.0,:1.2.1,' default/etc/kubernetes/spire/*
+images lreg_preload ./default
+```
