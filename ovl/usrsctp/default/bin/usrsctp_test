@@ -62,7 +62,7 @@ cmd_tcase_start_server() {
 
 cmd_tcase_start_client_interactive() {
 	tcase "Start client"
-	#local cmd="usrsctpt client --log=7 --addr=192.168.3.221,192.168.4.221 --port=7003 --laddr=11.0.2.2"
+	#local cmd="usrsctpt client --log=7 --addr=192.168.3.221,192.168.4.221 --port=7003 --laddr=11.0.2.2 --lport=7003"
 	local app="app=usrsctp-test"
 	#kubectl_exec $app -- $cmd
 	kubectl_exec $app --stdin -i -- bash

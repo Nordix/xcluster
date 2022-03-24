@@ -26,7 +26,7 @@ else
 fi
 
 make -s -C $dir/src clean > /dev/null 2>&1
-make -s -C $dir/src -j$(nproc) X=$tmp/bin/usrsctpt static > /dev/null 2>&1 || die make
+make -s -C $dir/src -j$(nproc) CFLAGS=-DSCTP_DEBUG X=$tmp/bin/usrsctpt static > /dev/null 2>&1 || die make
 
 cd $tmp
 tar cf "$1" *

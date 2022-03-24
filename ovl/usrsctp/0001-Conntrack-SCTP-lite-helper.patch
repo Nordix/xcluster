@@ -1,0 +1,1030 @@
+From 108dd6dba30a647541f6cbb33be7edf70a7b1b23 Mon Sep 17 00:00:00 2001
+From: Sriram Yagnaraman <sriram.yagnaraman@est.tech>
+Date: Wed, 16 Mar 2022 21:16:22 +0100
+Subject: [PATCH] Conntrack: SCTP lite helper
+
+---
+ include/linux/sctp.h                         |   7 +-
+ include/net/netfilter/ipv4/nf_reject.h       |   8 +
+ include/net/netfilter/nf_conntrack_l4proto.h |   9 +
+ include/net/netfilter/nf_nat.h               |   3 +
+ net/ipv4/netfilter/nf_reject_ipv4.c          | 262 +++++++++++
+ net/netfilter/Kconfig                        |  27 +-
+ net/netfilter/Makefile                       |   5 +-
+ net/netfilter/nf_conntrack_core.c            |   8 +
+ net/netfilter/nf_conntrack_proto.c           |   7 +
+ net/netfilter/nf_conntrack_proto_sctp_lite.c | 451 +++++++++++++++++++
+ net/netfilter/nf_nat_core.c                  |   6 +-
+ net/netfilter/nf_nat_proto.c                 |  24 +
+ 12 files changed, 811 insertions(+), 6 deletions(-)
+ create mode 100644 net/netfilter/nf_conntrack_proto_sctp_lite.c
+
+diff --git a/include/linux/sctp.h b/include/linux/sctp.h
+index a86e852507b3..fc88e2185bb4 100644
+--- a/include/linux/sctp.h
++++ b/include/linux/sctp.h
+@@ -122,7 +122,10 @@ enum { SCTP_CID_ACTION_MASK = 0xc0, };
+  *    The T bit is set to 0 if the sender had a TCB that it destroyed.
+  *    If the sender did not have a TCB it should set this bit to 1.
+  */
+-enum { SCTP_CHUNK_FLAG_T = 0x01 };
++enum {
++	SCTP_CHUNK_FLAG_T = 0x01,
++	SCTP_CHUNK_FLAG_M = 0x08,
++};
+ 
+ /*
+  *  Set the T bit
+@@ -197,6 +200,8 @@ enum sctp_param {
+ 	SCTP_PARAM_RESET_RESPONSE		= cpu_to_be16(0x0010),
+ 	SCTP_PARAM_RESET_ADD_OUT_STREAMS	= cpu_to_be16(0x0011),
+ 	SCTP_PARAM_RESET_ADD_IN_STREAMS		= cpu_to_be16(0x0012),
++
++	SCTP_PARAM_RJ = cpu_to_be16(0xc400),
+ }; /* enum */
+ 
+ 
+diff --git a/include/net/netfilter/ipv4/nf_reject.h b/include/net/netfilter/ipv4/nf_reject.h
+index c653fcb88354..c4612f3ec9ef 100644
+--- a/include/net/netfilter/ipv4/nf_reject.h
++++ b/include/net/netfilter/ipv4/nf_reject.h
+@@ -10,13 +10,21 @@
+ void nf_send_unreach(struct sk_buff *skb_in, int code, int hook);
+ void nf_send_reset(struct net *net, struct sock *, struct sk_buff *oldskb,
+ 		   int hook);
++void nf_send_abort(struct net *net, struct sock *, struct sk_buff *oldskb,
++		   int hook);
++void nf_send_init_ack(struct net *net, struct sock *sk, struct sk_buff *oldskb,
++		   int hook);
+ const struct tcphdr *nf_reject_ip_tcphdr_get(struct sk_buff *oldskb,
+ 					     struct tcphdr *_oth, int hook);
++const struct sctphdr *nf_reject_ip_sctphdr_get(struct sk_buff *oldskb,
++					     struct sctphdr *_osh);
+ struct iphdr *nf_reject_iphdr_put(struct sk_buff *nskb,
+ 				  const struct sk_buff *oldskb,
+ 				  __u8 protocol, int ttl);
+ void nf_reject_ip_tcphdr_put(struct sk_buff *nskb, const struct sk_buff *oldskb,
+ 			     const struct tcphdr *oth);
++void nf_reject_ip_sctphdr_put(struct sk_buff *nskb, const struct sk_buff *oldskb,
++				  const struct sctphdr *osh);
+ 
+ struct sk_buff *nf_reject_skb_v4_unreach(struct net *net,
+                                          struct sk_buff *oldskb,
+diff --git a/include/net/netfilter/nf_conntrack_l4proto.h b/include/net/netfilter/nf_conntrack_l4proto.h
+index 1f47bef51722..3dea4da87917 100644
+--- a/include/net/netfilter/nf_conntrack_l4proto.h
++++ b/include/net/netfilter/nf_conntrack_l4proto.h
+@@ -24,6 +24,10 @@ struct nf_conntrack_l4proto {
+ 	/* Resolve clashes on insertion races. */
+ 	bool allow_clash;
+ 
++	/* handle clash if any */
++	int (*on_clash)(struct sk_buff *skb, const struct nf_conn *ct,
++			struct nf_conn *loser_ct, enum ip_conntrack_info ctinfo);
++
+ 	/* protoinfo nlattr size, closes a hole */
+ 	u16 nlattr_size;
+ 
+@@ -142,6 +146,11 @@ void nf_conntrack_sctp_init_net(struct net *net);
+ void nf_conntrack_icmp_init_net(struct net *net);
+ void nf_conntrack_icmpv6_init_net(struct net *net);
+ 
++#ifdef CONFIG_NF_CT_PROTO_SCTP_LITE
++void nf_conntrack_proto_sctp_init(void);
++void nf_conntrack_proto_sctp_fini(void);
++#endif
++
+ /* Existing built-in generic protocol */
+ extern const struct nf_conntrack_l4proto nf_conntrack_l4proto_generic;
+ 
+diff --git a/include/net/netfilter/nf_nat.h b/include/net/netfilter/nf_nat.h
+index 987111ae5240..5bbe044fe21d 100644
+--- a/include/net/netfilter/nf_nat.h
++++ b/include/net/netfilter/nf_nat.h
+@@ -79,6 +79,9 @@ unsigned int nf_nat_packet(struct nf_conn *ct, enum ip_conntrack_info ctinfo,
+ unsigned int nf_nat_manip_pkt(struct sk_buff *skb, struct nf_conn *ct,
+ 			      enum nf_nat_manip_type mtype,
+ 			      enum ip_conntrack_dir dir);
++unsigned int nf_nat_reverse_manip_pkt(struct sk_buff *skb, struct nf_conn *ct,
++			      enum nf_nat_manip_type mtype,
++			      enum ip_conntrack_dir dir);
+ void nf_nat_csum_recalc(struct sk_buff *skb,
+ 			u8 nfproto, u8 proto, void *data, __sum16 *check,
+ 			int datalen, int oldlen);
+diff --git a/net/ipv4/netfilter/nf_reject_ipv4.c b/net/ipv4/netfilter/nf_reject_ipv4.c
+index 4eed5afca392..0be3eb1f5113 100644
+--- a/net/ipv4/netfilter/nf_reject_ipv4.c
++++ b/net/ipv4/netfilter/nf_reject_ipv4.c
+@@ -8,9 +8,11 @@
+ #include <net/tcp.h>
+ #include <net/route.h>
+ #include <net/dst.h>
++#include <net/sctp/checksum.h>
+ #include <net/netfilter/ipv4/nf_reject.h>
+ #include <linux/netfilter_ipv4.h>
+ #include <linux/netfilter_bridge.h>
++#include <linux/sctp.h>
+ 
+ static int nf_reject_iphdr_validate(struct sk_buff *skb)
+ {
+@@ -163,6 +165,24 @@ const struct tcphdr *nf_reject_ip_tcphdr_get(struct sk_buff *oldskb,
+ }
+ EXPORT_SYMBOL_GPL(nf_reject_ip_tcphdr_get);
+ 
++const struct sctphdr *nf_reject_ip_sctphdr_get(struct sk_buff *oldskb,
++					     struct sctphdr *_osh)
++{
++	const struct sctphdr *osh;
++
++	/* IP header checks: fragment. */
++	if (ip_hdr(oldskb)->frag_off & htons(IP_OFFSET))
++		return NULL;
++
++	if (ip_hdr(oldskb)->protocol != IPPROTO_SCTP)
++		return NULL;
++
++	osh = skb_header_pointer(oldskb, ip_hdrlen(oldskb),
++				 sizeof(struct sctphdr), _osh);
++	return osh;
++}
++EXPORT_SYMBOL_GPL(nf_reject_ip_sctphdr_get);
++
+ struct iphdr *nf_reject_iphdr_put(struct sk_buff *nskb,
+ 				  const struct sk_buff *oldskb,
+ 				  __u8 protocol, int ttl)
+@@ -218,6 +238,98 @@ void nf_reject_ip_tcphdr_put(struct sk_buff *nskb, const struct sk_buff *oldskb,
+ }
+ EXPORT_SYMBOL_GPL(nf_reject_ip_tcphdr_put);
+ 
++void nf_reject_ip_sctphdr_put(struct sk_buff *nskb, const struct sk_buff *oldskb,
++			  const struct sctphdr *osh)
++{
++	struct sctphdr *sctph;
++	__be32 vtag;
++
++	struct sctp_chunkhdr *aborth;
++	struct sctp_errhdr *errorh;
++
++	struct sctp_inithdr *oih;
++	struct sctp_chunkhdr *osch, _osch;
++
++	__be16 chunk_len, err_len, payload_len;
++
++	osch = skb_header_pointer(oldskb, ip_hdrlen(oldskb) + sizeof(struct sctphdr), sizeof(_osch), &_osch);
++	if (osch->type == SCTP_CID_INIT) {
++		oih = (struct sctp_inithdr*)((void*)osch + sizeof(struct sctp_chunkhdr));
++		vtag = oih->init_tag;
++	} else {
++		vtag = osh->vtag;
++	}
++
++	skb_reset_transport_header(nskb);
++	sctph = skb_put_zero(nskb, sizeof(struct sctphdr));
++	sctph->source	= osh->dest;
++	sctph->dest	= osh->source;
++	sctph->vtag = vtag;
++
++	payload_len = sizeof(struct sctp_chunkhdr);
++	err_len = sizeof(struct sctp_errhdr) + payload_len;
++	chunk_len = sizeof(struct sctp_chunkhdr) + err_len;
++
++	aborth = skb_put_zero(nskb, sizeof(struct sctp_chunkhdr));
++	aborth->type = SCTP_CID_ABORT;
++	aborth->flags |= SCTP_CHUNK_FLAG_M;
++	aborth->length = cpu_to_be16(chunk_len);
++
++	errorh = skb_put_zero(nskb, sizeof(struct sctp_errhdr));
++	errorh->cause = cpu_to_be16(0xB2);
++	errorh->length = cpu_to_be16(err_len);
++
++	/* copy first chunk into error */
++	(void)skb_put_data(nskb, (const void*)osch, payload_len);
++
++	sctph->checksum = sctp_compute_cksum(nskb, ip_hdrlen(nskb));
++}
++EXPORT_SYMBOL_GPL(nf_reject_ip_sctphdr_put);
++
++void nf_reject_ip_sctphdr_put_ack(struct sk_buff *nskb, const struct sk_buff *oldskb,
++			  const struct sctphdr *osh)
++{
++	struct sctphdr *sctph;
++	__be32 vtag;
++
++	struct sctp_chunkhdr *initackh;
++	struct sctp_paramhdr *rjparamh;
++
++	struct sctp_inithdr *oih;
++	struct sctp_chunkhdr *osch, _osch;
++
++	__be16 chunk_len, param_len;
++
++	osch = skb_header_pointer(oldskb, ip_hdrlen(oldskb) + sizeof(struct sctphdr), sizeof(_osch), &_osch);
++	if (osch->type == SCTP_CID_INIT) {
++		oih = (struct sctp_inithdr*)((void*)osch + sizeof(struct sctp_chunkhdr));
++		vtag = oih->init_tag;
++	} else {
++		vtag = osh->vtag;
++	}
++
++	skb_reset_transport_header(nskb);
++	sctph = skb_put_zero(nskb, sizeof(struct sctphdr));
++	sctph->source	= osh->dest;
++	sctph->dest	= osh->source;
++	sctph->vtag = vtag;
++
++	param_len = sizeof(struct sctp_paramhdr);
++	chunk_len = sizeof(struct sctp_chunkhdr) + param_len;
++
++	initackh = skb_put_zero(nskb, sizeof(struct sctp_chunkhdr));
++	initackh->type = SCTP_CID_INIT_ACK;
++	initackh->flags |= SCTP_CHUNK_FLAG_M;
++	initackh->length = cpu_to_be16(chunk_len);
++
++	rjparamh = skb_put_zero(nskb, sizeof(struct sctp_paramhdr));
++	rjparamh->type = cpu_to_be16(SCTP_PARAM_RJ);
++	rjparamh->length = cpu_to_be16(param_len);
++
++	sctph->checksum = sctp_compute_cksum(nskb, ip_hdrlen(nskb));
++}
++EXPORT_SYMBOL_GPL(nf_reject_ip_sctphdr_put_ack);
++
+ static int nf_reject_fill_skb_dst(struct sk_buff *skb_in)
+ {
+ 	struct dst_entry *dst = NULL;
+@@ -330,4 +442,154 @@ void nf_send_unreach(struct sk_buff *skb_in, int code, int hook)
+ }
+ EXPORT_SYMBOL_GPL(nf_send_unreach);
+ 
++/* Send SCTP ABORT reply */
++void nf_send_abort(struct net *net, struct sock *sk, struct sk_buff *oldskb,
++		   int hook)
++{
++	struct net_device *br_indev __maybe_unused;
++	struct sk_buff *nskb;
++	struct iphdr *niph;
++	const struct sctphdr *osh;
++	struct sctphdr _osh;
++
++	osh = nf_reject_ip_sctphdr_get(oldskb, &_osh);
++	if (!osh)
++		return;
++
++	if ((hook == NF_INET_PRE_ROUTING || hook == NF_INET_INGRESS) &&
++	    nf_reject_fill_skb_dst(oldskb) < 0)
++		return;
++
++	if (skb_rtable(oldskb)->rt_flags & (RTCF_BROADCAST | RTCF_MULTICAST))
++		return;
++
++	nskb = alloc_skb(sizeof(struct iphdr) + sizeof(struct sctphdr) +
++			 LL_MAX_HEADER, GFP_ATOMIC);
++	if (!nskb)
++		return;
++
++	/* ip_route_me_harder expects skb->dst to be set */
++	skb_dst_set_noref(nskb, skb_dst(oldskb));
++
++	nskb->mark = IP4_REPLY_MARK(net, oldskb->mark);
++
++	skb_reserve(nskb, LL_MAX_HEADER);
++	niph = nf_reject_iphdr_put(nskb, oldskb, IPPROTO_SCTP,
++				   ip4_dst_hoplimit(skb_dst(nskb)));
++	nf_reject_ip_sctphdr_put(nskb, oldskb, osh);
++	if (ip_route_me_harder(net, sk, nskb, RTN_UNSPEC))
++		goto free_nskb;
++
++	niph = ip_hdr(nskb);
++
++	/* "Never happens" */
++	if (nskb->len > dst_mtu(skb_dst(nskb)))
++		goto free_nskb;
++
++	nf_ct_attach(nskb, oldskb);
++
++#if IS_ENABLED(CONFIG_BRIDGE_NETFILTER)
++	/* If we use ip_local_out for bridged traffic, the MAC source on
++	 * the RST will be ours, instead of the destination's.  This confuses
++	 * some routers/firewalls, and they drop the packet.  So we need to
++	 * build the eth header using the original destination's MAC as the
++	 * source, and send the RST packet directly.
++	 */
++	br_indev = nf_bridge_get_physindev(oldskb);
++	if (br_indev) {
++		struct ethhdr *oeth = eth_hdr(oldskb);
++
++		nskb->dev = br_indev;
++		niph->tot_len = htons(nskb->len);
++		ip_send_check(niph);
++		if (dev_hard_header(nskb, nskb->dev, ntohs(nskb->protocol),
++				    oeth->h_source, oeth->h_dest, nskb->len) < 0)
++			goto free_nskb;
++		dev_queue_xmit(nskb);
++	} else
++#endif
++		ip_local_out(net, nskb->sk, nskb);
++
++	return;
++
++ free_nskb:
++	kfree_skb(nskb);
++}
++EXPORT_SYMBOL_GPL(nf_send_abort);
++
++/* Send SCTP INIT-ACK reply */
++void nf_send_init_ack(struct net *net, struct sock *sk, struct sk_buff *oldskb,
++		   int hook)
++{
++	struct net_device *br_indev __maybe_unused;
++	struct sk_buff *nskb;
++	struct iphdr *niph;
++	const struct sctphdr *osh;
++	struct sctphdr _osh;
++
++	osh = nf_reject_ip_sctphdr_get(oldskb, &_osh);
++	if (!osh)
++		return;
++
++	if ((hook == NF_INET_PRE_ROUTING || hook == NF_INET_INGRESS) &&
++	    nf_reject_fill_skb_dst(oldskb) < 0)
++		return;
++
++	if (skb_rtable(oldskb)->rt_flags & (RTCF_BROADCAST | RTCF_MULTICAST))
++		return;
++
++	nskb = alloc_skb(sizeof(struct iphdr) + sizeof(struct sctphdr) +
++			 LL_MAX_HEADER, GFP_ATOMIC);
++	if (!nskb)
++		return;
++
++	/* ip_route_me_harder expects skb->dst to be set */
++	skb_dst_set_noref(nskb, skb_dst(oldskb));
++
++	nskb->mark = IP4_REPLY_MARK(net, oldskb->mark);
++
++	skb_reserve(nskb, LL_MAX_HEADER);
++	niph = nf_reject_iphdr_put(nskb, oldskb, IPPROTO_SCTP,
++				   ip4_dst_hoplimit(skb_dst(nskb)));
++	nf_reject_ip_sctphdr_put_ack(nskb, oldskb, osh);
++	if (ip_route_me_harder(net, sk, nskb, RTN_UNSPEC))
++		goto free_nskb;
++
++	niph = ip_hdr(nskb);
++
++	/* "Never happens" */
++	if (nskb->len > dst_mtu(skb_dst(nskb)))
++		goto free_nskb;
++
++	nf_ct_attach(nskb, oldskb);
++
++#if IS_ENABLED(CONFIG_BRIDGE_NETFILTER)
++	/* If we use ip_local_out for bridged traffic, the MAC source on
++	 * the RST will be ours, instead of the destination's.  This confuses
++	 * some routers/firewalls, and they drop the packet.  So we need to
++	 * build the eth header using the original destination's MAC as the
++	 * source, and send the RST packet directly.
++	 */
++	br_indev = nf_bridge_get_physindev(oldskb);
++	if (br_indev) {
++		struct ethhdr *oeth = eth_hdr(oldskb);
++
++		nskb->dev = br_indev;
++		niph->tot_len = htons(nskb->len);
++		ip_send_check(niph);
++		if (dev_hard_header(nskb, nskb->dev, ntohs(nskb->protocol),
++				    oeth->h_source, oeth->h_dest, nskb->len) < 0)
++			goto free_nskb;
++		dev_queue_xmit(nskb);
++	} else
++#endif
++		ip_local_out(net, nskb->sk, nskb);
++
++	return;
++
++ free_nskb:
++	kfree_skb(nskb);
++}
++EXPORT_SYMBOL_GPL(nf_send_init_ack);
++
+ MODULE_LICENSE("GPL");
+diff --git a/net/netfilter/Kconfig b/net/netfilter/Kconfig
+index ddc54b6d18ee..36edb62510e6 100644
+--- a/net/netfilter/Kconfig
++++ b/net/netfilter/Kconfig
+@@ -203,9 +203,13 @@ config NF_CT_PROTO_DCCP
+ config NF_CT_PROTO_GRE
+ 	bool
+ 
+-config NF_CT_PROTO_SCTP
+-	bool 'SCTP protocol connection tracking support'
+-	depends on NETFILTER_ADVANCED
++menuconfig NF_CT_PROTO_SCTP
++	bool "SCTP connection tracking support"
++
++if NF_CT_PROTO_SCTP
++
++config NF_CT_PROTO_SCTP_LEGACY
++	bool 'Legacy SCTP conntrack helper'
+ 	default y
+ 	select LIBCRC32C
+ 	help
+@@ -214,6 +218,23 @@ config NF_CT_PROTO_SCTP
+ 
+ 	  If unsure, say Y.
+ 
++config NF_CT_PROTO_SCTP_LITE
++	bool 'SCTP conntrack helper LITE'
++	default n
++	select LIBCRC32C
++	help
++	  With this option enabled, the layer 3 independent connection
++	  tracking code will be able to do state tracking on SCTP connections.
++
++	  In contrast to the original SCTP conntrack helper module, this
++	  implementation is light, only inspects INIT chunks and based on
++	  timer for the rest of the state handling
++	  https://datatracker.ietf.org/doc/draft-porfiri-tsvwg-sctp-natsupp/
++
++	  If unsure, say N.
++
++endif # NF_CT_PROTO_SCTP
++
+ config NF_CT_PROTO_UDPLITE
+ 	bool 'UDP-Lite protocol connection tracking support'
+ 	depends on NETFILTER_ADVANCED
+diff --git a/net/netfilter/Makefile b/net/netfilter/Makefile
+index 238b6a620e88..7c749258262c 100644
+--- a/net/netfilter/Makefile
++++ b/net/netfilter/Makefile
+@@ -12,7 +12,10 @@ nf_conntrack-$(CONFIG_NF_CONNTRACK_TIMESTAMP) += nf_conntrack_timestamp.o
+ nf_conntrack-$(CONFIG_NF_CONNTRACK_EVENTS) += nf_conntrack_ecache.o
+ nf_conntrack-$(CONFIG_NF_CONNTRACK_LABELS) += nf_conntrack_labels.o
+ nf_conntrack-$(CONFIG_NF_CT_PROTO_DCCP) += nf_conntrack_proto_dccp.o
+-nf_conntrack-$(CONFIG_NF_CT_PROTO_SCTP) += nf_conntrack_proto_sctp.o
++nf_conntrack-$(CONFIG_NF_CT_PROTO_SCTP_LEGACY) += nf_conntrack_proto_sctp.o
++nf_conntrack-$(CONFIG_NF_CT_PROTO_SCTP_LITE) += nf_conntrack_proto_sctp_lite.o
++CFLAGS_nf_conntrack_proto_sctp_lite.o := -DDEBUG
++
+ nf_conntrack-$(CONFIG_NF_CT_PROTO_GRE) += nf_conntrack_proto_gre.o
+ ifeq ($(CONFIG_NF_CONNTRACK),m)
+ nf_conntrack-$(CONFIG_DEBUG_INFO_BTF_MODULES) += nf_conntrack_bpf.o
+diff --git a/net/netfilter/nf_conntrack_core.c b/net/netfilter/nf_conntrack_core.c
+index 0164e5f522e8..53f81c9e22d5 100644
+--- a/net/netfilter/nf_conntrack_core.c
++++ b/net/netfilter/nf_conntrack_core.c
+@@ -1122,6 +1122,14 @@ nf_ct_resolve_clash(struct sk_buff *skb, struct nf_conntrack_tuple_hash *h,
+ 	net = nf_ct_net(loser_ct);
+ 
+ 	l4proto = nf_ct_l4proto_find(nf_ct_protonum(ct));
++	if (l4proto->on_clash) {
++		ret = l4proto->on_clash(skb, ct, loser_ct, ctinfo);
++		if (ret == NF_ACCEPT)
++			return ret;
++		else
++			goto drop;
++	}
++
+ 	if (!l4proto->allow_clash)
+ 		goto drop;
+ 
+diff --git a/net/netfilter/nf_conntrack_proto.c b/net/netfilter/nf_conntrack_proto.c
+index d1f2d3c8d2b1..8dca61d2ed3f 100644
+--- a/net/netfilter/nf_conntrack_proto.c
++++ b/net/netfilter/nf_conntrack_proto.c
+@@ -676,6 +676,10 @@ int nf_conntrack_proto_init(void)
+ 		goto cleanup_sockopt;
+ #endif
+ 
++#ifdef CONFIG_NF_CT_PROTO_SCTP_LITE
++	nf_conntrack_proto_sctp_init();
++#endif
++
+ 	return ret;
+ 
+ #if IS_ENABLED(CONFIG_IPV6)
+@@ -691,6 +695,9 @@ void nf_conntrack_proto_fini(void)
+ #if IS_ENABLED(CONFIG_IPV6)
+ 	nf_unregister_sockopt(&so_getorigdst6);
+ #endif
++#ifdef CONFIG_NF_CT_PROTO_SCTP_LITE
++	nf_conntrack_proto_sctp_fini();
++#endif
+ }
+ 
+ void nf_conntrack_proto_pernet_init(struct net *net)
+diff --git a/net/netfilter/nf_conntrack_proto_sctp_lite.c b/net/netfilter/nf_conntrack_proto_sctp_lite.c
+new file mode 100644
+index 000000000000..21e0afa3325d
+--- /dev/null
++++ b/net/netfilter/nf_conntrack_proto_sctp_lite.c
+@@ -0,0 +1,451 @@
++// SPDX-License-Identifier: GPL-2.0-only
++/*
++ * Connection tracking protocol helper module for SCTP.
++ *
++ * Copyright (c) 2004 Kiran Kumar Immidi <immidi_kiran@yahoo.com>
++ * Copyright (c) 2004-2012 Patrick McHardy <kaber@trash.net>
++ *
++ * SCTP is defined in RFC 4960. References to various sections in this code
++ * are to this RFC.
++ */
++
++#include <linux/types.h>
++#include <linux/timer.h>
++#include <linux/netfilter.h>
++#include <linux/in.h>
++#include <linux/ip.h>
++#include <linux/sctp.h>
++#include <linux/string.h>
++#include <linux/seq_file.h>
++#include <linux/spinlock.h>
++#include <linux/interrupt.h>
++#include <net/sctp/checksum.h>
++
++#include <net/netfilter/nf_log.h>
++#include <net/netfilter/nf_conntrack.h>
++#include <net/netfilter/nf_conntrack_l4proto.h>
++#include <net/netfilter/nf_conntrack_ecache.h>
++#include <net/netfilter/nf_conntrack_timeout.h>
++#include <net/netfilter/nf_nat.h>
++#include <net/netfilter/ipv4/nf_reject.h>
++#include <net/netfilter/ipv6/nf_reject.h>
++
++static const char *const sctp_conntrack_names[] = {
++	"NONE",
++	"CLOSED",
++	"COOKIE_WAIT",
++	"COOKIE_ECHOED",
++	"ESTABLISHED",
++	"SHUTDOWN_SENT",
++	"SHUTDOWN_RECD",
++	"SHUTDOWN_ACK_SENT",
++	"HEARTBEAT_SENT",
++	"HEARTBEAT_ACKED",
++};
++
++#define SECS  * HZ
++#define MINS  * 60 SECS
++#define HOURS * 60 MINS
++#define DAYS  * 24 HOURS
++
++static const unsigned int sctp_timeouts[SCTP_CONNTRACK_MAX] = {
++	[SCTP_CONNTRACK_CLOSED]			= 10 SECS,
++	[SCTP_CONNTRACK_COOKIE_WAIT]		= 3 SECS,
++	[SCTP_CONNTRACK_COOKIE_ECHOED]		= 3 SECS,
++	[SCTP_CONNTRACK_ESTABLISHED]		= 5 DAYS,
++	[SCTP_CONNTRACK_SHUTDOWN_SENT]		= 300 SECS / 1000,
++	[SCTP_CONNTRACK_SHUTDOWN_RECD]		= 300 SECS / 1000,
++	[SCTP_CONNTRACK_SHUTDOWN_ACK_SENT]	= 3 SECS,
++	[SCTP_CONNTRACK_HEARTBEAT_SENT]		= 10 SECS,
++	[SCTP_CONNTRACK_HEARTBEAT_ACKED]	= 210 SECS,
++};
++
++/* delay handling INIT packets on restart until,
++* all existing SCTP associations are setup again */
++struct timer_list delayed_init;
++unsigned int should_handle_init;
++
++#ifdef CONFIG_NF_CONNTRACK_PROCFS
++/* Print out the private part of the conntrack. */
++static void sctp_print_conntrack(struct seq_file *s, struct nf_conn *ct)
++{
++	seq_printf(s, "%s ", sctp_conntrack_names[ct->proto.sctp.state]);
++}
++#endif
++
++static bool sctp_error(struct sk_buff *skb,
++		       unsigned int dataoff,
++		       const struct nf_hook_state *state)
++{
++	const struct sctphdr *sh;
++	const char *logmsg;
++
++	if (skb->len < dataoff + sizeof(struct sctphdr)) {
++		logmsg = "nf_ct_sctp: short packet ";
++		goto out_invalid;
++	}
++	if (state->hook == NF_INET_PRE_ROUTING &&
++	    state->net->ct.sysctl_checksum &&
++	    skb->ip_summed == CHECKSUM_NONE) {
++		if (skb_ensure_writable(skb, dataoff + sizeof(*sh))) {
++			logmsg = "nf_ct_sctp: failed to read header ";
++			goto out_invalid;
++		}
++		sh = (const struct sctphdr *)(skb->data + dataoff);
++		if (sh->checksum != sctp_compute_cksum(skb, dataoff)) {
++			logmsg = "nf_ct_sctp: bad CRC ";
++			goto out_invalid;
++		}
++		skb->ip_summed = CHECKSUM_UNNECESSARY;
++	}
++	return false;
++out_invalid:
++	nf_l4proto_log_invalid(skb, state, IPPROTO_SCTP, "%s", logmsg);
++	return true;
++}
++
++/* Returns verdict for packet, or -NF_ACCEPT for invalid. */
++int nf_conntrack_sctp_packet(struct nf_conn *ct,
++			     struct sk_buff *skb,
++			     unsigned int dataoff,
++			     enum ip_conntrack_info ctinfo,
++			     const struct nf_hook_state *state)
++{
++	enum ip_conntrack_dir dir = CTINFO2DIR(ctinfo);
++	unsigned int *timeouts;
++	unsigned int hb_interval;
++	unsigned int is_init = 0;
++	unsigned int has_init_rj = 0;
++	const struct sctphdr *sh;
++	struct sctphdr _sctph;
++	struct sctp_paramhdr *param;
++
++	struct sctp_inithdr *inith;
++	struct sctp_chunkhdr *sch, _sch;
++	unsigned int sch_len = 0;
++
++	unsigned int ignore = 0;
++
++	if (sctp_error(skb, dataoff, state))
++		goto out;
++
++	sh = skb_header_pointer(skb, dataoff, sizeof(_sctph), &_sctph);
++	if (sh == NULL)
++		goto out;
++
++	/* if vtag is zero, assume it is an INIT chunk, and an INIT
++	 * MUST be the only chunk in the SCTP packet carrying it */
++	is_init = (sh->vtag == 0);
++	if (is_init) {
++		if (!should_handle_init)
++			goto out_drop;
++
++		sch = skb_header_pointer(skb, ip_hdrlen(skb) + sizeof(struct sctphdr), sizeof(_sch), &_sch);
++		sch_len = be16_to_cpu(sch->length);
++		inith = (struct sctp_inithdr*)((void*)sch + sizeof(struct sctp_chunkhdr));
++
++		pr_debug("nf_ct_sctp: init chunk len: %u\n", sch_len);
++
++		for (param = (struct sctp_paramhdr*)inith->params;
++				((void*)param <= ((void*)sch + sch_len) - sizeof(struct sctp_paramhdr)) &&
++				((void*)param <= ((void*)sch + sch_len) - be16_to_cpu(param->length)) &&
++				be16_to_cpu(param->length) >= sizeof(struct sctp_paramhdr);
++				param = ((void*)param + SCTP_PAD4(be16_to_cpu(param->length)))) {
++			pr_debug("nf_ct_sctp: init param: %x, len: %u, padded len: %u \n",
++					be16_to_cpu(param->type),
++					be16_to_cpu(param->length),
++					SCTP_PAD4(be16_to_cpu(param->length)));
++			if (param->type == SCTP_PARAM_RJ) {
++				has_init_rj = 1;
++				pr_debug("nf_ct_sctp: init rj param found\n");
++				break;
++			}
++		}
++	}
++
++	/* always accept abort/init-ack(rj) with m bit set */
++	if (ctinfo == IP_CT_RELATED || ctinfo == IP_CT_RELATED_REPLY) {
++		pr_debug("nf_ct_sctp: related ct (abort/init-ack)");
++		return NF_ACCEPT;
++	}
++
++	if (!nf_ct_is_confirmed(ct)) {
++		pr_debug("nf_ct_sctp: unconfirmed ct\n");
++
++		memset(&ct->proto.sctp, 0, sizeof(ct->proto.sctp));
++		ct->proto.sctp.state = SCTP_CONNTRACK_ESTABLISHED;
++		nf_conntrack_event_cache(IPCT_PROTOINFO, ct);
++	} else {
++		/* don't renew timeout on init retransmit so
++		* port reuse by client or NAT middlebox cannot
++		* keep entry alive indefinitely (incl. nat info).
++		*/
++		if (is_init)
++			ignore = 1;
++	}
++
++	if (is_init && has_init_rj) {
++		pr_debug("nf_ct_sctp: send init ack rj\n");
++		nf_send_init_ack(nf_ct_net(ct), skb->sk, skb, state->hook);
++		/* setup ct entry, but discard silently */
++		return NF_DROP;
++	}
++
++	/* update last seen direction */
++	/* just here as a reminder to lock if updating ct, remove!!! */
++	spin_lock_bh(&ct->lock);
++	ct->proto.sctp.last_dir = dir;
++	spin_unlock_bh(&ct->lock);
++
++	/* allow but do not refresh timeout */
++	if (ignore)
++		return NF_ACCEPT;
++
++	timeouts = nf_ct_timeout_lookup(ct);
++	if (!timeouts)
++		timeouts = nf_sctp_pernet(nf_ct_net(ct))->timeouts;
++
++	hb_interval = sctp_timeouts[SCTP_CONNTRACK_HEARTBEAT_SENT];
++	nf_ct_refresh_acct(ct, ctinfo, skb, 3 * hb_interval);
++
++	if (dir == IP_CT_DIR_REPLY &&
++		!(test_bit(IPS_ASSURED_BIT, &ct->status))) {
++		  set_bit(IPS_ASSURED_BIT, &ct->status);
++		  nf_conntrack_event_cache(IPCT_ASSURED, ct);
++	}
++
++	return NF_ACCEPT;
++
++out_drop:
++	return -NF_DROP;
++
++out:
++	return -NF_ACCEPT;
++}
++
++static void dump_skb_tuple(struct sk_buff *skb)
++{
++	struct iphdr *iph = ip_hdr(skb);
++	struct sctphdr *sctph, _sctph;
++
++	sctph = skb_header_pointer(skb, ip_hdrlen(skb), sizeof(_sctph), &_sctph);
++	pr_debug("nf_ct_sctp: skb %p: %u %pI4:%hu -> %pI4:%hu\n",
++		skb, iph->protocol,
++		&iph->saddr, ntohs(sctph->source),
++		&iph->daddr, ntohs(sctph->dest));
++}
++
++static int sctp_on_clash(struct sk_buff *skb, const struct nf_conn *ct,
++		struct nf_conn *loser_ct, enum ip_conntrack_info ctinfo)
++{
++	enum ip_conntrack_dir dir = CTINFO2DIR(ctinfo);
++	int ret;
++
++	pr_debug("nf_ct_sctp: clash, sending abort\n");
++	if ((ct->status & IPS_DST_NAT) != 0) {
++		ret = nf_nat_reverse_manip_pkt(skb, loser_ct, NF_NAT_MANIP_DST, dir);
++		if (ret != NF_ACCEPT)
++			goto drop;
++	}
++
++	if ((ct->status & IPS_SRC_NAT) != 0) {
++		ret = nf_nat_reverse_manip_pkt(skb, loser_ct, NF_NAT_MANIP_SRC, dir);
++		if (ret != NF_ACCEPT)
++			goto drop;
++	}
++
++	nf_send_abort(nf_ct_net(loser_ct), skb->sk, skb, NF_INET_PRE_ROUTING);
++
++drop:
++	return NF_DROP;
++}
++
++#if IS_ENABLED(CONFIG_NF_CT_NETLINK)
++
++#include <linux/netfilter/nfnetlink.h>
++#include <linux/netfilter/nfnetlink_conntrack.h>
++
++static int sctp_to_nlattr(struct sk_buff *skb, struct nlattr *nla,
++			  struct nf_conn *ct, bool destroy)
++{
++	struct nlattr *nest_parms;
++
++	spin_lock_bh(&ct->lock);
++	nest_parms = nla_nest_start(skb, CTA_PROTOINFO_SCTP);
++	if (!nest_parms)
++		goto nla_put_failure;
++
++	if (nla_put_u8(skb, CTA_PROTOINFO_SCTP_STATE, ct->proto.sctp.state))
++		goto nla_put_failure;
++
++	if (destroy)
++		goto skip_state;
++
++skip_state:
++	spin_unlock_bh(&ct->lock);
++	nla_nest_end(skb, nest_parms);
++
++	return 0;
++
++nla_put_failure:
++	spin_unlock_bh(&ct->lock);
++	return -1;
++}
++
++static const struct nla_policy sctp_nla_policy[CTA_PROTOINFO_SCTP_MAX+1] = {
++	[CTA_PROTOINFO_SCTP_STATE]	    = { .type = NLA_U8 },
++};
++
++#define SCTP_NLATTR_SIZE ( \
++		NLA_ALIGN(NLA_HDRLEN + 1) + \
++		NLA_ALIGN(NLA_HDRLEN + 4) + \
++		NLA_ALIGN(NLA_HDRLEN + 4))
++
++static int nlattr_to_sctp(struct nlattr *cda[], struct nf_conn *ct)
++{
++	struct nlattr *attr = cda[CTA_PROTOINFO_SCTP];
++	struct nlattr *tb[CTA_PROTOINFO_SCTP_MAX+1];
++	int err;
++
++	/* updates may not contain the internal protocol info, skip parsing */
++	if (!attr)
++		return 0;
++
++	err = nla_parse_nested_deprecated(tb, CTA_PROTOINFO_SCTP_MAX, attr,
++					  sctp_nla_policy, NULL);
++	if (err < 0)
++		return err;
++
++	if (!tb[CTA_PROTOINFO_SCTP_STATE])
++		return -EINVAL;
++
++	spin_lock_bh(&ct->lock);
++	ct->proto.sctp.state = nla_get_u8(tb[CTA_PROTOINFO_SCTP_STATE]);
++	spin_unlock_bh(&ct->lock);
++
++	return 0;
++}
++#endif
++
++#ifdef CONFIG_NF_CONNTRACK_TIMEOUT
++
++#include <linux/netfilter/nfnetlink.h>
++#include <linux/netfilter/nfnetlink_cttimeout.h>
++
++static int sctp_timeout_nlattr_to_obj(struct nlattr *tb[],
++				      struct net *net, void *data)
++{
++	unsigned int *timeouts = data;
++	struct nf_sctp_net *sn = nf_sctp_pernet(net);
++	int i;
++
++	if (!timeouts)
++		timeouts = sn->timeouts;
++
++	/* set default SCTP timeouts. */
++	for (i=0; i<SCTP_CONNTRACK_MAX; i++)
++		timeouts[i] = sn->timeouts[i];
++
++	/* there's a 1:1 mapping between attributes and protocol states. */
++	for (i=CTA_TIMEOUT_SCTP_UNSPEC+1; i<CTA_TIMEOUT_SCTP_MAX+1; i++) {
++		if (tb[i]) {
++			timeouts[i] = ntohl(nla_get_be32(tb[i])) * HZ;
++		}
++	}
++
++	timeouts[CTA_TIMEOUT_SCTP_UNSPEC] = timeouts[CTA_TIMEOUT_SCTP_CLOSED];
++	return 0;
++}
++
++static int
++sctp_timeout_obj_to_nlattr(struct sk_buff *skb, const void *data)
++{
++        const unsigned int *timeouts = data;
++	int i;
++
++	for (i=CTA_TIMEOUT_SCTP_UNSPEC+1; i<CTA_TIMEOUT_SCTP_MAX+1; i++) {
++	        if (nla_put_be32(skb, i, htonl(timeouts[i] / HZ)))
++			goto nla_put_failure;
++	}
++        return 0;
++
++nla_put_failure:
++        return -ENOSPC;
++}
++
++static const struct nla_policy
++sctp_timeout_nla_policy[CTA_TIMEOUT_SCTP_MAX+1] = {
++	[CTA_TIMEOUT_SCTP_CLOSED]		= { .type = NLA_U32 },
++	[CTA_TIMEOUT_SCTP_COOKIE_WAIT]		= { .type = NLA_U32 },
++	[CTA_TIMEOUT_SCTP_COOKIE_ECHOED]	= { .type = NLA_U32 },
++	[CTA_TIMEOUT_SCTP_ESTABLISHED]		= { .type = NLA_U32 },
++	[CTA_TIMEOUT_SCTP_SHUTDOWN_SENT]	= { .type = NLA_U32 },
++	[CTA_TIMEOUT_SCTP_SHUTDOWN_RECD]	= { .type = NLA_U32 },
++	[CTA_TIMEOUT_SCTP_SHUTDOWN_ACK_SENT]	= { .type = NLA_U32 },
++	[CTA_TIMEOUT_SCTP_HEARTBEAT_SENT]	= { .type = NLA_U32 },
++	[CTA_TIMEOUT_SCTP_HEARTBEAT_ACKED]	= { .type = NLA_U32 },
++};
++#endif /* CONFIG_NF_CONNTRACK_TIMEOUT */
++
++void nf_conntrack_sctp_init_net(struct net *net)
++{
++	struct nf_sctp_net *sn = nf_sctp_pernet(net);
++	int i;
++
++	for (i = 0; i < SCTP_CONNTRACK_MAX; i++)
++		sn->timeouts[i] = sctp_timeouts[i];
++
++	/* timeouts[0] is unused, init it so ->timeouts[0] contains
++	 * 'new' timeout, like udp or icmp.
++	 */
++	sn->timeouts[0] = sctp_timeouts[SCTP_CONNTRACK_CLOSED];
++}
++
++const struct nf_conntrack_l4proto nf_conntrack_l4proto_sctp = {
++	.l4proto 		= IPPROTO_SCTP,
++#ifdef CONFIG_NF_CONNTRACK_PROCFS
++	.print_conntrack	= sctp_print_conntrack,
++#endif
++	.on_clash		= sctp_on_clash,
++#if IS_ENABLED(CONFIG_NF_CT_NETLINK)
++	.nlattr_size		= SCTP_NLATTR_SIZE,
++	.to_nlattr		= sctp_to_nlattr,
++	.from_nlattr		= nlattr_to_sctp,
++	.tuple_to_nlattr	= nf_ct_port_tuple_to_nlattr,
++	.nlattr_tuple_size	= nf_ct_port_nlattr_tuple_size,
++	.nlattr_to_tuple	= nf_ct_port_nlattr_to_tuple,
++	.nla_policy		= nf_ct_port_nla_policy,
++#endif
++#ifdef CONFIG_NF_CONNTRACK_TIMEOUT
++	.ctnl_timeout		= {
++		.nlattr_to_obj	= sctp_timeout_nlattr_to_obj,
++		.obj_to_nlattr	= sctp_timeout_obj_to_nlattr,
++		.nlattr_max	= CTA_TIMEOUT_SCTP_MAX,
++		.obj_size	= sizeof(unsigned int) * SCTP_CONNTRACK_MAX,
++		.nla_policy	= sctp_timeout_nla_policy,
++	},
++#endif /* CONFIG_NF_CONNTRACK_TIMEOUT */
++};
++
++static void delayed_init_timer_handler(struct timer_list *t)
++{
++	pr_debug("nf_ct_sctp: delay init timer expires");
++	should_handle_init = 1;
++}
++
++void nf_conntrack_proto_sctp_init()
++{
++	unsigned int hb_interval = sctp_timeouts[SCTP_CONNTRACK_HEARTBEAT_SENT];
++
++	pr_debug("nf_ct_sctp: init");
++	should_handle_init = 0;
++	timer_setup(&delayed_init, delayed_init_timer_handler, 0);
++	mod_timer(&delayed_init, (jiffies + 4 * hb_interval));
++}
++
++void nf_conntrack_proto_sctp_fini()
++{
++	pr_debug("nf_ct_sctp: finish");
++	if (timer_pending(&delayed_init))
++		del_timer_sync(&delayed_init);
++}
+\ No newline at end of file
+diff --git a/net/netfilter/nf_nat_core.c b/net/netfilter/nf_nat_core.c
+index 7981be526f26..c2ad2b00ed22 100644
+--- a/net/netfilter/nf_nat_core.c
++++ b/net/netfilter/nf_nat_core.c
+@@ -421,11 +421,15 @@ static void nf_nat_l4proto_unique_tuple(struct nf_conntrack_tuple *tuple,
+ 			range_size = ntohs(range->max_proto.gre.key) - min + 1;
+ 		}
+ 		goto find_free_id;
++#endif
++	case IPPROTO_SCTP:
++#ifdef CONFIG_NF_CT_PROTO_SCTP_LITE
++		/* do not change the tuples for SCTP if using lite */
++		return;
+ #endif
+ 	case IPPROTO_UDP:
+ 	case IPPROTO_UDPLITE:
+ 	case IPPROTO_TCP:
+-	case IPPROTO_SCTP:
+ 	case IPPROTO_DCCP:
+ 		if (maniptype == NF_NAT_MANIP_SRC)
+ 			keyptr = &tuple->src.u.all;
+diff --git a/net/netfilter/nf_nat_proto.c b/net/netfilter/nf_nat_proto.c
+index 48cc60084d28..c693c2605762 100644
+--- a/net/netfilter/nf_nat_proto.c
++++ b/net/netfilter/nf_nat_proto.c
+@@ -442,6 +442,30 @@ unsigned int nf_nat_manip_pkt(struct sk_buff *skb, struct nf_conn *ct,
+ 	return NF_DROP;
+ }
+ 
++unsigned int nf_nat_reverse_manip_pkt(struct sk_buff *skb, struct nf_conn *ct,
++			      enum nf_nat_manip_type mtype,
++			      enum ip_conntrack_dir dir)
++{
++	struct nf_conntrack_tuple target;
++	memcpy(&target, &ct->tuplehash[dir].tuple, sizeof(target));
++
++	switch (target.src.l3num) {
++	case NFPROTO_IPV6:
++		if (nf_nat_ipv6_manip_pkt(skb, 0, &target, mtype))
++			return NF_ACCEPT;
++		break;
++	case NFPROTO_IPV4:
++		if (nf_nat_ipv4_manip_pkt(skb, 0, &target, mtype))
++			return NF_ACCEPT;
++		break;
++	default:
++		WARN_ON_ONCE(1);
++		break;
++	}
++
++	return NF_DROP;
++}
++
+ static void nf_nat_ipv4_csum_update(struct sk_buff *skb,
+ 				    unsigned int iphdroff, __sum16 *check,
+ 				    const struct nf_conntrack_tuple *t,
+-- 
+2.25.1
+

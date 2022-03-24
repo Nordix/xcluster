@@ -65,10 +65,12 @@ static int cmdServer(int argc, char **argv)
 	warning("Usrserver; %s\n", __TIME__);
 	usrsctp_init(atoi(lencapport), NULL, debug_printf_stack);
 #ifdef SCTP_DEBUG
-	usrsctp_sysctl_set_sctp_debug_on(SCTP_DEBUG_NONE);
+	usrsctp_sysctl_set_sctp_debug_on(SCTP_DEBUG_ALL);
 #endif
 	usrsctp_sysctl_set_sctp_blackhole(2);
 	usrsctp_sysctl_set_sctp_no_csum_on_loopback(0);
+	usrsctp_sysctl_set_sctp_heartbeat_interval_default(10000);
+	usrsctp_sysctl_set_sctp_nat_lite(1);
 
 	if ((sock = usrsctp_socket(AF_INET6, SOCK_STREAM, IPPROTO_SCTP, NULL, NULL, 0, NULL)) == NULL) {
 		die("usrsctp_socket");
@@ -106,7 +108,7 @@ static int cmdServer(int argc, char **argv)
 		die("Invalid (or no) addresses [%s]\n", laddr);
 	debug("cnt %d\n", cnt);
 
-	if (usrsctp_bindx(sock, addrs, 1, SCTP_BINDX_ADD_ADDR) < 0) {
+	if (usrsctp_bindx(sock, addrs, cnt, SCTP_BINDX_ADD_ADDR) < 0) {
 		die("usrsctp_bindx %s\n", strerror(errno));
 	}
 	if (usrsctp_listen(sock, 64) < 0) {
@@ -134,14 +136,6 @@ static int cmdServer(int argc, char **argv)
 		INFO{
 			logf("Got a new connection (%p) from\n", arg->sock);
 			printAddrs("  ", (struct sockaddr*)&peer, 1);
-		}
-
-		if (cnt > 1) {
-			struct sockaddr_in6* laddrs;
-			laddrs = (struct sockaddr_in6*)((void*)addrs + sizeof(struct sockaddr_in6));
-			printAddrs("Adding secondary local addresses: ", (struct sockaddr*)laddrs, cnt - 1);
-			if (usrsctp_bindx(arg->sock, (struct sockaddr*)laddrs, cnt - 1, SCTP_BINDX_ADD_ADDR) != 0)
-				die("usrsctp_bindx %s\n", strerror(errno));
 		}
 
 		INFO{

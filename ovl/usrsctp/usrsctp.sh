@@ -91,14 +91,31 @@ test_start() {
 	otc 201 vip_ecmp_route
 	otc 202 "vip_ecmp_route 2"
 
+	otc 1 deploy_test_pods
+}
+
+test_start1() {
+	. ./network-topology/Envsettings
+
+	xcluster_prep
+	xcluster_start iptools network-topology usrsctp
+
+	otc 1 check_namespaces
+	otc 1 check_nodes
+	otc 221 start_server
+
+	otc 201 vip_ecmp_route
+	otc 202 "vip_ecmp_route 2"
+
 	otc 2 "start_tcpdump eth1"
 	otc 2 "start_tcpdump eth2"
+	otc 2 "start_tcpdump cbr0"
 	otc 221 "start_tcpdump eth1"
 	otc 221 "start_tcpdump eth2"
 
 	otc 1 deploy_test_pods
-	tlog "Sleep for 30 seconds for the client to finish"
-	sleep 30
+	tlog "Sleep for 90 seconds for the client to finish"
+	sleep 90
 	#otc 1 start_client_interactive
 
 	otc 2 stop_all_tcpdump
@@ -131,7 +148,7 @@ cmd_mkimage() {
 	cmd_env
 	mkdir -p $dir/image/default/bin
 	make -C $dir/src clean
-	make -j$(nproc) -C $dir/src X=$dir/image/default/bin/usrsctpt static
+	make -j$(nproc) CFLAGS=-DSCTP_DEBUG -C $dir/src X=$dir/image/default/bin/usrsctpt static
 	local imagesd=$($XCLUSTER ovld images)
 	$imagesd/images.sh mkimage --force --upload --strip-host --tag=$__tag $dir/image
 }
