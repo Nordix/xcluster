@@ -157,15 +157,18 @@ libnftnl_ver=1.1.9
 iptables_ver=1.8.7
 nftables_ver=0.9.8
 libnfnetlink_ver=1.0.1
+libnetfilter_acct_ver=1.0.3
 libnetfilter_cttimeout_ver=1.0.0
 libnetfilter_conntrack_ver=1.0.7
 libnetfilter_cthelper_ver=1.0.0
+libnetfilter_log_ver=1.0.2
 libnetfilter_queue_ver=1.0.3
 conntrack_tools_ver=1.4.5
 ipvsadm_ver=1.31
 ipset7_ver=7.15
 ipset_ver=6.38
 iproute2_ver=5.13.0
+ulogd_ver=2.0.7
 ver() {
 	eval "echo \$${1}_ver"
 }

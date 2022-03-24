@@ -1,3 +1,14 @@
 #! /bin/sh
 
 echo "tcpdump::100:0:tcpdump:/:/bin/false" >> /etc/passwd
+
+. /etc/profile
+
+if test "$ULOGD" = "yes"; then
+    # Needed for logging CT events to ulogd2
+    sysctl -w net.netfilter.nf_conntrack_acct=1
+    sysctl -w net.netfilter.nf_conntrack_timestamp=1
+
+    # start ulogd as a daemon
+    ulogd -d
+fi
