@@ -326,7 +326,7 @@ cmd_br_setup() {
 
 ##  Build functions;
 ##   kernel_build [--kver=linux-x.x.x] [--kobj=dir] [--kbin=file] \
-##      [--kcfg=file] [--menuconfig]
+##      [--kcfg=file] [--kpatch=file] [--menuconfig]
 ##   busybox_build [--menuconfig]
 ##   dropbear_build
 ##   iproute2_build
@@ -335,6 +335,12 @@ cmd_kernel_build() {
 	cmd_env
 	test "$__kbin" = "$XCLUSTER_HOME/bzImage" && __kbin="$__kbin-$__kver"
 	$DISKIM kernel_download --kver=$__kver
+	test -r "$__kpatch" || die "Kpatch not readable [$__kpatch]"
+    if test -f "$__kpatch"; then
+		rm -rf $KERNELDIR/$__kver
+		$DISKIM kernel_unpack --kdir=$KERNELDIR/$__kver
+		patch -d $KERNELDIR/$__kver -p1 < $__kpatch
+	fi
 	mkdir -p $KERNELDIR $__kobj
 	cmd_cpio_list $dir/image/initfs > $__kobj/cpio_list
 	$DISKIM kernel_build --kdir=$KERNELDIR/$__kver --kernel=$__kbin \
