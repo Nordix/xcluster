@@ -58,8 +58,17 @@ tdie() {
 ##    __retries (10) - Max re-tries
 ##    __interval (1) - Interval between re-tries
 ##
+##    Use "pushv 60 12 5" for instance to set re-try variables.
+##
+##    If the command includes a redirect it MUST be qouted;
+##
+##      tex "get-items > /tmp/items" || tdie "Can't get items"
+##
 tex() {
-	eval $@ && return 0
+	local cmd
+	cmd="$@"
+	echo "tex [$cmd]"
+	eval $cmd && return 0
 	test $__retries -gt 0 || return 1
 
 	# We shall do retries
@@ -75,8 +84,8 @@ tex() {
 			fi
 		fi
 		sleep $__interval
-		echo "Retry ($retry/$__retries) [$1]"
-		eval $@ && return 0
+		echo "Retry ($retry/$__retries) [$cmd]"
+		eval $cmd && return 0
 		retry=$((retry+1))
 	done
 	return 1
