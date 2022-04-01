@@ -96,7 +96,7 @@ cmd_env() {
 	test -n "$KERNELDIR" || KERNELDIR=$HOME/tmp/linux
 	export ARCHIVE
 
-	test -n "$__kver" || __kver=linux-5.16.1
+	test -n "$__kver" || __kver=linux-5.17.1
 	test -n "$__kobj" || __kobj=$XCLUSTER_HOME/obj-$__kver
 	if test -z "$__kbin"; then
 		__kbin=$XCLUSTER_HOME/bzImage-$__kver
@@ -335,8 +335,8 @@ cmd_kernel_build() {
 	cmd_env
 	test "$__kbin" = "$XCLUSTER_HOME/bzImage" && __kbin="$__kbin-$__kver"
 	$DISKIM kernel_download --kver=$__kver
-	test -r "$__kpatch" || die "Kpatch not readable [$__kpatch]"
     if test -f "$__kpatch"; then
+		test -r "$__kpatch" || die "Kpatch not readable [$__kpatch]"
 		rm -rf $KERNELDIR/$__kver
 		$DISKIM kernel_unpack --kdir=$KERNELDIR/$__kver
 		patch -d $KERNELDIR/$__kver -p1 < $__kpatch
