@@ -26,8 +26,10 @@ help() {
 test -n "$1" || help
 echo "$1" | grep -qi "^help\|-h" && help
 
+logf=/var/log/k8s-cni-bridge.log
 log() {
-	echo "$(date) $prg: $*" >&2
+	#echo "$(date) $prg: $*" >&2
+	echo "$(date) $prg: $*" >> $logf
 }
 
 ##  env
@@ -56,13 +58,18 @@ cmd_found_routes() {
 cmd_routes_ok() {
 	mkdir -p $tmp
 	cmd_expected_routes | sort > $tmp/expected
+	local cnt=$(cat $tmp/expected | wc -l)
+	log "Expected-route count = $cnt"
+	if test $cnt -le 1; then
+		log "Ignoring update. Fault or single-node"
+		return 0
+	fi
 	cmd_found_routes | sort > $tmp/found
 	diff $tmp/expected $tmp/found > /dev/null && return 0
-	log "Routes differ"
-	echo "Expected;"
-	cat $tmp/expected
-	echo "Found;"
-	cat $tmp/found
+	log "Expected routes;"
+	cat $tmp/expected >> $logf
+	log "Found routes;"
+	cat $tmp/found >> $logf
 	return 1
 }
 ##  update_routes
@@ -83,9 +90,19 @@ cmd_clean_routes() {
 	cmd_found_routes | sort > $tmp/found
 	local a
 	for a in $(diff $tmp/found $tmp/expected | grep '^-1' | tr -d -); do
+		# NEVER delete a route to the own cbr0 !!!
+		log "Deleted route [$a]"
 		if echo $a | grep -q : ; then
+			if echo $a | grep -q "1100::${__node}00"; then
+				log "Omit cbr0 route; $a"
+				continue
+			fi
 			ip -6 route del $a
 		else
+			if echo $a | grep -Fq "192.168.$__node."; then
+				log "Omit cbr0 route; $a"
+				continue
+			fi
 			ip route del $a
 		fi
 	done
@@ -97,7 +114,7 @@ cmd_monitor() {
 	# Delay here to avoid unnecessary delete/setup during start.
 	sleep 20
 	while true; do
-		sleep 5
+		sleep 15
 		cmd_routes_ok && continue
 		log "Updating routes"
 		cmd_update_routes
