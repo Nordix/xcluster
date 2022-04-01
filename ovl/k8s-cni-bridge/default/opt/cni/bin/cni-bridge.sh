@@ -87,6 +87,12 @@ cmd_update_routes() {
 cmd_clean_routes() {
 	mkdir -p $tmp
 	cmd_expected_routes | sort > $tmp/expected
+	local cnt=$(cat $tmp/expected | wc -l)
+	log "Expected-route count = $cnt"
+	if test $cnt -le 1; then
+		log "Ignoring clean. Fault or single-node"
+		return
+	fi
 	cmd_found_routes | sort > $tmp/found
 	local a
 	for a in $(diff $tmp/found $tmp/expected | grep '^-1' | tr -d -); do
