@@ -81,10 +81,12 @@ build() {
 	if test "$n" = "iptables" -o "$n" = "ipset"; then
 		./configure --prefix=/usr \
 			--with-kbuild=$__kobj --with-ksource=$KERNELDIR/$__kver
+	elif test "$n" = "nftables"; then
+		 ./configure --prefix=/usr --with-json
 	else
 		./configure --prefix=/usr
 	fi
-	test "$n" = "nftables" && sed -ie 's,\tdoc,,' Makefile
+	test "$n" = "nftables" && sed -i -e 's,doc examples,,' Makefile
 	la_fix
 	make -j$(nproc) || die "Make failed"
 	if test "$n" != "ipset7"; then
@@ -153,9 +155,9 @@ download() {
 }
 
 libmnl_ver=1.0.4
-libnftnl_ver=1.1.9
+libnftnl_ver=1.2.1
 iptables_ver=1.8.7
-nftables_ver=0.9.8
+nftables_ver=1.0.2
 libnfnetlink_ver=1.0.1
 libnetfilter_acct_ver=1.0.3
 libnetfilter_cttimeout_ver=1.0.0
