@@ -724,7 +724,7 @@ cmd_boot_vm() {
 
 	# Create an overlay-disk
 	local hd=$XCLUSTER_TMP/hd-$nodeid.img
-	qemu-img create -f qcow2 -o backing_file="$__image" $hd
+	qemu-img create -f qcow2 -o backing_file="$__image" -F qcow2 $hd
 
 	local tvar
 	eval tvar=\$__mem$nodeid
