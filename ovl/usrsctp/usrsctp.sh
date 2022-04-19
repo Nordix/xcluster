@@ -114,8 +114,8 @@ test_start1() {
 	otc 221 "start_tcpdump eth2"
 
 	otc 1 deploy_test_pods
-	tlog "Sleep for 90 seconds for the client to finish"
-	sleep 90
+	tlog "Sleep for 10 seconds for the client to finish"
+	sleep 10
 	#otc 1 start_client_interactive
 
 	otc 2 stop_all_tcpdump

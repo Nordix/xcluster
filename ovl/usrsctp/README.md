@@ -5,3 +5,6 @@ https://datatracker.ietf.org/doc/draft-porfiri-tsvwg-sctp-natsupp/
 
 ## Test environment
 <img src="network-topology/dual-path.svg" alt="Dual-path network topology" width="80%" />
+
+## Distributed client scenario
+<img src="network-topology/distributed-client.svg" alt="Distributed client association setup" width="80%" />

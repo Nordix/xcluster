@@ -80,6 +80,14 @@ cmd_tcase_vip_route() {
 	ip -6 ro replace 1000::/120 via $PREFIX:$1
 	ip -6 ro replace $PREFIX:10.0.0.0/120 via $PREFIX:$1
 }
+cmd_tcase_interface_up() {
+	tcase "Bring up $1"
+	ip link set dev $1 up
+}
+cmd_tcase_interface_down() {
+	tcase "Bring up $1"
+	ip link set dev $1 down
+}
 
 cmd_tcase_start_tcpdump() {
 	local dev=eth1

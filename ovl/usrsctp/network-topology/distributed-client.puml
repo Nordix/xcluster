@@ -1,0 +1,58 @@
+@startuml distributed-client
+hide footbox
+box "client"
+participant "Client1"
+participant "Client2"
+participant "eth1\n192.168.1.2" as c1
+participant "eth2\n192.168.2.2" as c2
+end box
+box "server"
+participant "eth1\n192.168.3.221" as s1
+participant "eth2\n192.168.4.221" as s2
+participant "Server"
+end box
+
+Client1 -> c1 : "INIT(11.2.0.x:7003)"
+c1 -> s1 : "INIT(192.168.1.2:7003)"
+s1 -> Server : INIT
+
+Server -> s1 : "INIT_ACK(192.168.3.221:7003)"
+s1 -> c1 : "INIT_ACK(192.168.3.221:7003)"
+c1 -> Client1 : INIT_ACK
+
+Client1 -> c1 : COOKIE_ECHO
+c1 -> s1 : COOKIE_ECHO
+s1 -> Server : COOKIE_ECHO
+
+Server -> s1 : COOKIE_ACK
+s1 -> c1 : COOKIE_ACK
+c1 -> Client1 : COOKIE_ACK
+
+Client1 -> c2 : INIT (RJ)
+c2 -> Client1 : INIT_ACK (M bit)
+
+Client1 -> c2 : "ASCONF(192.168.4.221)"
+c2 -> s2 : ASCONF
+s2 -> Server : ASCONF
+
+Server -> s2 : ASCONF_ACK
+s2 -> c2 : ASCONF_ACK
+c2 -> Client1: ASCONF_ACK
+
+Client1 -> c1 : DATA
+c1 -> s1 : DATA
+s1 -> Server : DATA
+Server -> s1 : SACK
+s1 -> c1 : SACK
+c1 -> Client1 : SACK
+
+Server -> s2 : HEARTBEAT
+s2 -> c2 : HEARTBEAT
+c2 -> Client1 : HEARTBEAT
+Client1 -> c2 : HEARTBEAT_ACK
+c2 -> s2 : HEARTBEAT_ACK
+s2 -> Server : HEARTBEAT_ACK
+
+Client2 -> c1 : "INIT(11.2.0.x:7003)"
+c1 -> Client2 : "ABORT(port collision)"
+@enduml

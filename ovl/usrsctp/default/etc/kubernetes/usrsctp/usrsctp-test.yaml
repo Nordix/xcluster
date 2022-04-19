@@ -3,6 +3,7 @@ kind: Deployment
 metadata:
   name: usrsctp-test
 spec:
+  replicas: 2
   selector:
     matchLabels:
       app: usrsctp-test
@@ -21,5 +22,10 @@ spec:
         ports:
         - containerPort: 7002
         - containerPort: 7003
+        env:
+        - name: LOCAL_IP_ADDR
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
         securityContext:
           privileged: true
