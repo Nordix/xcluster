@@ -1,4 +1,4 @@
-From 108dd6dba30a647541f6cbb33be7edf70a7b1b23 Mon Sep 17 00:00:00 2001
+From 48a752037128b49bc257ac5e648d172853f85d30 Mon Sep 17 00:00:00 2001
 From: Sriram Yagnaraman <sriram.yagnaraman@est.tech>
 Date: Wed, 16 Mar 2022 21:16:22 +0100
 Subject: [PATCH] Conntrack: SCTP lite helper
@@ -8,7 +8,7 @@ Subject: [PATCH] Conntrack: SCTP lite helper
  include/net/netfilter/ipv4/nf_reject.h       |   8 +
  include/net/netfilter/nf_conntrack_l4proto.h |   9 +
  include/net/netfilter/nf_nat.h               |   3 +
- net/ipv4/netfilter/nf_reject_ipv4.c          | 262 +++++++++++
+ net/ipv4/netfilter/nf_reject_ipv4.c          | 268 +++++++++++
  net/netfilter/Kconfig                        |  27 +-
  net/netfilter/Makefile                       |   5 +-
  net/netfilter/nf_conntrack_core.c            |   8 +
@@ -16,7 +16,7 @@ Subject: [PATCH] Conntrack: SCTP lite helper
  net/netfilter/nf_conntrack_proto_sctp_lite.c | 451 +++++++++++++++++++
  net/netfilter/nf_nat_core.c                  |   6 +-
  net/netfilter/nf_nat_proto.c                 |  24 +
- 12 files changed, 811 insertions(+), 6 deletions(-)
+ 12 files changed, 817 insertions(+), 6 deletions(-)
  create mode 100644 net/netfilter/nf_conntrack_proto_sctp_lite.c
 
 diff --git a/include/linux/sctp.h b/include/linux/sctp.h
@@ -112,7 +112,7 @@ index 987111ae5240..5bbe044fe21d 100644
  			u8 nfproto, u8 proto, void *data, __sum16 *check,
  			int datalen, int oldlen);
 diff --git a/net/ipv4/netfilter/nf_reject_ipv4.c b/net/ipv4/netfilter/nf_reject_ipv4.c
-index 4eed5afca392..0be3eb1f5113 100644
+index 4eed5afca392..2172baf1148b 100644
 --- a/net/ipv4/netfilter/nf_reject_ipv4.c
 +++ b/net/ipv4/netfilter/nf_reject_ipv4.c
 @@ -8,9 +8,11 @@
@@ -152,7 +152,7 @@ index 4eed5afca392..0be3eb1f5113 100644
  struct iphdr *nf_reject_iphdr_put(struct sk_buff *nskb,
  				  const struct sk_buff *oldskb,
  				  __u8 protocol, int ttl)
-@@ -218,6 +238,98 @@ void nf_reject_ip_tcphdr_put(struct sk_buff *nskb, const struct sk_buff *oldskb,
+@@ -218,6 +238,104 @@ void nf_reject_ip_tcphdr_put(struct sk_buff *nskb, const struct sk_buff *oldskb,
  }
  EXPORT_SYMBOL_GPL(nf_reject_ip_tcphdr_put);
  
@@ -210,7 +210,7 @@ index 4eed5afca392..0be3eb1f5113 100644
 +	struct sctphdr *sctph;
 +	__be32 vtag;
 +
-+	struct sctp_chunkhdr *initackh;
++	struct sctp_init_chunk *initackh;
 +	struct sctp_paramhdr *rjparamh;
 +
 +	struct sctp_inithdr *oih;
@@ -233,12 +233,18 @@ index 4eed5afca392..0be3eb1f5113 100644
 +	sctph->vtag = vtag;
 +
 +	param_len = sizeof(struct sctp_paramhdr);
-+	chunk_len = sizeof(struct sctp_chunkhdr) + param_len;
++	chunk_len = sizeof(struct sctp_init_chunk) + param_len;
 +
-+	initackh = skb_put_zero(nskb, sizeof(struct sctp_chunkhdr));
-+	initackh->type = SCTP_CID_INIT_ACK;
-+	initackh->flags |= SCTP_CHUNK_FLAG_M;
-+	initackh->length = cpu_to_be16(chunk_len);
++	initackh = skb_put_zero(nskb, sizeof(struct sctp_init_chunk));
++	initackh->chunk_hdr.type = SCTP_CID_INIT_ACK;
++	initackh->chunk_hdr.flags |= SCTP_CHUNK_FLAG_T;
++	initackh->chunk_hdr.flags |= SCTP_CHUNK_FLAG_M;
++	initackh->chunk_hdr.length = cpu_to_be16(chunk_len);
++	initackh->init_hdr.init_tag = oih->init_tag;
++	initackh->init_hdr.a_rwnd = oih->a_rwnd;
++	initackh->init_hdr.num_outbound_streams = oih->num_outbound_streams;
++	initackh->init_hdr.num_inbound_streams = oih->num_inbound_streams;
++	initackh->init_hdr.initial_tsn = oih->initial_tsn;
 +
 +	rjparamh = skb_put_zero(nskb, sizeof(struct sctp_paramhdr));
 +	rjparamh->type = cpu_to_be16(SCTP_PARAM_RJ);
@@ -251,7 +257,7 @@ index 4eed5afca392..0be3eb1f5113 100644
  static int nf_reject_fill_skb_dst(struct sk_buff *skb_in)
  {
  	struct dst_entry *dst = NULL;
-@@ -330,4 +442,154 @@ void nf_send_unreach(struct sk_buff *skb_in, int code, int hook)
+@@ -330,4 +448,154 @@ void nf_send_unreach(struct sk_buff *skb_in, int code, int hook)
  }
  EXPORT_SYMBOL_GPL(nf_send_unreach);
  

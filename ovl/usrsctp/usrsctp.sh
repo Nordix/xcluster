@@ -107,15 +107,14 @@ test_start1() {
 	otc 201 vip_ecmp_route
 	otc 202 "vip_ecmp_route 2"
 
-	otc 2 "start_tcpdump eth1"
-	otc 2 "start_tcpdump eth2"
-	otc 2 "start_tcpdump cbr0"
 	otc 221 "start_tcpdump eth1"
 	otc 221 "start_tcpdump eth2"
 
-	otc 1 deploy_test_pods
-	tlog "Sleep for 10 seconds for the client to finish"
-	sleep 10
+	otc 2 deploy_client_pods
+	otc 2 "start_tcpdump_proc_ns usrsctpt"
+
+	tlog "Sleep for 60 seconds for the client to finish"
+	sleep 60
 	#otc 1 start_client_interactive
 
 	otc 2 stop_all_tcpdump
@@ -135,20 +134,18 @@ test_start2() {
 
 	otc 1 check_namespaces
 	otc 1 check_nodes
-	otc 1 deploy_test_pods
+	otc 1 deploy_server_pods
 
 	otc 201 vip_ecmp_route
 	otc 202 "vip_ecmp_route 2"
 
-	otc 2 "start_tcpdump eth1"
-	otc 2 "start_tcpdump eth2"
-	otc 2 "start_tcpdump cbr0"
+	otc 2 "start_tcpdump_proc_ns usrsctpt"
 	otc 221 "start_tcpdump eth1"
 	otc 221 "start_tcpdump eth2"
 
 	otc 221 "start_client 6001"
 	otc 221 "start_client 6002"
-	tlog "Sleep for 10 seconds for the client to finish"
+	tlog "Sleep for 30 seconds for the client to finish"
 	sleep 30
 	#otc 1 start_client_interactive
 

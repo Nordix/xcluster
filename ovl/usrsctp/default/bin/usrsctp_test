@@ -14,7 +14,8 @@ tmp=/tmp/${prg}_$$
 test -n "$DOMAIN" || DOMAIN=xcluster
 test -n "$PREFIX" || PREFIX=1000::1
 test -n "$FIRST_WORKER" || FIRST_WORKER=1
-yamld=/etc/kubernetes/usrsctp
+client_yamld=/etc/kubernetes/usrsctp-client
+server_yamld=/etc/kubernetes/usrsctp-server
 
 die() {
 	echo "ERROR: $*" >&2
@@ -43,10 +44,15 @@ cmd_tcase_check_nodes() {
     test_nodes
 }
 
-cmd_tcase_deploy_test_pods() {
-	tcase "Deploy test pods"
-	apply_k8s $yamld
+cmd_tcase_deploy_client_pods() {
+	tcase "Deploy client pods"
+	apply_k8s $client_yamld
 	test_deployment usrsctp-client 180
+}
+
+cmd_tcase_deploy_server_pods() {
+	tcase "Deploy server pods"
+	apply_k8s $server_yamld
 	test_deployment usrsctp-server 180
 	assign-lb-ip -svc usrsctp -ip 10.0.0.72,1000::72
 }
@@ -114,6 +120,25 @@ cmd_tcase_start_tcpdump() {
 	# tcpdump takes a couple of seconds to start
 	sleep 2
 	tex "pgrep -P $$ tcpdump > /dev/null" || tdie
+}
+
+cmd_tcase_start_tcpdump_proc_ns() {
+	local dev=eth0
+	test -n "$1" || die "No process name given"
+	local proc=$1
+	tcase "Start tcpdump on dev=$dev for proc=$proc"
+
+	for pid in $(pgrep $proc)
+	do
+		tcase "Start tcpdump on dev=$dev for pid=$pid"
+		local pcap=/var/log/usrsctp-$(hostname)-$dev-$pid.pcap
+		local cmd="nsenter -t $pid -n tcpdump -- -i $dev sctp -w $pcap"
+		tlog $cmd
+		nohup $cmd 2>&1 &
+		# tcpdump takes a couple of seconds to start
+		sleep 2
+		tex "pgrep -P $$ tcpdump > /dev/null" || tdie
+	done
 }
 
 cmd_tcase_stop_all_tcpdump() {

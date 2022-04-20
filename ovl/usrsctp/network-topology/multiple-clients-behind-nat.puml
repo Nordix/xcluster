@@ -30,8 +30,8 @@ Server -> s1 : COOKIE_ACK
 s1 -> c1 : COOKIE_ACK
 c1 -> Client1 : COOKIE_ACK
 
-Client1 -> c2 : INIT (RJ)
-c2 -> Client1 : INIT_ACK (M bit)
+Client1 -> c2 : "--INIT (RJ)--"
+c2 -> Client1 : "--INIT_ACK (M bit)--"
 
 Client1 -> c2 : "ASCONF(192.168.4.221)"
 c2 -> s2 : ASCONF
