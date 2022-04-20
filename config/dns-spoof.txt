@@ -6,3 +6,4 @@ registry.nordix.org
 quay.io
 ghcr.io
 projects.registry.vmware.com
+registry.k8s.io
