@@ -1,4 +1,4 @@
-@startuml distributed-client
+@startuml multiple-clients-behind-nat
 hide footbox
 box "client"
 participant "Client1"
@@ -11,6 +11,8 @@ participant "eth1\n192.168.3.221" as s1
 participant "eth2\n192.168.4.221" as s2
 participant "Server"
 end box
+
+alt Successful case
 
 Client1 -> c1 : "INIT(11.2.0.x:7003)"
 c1 -> s1 : "INIT(192.168.1.2:7003)"
@@ -53,6 +55,9 @@ Client1 -> c2 : HEARTBEAT_ACK
 c2 -> s2 : HEARTBEAT_ACK
 s2 -> Server : HEARTBEAT_ACK
 
+else Port collision
 Client2 -> c1 : "INIT(11.2.0.x:7003)"
 c1 -> Client2 : "ABORT(port collision)"
+
+end
 @enduml

@@ -91,7 +91,7 @@ test_start() {
 	otc 201 vip_ecmp_route
 	otc 202 "vip_ecmp_route 2"
 
-	otc 1 deploy_test_pods
+	otc 1 deploy_client_pods
 }
 
 test_start1() {
@@ -116,6 +116,40 @@ test_start1() {
 	otc 1 deploy_test_pods
 	tlog "Sleep for 10 seconds for the client to finish"
 	sleep 10
+	#otc 1 start_client_interactive
+
+	otc 2 stop_all_tcpdump
+	otc 221 stop_all_tcpdump
+
+	sleep 10
+
+	rcp 2 /var/log/*.pcap captures/
+	rcp 221 /var/log/*.pcap captures/
+}
+
+test_start2() {
+	. ./network-topology/Envsettings
+
+	xcluster_prep
+	xcluster_start iptools network-topology usrsctp
+
+	otc 1 check_namespaces
+	otc 1 check_nodes
+	otc 1 deploy_test_pods
+
+	otc 201 vip_ecmp_route
+	otc 202 "vip_ecmp_route 2"
+
+	otc 2 "start_tcpdump eth1"
+	otc 2 "start_tcpdump eth2"
+	otc 2 "start_tcpdump cbr0"
+	otc 221 "start_tcpdump eth1"
+	otc 221 "start_tcpdump eth2"
+
+	otc 221 "start_client 6001"
+	otc 221 "start_client 6002"
+	tlog "Sleep for 10 seconds for the client to finish"
+	sleep 30
 	#otc 1 start_client_interactive
 
 	otc 2 stop_all_tcpdump

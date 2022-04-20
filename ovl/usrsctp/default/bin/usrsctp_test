@@ -46,14 +46,27 @@ cmd_tcase_check_nodes() {
 cmd_tcase_deploy_test_pods() {
 	tcase "Deploy test pods"
 	apply_k8s $yamld
-	test_deployment usrsctp-test 180
+	test_deployment usrsctp-client 180
+	test_deployment usrsctp-server 180
 	assign-lb-ip -svc usrsctp -ip 10.0.0.72,1000::72
 }
 
 cmd_tcase_start_server() {
 	tcase "Start server"
 	local cmd="usrsctpt server --log=7 --addr=192.168.3.221,192.168.4.221 --port=7003"
-	local log=/var/log/usrsctp.log
+	local log=/var/log/usrsctp-server.log
+	tlog $cmd
+	nohup $cmd > $log 2>&1 &
+	tlog "Check usrsctpt has started"
+	tex "pgrep usrsctpt" || tdie
+}
+
+cmd_tcase_start_client() {
+	lport=7002
+	test -n "$1" && lport="$1"
+	tcase "Start server"
+	local cmd="usrsctpt niclient --log=7 --addr=10.0.0.72 --port=7002 --laddr=192.168.3.221,192.168.4.221 --lport=$lport"
+	local log=/var/log/usrsctp-client.log
 	tlog $cmd
 	nohup $cmd > $log 2>&1 &
 	tlog "Check usrsctpt has started"

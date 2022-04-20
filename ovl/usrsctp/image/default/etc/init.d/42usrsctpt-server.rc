@@ -1,0 +1,4 @@
+#! /bin/sh
+. /etc/profile
+test "$NO_SERVERS" = "yes" && exit 0
+usrsctpt server --log=7 --addr="$LOCAL_IP_ADDR" --port=7002 &

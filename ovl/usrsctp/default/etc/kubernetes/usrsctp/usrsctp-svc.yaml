@@ -6,12 +6,9 @@ spec:
   externalTrafficPolicy: Local
   ipFamilyPolicy: PreferDualStack
   selector:
-    app: usrsctp-test
+    app: usrsctp-server
   ports:
   - port: 7002
     name: usrsctpt-server
-    protocol: SCTP
-  - port: 7003
-    name: usrsctpt-usrserver
     protocol: SCTP
   type: LoadBalancer

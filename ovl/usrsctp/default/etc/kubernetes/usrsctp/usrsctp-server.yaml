@@ -1,0 +1,32 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: usrsctp-server
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: usrsctp-server
+  template:
+    metadata:
+      labels:
+        app: usrsctp-server
+    spec:
+      serviceAccount: default
+      nodeSelector:
+        kubernetes.io/hostname: vm-002
+      containers:
+      - name: usrsctp-server
+        imagePullPolicy: Always
+        image: registry.nordix.org/cloud-native/usrsctp-test:latest
+        ports:
+        - containerPort: 7002
+        env:
+        - name: NO_CLIENTS
+          value: "yes"
+        - name: LOCAL_IP_ADDR
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
+        securityContext:
+          privileged: true
