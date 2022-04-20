@@ -109,13 +109,17 @@ start_coredns() {
 }
 
 cmd_tcase_install_cni() {
+	if test "$CNI_INFO" = "bridge"; then
+		tlog "CNI-plugin; Using internal bridge"
+		return 0
+	fi
 	local cni f
 	for f in xcluster-cni.yaml calico.yaml quick-install.yaml \
-		kube-flannel.yaml weave.yaml None; do
+		kube-flannel.yaml None; do
 		cni=/etc/kubernetes/load/$f
 		test -r $cni && break
 	done
-	tcase "InstallCNI-plugin; $f"
+	tcase "Install CNI-plugin; $f"
 	test -r $cni || tdie "No CNI-plugin found"
 	kubectl apply -f $cni || tdie
 }

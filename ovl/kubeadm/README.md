@@ -24,7 +24,7 @@ Downloaded archives should be in the `$ARCHIVE` directory.
 
 Set the K8s version and unpack the K8s server binary;
 ```
-export __k8sver=v1.19.2
+export __k8sver=v1.23.5
 export KUBERNETESD=$HOME/tmp/kubernetes/kubernetes-$__k8sver/server/bin
 # (make sure the K8s server binary are unpacked at $KUBERNETESD)
 alias kubeadm="$KUBERNETESD/kubeadm"
@@ -41,6 +41,7 @@ If the local private registry is ok, just do;
 
 ```
 ./kubeadm.sh cache_images
+images lreg_cache k8s.gcr.io/pause:3.5  # (may be needed)
 ```
 
 [skopeo](https://github.com/containers/skopeo) is used for downloads.
@@ -50,11 +51,11 @@ If the local private registry is ok, just do;
 
 You must select a CNI-plugin. Tested and supported in xcluster are;
 
+* [bridge (xcluster internal)](../k8s-cni-bridge/)
 * [xcluster-cni](https://github.com/Nordix/xcluster-cni) (default)
 * [Calico](http://www.projectcalico.org/)
 * [Cilium](https://github.com/cilium/cilium)
-* [Flannel](https://github.com/coreos/flannel) (ipv4-only)
-* [Weave](https://www.weave.works/) (ipv4-only)
+* [Flannel](https://github.com/coreos/flannel)
 
 These can be selected with the `--cni=` parameter. Other CNI-plugin
 might work but then you are on your own.
@@ -63,11 +64,9 @@ The images for the CNI-plugin must be in the local private
 registry. Check and cache to the local private registry;
 
 ```
-images lreg_missingimages k8s-cni-calico
-docker.io/calico/cni:v3.14.0
-...
-images lreg_cache docker.io/calico/cni:v3.14.0
-...
+cdo k8s-cni-calico
+images lreg_missingimages default
+images lreg_preload default
 ```
 
 
@@ -77,18 +76,16 @@ Prepare as described above.
 
 Examples;
 ```
-export __k8sver=v1.18.8
+export __k8sver=v1.23.5
 ./kubeadm.sh test --list
 ./kubeadm.sh test > $log  # Default; --cni=xcluster test_template
 ./kubeadm.sh test --cni=cilium test_template > $log
-./kubeadm.sh test --cni=weave test_template4 > $log
 ```
 
 Install and leave the cluster running;
 ```
 ./kubeadm.sh test --cni=cilium --no-stop install > $log
-# Or;
-./kubeadm.sh test --cni=weave --no-stop install_ipv4 > $log
+./kubeadm.sh test --cni=bridge --no-stop install > $log
 ```
 
 
@@ -108,8 +105,6 @@ this installed is started with;
 ./kubeadm.sh test start > $log
 # Dual-stack with Calico;
 ./kubeadm.sh test --cni=calico start > $log
-# Ipv4-only with Flannel;
-./kubeadm.sh test --cni=flannel start_ipv4 > $log
 ```
 
 The rest of the commands are executed on the K8s nodes. Open a
@@ -149,8 +144,6 @@ ls /opt/cni/bin/
 
 #### Use a node-local CoreDNS
 
-
-
 The internal `xcluster` CoreDNS is used but knows nothing about
 K8s. Delete the K8s coredns deployment and re-configure and
 re-start the local CoreDNS;
@@ -164,33 +157,6 @@ nslookup kubernetes.default.svc.cluster.local
 
 
 Now you have a working one-node dual-stack K8s cluster and other nodes
-can join.
-
-
-### Ipv4 manual installation
-
-In this example `Flannel` is used.
-
-```
-./kubeadm.sh test --cni=flannel start_ipv4 > $log
-vm 1
-# On vm-001;
-# Check versions:
-echo $__k8sver
-kubeadm version -o short
-# Pull images (from the local registry);
-kubeadm config images pull --kubernetes-version $__k8sver
-kubeadm init --token=11n1ns.vneshg4ikfoyiy09 --kubernetes-version $__k8sver --pod-network-cidr 11.0.0.0/16
-# Install the CNI-plugin and test;
-kubectl apply -f /etc/kubernetes/load/kube-flannel.yaml
-# Check
-kubectl get pods -A
-kubectl get nodes   # Shall become "Ready" after some time
-ls /etc/cni/net.d/
-ls /opt/cni/bin/
-```
-
-Now you have a working one-node ipv4 K8s cluster and other nodes
 can join.
 
 
