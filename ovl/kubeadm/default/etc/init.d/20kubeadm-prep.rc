@@ -50,7 +50,7 @@ run_kubelet() {
 	fi
 	kubelet --node-ip=192.168.1.$i $CRI_OPTS \
 		--register-node=true --kubeconfig $KUBECONFIG \
-		--network-plugin=cni --cluster-domain=cluster.local \
+		--cluster-domain=cluster.local \
 		--pod-manifest-path /etc/kubernetes/manifests \
 		--cluster-dns=192.168.1.1 \
 		--bootstrap-kubeconfig /etc/kubernetes/bootstrap-kubelet.conf \
