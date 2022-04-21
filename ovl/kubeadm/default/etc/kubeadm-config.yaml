@@ -30,7 +30,6 @@ etcd:
   local:
     dataDir: /var/lib/etcd
 featureGates:
-  IPv6DualStack: true
 imageRepository: k8s.gcr.io
 kind: ClusterConfiguration
 kubernetesVersion: %k8sver%
