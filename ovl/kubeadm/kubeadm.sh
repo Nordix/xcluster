@@ -39,7 +39,7 @@ cmd_env() {
 	test -n "$__nvm" || __nvm=4
 	test -n "$__k8sver" || __k8sver=v1.19.2
 	export __k8sver
-	test -n "$__cni" || __cni=xcluster
+	test -n "$__cni" || __cni=bridge
 	export __mem1=2048
 	export __mem=1536
 	export xcluster_DOMAIN=cluster.local

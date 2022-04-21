@@ -101,7 +101,7 @@ CRI-plugin (or docker) is installed on the system. An `xcluster` with
 this installed is started with;
 
 ```
-# Dual-stack with --cni=xcluster (default);
+# Dual-stack with --cni=bridge (default);
 ./kubeadm.sh test start > $log
 # Dual-stack with Calico;
 ./kubeadm.sh test --cni=calico start > $log
