@@ -46,6 +46,11 @@ tester() {
 
 	ip ro add 192.168.2.0/24 via 192.168.4.202
 	ip -6 ro add $PREFIX:192.168.2.0/120 via $PREFIX:192.168.4.202
+
+	ip ro add 10.0.0.0/25 via 192.168.3.201
+	ip -6 ro add $PREFIX:10.0.0.0/121 via $PREFIX:192.168.3.201
+	ip ro add 10.0.0.128/25 via 192.168.4.202
+	ip -6 ro add $PREFIX:10.0.0.128/121 via $PREFIX:192.168.4.202
 }
 
 

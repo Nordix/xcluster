@@ -64,6 +64,7 @@ cmd_test() {
     start=starts
     test "$__xterm" = "yes" && start=start
     rm -f $XCLUSTER_TMP/cdrom.iso
+	rm -f $($XCLUSTER ovld usrsctp)/captures/*.pcap
 
     if test -n "$1"; then
         for t in $@; do
@@ -94,7 +95,7 @@ test_start() {
 	otc 1 deploy_client_pods
 }
 
-test_start1() {
+test_k8s_client() {
 	. ./network-topology/Envsettings
 
 	xcluster_prep
@@ -107,6 +108,8 @@ test_start1() {
 	otc 201 vip_ecmp_route
 	otc 202 "vip_ecmp_route 2"
 
+	otc 2 "start_tcpdump eth1"
+	otc 2 "start_tcpdump eth2"
 	otc 221 "start_tcpdump eth1"
 	otc 221 "start_tcpdump eth2"
 
@@ -126,7 +129,7 @@ test_start1() {
 	rcp 221 /var/log/*.pcap captures/
 }
 
-test_start2() {
+test_k8s_server() {
 	. ./network-topology/Envsettings
 
 	xcluster_prep
@@ -140,22 +143,90 @@ test_start2() {
 	otc 202 "vip_ecmp_route 2"
 
 	otc 2 "start_tcpdump_proc_ns usrsctpt"
+	otc 2 "start_tcpdump eth1"
+	otc 2 "start_tcpdump eth2"
+	otc 201 "start_tcpdump eth1"
+	otc 201 "start_tcpdump eth2"
+	otc 202 "start_tcpdump eth1"
+	otc 202 "start_tcpdump eth2"
 	otc 221 "start_tcpdump eth1"
 	otc 221 "start_tcpdump eth2"
+	otc 222 "start_tcpdump eth1"
+	otc 222 "start_tcpdump eth2"
 
 	otc 221 "start_client 6001"
-	otc 221 "start_client 6002"
-	tlog "Sleep for 30 seconds for the client to finish"
-	sleep 30
-	#otc 1 start_client_interactive
+	otc 222 "start_client 6001"
+	tlog "Sleep for 120 seconds for the client to finish"
+	sleep 120
 
 	otc 2 stop_all_tcpdump
+	otc 201 stop_all_tcpdump
+	otc 202 stop_all_tcpdump
 	otc 221 stop_all_tcpdump
+	otc 222 stop_all_tcpdump
 
 	sleep 10
 
 	rcp 2 /var/log/*.pcap captures/
+	rcp 201 /var/log/*.pcap captures/
+	rcp 202 /var/log/*.pcap captures/
 	rcp 221 /var/log/*.pcap captures/
+	rcp 222 /var/log/*.pcap captures/
+}
+
+test_k8s_server_calico() {
+	. ./network-topology/Envsettings
+
+	test -n "$__mode" || __mode=dual-stack
+	export xcluster___mode=$__mode
+	# Test with k8s-xcluster;
+	__image=$XCLUSTER_HOME/hd-k8s-xcluster-$__k8sver.img
+	test -r $__image || __image=$XCLUSTER_HOME/hd-k8s-xcluster.img
+	export __image
+	test -r $__image || die "Not readable [$__image]"
+	export XCTEST_HOOK=$($XCLUSTER ovld k8s-xcluster)/xctest-hook
+	export xcluster_FIRST_WORKER=2
+
+	xcluster_prep $__mode
+	xcluster_start k8s-cni-calico iptools network-topology usrsctp
+
+	otc 1 check_namespaces
+	otc 1 check_nodes
+	otc 1 deploy_server_pods
+
+	otc 201 vip_ecmp_route
+	otc 202 "vip_ecmp_route 2"
+
+	otc 2 "start_tcpdump_proc_ns usrsctpt"
+	otc 2 "start_tcpdump eth1"
+	otc 2 "start_tcpdump eth2"
+	otc 201 "start_tcpdump eth1"
+	otc 201 "start_tcpdump eth2"
+	otc 202 "start_tcpdump eth1"
+	otc 202 "start_tcpdump eth2"
+	otc 221 "start_tcpdump eth1"
+	otc 221 "start_tcpdump eth2"
+	otc 222 "start_tcpdump eth1"
+	otc 222 "start_tcpdump eth2"
+
+	otc 221 "start_client 6001"
+	otc 222 "start_client 6001"
+	tlog "Sleep for 120 seconds for the client to finish"
+	sleep 120
+
+	otc 2 stop_all_tcpdump
+	otc 201 stop_all_tcpdump
+	otc 202 stop_all_tcpdump
+	otc 221 stop_all_tcpdump
+	otc 222 stop_all_tcpdump
+
+	sleep 10
+
+	rcp 2 /var/log/*.pcap captures/
+	rcp 201 /var/log/*.pcap captures/
+	rcp 202 /var/log/*.pcap captures/
+	rcp 221 /var/log/*.pcap captures/
+	rcp 222 /var/log/*.pcap captures/
 }
 
 ##   nfqlb_download

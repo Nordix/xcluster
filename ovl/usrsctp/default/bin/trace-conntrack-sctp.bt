@@ -1,0 +1,29 @@
+#!/usr/bin/env bpftrace
+/*
+ * trace-conntrack-sctp.bt
+ *
+ * Trace conntrack sctp handling.
+ */
+
+BEGIN
+{
+	printf("Tracing conntrack SCTP handling... Hit Ctrl-C to quit\n")
+}
+
+kprobe:nf_conntrack_in
+{
+	$skb = (struct sk_buff *)arg1;
+	$iph = (struct iphdr *)($skb->head + $skb->network_header);
+	$sh = (struct sctphdr *)($skb->head + $skb->transport_header);
+
+	if ($iph->protocol == 132 /* IPPROTO_SCTP */ &&
+	    $sh->vtag == 0 /* init */) {
+		time("%H:%M:%S ");
+		printf("%s:%u > %s:%u sctp init %s\n",
+		       ntop($iph->saddr),
+		       (uint16)($sh->source << 8) | ($sh->source >> 8),
+		       ntop($iph->daddr),
+		       (uint16)($sh->dest << 8) | ($sh->dest >> 8),
+		       func);
+	}
+}
