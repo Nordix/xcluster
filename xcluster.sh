@@ -978,7 +978,7 @@ stop() {
 		port=$((XCLUSTER_MONITOR_BASE+nodeid))
 		echo quit | nc localhost $port > /dev/null 2>&1
 	done
-	kill $(grep -s XXTERM=XCLUSTER /proc/*/environ | cut -d/ -f3) > /dev/null 2>&1
+	kill $(grep -ls XXTERM=XCLUSTER /proc/*/environ | cut -d/ -f3) > /dev/null 2>&1
 	return 0
 }
 cmd_scaleout() {
