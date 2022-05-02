@@ -113,6 +113,13 @@ The cluster VMs has multiple networks for test of
 No ip addresses are assigned to the interfaces since that is assumed
 to be done by the tested SW.
 
+## Multilan-router
+
+An improved version of `multilan` originally defined for
+[ovl/nsm-vlan-dpdk](https://github.com/Nordix/nsm-test/blob/master/ovl/nsm-vlan-dpdk) but used elsewhere.
+
+<img src="multilan-router.svg" alt="Multiple networks with router" width="80%" />
+
 
 ## Evil tester
 

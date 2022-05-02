@@ -50,9 +50,8 @@ cmd_env() {
 }
 
 ##   test --list
-##   test [--xterm] [test...] > logfile
-##     Exec tests
-##
+##   test [--xterm] [--no-stop] > logfile
+##     Exec all tests
 cmd_test() {
 	if test "$__list" = "yes"; then
         grep '^test_' $me | cut -d'(' -f1 | sed -e 's,test_,,'
@@ -69,7 +68,7 @@ cmd_test() {
             test_$t
         done
     else
-        for t in xnet dual_path multihop zones evil_tester; do
+        for t in xnet dual_path multihop zones backend multilan evil_tester; do
 			# Invoke $me rather than call the function to avoid
 			# lingering Envsettings
             $me test $t
@@ -80,7 +79,8 @@ cmd_test() {
     tlog "Xcluster test ended. Total time $((now-begin)) sec"
 
 }
-
+##   TOPOLOGY= ... test start
+##     Start a cluster with the specified TOPOLOGY
 test_start() {
 	test -n "$TOPOLOGY" || tdie "TOPOLOGY not specified"
 	local envsettings=$dir/$TOPOLOGY/Envsettings
@@ -90,7 +90,7 @@ test_start() {
 	. $envsettings 
 	xcluster_start iptools network-topology
 }
-
+##   test xnet
 test_xnet() {
 	tlog "=== network-topology test: xnet"
 	export __ntesters=2
@@ -100,7 +100,7 @@ test_xnet() {
 	base_test
 	xcluster_stop
 }
-
+##   test dual_path
 test_dual_path() {
 	export TOPOLOGY=dual-path
 	tlog "=== network-topology test: $TOPOLOGY"
@@ -115,7 +115,7 @@ test_dual_path() {
 	
 	xcluster_stop
 }
-
+##   test multihop
 test_multihop() {
 	export TOPOLOGY=multihop
 	tlog "=== network-topology test: $TOPOLOGY"
@@ -124,7 +124,7 @@ test_multihop() {
 	base_test
 	xcluster_stop
 }
-
+##   test zones
 test_zones() {
 	export TOPOLOGY=zones
 	tlog "=== network-topology test: $TOPOLOGY"
@@ -146,7 +146,7 @@ test_zones() {
 	export __nvm=30
 	xcluster_stop
 }
-
+##   test backend
 test_backend() {
 	export TOPOLOGY=backend
 	tlog "=== network-topology test: $TOPOLOGY"
@@ -162,15 +162,26 @@ test_backend() {
 	otc 221 "wget http://www.google.se"
 	xcluster_stop
 }
-
+##   test multilan
 test_multilan() {
 	export TOPOLOGY=multilan
+	export __ntesters=2
+	tlog "=== network-topology test: $TOPOLOGY"
+	test_start
+	base_test
+	xcluster_stop
+}
+##   test multilan_router
+test_multilan_router() {
+	export TOPOLOGY=multilan-router
+	export __ntesters=2
 	tlog "=== network-topology test: $TOPOLOGY"
 	test_start
 	base_test
 	xcluster_stop
 }
 
+##   test evil_tester
 test_evil_tester() {
 	export TOPOLOGY=evil_tester
 	tlog "=== network-topology test: $TOPOLOGY"
@@ -190,6 +201,7 @@ base_test() {
 	otc 221 "wget http://www.google.se"
 }
 
+##
 . $($XCLUSTER ovld test)/default/usr/lib/xctest
 indent=''
 
