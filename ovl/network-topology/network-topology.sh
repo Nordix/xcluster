@@ -175,6 +175,7 @@ test_multilan() {
 test_multilan_router() {
 	export TOPOLOGY=multilan-router
 	export __ntesters=2
+	export xcluster_XLAN_PREFIX=169.254.1
 	tlog "=== network-topology test: $TOPOLOGY"
 	test_start
 	base_test

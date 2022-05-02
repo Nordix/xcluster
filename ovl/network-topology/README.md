@@ -120,6 +120,20 @@ An improved version of `multilan` originally defined for
 
 <img src="multilan-router.svg" alt="Multiple networks with router" width="80%" />
 
+To assign addresses to the extra interfaces define `XLAN_PREFIX`;
+```
+export xcluster_XLAN_PREFIX=169.254.1
+```
+Addresses are assigned as;
+```
+# Addresses for the extra networks;
+#  No   vm     router  ipv4                 ipv6
+#   1   eth2   eth3    ${XLAN_PREFIX}2.$i   1000::1:${XLAN_PREFIX}2.$i
+#   2   eth3   eth4    ${XLAN_PREFIX}3.$i   1000::1:${XLAN_PREFIX}3.$i
+#   3   eth4   eth5    ${XLAN_PREFIX}4.$i   1000::1:${XLAN_PREFIX}4.$i
+#
+# Example; XLAN_PREFIX=169.254.1, vm-001/eth3, address=169.254.13.1
+```
 
 ## Evil tester
 
