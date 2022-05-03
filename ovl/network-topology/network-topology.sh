@@ -179,6 +179,9 @@ test_multilan_router() {
 	tlog "=== network-topology test: $TOPOLOGY"
 	test_start
 	base_test
+	otc 202 "ping 169.254.12.1"
+	otc 202 "ping 169.254.13.2"
+	otc 202 "ping 169.254.14.3"
 	xcluster_stop
 }
 

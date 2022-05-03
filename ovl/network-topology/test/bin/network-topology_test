@@ -38,7 +38,8 @@ dbg() {
 cmd_tcase_ping() {
 	tcase "Ping $1 and $PREFIX:$1"
 	ping -c1 -W1 $1 || tdie "ping $1"
-	ping -c1 -W1 $PREFIX:$1 || tdie "ping $PREFIX:$1"
+	# (ipv6 needs time for DAD)
+	tex ping -c1 -W1 $PREFIX:$1 || tdie "ping $PREFIX:$1"
 }
 
 cmd_tcase_nslookup() {
