@@ -62,24 +62,29 @@ test -n "XLAN_PREFIX" || exit 0
 #
 # Example; XLAN_PREFIX=169.254.1, vm-001/eth3, address=169.254.13.1
 
+i=$(hostname | cut -d- -f2 | sed -re 's,^0+,,')
+
+# ifup <net> <interface>
+ifup() {
+	local n=$1
+	local iface=$2
+	sysctl -qw net.ipv6.conf.$iface.accept_dad=0
+	ip link set $iface up
+	ip addr add ${XLAN_PREFIX}$n.$i/24 dev $iface
+	ip -6 addr add 1000::1:${XLAN_PREFIX}$n.$i/120 dev $iface
+}
+
 vm_x() {
-	local i=$(hostname | cut -d- -f2 | sed -re 's,^0+,,')
 	local n
 	for n in 2 3 4; do
-		ip link set eth$n up
-		ip addr add ${XLAN_PREFIX}$n.$i/24 dev eth$n
-		ip -6 addr add 1000::1:${XLAN_PREFIX}$n.$i/120 dev eth$n
+		ifup $n eth$n
 	done
 }
 
 router_202() {
-	local i=202
-	local n iface
+	local n
 	for n in 2 3 4; do
-		iface=eth$((n + 1))
-		ip link set $iface up
-		ip addr add ${XLAN_PREFIX}$n.$i/24 dev $iface
-		ip -6 addr add 1000::1:${XLAN_PREFIX}$n.$i/120 dev $iface
+		ifup $n eth$((n + 1))
 	done
 }
 

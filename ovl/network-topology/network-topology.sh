@@ -68,10 +68,10 @@ cmd_test() {
             test_$t
         done
     else
-        for t in xnet dual_path multihop zones backend multilan evil_tester; do
+        for t in xnet dual_path multihop zones backend multilan multilan_router evil_tester; do
 			# Invoke $me rather than call the function to avoid
 			# lingering Envsettings
-            $me test $t
+            $me test $t || die "FAILED: $t"
         done
     fi      
 
