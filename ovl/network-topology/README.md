@@ -124,7 +124,7 @@ An improved version of `multilan` originally defined for
 
 To assign addresses to the extra interfaces define `XLAN_TEMPLATE`;
 ```
-export xcluster_XLAN_PREFIX=169.254.0.0/20/24
+export xcluster_XLAN_TEMPLATE=169.254.0.0/20/24
 ```
 
 The `src/mkadr.c` program is used. Help printout;
