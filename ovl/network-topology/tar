@@ -29,6 +29,11 @@ test -x $n || die "Not executable [$n]"
 mkdir -p $tmp/bin
 cp $n $tmp/bin
 
+if test "$TOPOLOGY" = "multilan-router"; then
+	mkdir -p $tmp/bin
+	gcc -o $tmp/bin/mkadr $dir/src/mkadr.c
+fi
+
 cd $tmp
 tar cf "$1" *
 cd - > /dev/null

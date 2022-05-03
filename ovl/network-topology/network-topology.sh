@@ -175,13 +175,13 @@ test_multilan() {
 test_multilan_router() {
 	export TOPOLOGY=multilan-router
 	export __ntesters=2
-	export xcluster_XLAN_PREFIX=169.254.1
+	export xcluster_XLAN_TEMPLATE=169.254.0.0/20/24
 	tlog "=== network-topology test: $TOPOLOGY"
 	test_start
 	base_test
-	otc 202 "ping 169.254.12.1"
-	otc 202 "ping 169.254.13.2"
-	otc 202 "ping 169.254.14.3"
+	otc 202 "ping 169.254.2.1"
+	otc 202 "ping 169.254.3.2"
+	otc 202 "ping 169.254.4.3"
 	xcluster_stop
 }
 

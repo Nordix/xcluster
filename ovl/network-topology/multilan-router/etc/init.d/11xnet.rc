@@ -52,26 +52,28 @@ case $(hostname) in
 		tester;;
 esac
 
-test -n "XLAN_PREFIX" || exit 0
 
-# Addresses for the extra networks;
-#  No   vm     router  ipv4                 ipv6
-#   1   eth2   eth3    ${XLAN_PREFIX}2.$i   1000::1:${XLAN_PREFIX}2.$i
-#   2   eth3   eth4    ${XLAN_PREFIX}3.$i   1000::1:${XLAN_PREFIX}3.$i
-#   3   eth4   eth5    ${XLAN_PREFIX}4.$i   1000::1:${XLAN_PREFIX}4.$i
-#
-# Example; XLAN_PREFIX=169.254.1, vm-001/eth3, address=169.254.13.1
+test -n "XLAN_TEMPLATE" || exit 0
 
+# Configure extra networks
+
+test -n "$PREFIX" || PREFIX=1000::1
 i=$(hostname | cut -d- -f2 | sed -re 's,^0+,,')
 
 # ifup <net> <interface>
 ifup() {
 	local n=$1
 	local iface=$2
+
+	local adr m4 m6
+	adr=$(mkadr $XLAN_TEMPLATE $n $i)
+	m4=$(echo $XLAN_TEMPLATE | cut -d/ -f3)
+	m6=$((m4 + 96))
+	
 	sysctl -qw net.ipv6.conf.$iface.accept_dad=0
 	ip link set $iface up
-	ip addr add ${XLAN_PREFIX}$n.$i/24 dev $iface
-	ip -6 addr add 1000::1:${XLAN_PREFIX}$n.$i/120 dev $iface
+	ip addr add $adr/$m4 dev $iface
+	ip -6 addr add 1000::1:$adr/$m6 dev $iface
 }
 
 vm_x() {

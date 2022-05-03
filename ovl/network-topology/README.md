@@ -122,20 +122,31 @@ An improved version of `multilan` originally defined for
 
 <img src="multilan-router.svg" alt="Multiple networks with router" width="80%" />
 
-To assign addresses to the extra interfaces define `XLAN_PREFIX`;
+To assign addresses to the extra interfaces define `XLAN_TEMPLATE`;
 ```
-export xcluster_XLAN_PREFIX=169.254.1
+export xcluster_XLAN_PREFIX=169.254.0.0/20/24
 ```
-Addresses are assigned as;
+
+The `src/mkadr.c` program is used. Help printout;
 ```
-# Addresses for the extra networks;
-#  No   vm     router  ipv4                 ipv6
-#   1   eth2   eth3    ${XLAN_PREFIX}2.$i   1000::1:${XLAN_PREFIX}2.$i
-#   2   eth3   eth4    ${XLAN_PREFIX}3.$i   1000::1:${XLAN_PREFIX}3.$i
-#   3   eth4   eth5    ${XLAN_PREFIX}4.$i   1000::1:${XLAN_PREFIX}4.$i
-#
-# Example; XLAN_PREFIX=169.254.1, vm-001/eth3, address=169.254.13.1
+Syntax:
+  mkadr template net host
+
+'template' is a cidr address with double slashes for net and
+host masks. Example;
+
+  192.168.128/17/24
+  1000:2000:3000::3:0/112/120
+
+The address is formed by inserting 'net' and 'host' in the
+bit-fields. Example
+
+  # mkadr 192.168.128.0/17/24 3 12
+  192.168.131.12
+  # mkadr 1000::192.168.0.0/112/120 3 1
+  1000::c0a8:301
 ```
+
 
 ## Evil tester
 
