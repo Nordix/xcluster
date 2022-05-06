@@ -14,15 +14,8 @@ i=$(hostname | cut -d- -f2 | sed -re 's,^0+,,')
 test "$MASTERS" || MASTERS=vm-001
 echo ",$MASTERS," | grep -q ",$(hostname)," || exit 0
 
-test -n "$FEATURE_GATES" || FEATURE_GATES=IPv6DualStack=true
-
 CLUSTER_CIDR=11.0.0.0/16,1100::/48
 SERVICE_RANGE=12.0.0.0/16,fd00:4000::/112
-
-if echo "$FEATURE_GATES" | grep -q "IPv6DualStack=false"; then
-	CLUSTER_CIDR=11.0.0.0/16
-	SERVICE_RANGE=12.0.0.0/16
-fi
 
 if test -z "$BASE_FAMILY"; then
 	BASE_FAMILY=IPv4
@@ -34,20 +27,17 @@ ADVERTISE_ADR=192.168.1.$i
 if test "$BASE_FAMILY" = "IPv6"; then
 	SERVICE_RANGE=fd00:4000::/112,12.0.0.0/16
 	ADVERTISE_ADR=${IPV6_PREFIX}192.168.1.$i
-	if echo "$FEATURE_GATES" | grep -q "IPv6DualStack=false"; then
-		CLUSTER_CIDR=1100::/48
-		SERVICE_RANGE=fd00:4000::/112
-	fi
 fi
+
+test -n "$FEATURE_GATES" && fg_param="--feature-gates $FEATURE_GATES"
 
 apiserver() {
 	local log=/var/log/kube-apiserver.log
 	logger -s -t K8s "STARTED: kube-apiserver at $(date)" >> log 2>&1
 	kube-apiserver --token-auth-file=/srv/kubernetes/known_tokens.csv \
-		$API_FLAGS --allow-privileged=true \
+		$API_FLAGS --allow-privileged=true $fg_param \
 		--bind-address=:: --advertise-address=$ADVERTISE_ADR \
 		--authorization-mode=AlwaysAllow \
-		--feature-gates $FEATURE_GATES \
 		--etcd-servers=http://192.168.1.1:2379 --anonymous-auth=false \
 		--service-cluster-ip-range=$SERVICE_RANGE \
 		--enable-admission-plugins=ServiceAccount \
@@ -62,8 +52,7 @@ controller() {
 	logger -s -t K8s "STARTED: kube-controller-manager at $(date)" >> log 2>&1
 	kube-controller-manager --kubeconfig $KUBECONFIG $CONTROLLER_FLAGS \
 		--allocate-node-cidrs=true --cluster-cidr=$CLUSTER_CIDR \
-		--controllers="*,serviceaccount,serviceaccount-token" \
-		--feature-gates $FEATURE_GATES \
+		--controllers="*,serviceaccount,serviceaccount-token" $fg_param \
 		--service-account-private-key-file=/srv/kubernetes/server.key \
 		--root-ca-file=/srv/kubernetes/server.crt --leader-elect=false \
 		>> $log 2>&1
@@ -73,7 +62,7 @@ scheduler() {
 	local log=/var/log/kube-scheduler.log
 	logger -s -t K8s "STARTED: kube-scheduler at $(date)" >> log 2>&1
 	kube-scheduler --kubeconfig $KUBECONFIG --leader-elect=false \
-		$SCHEDULER_FLAGS --feature-gates $FEATURE_GATES \
+		$SCHEDULER_FLAGS $fg_param \
 		>> $log 2>&1
 }
 

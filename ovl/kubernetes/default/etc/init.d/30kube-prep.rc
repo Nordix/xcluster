@@ -71,11 +71,6 @@ if kubectl version --short --client | grep -q v1.2; then
 		echo "API_FLAGS='--service-account-signing-key-file=$key --service-account-issuer=Nemo --service-account-key-file=$key'" >> /etc/profile
 fi
 
-if test -z "$FEATURE_GATES"; then
-	FEATURE_GATES=IPv6DualStack=true
-	echo "FEATURE_GATES=$FEATURE_GATES" >> /etc/profile
-fi
-
 f=/etc/kubernetes/kube-proxy.config
 for g in $(echo $FEATURE_GATES | tr ',' ' '); do
 	g=$(echo $g | sed -e 's,=,: ,')

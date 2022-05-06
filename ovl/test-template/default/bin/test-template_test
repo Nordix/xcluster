@@ -57,25 +57,10 @@ cmd_tcase_start_servers() {
 	else
 		assign-lb-ip -svc mconnect-lb -ip 10.0.0.0
 	fi
-	if test "$__mode" != "dual-stack"; then
-		if isDual3; then
-			if ipv6base; then
-				assign-lb-ip -svc mconnect-preferdual -ip 1000::2
-			else
-				assign-lb-ip -svc mconnect-preferdual -ip 10.0.0.2
-			fi
-		fi
-		return 0
-	fi
-
-	# Dual-stack;
 
 	assign-lb-ip -svc mconnect-ipv4 || tdie
 	assign-lb-ip -svc mconnect-ipv6 || tdie
 
-	isDual3 || return 0
-
-	# Dual-stack phase.3
 	assign-lb-ip -svc mconnect-preferdual -ip 1000::2,10.0.0.2
 }
 cmd_tcase_check_servers() {
@@ -101,23 +86,10 @@ cmd_tcase_set_vip_routes() {
 }
 cmd_tcase_internal_mconnect() {
 	tcase "Internal connect"
-
 	mconnect_to mconnect.default.svc.$DOMAIN:5001
-
-	if test "$__mode" != "dual-stack"; then
-		if isDual3; then
-			mconnect_to mconnect-preferdual.default.svc.$DOMAIN:5001
-		fi
-		return 0
-	fi
-
-	# Dual-stack
 	mconnect_to mconnect-ipv4.default.svc.$DOMAIN
 	mconnect_to mconnect-ipv6.default.svc.$DOMAIN
-
-	if isDual3; then
-		mconnect_to mconnect-preferdual.default.svc.$DOMAIN:5001
-	fi
+	mconnect_to mconnect-preferdual.default.svc.$DOMAIN:5001
 }
 cmd_tcase_external_mconnect() {
 	tcase "External connect"
@@ -126,25 +98,8 @@ cmd_tcase_external_mconnect() {
 	else
 		mconnect_to "10.0.0.0:5001"
 	fi
-
-	if test "$__mode" != "dual-stack"; then
-		if isDual3; then
-			if ipv6base; then
-				mconnect_to "[1000::2]:5001"
-			else
-				mconnect_to "10.0.0.2:5001"
-			fi
-		fi
-		return 0
-	fi
-
-	# Dual-stack
 	mconnect_to "[1000::1]:5001"
 	mconnect_to "10.0.0.1:5001"
-
-	isDual3 || return 0
-
-	# Dual-stack phase.3
 	mconnect_to "[1000::2]:5001"
 	mconnect_to "10.0.0.2:5001"
 }

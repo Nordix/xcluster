@@ -13,7 +13,6 @@ i=$(hostname | cut -d- -f2 | sed -re 's,^0+,,')
 test $i -le 200 || exit 0
 
 test -n "$DOMAIN" || DOMAIN=xcluster
-test -n "$FEATURE_GATES" || FEATURE_GATES=IPv6DualStack=true
 . /etc/cri-plugin.rc
 
 if test -z "$BASE_FAMILY"; then
@@ -36,11 +35,12 @@ if kubectl version --short --client | grep -q v1.1; then
 	test "$BASE_FAMILY" = "IPv6" && NODE_IP=${IPV6_PREFIX}192.168.1.$i
 fi
 
+test -n "$FEATURE_GATES" && fg_param="--feature-gates $FEATURE_GATES"
+
 # --network-plugin=cni removed in v1.24!!
 run_kubelet() {
 	kubelet --address=:: $CRI_OPTS --node-ip=$NODE_IP \
-		--register-node=true --kubeconfig $KUBECONFIG \
-		--feature-gates $FEATURE_GATES \
+		--register-node=true --kubeconfig $KUBECONFIG $fg_param \
 		--cluster-dns=$DNS_ADR \
 		--cluster-domain=$DOMAIN \
 		--runtime-cgroups=/systemd/system.slice \
@@ -50,10 +50,6 @@ run_kubelet() {
 run_kube_proxy() {
 	local i g v
 	CLUSTER_CIDR=11.0.0.0/16,1100::/48
-	if echo "$FEATURE_GATES" | grep -q "IPv6DualStack=false"; then
-		CLUSTER_CIDR=11.0.0.0/16
-		test "$BASE_FAMILY" = "IPv6" && CLUSTER_CIDR=1100::/48
-	fi
 	sed -i -e "s,clusterCIDR:.*,clusterCIDR: \"$CLUSTER_CIDR\"," /etc/kubernetes/kube-proxy.config
 	kube-proxy --config /etc/kubernetes/kube-proxy.config --v 7 \
 		>> /var/log/kube-proxy.log 2>&1

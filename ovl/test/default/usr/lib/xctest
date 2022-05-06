@@ -405,18 +405,7 @@ log_version() {
 	tlog $(crio -v 2> /dev/null | grep "crio version")
 	local baseFamily=IPv4
 	ipv6base && baseFamily=IPv6
-	local dualMode="old dual-stack API"
-	isDual3 && dualMode="phase.3 dual-stack API"
-	if test "$__mode" = "dual-stack"; then
-		if echo "$FEATURE_GATES" | grep -q "IPv6DualStack=false"; then
-			tlog "WARNING: __mode=dual-stack but IPv6DualStack=false"
-			tlog "Single-stack cluster. BaseFamily=$baseFamily, $dualMode"
-		else
-			tlog "Dual-stack cluster. BaseFamily=$baseFamily, $dualMode"
-		fi
-	else
-		tlog "Single-stack cluster. BaseFamily=$baseFamily, $dualMode"
-	fi
+	tlog "BaseFamily=$baseFamily"
 }
 cni_plugin_info() {
 	if test -n "$CNI_INFO"; then
@@ -476,22 +465,6 @@ cni_plugin_info() {
 	echo "Unknown CNI-plugin"
 }
 
-##  isDual
-##    Returns true if K8s is dual-stack
-##
-isDual() {
-	echo "$FEATURE_GATES" | grep -q "IPv6DualStack=false" && return 1
-	echo "$xcluster_FEATURE_GATES" | grep -q "IPv6DualStack=false" && return 1
-	test "$__mode" = "dual-stack"
-}
-	
-##  isDual3
-##    Returns true if K8s dual-stack phase.3 is used ("ipFamilies" array).
-##
-isDual3() {
-	test "$(kubectl get svc -o json kubernetes | jq -r .spec.clusterIPs)" != "null"
-}
-
 ##  ipv6base
 ##    Returns true if the "main" cluster family is ipv6
 ##
@@ -500,9 +473,7 @@ ipv6base() {
 }
 
 ##  apply_k8s <manifest-dir>
-##    Applies k8s manifests in the passed dir. If $__mode=dual-stack
-##    manifest-dir/dual or manifest-dir/dual-old are also applied
-##    depending on "isDual3"
+##    Applies k8s manifests in the passed dir and in dir/dual.
 ##
 apply_k8s() {
 	tlog "Applying manifests from [$1]"
@@ -510,21 +481,8 @@ apply_k8s() {
 	test -d "$1" || tdie "Not a directory [$1]"
 	local yamld=$1
 	$kubectl apply -f $yamld || tdie
-
-	if isDual; then
-		if isDual3; then
-			if test -d $yamld/dual; then
-				$kubectl apply -f $yamld/dual || tdie
-			fi
-		else
-			if test -d $yamld/dual-old; then
-				$kubectl apply -f $yamld/dual-old || tdie
-			fi
-		fi
-	else
-		if isDual3 && test -d $yamld/single; then
-			$kubectl apply -f $yamld/single || tdie
-		fi
+	if test -d $yamld/dual; then
+		$kubectl apply -f $yamld/dual || tdie
 	fi
 	return 0
 }
