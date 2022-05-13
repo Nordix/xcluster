@@ -16,12 +16,7 @@ CNI-plugin ovl should be used, e.g. `k8s-cni-xcluster`.
 Start using the test system (prefered);
 ```
 log=/tmp/$USER-xcluster.log
-# Dual-stack with xcluster-cni;
 ./xcadmin.sh k8s_test --cni=xcluster test-template start > $log
-# Ipv4;
-./xcadmin.sh k8s_test --cni=flannel --mode=ipv4 test-template start > $log
-# Ipv6;
-./xcadmin.sh k8s_test --cni=calico --mode=ipv6 test-template start > $log
 ```
 
 Manual start;
@@ -30,12 +25,6 @@ export __
 eval $($XCLUSTER env | grep XCLUSTER_HOME)
 # Dual-stack (default);
 xc mkcdrom k8s-cni-xcluster
-xc starts --image=$XCLUSTER_HOME/hd-k8s-xcluster.img
-# Ipv4;
-SETUP=ipv4 xc mkcdrom k8s-xcluster k8s-cni-flannel
-xc starts --image=$XCLUSTER_HOME/hd-k8s-xcluster.img
-# Ipv6;
-SETUP=ipv6 xc mkcdrom k8s-xcluster k8s-cni-calico
 xc starts --image=$XCLUSTER_HOME/hd-k8s-xcluster.img
 ```
 
@@ -53,7 +42,6 @@ before test or start.
 ```
 log=/tmp/$USER-xcluster.log
 ./xcadmin.sh k8s_test --cni=xcluster test-template > $log
-./xcadmin.sh k8s_test --cni=weave test-template basic4 > $log
 ```
 
 ## CNI-plugin and private registry
@@ -63,8 +51,6 @@ used (and it *really* should) you must make sure that the images
 needed by the CNI-plugin is cached in the private local registry.
 
 ```
-images lreg_missingimages k8s-cni-calico
-# If there are missing images, cache them with;
-images lreg_cache ...
+images lreg_preload k8s-cni-calico
 ```
 

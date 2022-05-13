@@ -13,9 +13,6 @@ done
 
 Start;
 ```
-# Ipv4-only, ipv6-only, dual-stack;
-xcadmin k8s_test --cni=calico test-template --mode=ipv4 start_empty > $log
-xcadmin k8s_test --cni=calico test-template --mode=ipv6 start_empty > $log
 xcadmin k8s_test --cni=calico test-template start_empty > $log
 ```
 
