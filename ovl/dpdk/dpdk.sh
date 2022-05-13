@@ -37,7 +37,7 @@ dbg() {
 ##
 cmd_env() {
 
-	test -n "$__dpdk_ver" || __dpdk_ver=20.11
+	test -n "$__dpdk_ver" || __dpdk_ver=21.11.1
 	if ! test -n "$__dpdk_src"; then
 		__dpdk_src=$XCLUSTER_WORKSPACE/dpdk-stable-$__dpdk_ver
 		test "$__dpdk_ver" = "20.11" && \

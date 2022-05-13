@@ -88,7 +88,7 @@ start tx_first
 
 ## Build dpdk
 
-The latest LTS (Long Term Stable) version is used, at the moment 20.11;
+The latest LTS (Long Term Stable) version is used, at the moment 21.11.1;
 
 ```
 cdo dpdk
@@ -118,6 +118,7 @@ Dpdk build uses meson/ninja so these tools may have to be
 installed. Then build;
 
 ```
+#sudo apt install -y python3-pyelftools
 #sudo apt install -y meson  # Too old!
 ./dpdk.sh install_meson
 ./dpdk.sh download
