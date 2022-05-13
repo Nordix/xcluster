@@ -68,10 +68,7 @@ cmd_test() {
 			test_$t
 		done
 	else
-		for t in basic4 basic6 basic; do
-			unset __mode
-			test_$t
-		done
+		test_basic
 	fi		
 
 	now=$(date +%s)
@@ -95,15 +92,6 @@ test_start() {
 	otc 1 check_servers
 }
 
-test_basic4() {
-	__mode=ipv4
-	test_basic
-}
-
-test_basic6() {
-	__mode=ipv6
-	test_basic
-}
 test_basic() {
 	test -n "$__mode" || __mode=dual-stack
 	tlog "=== test-template: Basic test on $__mode"
