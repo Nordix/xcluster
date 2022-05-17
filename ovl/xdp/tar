@@ -40,7 +40,7 @@ for x in basic01-xdp-pass basic02-prog-by-name basic03-map-counter \
 done
 
 mkdir -p $tmp/root/xdptest
-make -C src O=$tmp/root/xdptest > /dev/null 
+make -C src O=$tmp/root/xdptest > /dev/null || die "Build"
 
 
 cd $tmp

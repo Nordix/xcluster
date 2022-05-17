@@ -38,6 +38,13 @@ sudo chmod u+s /usr/lib/qemu/qemu-bridge-helper
 sudo chmod u+s /usr/bin/qemu-system-x86_64
 ```
 
+Test to build;
+```
+. ./Envsettings
+mkdir -p /tmp/xdptest
+make -C src O=/tmp/xdptest
+```
+
 ## xdp-tutorial
 
 The tutorial at;
