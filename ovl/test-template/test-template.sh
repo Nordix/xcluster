@@ -32,8 +32,8 @@ dbg() {
 	test -n "$__verbose" && echo "$prg: $*" >&2
 }
 
-##  env
-##    Print environment.
+##   env
+##     Print environment.
 ##
 cmd_env() {
 
@@ -49,9 +49,8 @@ cmd_env() {
 }
 
 ##   test --list
-##   test [--xterm] [test...] > logfile
+##   test [--xterm] [--no-stop] [test...] > logfile
 ##     Exec tests
-##
 cmd_test() {
 	if test "$__list" = "yes"; then
 		grep '^test_' $me | cut -d'(' -f1 | sed -e 's,test_,,'
@@ -76,9 +75,10 @@ cmd_test() {
 
 }
 
+##   test start_empty
+##     Start a K8s cluster and setup routes
 test_start_empty() {
 	test -n "$__mode" || __mode=dual-stack
-	xcluster_prep $__mode
 	xcluster_start test-template
 
 	otc 1 check_namespaces
@@ -86,15 +86,17 @@ test_start_empty() {
 	otc 201 set_vip_routes
 	otc 202 set_vip_routes
 }
+##   test start
+##     Start a K8s cluster with test servers
 test_start() {
 	test_start_empty
 	otc 1 start_servers
 	otc 1 check_servers
 }
-
+##   test basic (default)
+##     Basic K8s tests
 test_basic() {
-	test -n "$__mode" || __mode=dual-stack
-	tlog "=== test-template: Basic test on $__mode"
+	tlog "=== test-template: Basic K8s test"
 	test_start
 
 	otc 1 check_pod_addresses
@@ -108,15 +110,10 @@ test_basic() {
 	xcluster_stop
 }
 
-
-cmd_otc() {
-	test -n "$__vm" || __vm=2
-	otc $__vm $@
-}
-
 . $($XCLUSTER ovld test)/default/usr/lib/xctest
 indent=''
 
+##
 # Get the command
 cmd=$1
 shift

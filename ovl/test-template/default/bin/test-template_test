@@ -42,13 +42,6 @@ cmd_tcase_check_namespaces() {
 cmd_tcase_check_nodes() {
 	test_nodes
 }
-cmd_tcase_check_coredns() {
-	test_coredns
-}
-cmd_tcase_check_metric_server() {
-	kubectl="kubectl -n kube-system"
-	test_deployment metrics-server 180
-}
 cmd_tcase_start_servers() {
 	$kubectl apply -f /etc/kubernetes/alpine.yaml || tdie
 	apply_k8s /etc/kubernetes/mconnect
@@ -60,7 +53,6 @@ cmd_tcase_start_servers() {
 
 	assign-lb-ip -svc mconnect-ipv4 || tdie
 	assign-lb-ip -svc mconnect-ipv6 || tdie
-
 	assign-lb-ip -svc mconnect-preferdual -ip 1000::2,10.0.0.2
 }
 cmd_tcase_check_servers() {
@@ -68,7 +60,6 @@ cmd_tcase_check_servers() {
 	test_daemonset mconnect 120
 	test_deployment mconnect-deployment 120
 }
-
 cmd_tcase_nslookup() {
 	tcase "Nslookup $1"
 	test -n "$1" || tdie "Nothing to lookup"
@@ -122,19 +113,13 @@ cmd_tcase_check_pod_addresses() {
 			found=$((found+1))
 		fi
 	done
-	case $__mode in
-		ipv4) test $found -eq 1 -o $found -eq 101 \
-			|| tdie "Invalid adr for $__mode; $adrs";;
-		ipv6) test $found -eq 100 -o $found -eq 101 \
-			|| tdie "Invalid adr for $__mode; $adrs";;
-		*) test $found -eq 101 || tdie "Invalid adr for $_mode; $adrs";;
-	esac
+	test $found -eq 101 || tdie "Invalid adr for $_mode; $adrs"
 
 	adr=$($kubectl get pod $pod -o json | jq -r .status.podIP)
 	if ipv6base; then
-		echo $adr | grep -q : || tlog "IGNORED: podIP has wrong family [$adr]"
+		echo $adr | grep -q : || tlog "IGNORED:podIP has wrong family in [$pod]"
 	else
-		echo $adr | grep -q : && tlog "IGNORED: podIP has wrong family [$adr]"
+		echo $adr | grep -q : && tdie "podIP has wrong family in [$pod]"
 	fi
 	return 0
 }
@@ -165,6 +150,7 @@ cmd_tcase_outgoing_connect() {
 	done
 }
 
+. /etc/profile
 . /usr/lib/xctest
 indent='  '
 

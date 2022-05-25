@@ -7,9 +7,19 @@ Template for test program using `ovl/test` script-based testing.
 
 ```
 log=/tmp/$USER/xcluster-test.log
-./test-template test basic > $log
-./test-template test basic6 > $log
-./test-template test basic4 > $log
+./test-template test > $log
+# Or;
+xcadmin k8s_test test-template > $log
+# Or with another CNI-plugin;
+xcadmin k8s_test --cni=cilium test-template > $log
+```
+
+If you use a [private registry](../private-reg/) (and you really
+should), then you must pre-load the CNI-plugin images;
+
+```
+images lreg_preload k8s-cni-calico
+xcadmin k8s_test --cni=calico test-template > $log
 ```
 
 
