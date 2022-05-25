@@ -89,7 +89,7 @@ and try to change "PASS" to "FAIL".
 
 ## More info
 
-Please see [ovl/test-template](../ovl/test-template) for a more
+Please see [ovl/test-template](../test-template) for a more
 comprehensive example.
 
 
