@@ -50,7 +50,7 @@ cmd_tcase_nslookup() {
 cmd_tcase_ssh() {
 	tcase "Ssh/scp tests"
 	dropbear -V
-	dbclient -y -y 192.168.0.2 ls / || tdie "ssh 192.168.0.2"
+	dbclient -y -y 192.168.1.2 ls / || tdie "ssh 192.168.1.2"
 }
 
 . /usr/lib/xctest

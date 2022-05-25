@@ -568,7 +568,7 @@ check_vm() {
 ##    Execute a test on all testers.
 ##
 otc() {
-	test -n "$otcprog" || otcprog=$(basename $dir)_test
+	test -n "$otcprog" || otcprog=$(basename $0 .sh)_test
 	local tc vm
 	vm=$1
 	shift
@@ -601,6 +601,13 @@ otct() {
 ##    Build a system (mkcdrom) and start xcluster.
 ##
 xcluster_start() {
+	# (mode set for backward compatibility)
+	__mode=dual-stack
+	export xcluster___mode=$__mode
+	test -n "$xcluster_DOMAIN" || xcluster_DOMAIN=xcluster
+	export xcluster_DOMAIN
+	test -n "$xcluster_KUBECONFIG" || xcluster_KUBECONFIG=/etc/kubernetes/kubeconfig.token
+	export xcluster_KUBECONFIG
 	test "$__no_start" = "yes" && return 0
 	test -n "$__nvm" || __nvm=4
 	test -n "$__nrouters" || __nrouters=2
@@ -614,7 +621,11 @@ xcluster_start() {
 		$XCLUSTER mkcdrom env $BASEOVLS $@ $XOVLS test || tdie
 	fi
 	tcase "Cluster start ($(basename $__image))"
-	$XCLUSTER $start || tdie
+	if test "$__xterm" = "yes"; then
+		$XCLUSTER start || tdie
+	else
+		$XCLUSTER starts || tdie
+	fi
 	sleep 2
 	local lastrouter=$((200 + __nrouters))
 	local lasttester=$((220 + __ntesters))
@@ -623,37 +634,21 @@ xcluster_start() {
 	tcase "VM connectivity; $EXPECTED_VMS"
 	tex check_vm $EXPECTED_VMS || tdie
 	popv
-	xcluster_unprep
 }
 
-##  xcluster_prep <ipv4|ipv6|dual-stack|...>
-##    Set SETUP and BASEOVLS variables for some pre-set configurations.
-##
 xcluster_prep() {
-	# NOTE!!!!!
-	# Update ovl/k8s-xcluster/xctest-hook when this function is updated!!
 	case $1 in
 		ipv4)
-			SETUP="ipv4,$XSETUP"
-			BASEOVLS=kubernetes
+			tdie "Single-stack not supported (IPv4)"
 			;;
 		ipv6)
-			SETUP="ipv6,$XSETUP"
-			BASEOVLS=kubernetes
-			;;
-		*)
-			SETUP=$XSETUP
-			__mode=dual-stack
+			tdie "Single-stack not supported (IPv6)"
 			;;
 	esac
-	export xcluster___mode=$1
-	test -n "$xcluster_DOMAIN" || xcluster_DOMAIN=xcluster
-	export xcluster_DOMAIN
-	test -n "$xcluster_KUBECONFIG" || xcluster_KUBECONFIG=/etc/kubernetes/kubeconfig.token
-	export xcluster_KUBECONFIG
+	tlog "OBSOLETE function used; xcluster_prep"
 }
 xcluster_unprep() {
-	unset SETUP BASEOVLS 
+	tlog "OBSOLETE function used; xcluster_unprep"
 }
 
 xcluster_stop() {
