@@ -352,10 +352,12 @@ cmd_mktar() {
 	test $(id -u) -eq 0 || die 'Must run as "root"'
 	rm -rf /tmp/var > /dev/null 2>&1
 	local f n
+	local skopeo=skopeo
+	test -x $GOPATH/bin/skopeo && skopeo=$GOPATH/bin/skopeo
 	mkdir -p $tmp
 	for f in $@; do
 		log "Adding [$f]"
-        if ! skopeo --insecure-policy copy docker-daemon:$f \
+        if ! $skopeo --insecure-policy copy docker-daemon:$f \
             containers-storage:$f > $tmp/out 2>&1; then
 			cat $tmp/out
 			die "skopeo failed [$f]"
