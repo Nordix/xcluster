@@ -353,7 +353,7 @@ cmd_mktar() {
 	rm -rf /tmp/var > /dev/null 2>&1
 	local f n
 	local skopeo=skopeo
-	test -x $GOPATH/bin/skopeo && skopeo=$GOPATH/bin/skopeo
+	test -x /home/$__user/go/bin/skopeo && skopeo=/home/$__user/go/bin/skopeo
 	mkdir -p $tmp
 	for f in $@; do
 		log "Adding [$f]"
