@@ -3,9 +3,12 @@ apiVersion: v1
 kind: Service
 metadata:
   name: usrsctp
+  # labels:
+  #   service.kubernetes.io/service-proxy-name: kpng-nfqlb
 spec:
+  allocateLoadBalancerNodePorts: false
   externalTrafficPolicy: Local
-  sessionAffinity: ClientIP
+  # sessionAffinity: ClientIP
   ipFamilyPolicy: PreferDualStack
   selector:
     app: usrsctp-server
@@ -19,9 +22,12 @@ apiVersion: v1
 kind: Service
 metadata:
   name: usrsctp-alternate
+  # labels:
+  #   service.kubernetes.io/service-proxy-name: kpng-nfqlb
 spec:
+  allocateLoadBalancerNodePorts: false
   externalTrafficPolicy: Local
-  sessionAffinity: ClientIP
+  # sessionAffinity: ClientIP
   ipFamilyPolicy: PreferDualStack
   selector:
     app: usrsctp-server

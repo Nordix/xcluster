@@ -16,6 +16,7 @@ test -n "$PREFIX" || PREFIX=1000::1
 test -n "$FIRST_WORKER" || FIRST_WORKER=1
 client_yamld=/etc/kubernetes/usrsctp-client
 server_yamld=/etc/kubernetes/usrsctp-server
+kpng_yamld=/etc/kubernetes/kpng-nfqlb
 
 die() {
 	echo "ERROR: $*" >&2
@@ -42,6 +43,12 @@ cmd_tcase_check_namespaces() {
 }
 cmd_tcase_check_nodes() {
     test_nodes
+}
+
+cmd_tcase_deploy_kpng_pods() {
+	tcase "Deploy KPNG pods"
+	apply_k8s $kpng_yamld
+	test_daemonset kpng-nfqlb-proxy 180
 }
 
 cmd_tcase_deploy_client_pods() {
@@ -87,6 +94,12 @@ cmd_tcase_vip_ecmp_route() {
 	test -n "$1" && net=$1
 	tcase "Setup VIP ECMP routes. net=$net"
 	vip_route $net
+}
+cmd_tcase_vip_route() {
+	tcase "Setup VIP route to [$1]"
+	ip ro replace 10.0.0.0/24 via $1
+	ip -6 ro replace 1000::/120 via $PREFIX:$1
+	ip -6 ro replace $PREFIX:10.0.0.0/120 via $PREFIX:$1
 }
 cmd_tcase_interface_up() {
 	tcase "Bring up $1"

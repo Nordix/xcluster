@@ -1,0 +1,19 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: kpng-nfqlb-proxy
+spec:
+  selector:
+    matchLabels:
+      app: kpng-nfqlb-proxy
+  template:
+    metadata:
+      labels:
+        app: kpng-nfqlb-proxy
+    spec:
+      hostNetwork: true
+      containers:
+      - name: kpng
+        image: registry.nordix.org/cloud-native/kpng-nfqlb-proxy:latest
+        securityContext:
+          privileged: true

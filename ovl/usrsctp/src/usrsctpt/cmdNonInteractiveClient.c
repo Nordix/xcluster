@@ -57,9 +57,9 @@ static int cmdNoInteractiveClient(int argc, char **argv)
 	if (lcnt < 0)
 		die("Invalid local addresses [%s]\n", laddr);
 
-	logf("Sleep 10 seconds before start");
-	sleep(10);
-	logf("Sleep done, starting program");
+	// logf("Sleep 10 seconds before start");
+	// sleep(10);
+	// logf("Sleep done, starting program");
 
 	usrsctp_init(atoi(lencapport), NULL, debug_printf_stack);
 #ifdef SCTP_DEBUG
