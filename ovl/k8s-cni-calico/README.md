@@ -66,9 +66,9 @@ $($XCLUSTER ovld $t)/$t.sh test basic_dual > /dev/null
 ### Install calicoctl
 
 ```
-ver=v3.22.1
+ver=v3.23.1
 curl -L \
- https://github.com/projectcalico/calicoctl/releases/download/$ver/calicoctl \
+ https://github.com/projectcalico/calico/releases/download/$ver/calicoctl-linux-amd64 \
  > $GOPATH/bin/calicoctl
 chmod a+x $GOPATH/bin/calicoctl
 ```
