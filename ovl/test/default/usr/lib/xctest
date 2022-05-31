@@ -224,11 +224,18 @@ test_deployment() {
 		jq -r '.spec.selector.matchLabels|to_entries[0]|.key + "=" + .value')
 	echo "POD selector [$selector]"
 	test -n "$2" && pushv $2
-	tex "npods $selector $replicas" || tdie
+	tex deployment_nready $1 $replicas
 	tex "check_pods_ready $selector" || tdie
 	test -n "$2" && popv
 	return 0
 }
+deployment_nready() {
+	local nready=$($kubectl get deployment $1 -o json | \
+		jq -r '.status.readyReplicas')
+	test "$nready" = "null" && return 1
+	test "$nready" -eq "$2"
+}
+
 
 ##  test_daemonset <daemonset> [timeout]
 ##    Verify that all PODs in a deployment are ready
