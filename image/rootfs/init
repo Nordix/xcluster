@@ -25,7 +25,7 @@ mount /dev/mqueue
 mkdir -p /mnt
 if mount -t iso9660 /dev/vdb /mnt > /dev/null 2>&1; then
 	for n in $(find /mnt -name '*.tar' | sort); do
-		EXTRACT_UNSAFE_SYMLINKS=1 tar -C / -xf $n
+		EXTRACT_UNSAFE_SYMLINKS=1 tar -C / -o -xf $n
 	done
 	umount /mnt
 fi

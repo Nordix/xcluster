@@ -75,6 +75,6 @@ test -n "$__version" && \
 	sed -i -e "s,0\.0\.0,$__version," $tmp/etc/issue $tmp/etc/os-release
 
 cd $tmp
-tar cf $1 *
+tar --owner=0 --group=0 -cf $1 *
 cd
 rm -rf $tmp
