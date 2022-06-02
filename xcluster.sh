@@ -119,7 +119,7 @@ cmd_env() {
 
 	__ipver=5.7.0
 	__dropbearver=2020.81
-	__diskimver=v0.4.0
+	__diskimver=1.0.0
 	test -n "$DISKIM" || DISKIM=$XCLUSTER_WORKSPACE/diskim-$__diskimver/diskim.sh
 
 	if test "$cmd" = "env"; then
