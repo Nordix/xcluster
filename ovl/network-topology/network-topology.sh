@@ -205,6 +205,24 @@ base_test() {
 	otc 221 "wget http://www.google.se"
 }
 
+##   test diamond
+test_diamond() {
+	export TOPOLOGY=diamond
+	tlog "=== network-topology test: $TOPOLOGY"
+	test_start
+	base_test
+	xcluster_stop
+}
+
+base_test() {
+	otc 1 "ping 192.168.2.221"
+	otc 221 "ping 192.168.1.2"
+	otc 1 "nslookup www.google.se"
+	otc 221 "nslookup www.google.se"
+	otc 1 "wget http://www.google.se"
+	otc 221 "wget http://www.google.se"
+}
+
 ##
 . $($XCLUSTER ovld test)/default/usr/lib/xctest
 indent=''

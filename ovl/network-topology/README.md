@@ -154,3 +154,13 @@ bit-fields. Example
 
 An "evil tester" is added to the path intended for doing bad things
 with traffic for test purposes.
+
+
+## Diamond
+
+<img src="diamond.svg" alt="Diamond topology" width="80%" />
+
+For basic experiments with multi-path networks, e.g with
+[SRv6](https://en.wikipedia.org/wiki/Segment_routing). The upper is
+the "odd" path, the lower is the "even" path.
+
