@@ -117,7 +117,7 @@ cmd_env() {
 	test -n "$__nets_router" || __nets_router=0,1,2
 	test -n "$__base_libs" || __base_libs=$XCLUSTER_HOME/base-libs.txt
 
-	__ipver=5.7.0
+	__ipver=5.18.0
 	__dropbearver=2020.81
 	__diskimver=1.0.0
 	test -n "$DISKIM" || DISKIM=$XCLUSTER_WORKSPACE/diskim-$__diskimver/diskim.sh
@@ -465,7 +465,6 @@ cmd_dropbear_build() {
 ##   cplib [--base-libs=file] --dest=dir
 ##   libs [--base-libs=file]
 ##   cploader --dest=dir
-##   ovld ovl
 cmd_mkimage() {
 	cmd_env
 	test -r $__kbin || die "Kernel not built [$__kbin]"
@@ -671,19 +670,6 @@ cmd_collect_tar() {
 	done
 }
 
-cmd_ovld() {
-	test -n "$1" || die "No ovl"
-	cmd_env
-	local d
-	for d in $(echo $XCLUSTER_OVLPATH | tr : ' '); do
-		if test -d $d/$1; then
-			echo "$d/$1"
-			return 0
-		fi
-	done
-	die "Ovl not found [$1]"
-}
-
 ##   inject [--sudo=sudo] [--key=file] --addr=root@... [ovl...]
 ##     Install ovl's on a running target. The target does not have to be a
 ##     xcluster VM. Example inject on an AWS instance;
@@ -702,6 +688,68 @@ cmd_inject() {
 		ovld=$(cmd_ovld $ovl)
 		$ovld/tar - | ssh $sshopt $__addr $__sudo tar -C / -x
 	done
+}
+
+##  Utilities;
+##   ovld ovl
+##   rsh [--bg] <vm> command...
+##   rcp <vm> <remote-file> <local-file>
+##   tcpdump [--start|get] <vm> <interface> [opts...]
+##
+cmd_ovld() {
+	test -n "$1" || die "No ovl"
+	cmd_env
+	local d
+	for d in $(echo $XCLUSTER_OVLPATH | tr : ' '); do
+		if test -d $d/$1; then
+			echo "$d/$1"
+			return 0
+		fi
+	done
+	die "Ovl not found [$1]"
+}
+
+sshopt="-o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no"
+cmd_rsh() {
+	test -n "$1" || die "No VM"
+	local vm=$1
+	shift
+	local adr
+	if ip link show xcbr1 > /dev/null 2>&1; then
+		adr="root@192.168.0.$vm"
+	else
+		adr="-p $((12300+vm)) root@127.0.0.1"
+	fi
+	if test "$__bg" = "yes"; then
+		ssh -q $sshopt $adr sh -c "'$@ > /dev/null 2>&1 &'"
+	else
+		ssh -q $sshopt $adr $@
+	fi
+}
+cmd_rcp() {
+	test -n "$2" || die "Too few parameters"
+	local vm=$1
+	shift
+	if ip link show xcbr1 > /dev/null 2>&1; then
+		scp -q $sshopt root@192.168.0.$vm:$1 $2
+	else
+		scp -q $sshopt -P $((12300+vm)) root@127.0.0.1:$1 $2
+	fi
+}
+cmd_tcpdump() {
+	test -n "$2" || die "Too few parameters"
+	local vm=$1; shift
+	local iface=$1; shift
+	local file=$(printf "/tmp/vm-%03u-$iface.pcap" $vm)
+	if test "$__start" = "yes"; then
+		__bg=yes
+		cmd_rsh $vm tcpdump -Z root -ni $iface -w $file $@
+	else
+		cmd_rsh $vm killall tcpdump
+		sleep 0.5
+		cmd_rcp $vm $file $file || die
+		echo "wireshark $file &"
+	fi
 }
 
 
