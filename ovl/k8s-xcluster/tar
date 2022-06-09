@@ -73,7 +73,7 @@ mkdir -p $tmp/opt/cni/bin
 tar -C $tmp/opt/cni/bin -xf $ar ./loopback
 
 # Install libraries
-$XCLUSTER cplib --dest=$tmp $tmp/bin/*
+$XCLUSTER cplib --dest=$tmp $tmp/bin/* $tmp/sbin/*
 
 cd $tmp
 tar cf "$1" *

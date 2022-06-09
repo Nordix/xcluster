@@ -53,7 +53,7 @@ test -x $f || f=$GOPATH/bin/assign-lb-ip
 test -x $f && cp $f $tmp/bin
 
 # Install libraries
-$XCLUSTER cplib --dest=$tmp $tmp/bin/*
+$XCLUSTER cplib --dest=$tmp $tmp/bin/* $tmp/sbin/*
 
 cd $tmp
 tar cf "$1" *
