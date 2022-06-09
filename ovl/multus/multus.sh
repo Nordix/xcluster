@@ -86,11 +86,8 @@ test_start_empty() {
 	test -r "$ar" || die "Not readable [$ar]"
 	export __cniver
 	tlog "Using cni-plugins $__cniver"
-	test -n "$__mode" || __mode=dual-stack
-	export xcluster___mode=$__mode
-	export TOPOLOGY=multilan
+	export TOPOLOGY=multilan-router
 	. $($XCLUSTER ovld network-topology)/$TOPOLOGY/Envsettings
-	xcluster_prep $__mode
 	xcluster_start multus
 
 	otc 1 check_namespaces
@@ -101,7 +98,7 @@ test_start_empty() {
 	otcw "ifup eth4"
 	otc 1 start_multus
 }
-##   test start_empty
+##   test start
 ##     Start with Alpine POD
 test_start() {
 	test_start_empty
