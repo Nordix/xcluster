@@ -1,0 +1,175 @@
+#! /bin/sh
+##
+## srv6_test --
+##
+##   Test script for srv6 executed in xcluster.
+##
+## Commands;
+##
+
+prg=$(basename $0)
+dir=$(dirname $0); dir=$(readlink -f $dir)
+me=$dir/$prg
+tmp=/tmp/${prg}_$$
+test -n "$DOMAIN" || DOMAIN=xcluster
+
+
+die() {
+	echo "ERROR: $*" >&2
+	rm -rf $tmp
+	exit 1
+}
+help() {
+	grep '^##' $0 | cut -c3-
+	rm -rf $tmp
+	exit 0
+}
+test -n "$1" || help
+echo "$1" | grep -qi "^help\|-h" && help
+
+log() {
+	echo "$prg: $*" >&2
+}
+dbg() {
+	test -n "$__verbose" && echo "$prg: $*" >&2
+}
+
+cmd_tcase_flush_routes() {
+	tcase "Flush gateway routes"
+	local a
+	for n in $(ip -6 -j ro | jq -r '.[]|select(.nexthops != null)|.dst'); do
+		ip -6 ro delete $n
+	done
+	for n in $(ip -6 -j ro | jq -r '.[]|select(.gateway != null)|.dst'); do
+		ip -6 ro delete $n
+	done
+	for n in $(ip -j ro | jq -r '.[]|select(.nexthops != null)|.dst'); do
+		ip ro delete $n
+	done
+	for n in $(ip -j ro | jq -r '.[]|select(.gateway != null)|.dst'); do
+		ip ro delete $n
+	done
+}
+
+mysid() {
+	local i=$(mynode)
+	test $i -gt 200 -a $i -lt 220 || tdie "SRv6 only on routers"
+	echo "fc00:$i"
+}
+
+cmd_tcase_enable_srv6() {
+	tcase "Enable SRv6"
+	local iface
+	for iface in $(ip -j link show | jq -r .[].ifname | grep -E 'eth[1-9]'); do
+		sysctl -w net.ipv6.conf.$iface.seg6_enabled=1
+	done
+
+	# Setup the local SID table
+	mkdir -p /etc/iproute2
+	echo "100 localsid" >> /etc/iproute2/rt_tables
+	ip -6 route add blackhole default table localsid
+	ip -6 rule add to $(mysid)::/64 lookup localsid
+
+	# Setup routes to the adjacent segments.  We can do this because
+	# we are topology aware. IRL this would be done by a routing protocol.
+	case $(hostname) in
+		vm-201)
+			ip -6 ro add fc00:203::/64 via 1000::1:192.168.3.203
+			ip -6 ro add fc00:204::/64 via 1000::1:192.168.4.204;;
+		vm-202)
+			ip -6 ro add fc00:203::/64 via 1000::1:192.168.5.203
+			ip -6 ro add fc00:204::/64 via 1000::1:192.168.6.204;;
+		vm-203)
+			ip -6 ro add fc00:201::/64 via 1000::1:192.168.3.201
+			ip -6 ro add fc00:202::/64 via 1000::1:192.168.5.202;;
+		vm-204)
+			ip -6 ro add fc00:201::/64 via 1000::1:192.168.4.201
+			ip -6 ro add fc00:202::/64 via 1000::1:192.168.6.202;;
+		*)
+			tdie "Unknown hostname [$(hostname)]"
+	esac
+}
+
+cmd_tcase_intermediate() {
+	tcase "Intermediate segment endpoint"
+	ip -6 ro add $(mysid)::/64 encap seg6local action End count dev eth0 table localsid
+}
+cmd_tcase_ping() {
+	tcase "Ping $1"
+	ping -c1 -W1 $1
+}
+
+cmd_tcase_decapsulate() {
+	tcase "Decapsulate inner packet"
+	ip -6 ro add $(mysid)::6 encap seg6local \
+		action End.DX6 nh6 :: dev eth0 table localsid || tdie
+	ip -6 ro add $(mysid)::4 encap seg6local \
+		action End.DX4 nh4 0.0.0.0 dev eth0 table localsid
+}
+
+cmd_tcase_sr() {
+	test -n "$2" || tdie "No segments"
+	local to=$1
+	shift
+	tcase "Setup SR to [$to] via [$@]"
+	local s1=$1
+	shift
+	local s segs
+	segs="fc00:$s1::6"
+	for s in $@; do
+		segs="$segs,fc00:$s::6"
+	done
+	ip -6 route add 1000::1:$to/120 encap seg6 mode encap \
+		segs $segs dev eth0 || tdie
+	segs=$(echo $segs | sed -e 's,::6,::4,g')
+	ip route add $to/24 encap seg6 mode encap segs $segs dev eth0 || tdie
+}
+
+cmd_tcase_default_route() {
+	tcase "Default route; $@"
+	ip route replace default via $@ || tdie
+	ip -6 route replace default via 1000::1:$@ || tdie
+}
+
+cmd_tcase_http() {
+	tcase "Test mtu by http GET $1"
+	test -n "$1" || tdie "No address"
+	local adr="[1000::1:$1]"
+	curl -s http://$adr/ > /tmp/index6.html || tdie "Curl $adr"
+	diff /root/www/index.html /tmp/index6.html || tdie "Diff $adr"
+	local adr="$1"
+	curl -s http://$adr/ > /tmp/index4.html || tdie "Curl $adr"
+	diff /root/www/index.html /tmp/index4.html || tdie "Diff $adr"
+}
+
+
+. /etc/profile
+. /usr/lib/xctest
+indent='  '
+
+
+# Get the command
+cmd=$1
+shift
+grep -q "^cmd_$cmd()" $0 || die "Invalid command [$cmd]"
+
+while echo "$1" | grep -q '^--'; do
+	if echo $1 | grep -q =; then
+		o=$(echo "$1" | cut -d= -f1 | sed -e 's,-,_,g')
+		v=$(echo "$1" | cut -d= -f2-)
+		eval "$o=\"$v\""
+	else
+		o=$(echo "$1" | sed -e 's,-,_,g')
+		eval "$o=yes"
+	fi
+	shift
+done
+unset o v
+long_opts=`set | grep '^__' | cut -d= -f1`
+
+# Execute command
+trap "die Interrupted" INT TERM
+cmd_$cmd "$@"
+status=$?
+rm -rf $tmp
+exit $status
