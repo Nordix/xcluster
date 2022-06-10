@@ -15,6 +15,7 @@ log() {
 
 test -n "$1" || die "No out-file"
 
+mkdir -p $tmp
 cp -R $dir/default/* $tmp
 
 cd $tmp

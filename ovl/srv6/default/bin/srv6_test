@@ -34,6 +34,10 @@ dbg() {
 	test -n "$__verbose" && echo "$prg: $*" >&2
 }
 
+cmd_tcase_version() {
+	log_version
+}
+
 cmd_tcase_flush_routes() {
 	tcase "Flush gateway routes"
 	local a

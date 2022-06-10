@@ -84,6 +84,7 @@ test_start_empty() {
 	export TOPOLOGY=diamond
 	. $($XCLUSTER ovld network-topology)/$TOPOLOGY/Envsettings
 	xcluster_start network-topology iptools srv6
+	otc 1 version
 	otcr flush_routes
 }
 ##   test start
