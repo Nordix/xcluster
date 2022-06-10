@@ -405,6 +405,7 @@ do_mconnect() {
 log_version() {
 	. /etc/os-release
 	test "$VERSION" != "1.0" && tlog "Xcluster: $VERSION"
+	which kubectl > /dev/null || return 0
 	tlog "$(kubectl version --short=true | grep Server)"
 	tlog "$(uname -s -r -v)"
 	tlog "CNI-plugin; $(cni_plugin_info)"
