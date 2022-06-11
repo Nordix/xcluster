@@ -694,7 +694,8 @@ cmd_inject() {
 ##   ovld ovl
 ##   rsh [--bg] <vm> command...
 ##   rcp <vm> <remote-file> <local-file>
-##   tcpdump [--start|get] <vm> <interface> [opts...]
+##   tcpdump --start|get <vm> <interface> [opts...]
+##   tcpdump --get <vm> <interface...>
 ##
 cmd_ovld() {
 	test -n "$1" || die "No ovl"
@@ -739,16 +740,21 @@ cmd_rcp() {
 cmd_tcpdump() {
 	test -n "$2" || die "Too few parameters"
 	local vm=$1; shift
-	local iface=$1; shift
-	local file=$(printf "/tmp/vm-%03u-$iface.pcap" $vm)
+	local iface file
 	if test "$__start" = "yes"; then
 		__bg=yes
+		iface=$1; shift
+		file=$(printf "/tmp/vm-%03u-$iface.pcap" $vm)
 		cmd_rsh $vm tcpdump -Z root -ni $iface -w $file $@
-	else
+	elif test "$__get" = "yes"; then
 		cmd_rsh $vm killall tcpdump
 		sleep 0.5
-		cmd_rcp $vm $file $file || die
-		echo "wireshark $file &"
+		for iface in $@; do
+			file=$(printf "/tmp/vm-%03u-$iface.pcap" $vm)
+			cmd_rcp $vm $file $file && echo "wireshark $file &"
+		done
+	else
+		die "Either --start or --get must be specified"
 	fi
 }
 
@@ -884,8 +890,8 @@ cmd_geometry() {
 cmd_status() {
 	cmd_env
 	test -n "$__nvm" || __nvm=8
-	test -n "$__nrouters" || __nrouters=2
-	test -n "$__ntesters" || __ntesters=0
+	test -n "$__nrouters" || __nrouters=4
+	test -n "$__ntesters" || __ntesters=2
 	local n s alive=0 hvm=0
 	for n in $(seq 1 $__nvm) $(seq 201 $((200+__nrouters))) \
 		$(seq 221 $((220+__ntesters))); do
@@ -1006,9 +1012,9 @@ cmd_starts() {
 }
 
 cmd_stop() {
-	test -n "$__nvm" || __nvm=100
-	test -n "$__nrouters" || __nrouters=2
-	test -n "$__ntesters" || __ntesters=2
+	test -n "$__nvm" || __nvm=16
+	test -n "$__nrouters" || __nrouters=8
+	test -n "$__ntesters" || __ntesters=8
 	stop $__nvm $__nrouters $__ntesters
 	return 0
 }
