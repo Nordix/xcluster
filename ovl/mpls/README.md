@@ -51,6 +51,18 @@ ping 1000::1:192.168.2.221
 
 I direct packets to `lo` for decapsulation. Is there a better way?
 
+You may capture traffic to see what's happening;
+```
+# On host
+./mpls.sh test --no-stop > $log
+xc tcpdump --start 203 eth1
+xc tcpdump --start 203 eth2
+# On vm-001
+ping -c2 192.168.2.221
+# On host
+xc tcpdump --get 203 eth1 eth2
+```
+
 
 ## References
 

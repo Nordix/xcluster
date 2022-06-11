@@ -67,7 +67,7 @@ cmd_test() {
             test_$t
         done
     else
-        test_start
+        test_basic
     fi      
 
     now=$(date +%s)
@@ -95,7 +95,7 @@ test_start() {
 	otcr enable_mpls
 }
 
-##   test basic
+##   test basic (default)
 ##     Setup MPLS for IPv4/IPv6 and test with ping
 test_basic() {
 	tlog "=== Basic test with ping"
