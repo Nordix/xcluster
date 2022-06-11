@@ -95,6 +95,19 @@ test_start() {
 	otcr enable_mpls
 }
 
+##   test start_full_mpls
+##     Start cluster with MPLS enabled on ALL nodes
+test_start_full_mpls() {
+	test -n "$__nvm" || __nvm=4
+	test_start_empty
+	otcr flush_routes
+	otcr enable_mpls
+	otcw flush_routes
+	otcw enable_mpls
+	otct flush_routes
+	otct enable_mpls
+}
+
 ##   test basic (default)
 ##     Setup MPLS for IPv4/IPv6 and test with ping
 test_basic() {
@@ -106,6 +119,25 @@ test_basic() {
 	otc 204 intermediate
 	otc 1 "ping 192.168.2.221"
 	otc 1 "ping 1000::1:192.168.2.221"
+	xcluster_stop
+}
+
+##   test basic_sr
+##     Test basic Segment Routing
+test_basic_sr() {
+	tlog "=== Basic Segment Routing test"
+	test_start_full_mpls
+	otcw "sr_vm 203"
+	otc 221 "sr_tester 203"
+	otc 201 sr_router
+	otc 202 sr_router
+	otc 203 sr_router
+	otc 204 sr_router
+	local n
+	for n in $(seq 1 $__nvm); do
+		otc 221 "ping 192.168.1.$n"
+		otc 221 "ping 1000::1:192.168.1.$n"
+	done
 	xcluster_stop
 }
 

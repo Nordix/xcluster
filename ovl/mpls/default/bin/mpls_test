@@ -107,7 +107,59 @@ cmd_tcase_intermediate() {
 			ip -f mpls route add 202 as 204 via inet6 1000::1:192.168.4.201
 			;;
 		*)
-			tdie "Not an intermediate router"
+			tdie "Not a router"
+	esac
+}
+
+cmd_tcase_sr_vm() {
+	tcase "Setup endpoint SR on a vm via [$1]"
+	test -n "$1" || die "No via"
+	ip route replace 192.168.2.221/32 encap mpls $1/202/221 \
+		via inet6 1000::1:192.168.1.201
+	ip -6 route replace 1000::1:192.168.2.221/128 encap mpls $1/202/221 \
+		via inet6 1000::1:192.168.1.201
+}
+
+cmd_tcase_sr_tester() {
+	tcase "Setup endpoint SR on a tester via [$1]"
+	test -n "$1" || die "No via"
+	local n l
+	for n in $(seq 1 $__nvm); do
+		l=$((n + 100))
+		ip route replace 192.168.1.$n/32 encap mpls $1/201/$l \
+			via inet6 1000::1:192.168.2.202 || tdie
+		ip -6 route replace 1000::1:192.168.1.$n/128 encap mpls $1/201/$l \
+			via inet6 1000::1:192.168.2.202 || tdie
+	done
+}
+
+cmd_tcase_sr_router() {
+	tcase "Setup intermediate SR on a router"
+	local n l
+	case $(hostname) in
+		vm-201)
+			ip -f mpls route add 203 via inet6 1000::1:192.168.3.203
+			ip -f mpls route add 204 via inet6 1000::1:192.168.4.204
+			for n in $(seq 1 $__nvm); do
+				l=$((n + 100))
+				ip -f mpls route add $l via inet6 1000::1:192.168.1.$n
+			done
+			;;
+		vm-202)
+			ip -f mpls route add 203 via inet6 1000::1:192.168.5.203
+			ip -f mpls route add 204 via inet6 1000::1:192.168.6.204
+			ip -f mpls route add 221 via inet6 1000::1:192.168.2.221
+			;;
+		vm-203)
+			ip -f mpls route add 201 via inet6 1000::1:192.168.3.201
+			ip -f mpls route add 202 via inet6 1000::1:192.168.5.202
+			;;		
+		vm-204)
+			ip -f mpls route add 201 via inet6 1000::1:192.168.4.201
+			ip -f mpls route add 202 via inet6 1000::1:192.168.6.202
+			;;		
+		*)
+			tdie "Not a router"
 	esac
 }
 
