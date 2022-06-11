@@ -889,12 +889,13 @@ cmd_geometry() {
 }
 cmd_status() {
 	cmd_env
-	test -n "$__nvm" || __nvm=8
-	test -n "$__nrouters" || __nrouters=4
-	test -n "$__ntesters" || __ntesters=2
+	local nvm=8 nrouters=4 ntesters=2
+	test -n "$__nvm" && test "$__nvm" -gt $nvm && nvm=$__nvm
+	test -n "$__nrouters" && test $__nrouters -gt $nrouters && nrouters=$__nrouters
+	test -n "$__ntesters" && test $__ntesters -gt $ntesters && ntesters=$__ntesters
 	local n s alive=0 hvm=0
-	for n in $(seq 1 $__nvm) $(seq 201 $((200+__nrouters))) \
-		$(seq 221 $((220+__ntesters))); do
+	for n in $(seq 1 $nvm) $(seq 201 $((200+nrouters))) \
+		$(seq 221 $((220+ntesters))); do
 		s=alive
 		if echo help | telnet 127.0.0.1 $((XCLUSTER_MONITOR_BASE+n)) 2>&1 | \
 			grep -q 'Connection refused'; then
@@ -911,7 +912,6 @@ cmd_status() {
 
 cmd_start() {
 	cmd_env
-
 	local n dev
 	if test -z "$__net_setup"; then
 		for n in 0 1 2; do
@@ -1012,20 +1012,11 @@ cmd_starts() {
 }
 
 cmd_stop() {
-	test -n "$__nvm" || __nvm=16
-	test -n "$__nrouters" || __nrouters=8
-	test -n "$__ntesters" || __ntesters=8
-	stop $__nvm $__nrouters $__ntesters
-	return 0
-}
-stop() {
 	cmd_env
-	local nvm=$1
-	local nrouters=$2
-	local ntesters=$3
-	test -n "$nvm" || nvm=100
-	test -n "$nrouters" || nrouters=2
-	test -n "$ntesters" || ntesters=2
+	local nvm=8 nrouters=4 ntesters=2
+	test -n "$__nvm" && test "$__nvm" -gt $nvm && nvm=$__nvm
+	test -n "$__nrouters" && test $__nrouters -gt $nrouters && nrouters=$__nrouters
+	test -n "$__ntesters" && test $__ntesters -gt $ntesters && ntesters=$__ntesters
 	local lastr=$((200+nrouters))
 	local lastt=$((220+ntesters))
 	local nodeid port
