@@ -1,0 +1,150 @@
+#! /bin/sh
+##
+## mpls_test --
+##
+##   Test script for mpls executed in xcluster.
+##
+## Commands;
+##
+
+prg=$(basename $0)
+dir=$(dirname $0); dir=$(readlink -f $dir)
+me=$dir/$prg
+tmp=/tmp/${prg}_$$
+test -n "$DOMAIN" || DOMAIN=xcluster
+
+die() {
+	echo "ERROR: $*" >&2
+	rm -rf $tmp
+	exit 1
+}
+help() {
+	grep '^##' $0 | cut -c3-
+	rm -rf $tmp
+	exit 0
+}
+test -n "$1" || help
+echo "$1" | grep -qi "^help\|-h" && help
+
+log() {
+	echo "$prg: $*" >&2
+}
+dbg() {
+	test -n "$__verbose" && echo "$prg: $*" >&2
+}
+
+cmd_tcase_version() {
+	log_version
+}
+
+cmd_tcase_flush_routes() {
+	tcase "Flush gateway routes"
+	local a
+	for n in $(ip -6 -j ro | jq -r '.[]|select(.nexthops != null)|.dst'); do
+		ip -6 ro delete $n
+	done
+	for n in $(ip -6 -j ro | jq -r '.[]|select(.gateway != null)|.dst'); do
+		ip -6 ro delete $n
+	done
+	for n in $(ip -j ro | jq -r '.[]|select(.nexthops != null)|.dst'); do
+		ip ro delete $n
+	done
+	for n in $(ip -j ro | jq -r '.[]|select(.gateway != null)|.dst'); do
+		ip ro delete $n
+	done
+}
+cmd_tcase_enable_mpls() {
+	tcase "Enable MPLS"
+	modprobe mpls_router || tdie "modue missing"
+	modprobe mpls_iptunnel || tdie "modue missing"
+	sysctl -w net.mpls.platform_labels=65535 || tdie
+	local iface
+	for iface in /proc/sys/net/mpls/conf/eth[1-3]; do
+		echo 1 > $iface/input
+	done
+}
+
+cmd_tcase_edge() {
+	tcase "Setup MPLS on an edge router eg/in [$1 $2]"
+	test -n "$2" || tdie "Param missing"
+	case $(hostname) in
+		vm-201) edgeVM $1 $2;;
+		vm-202) edgeTESTER $1 $2;;
+		*)
+			tdie "Not an edge router"
+	esac
+}
+edgeVM() {
+	local eg=$1
+	local in=$2
+	local me=$(hostname | sed -e 's,vm-,,')
+	local nexthop=1000::1:192.168.3.203
+	test $eg -eq 204 && nexthop=1000::1:192.168.4.204
+	ip route add 192.168.2.0/24 encap mpls $me via inet6 $nexthop
+	ip -6 route add 1000::1:192.168.2.0/24 encap mpls $me via inet6 $nexthop
+	ip -f mpls route add $in dev lo
+}
+
+edgeTESTER() {
+	local eg=$1
+	local in=$2
+	local me=$(hostname | sed -e 's,vm-,,')
+	local nexthop=1000::1:192.168.5.203
+	test $eg -eq 204 && nexthop=1000::1:192.168.6.204
+	ip route add 192.168.1.0/24 encap mpls $me via inet6 $nexthop
+	ip -6 route add 1000::1:192.168.1.0/24 encap mpls $me via inet6 $nexthop
+	ip -f mpls route add $in dev lo
+}
+cmd_tcase_intermediate() {
+	tcase "Setup MPLS on an intermediate router"
+	case $(hostname) in
+		vm-203)
+			ip -f mpls route add 201 as 203 via inet6 1000::1:192.168.5.202
+			ip -f mpls route add 202 as 203 via inet6 1000::1:192.168.3.201
+			;;
+		vm-204)
+			ip -f mpls route add 201 as 204 via inet6 1000::1:192.168.6.202
+			ip -f mpls route add 202 as 204 via inet6 1000::1:192.168.4.201
+			;;
+		*)
+			tdie "Not an intermediate router"
+	esac
+}
+
+cmd_tcase_ping() {
+	tcase "Ping [$1]"
+	test -n "$1" || tdie "Param missing"
+	ping -c1 -W1 $1
+}
+
+
+. /etc/profile
+. /usr/lib/xctest
+indent='  '
+
+
+# Get the command
+cmd=$1
+shift
+grep -q "^cmd_$cmd()" $0 || die "Invalid command [$cmd]"
+
+while echo "$1" | grep -q '^--'; do
+	if echo $1 | grep -q =; then
+		o=$(echo "$1" | cut -d= -f1 | sed -e 's,-,_,g')
+		v=$(echo "$1" | cut -d= -f2-)
+		eval "$o=\"$v\""
+	else
+		o=$(echo "$1" | sed -e 's,-,_,g')
+		eval "$o=yes"
+	fi
+	shift
+done
+unset o v
+long_opts=`set | grep '^__' | cut -d= -f1`
+
+# Execute command
+trap "die Interrupted" INT TERM
+cmd_$cmd "$@"
+status=$?
+rm -rf $tmp
+exit $status
