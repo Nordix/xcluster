@@ -573,6 +573,7 @@ cmd_libs() {
 	cmd_env
 	local f libs=$tmp/libs
 	mkdir -p $tmp
+	touch $libs
 	for f in $@; do
 		test -x $f || continue
 		ldd $f | grep '=> /' | sed -re 's,.*=> (/[^ ]+) .*,\1,' | \
