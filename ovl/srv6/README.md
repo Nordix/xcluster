@@ -6,6 +6,19 @@ with IPv6 as data plane, `SRv6`.
 
 Inspired by the [presentation](https://www.youtube.com/watch?v=vJaOKGWiyvU&list=PLj6h78yzYM2P4FvE6vARKAUg9BUi7ydw8&index=4) by Daniel Bernier, Bell Canada at KubeCon in Valencia 2022.
 
+Documentation about SRv6 in linux seem imature. For instance `man
+ip-route` does not describe `End.DX4` but it is
+[implemented](https://www.segment-routing.net/open-software/linux/). The
+[kernel source](https://github.com/torvalds/linux/blob/874c8ca1e60b2c564a48f7e7acc40d328d5c8733/net/ipv6/seg6_local.c#L951-L1046)
+may be the only true documentation.
+
+#### uSID in Linux
+
+I have not been able to find *any* information about uSID in Linux
+after the [ROSE](https://netgroup.github.io/rose/#srv6-usid-micro-segment-implementation-in-linux) implementation for the 5.6 kernel in May 2020.
+And the [ROSE](https://netgroup.github.io/rose/) project seem dead or dormant.
+
+
 ## Network
 
 The [diamond](https://github.com/Nordix/xcluster/tree/master/ovl/network-topology#diamond) network topology is used;
@@ -104,9 +117,9 @@ wireshark /tmp/vm-203-eth1.pcap &
 
 
 
-## PMTU discovery
+## PMTU discovery in SRv6 networks
 
-Short answer; it doesn't work.
+TL;DR It doesn't work with Linux.
 
 A packet from a VM is routed by "normal" routing to the first SR
 router `vm-201`. This router will encapsulate the packet and add a SRH
