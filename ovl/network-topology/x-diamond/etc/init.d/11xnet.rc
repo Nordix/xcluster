@@ -1,0 +1,108 @@
+#! /bin/sh
+. /usr/lib/network-topology.sh
+
+vm() {
+	ifsetup eth1 1
+	ip ro add default via 192.168.1.201
+	ip -6 ro add default via $PREFIX:192.168.1.201
+}
+
+router201() {
+	fwsetup
+	ifsetup eth1 1
+	ifsetup eth2 3
+	ifsetup eth3 4
+	ip ro add default via 192.168.0.250
+	iptables -t nat -A POSTROUTING -s 192.168.1.0/24 -o eth0 -j MASQUERADE
+	ip ro add 192.168.2.0/24 \
+		nexthop via 192.168.3.203 nexthop via 192.168.4.204
+	ip -6 ro add $PREFIX:192.168.2.0/120 \
+		nexthop via $PREFIX:192.168.3.203 nexthop via $PREFIX:192.168.4.204
+}
+
+router202() {
+	fwsetup
+	ifsetup eth1 2
+	ifsetup eth2 7
+	ifsetup eth3 8
+	ip ro add default via 192.168.0.250
+	iptables -t nat -A POSTROUTING -s 192.168.2.0/24 -o eth0 -j MASQUERADE
+	ip ro add 192.168.1.0/24 \
+		nexthop via 192.168.7.205 nexthop via 192.168.8.206
+	ip -6 ro add $PREFIX:192.168.1.0/120 \
+		nexthop via $PREFIX:192.168.7.205 nexthop via $PREFIX:192.168.8.206
+}
+
+router203() {
+	fwsetup
+	ifsetup eth1 3
+	ifsetup eth2 5
+	ifsetup eth3 9
+	ifsetup eth4 11
+	ip ro add 192.168.1.0/24 nexthop via 192.168.3.201
+	ip ro add 192.168.2.0/24 nexthop via 192.168.5.205
+	ip -6 ro add $PREFIX:192.168.1.0/120 via $PREFIX:192.168.3.201
+	ip -6 ro add $PREFIX:192.168.2.0/120 via $PREFIX:192.168.5.205
+}
+
+router204() {
+	fwsetup
+	ifsetup eth1 4
+	ifsetup eth2 6
+	ifsetup eth3 9
+	ifsetup eth4 12
+	ip ro add 192.168.1.0/24 nexthop via 192.168.4.201
+	ip ro add 192.168.2.0/24 nexthop via 192.168.6.206
+	ip -6 ro add $PREFIX:192.168.1.0/120 via $PREFIX:192.168.4.201
+	ip -6 ro add $PREFIX:192.168.2.0/120 via $PREFIX:192.168.6.206
+}
+
+router205() {
+	fwsetup
+	ifsetup eth1 5
+	ifsetup eth2 7
+	ifsetup eth3 10
+	ifsetup eth4 12
+	ip ro add 192.168.1.0/24 nexthop via 192.168.5.203
+	ip ro add 192.168.2.0/24 nexthop via 192.168.7.202
+	ip -6 ro add $PREFIX:192.168.1.0/120 via $PREFIX:192.168.5.203
+	ip -6 ro add $PREFIX:192.168.2.0/120 via $PREFIX:192.168.7.202
+}
+
+router206() {
+	fwsetup
+	ifsetup eth1 6
+	ifsetup eth2 8
+	ifsetup eth3 10
+	ifsetup eth4 11
+	ip ro add 192.168.1.0/24 nexthop via 192.168.6.204
+	ip ro add 192.168.2.0/24 nexthop via 192.168.8.202
+	ip -6 ro add $PREFIX:192.168.1.0/120 via $PREFIX:192.168.6.204
+	ip -6 ro add $PREFIX:192.168.2.0/120 via $PREFIX:192.168.8.202
+}
+
+tester() {
+	ifsetup eth1 2
+	ip ro add default via 192.168.2.202
+	ip -6 ro add default via $PREFIX:192.168.2.202
+}
+
+
+case $(hostname) in
+	vm-0*)
+		vm;;
+	vm-201)
+		router201;;
+	vm-202)
+		router202;;
+	vm-203)
+		router203;;
+	vm-204)
+		router204;;
+	vm-205)
+		router205;;
+	vm-206)
+		router206;;
+	vm-22*)
+		tester;;
+esac

@@ -45,6 +45,9 @@ routers, so setting `__nrouters` should be avoided.
 ## Test
 
 ```
+
+# Start;
+TOPOLOGY=... ./network-topology.sh test start > $log
 # Test all topologies;
 ./network-topology.sh test
 # Test a specific topology
@@ -163,4 +166,11 @@ with traffic for test purposes.
 For basic experiments with multi-path networks, e.g with
 [SRv6](https://en.wikipedia.org/wiki/Segment_routing). The upper is
 the "odd" path, the lower is the "even" path.
+
+## X-diamond
+
+<img src="x-diamond.svg" alt="Extended Diamond topology" width="80%" />
+
+The most complex network so far. Same usage as `diamond`.
+
 

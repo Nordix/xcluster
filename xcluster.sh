@@ -1014,7 +1014,7 @@ cmd_starts() {
 
 cmd_stop() {
 	cmd_env
-	local nvm=8 nrouters=4 ntesters=2
+	local nvm=12 nrouters=8 ntesters=2
 	test -n "$__nvm" && test "$__nvm" -gt $nvm && nvm=$__nvm
 	test -n "$__nrouters" && test $__nrouters -gt $nrouters && nrouters=$__nrouters
 	test -n "$__ntesters" && test $__ntesters -gt $ntesters && ntesters=$__ntesters

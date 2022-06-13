@@ -68,7 +68,8 @@ cmd_test() {
             test_$t
         done
     else
-        for t in xnet dual_path multihop zones backend multilan multilan_router evil_tester; do
+        for t in xnet dual_path multihop zones backend multilan \
+			multilan_router evil_tester diamond x_diamond; do
 			# Invoke $me rather than call the function to avoid
 			# lingering Envsettings
             $me test $t || die "FAILED: $t"
@@ -208,6 +209,15 @@ base_test() {
 ##   test diamond
 test_diamond() {
 	export TOPOLOGY=diamond
+	tlog "=== network-topology test: $TOPOLOGY"
+	test_start
+	base_test
+	xcluster_stop
+}
+
+##   test x_diamond
+test_x_diamond() {
+	export TOPOLOGY=x-diamond
 	tlog "=== network-topology test: $TOPOLOGY"
 	test_start
 	base_test
