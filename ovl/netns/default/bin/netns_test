@@ -1,0 +1,219 @@
+#! /bin/sh
+##
+## netns_test --
+##
+##   Test script for netns executed in xcluster.
+##
+## Commands;
+##
+
+prg=$(basename $0)
+dir=$(dirname $0); dir=$(readlink -f $dir)
+me=$dir/$prg
+tmp=/tmp/${prg}_$$
+
+die() {
+	echo "ERROR: $*" >&2
+	rm -rf $tmp
+	exit 1
+}
+help() {
+	grep '^##' $0 | cut -c3-
+	rm -rf $tmp
+	exit 0
+}
+test -n "$1" || help
+echo "$1" | grep -qi "^help\|-h" && help
+
+log() {
+	echo "$prg: $*" >&2
+}
+dbg() {
+	test -n "$__verbose" && echo "$prg: $*" >&2
+}
+
+## Test-cases;
+##   version -- Log version
+cmd_tcase_version() {
+	log_version
+}
+
+##   cni_bridge_configure <addr> -- Configure CNI-bridge
+cmd_tcase_cni_bridge_configure() {
+	tcase "Setup CNI-bridge. Template [$1]"
+	cmd_bridge_prerequisites
+	cmd_bridge_configure $1
+}
+
+##   cni_bridge_start [count] -- Create netns using CNI-bridge
+cmd_tcase_cni_bridge_start() {
+	tcase "Start netns with CNI-bridge [$1]"
+	cmd_bridge_start $1
+}
+
+##   cni_bridge_ping -- Ping local netns'es from main netns
+cmd_tcase_cni_bridge_ping() {
+	local acount=$(cat /tmp/$(hostname)-ns* | jq -r .ips[].address | wc -l)
+	tcase "Ping $acount local netns addresses"
+	local a adr
+	for a in $(cat /tmp/$(hostname)-ns* | jq -r .ips[].address); do
+		#tlog "Ping $a"
+		adr=$(echo $a | cut -d/ -f1)
+		tex ping -c1 -W1 $adr || tdie "Ping $adr"
+	done
+}
+
+# Netns init command
+cmd_init() {
+	hostname $1
+	ip link set up dev lo
+	nc -p 7777 -lk -e hostname &
+}
+
+##
+## Commands on nodes;
+##   for first [count]
+##     Emit a sequence <count> numbers starting with <first>
+cmd_for() {
+	test -n "$1" || die "No first number"
+	local first=$1
+	local count=1
+	test -n "$2" && count=$2
+	local n
+	for n in $(seq $count); do
+		echo $((first + n - 1))
+	done
+}
+
+##   name nsnumber [count]
+##     Print netns names
+cmd_name() {
+	test -n "$1" || die "No nsnumber"
+	local n
+	for n in $(cmd_for $1 $2); do
+		printf "%s-ns%02d\n" $(hostname) $n
+	done
+}
+
+##   create nsnumber [count]
+##     Create network namespaces
+cmd_create() {
+	mkdir -p /var/run/utsns
+	test -n "$1" || die "No ns number"
+	local name
+	for name in $(cmd_name $1 $2); do
+		ip netns add $name || die
+		touch /var/run/utsns/$name
+		unshare --net=/var/run/netns/$name --uts=/var/run/utsns/$name \
+			$me init $name
+	done
+}
+
+##   veth nsnumber [count]
+##     Create veth to netns. Link is "up" and "dad" disabled
+cmd_veth() {
+	test -n "$1" || die "No ns number"
+	local name
+	for name in $(cmd_name $1 $2); do
+		ip link add $name type veth peer name host || die
+		ip link set netns $name dev host || die
+		sysctl -qw net.ipv6.conf.$name.accept_dad=0 || die
+		ip link set up dev $name || die
+		ip netns exec $name sysctl -qw net.ipv6.conf.host.accept_dad=0 || die
+		ip -n $name link set up dev host || die
+	done
+}
+
+##   exec nsnumber command args...
+##     Execute a command in a netns
+cmd_exec() {
+	test -n "$1" || die "No ns number"
+	local name=$(printf "%s-ns%02d" $(hostname) $1)
+	shift
+	nsenter -n/var/run/netns/$name -u/var/run/utsns/$name $@
+}
+
+##   bridge_prerequisites
+##     Needs CNI-plugins and the "ipu" utility
+cmd_bridge_prerequisites() {
+	test -x /opt/cni/bin/bridge || tdie "CNI-plugins not included"
+	if ! which ipu > /dev/null; then
+		cat >&2 <<"EOF"
+The "ipu" utility must be included. It is a part of
+https://github.com/Nordix/nfqueue-loadbalancer/. Download a
+release and set $NFQLBDIR to point to it.
+EOF
+		tdie "Missing; ipu"
+	fi
+}
+cmd_bridge_configure() {
+	test -n "$1" || die "No address"
+	local ipv4=$(ipu makeip --cidr=$1 --net=$(mynode) --subnet=2)
+	local ipv6=$(ipu makeip --cidr=$1 --net=$(mynode) --subnet=2 --ipv6prefix=1000::1:0.0.0.0)
+	mkdir -p /etc/cni/net.d
+	cat > /etc/cni/10-bridge.conf <<EOF
+{
+    "cniVersion": "1.0.0",
+    "name": "xnet",
+    "type": "bridge",
+    "isDefaultGateway": true,
+    "hairpinMode": true,
+    "ipam": {
+      "type": "host-local",
+      "ranges": [
+        [ { "subnet": "$ipv4" } ],
+        [ { "subnet": "$ipv6" } ]
+      ]
+    }
+}
+EOF
+}
+
+##   bridge_start [count]
+##     Create netns'es using CNI-bridge. Logs like /tmp/vm-001-ns01.json
+cmd_bridge_start() {
+	test -r /etc/cni/10-bridge.conf || die "Bridge not configured"
+	local count=1
+	test -n "$1" && count=$1
+	netns_test create 1 $count
+	local n
+	for n in $(netns_test name 1 $count); do
+		# These takes >1s (because of DAD) so execute in parallel
+		CNI_CONTAINERID=$n CNI_NETNS=/var/run/netns/$n CNI_IFNAME=host \
+			CNI_PATH=/opt/cni/bin CNI_COMMAND=ADD /opt/cni/bin/bridge \
+			< /etc/cni/10-bridge.conf > /tmp/$n.json &
+	done
+	wait
+}
+
+
+test -r /etc/profile && . /etc/profile
+test -r /usr/lib/xctest && . /usr/lib/xctest
+indent='  '
+
+##
+# Get the command
+cmd=$1
+shift
+grep -q "^cmd_$cmd()" $0 || die "Invalid command [$cmd]"
+
+while echo "$1" | grep -q '^--'; do
+	if echo $1 | grep -q =; then
+		o=$(echo "$1" | cut -d= -f1 | sed -e 's,-,_,g')
+		v=$(echo "$1" | cut -d= -f2-)
+		eval "$o=\"$v\""
+	else
+		o=$(echo "$1" | sed -e 's,-,_,g')
+		eval "$o=yes"
+	fi
+	shift
+done
+unset o v
+long_opts=`set | grep '^__' | cut -d= -f1`
+
+# Execute command
+trap "die Interrupted" INT TERM
+cmd_$cmd "$@"
+status=$?
+rm -rf $tmp
+exit $status
