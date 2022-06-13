@@ -814,7 +814,7 @@ cmd_boot_vm() {
 		ip link show dev $dev > /dev/null 2>&1 || \
 			die "Bridge does not exists [$dev]"
 		tap=${dev}_t$nodeid
-		b1=$n
+		b1=$(printf "%02x" $n)
 
 		test "$__mtu" -ne 1500 && append="$append mtu$n=$__mtu"
 
@@ -829,7 +829,7 @@ cmd_boot_vm() {
 
 		local b0=$(printf '%02x' $nodeid)
 		opt="$opt -netdev tap,id=net$n,script=no,downscript=/tmp/rmtap,ifname=$tap"
-		opt="$opt -device virtio-net-pci,netdev=net$n,mac=00:00:00:01:0$b1:$b0"
+		opt="$opt -device virtio-net-pci,netdev=net$n,mac=00:00:00:01:$b1:$b0"
 	done
 
 	# Allow ^C in the terminals without killing the entire VM
