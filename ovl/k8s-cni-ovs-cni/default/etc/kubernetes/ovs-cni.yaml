@@ -1,0 +1,117 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: ovs-cni-marker
+  namespace: kube-system
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: ovs-cni-amd64
+  namespace: kube-system
+  labels:
+    tier: node
+    app: ovs-cni
+spec:
+  selector:
+    matchLabels:
+      app: ovs-cni
+  updateStrategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 10%
+  template:
+    metadata:
+      labels:
+        tier: node
+        app: ovs-cni
+      annotations:
+        description: OVS CNI allows users to attach their Pods/VMs to Open vSwitch bridges available on nodes
+    spec:
+      serviceAccountName: ovs-cni-marker
+      tolerations:
+        # Make sure ovs-cni gets scheduled on all nodes.
+        - effect: NoSchedule
+          operator: Exists
+        # Mark the pod as a critical add-on for rescheduling.
+        - key: CriticalAddonsOnly
+          operator: Exists
+        - effect: NoExecute
+          operator: Exists
+      priorityClassName: system-node-critical
+      hostNetwork: true
+      nodeSelector:
+        kubernetes.io/arch: amd64
+      initContainers:
+      - name: ovs-cni-plugin
+        image: quay.io/kubevirt/ovs-cni-plugin:latest
+        command: ['cp', '/ovs', '/host/opt/cni/bin/ovs']
+        imagePullPolicy: IfNotPresent
+        securityContext:
+          privileged: true
+        resources:
+          requests:
+            cpu: "10m"
+            memory: "15Mi"
+        volumeMounts:
+        - name: cnibin
+          mountPath: /host/opt/cni/bin
+      priorityClassName: system-node-critical
+      containers:
+      - name: ovs-cni-marker
+        image: quay.io/kubevirt/ovs-cni-marker:latest
+        imagePullPolicy: IfNotPresent
+        securityContext:
+          privileged: true
+        args:
+          - -node-name
+          - $(NODE_NAME)
+          - -ovs-socket
+          - unix:/host/var/run/openvswitch/db.sock
+        volumeMounts:
+          - name: ovs-var-run
+            mountPath: /host/var/run/openvswitch
+        resources:
+          requests:
+            cpu: "10m"
+            memory: "10Mi"
+        env:
+          - name: NODE_NAME
+            valueFrom:
+              fieldRef:
+                fieldPath: spec.nodeName
+      volumes:
+        - name: cnibin
+          hostPath:
+            path: /opt/cni/bin
+        - name: ovs-var-run
+          hostPath:
+            path: /var/run/openvswitch
+---
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: ovs-cni-marker-cr
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - nodes
+  - nodes/status
+  verbs:
+  - get
+  - update
+  - patch
+---
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: ovs-cni-marker-crb
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: ovs-cni-marker-cr
+subjects:
+- kind: ServiceAccount
+  name: ovs-cni-marker
+  namespace: kube-system
