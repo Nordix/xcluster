@@ -149,7 +149,7 @@ EOF
 cmd_bridge_configure() {
 	test -n "$1" || die "No address"
 	local ipv4=$(ipu makeip --cidr=$1 --net=$(mynode) --subnet=2)
-	local ipv6=$(ipu makeip --cidr=$1 --net=$(mynode) --subnet=2 --ipv6prefix=1000::1:0.0.0.0)
+	local ipv6=$(ipu makeip --cidr=$1 --net=$(mynode) --subnet=2 --ipv6template=1000::1:0.0.0.0)
 	mkdir -p /etc/cni/net.d
 	cat > /etc/cni/10-bridge.conf <<EOF
 {
