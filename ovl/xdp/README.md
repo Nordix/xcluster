@@ -166,11 +166,8 @@ export __nvm=1
 # On vm-201
 cat /sys/kernel/debug/tracing/trace_pipe   # (optional)
 cd /root/xdptest
-bpftool prog loadall ./xdp_kern.o /sys/fs/bpf/xdptest pinmaps /sys/fs/bpf/xdptest
-ls /sys/fs/bpf/xdptest
 ethtool -L eth1 combined 1
-ip link set dev eth1 xdpgeneric pinned /sys/fs/bpf/xdptest/xdp_redirect
-./xdptest receive --dev=eth1 --fillq=4
+./xdptest/xdptest receive --queue=0 --dev=eth1 --fillq=4
 ssh $sshopt root@192.168.0.1 ping -c1 -W1 192.168.1.201
 ssh $sshopt root@192.168.0.1 ping -c1 -W1 1000::1:192.168.1.201 # (works)
 #ip link set dev eth1 xdpgeneric none

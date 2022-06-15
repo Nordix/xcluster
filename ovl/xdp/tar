@@ -27,6 +27,17 @@ f=$kdir/tools/perf/perf
 test -x $f || die "Not executable [$f]"
 $XCLUSTER install_prog --dest=$tmp $f
 
+eval $($XCLUSTER env | grep __kobj)
+bpflibd=$(readlink -f $__kobj/source)/tools/lib/bpf/build/usr
+f=$bpflibd/lib64/libbpf.so.0
+if test -r $f; then
+	log "Including libbpf.so"
+	mkdir -p $tmp/usr/lib/x86_64-linux-gnu
+	cp -L $f $tmp/usr/lib/x86_64-linux-gnu
+else
+	log "NOT including libbpf.so"
+fi
+
 d=$GOPATH/src/github.com/xdp-project/xdp-tutorial
 
 for x in basic01-xdp-pass basic02-prog-by-name basic03-map-counter \

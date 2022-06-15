@@ -5,13 +5,12 @@
 #include <bpf/bpf_endian.h>
 
 // Socket map for redirect to user-space
-struct bpf_map_def SEC("maps") xsks_map = {
-	.type = BPF_MAP_TYPE_XSKMAP,
-	.key_size = sizeof(int),
-	.value_size = sizeof(int),
-	.max_entries = 4,			/* Must be > nqueues for the nic */
-};
-
+struct {
+    __uint(type, BPF_MAP_TYPE_XSKMAP);
+    __uint(max_entries, 16);
+    __type(key, int);
+    __type(value, int);
+} xsks_map SEC(".maps");
 
 #if 1
 #define Dx(fmt, ...)                                      \
@@ -24,7 +23,7 @@ struct bpf_map_def SEC("maps") xsks_map = {
 #endif
 #define D(fmt, ...)
 
-SEC("xdp_redirect")
+SEC("xdp")
 int  xdp_prog_redirect(struct xdp_md *ctx)
 {
 	void *data_end = (void*)(long)ctx->data_end;
@@ -56,7 +55,7 @@ int  xdp_prog_redirect(struct xdp_md *ctx)
 	return rc;
 }
 
-SEC("xdp_pass")
+SEC("xdp")
 int  xdp_prog_pass(struct xdp_md *ctx)
 {
 	return XDP_PASS;

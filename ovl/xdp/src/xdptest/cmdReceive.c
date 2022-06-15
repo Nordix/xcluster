@@ -26,6 +26,7 @@ struct xsk_umem_info {
 	struct xsk_umem *umem;
 	void *buffer;
 };
+
 static struct xsk_umem_info* create_umem(unsigned nfq)
 {
 	struct xsk_umem_info* u;
@@ -56,6 +57,48 @@ static struct xsk_umem_info* create_umem(unsigned nfq)
 	return u;
 }
 
+static void load_xdp_program(int ifindex, char xdp_filename[], struct bpf_object **obj)
+{
+	struct bpf_prog_load_attr prog_load_attr = {
+		.prog_type      = BPF_PROG_TYPE_XDP,
+		.file 			= xdp_filename,
+	};
+
+	int prog_fd;
+	if (bpf_prog_load_xattr(&prog_load_attr, obj, &prog_fd))
+		exit(EXIT_FAILURE);
+	if (prog_fd < 0) {
+		fprintf(stderr, "ERROR: no program found: %s\n",
+			strerror(prog_fd));
+		exit(EXIT_FAILURE);
+	}
+
+	if (bpf_xdp_attach(ifindex, prog_fd, 0, NULL) < 0) {
+		fprintf(stderr, "ERROR: link set xdp fd failed\n");
+		exit(EXIT_FAILURE);
+	}
+}
+
+static void enter_xsks_into_map(struct xsk_socket *xsk, int queue, struct bpf_object *obj)
+{
+	struct bpf_map *map;
+	int xsks_map;
+
+	map = bpf_object__find_map_by_name(obj, "xsks_map");
+	xsks_map = bpf_map__fd(map);
+	if (xsks_map < 0) {
+		fprintf(stderr, "ERROR: no xsks map found: %s\n",
+			strerror(xsks_map));
+			exit(EXIT_FAILURE);
+	}
+
+	int fd = xsk_socket__fd(xsk);
+	int ret = bpf_map_update_elem(xsks_map, &queue, &fd, 0);
+	if (ret) {
+		fprintf(stderr, "ERROR: bpf_map_update_elem %d\n", queue);
+		exit(EXIT_FAILURE);
+	}
+}
 
 static int cmdReceive(int argc, char **argv)
 {
@@ -102,14 +145,20 @@ static int cmdReceive(int argc, char **argv)
 	struct xsk_ring_prod tx;
 	xsk_cfg.rx_size = XSK_RING_CONS__DEFAULT_NUM_DESCS;
 	xsk_cfg.tx_size = XSK_RING_PROD__DEFAULT_NUM_DESCS;
-	xsk_cfg.libbpf_flags = 0;
+	xsk_cfg.libbpf_flags = XSK_LIBBPF_FLAGS__INHIBIT_PROG_LOAD;
 	xsk_cfg.xdp_flags = 0;
 	xsk_cfg.bind_flags = XDP_COPY;
 	rc = xsk_socket__create(&ixsk, dev, q, uinfo->umem, &rx, &tx, &xsk_cfg);
 	if (rc != 0)
 		die("Failed xsk_socket__create (ingress); %s\n", strerror(-rc));
 	Dx(printf("Need wakeup; %s\n", xsk_ring_prod__needs_wakeup(&tx) ? "Yes":"No"));
-	
+
+	struct bpf_object *xdp_object;
+	char xdp_filename[256];
+	snprintf(xdp_filename, sizeof(xdp_filename), "xdp_kern.o");
+	load_xdp_program(ifindex, xdp_filename, &xdp_object);
+	enter_xsks_into_map(ixsk, q, xdp_object);
+
 #define RX_BATCH_SIZE      64
 	uint32_t idx_rx;
 	struct pollfd fds;
