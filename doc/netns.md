@@ -16,7 +16,7 @@ netns for more advanced network testing. To setup do;
 
 ```
 sudo setcap cap_net_admin,cap_sys_admin+ep /bin/ip   # (once)
-# On Ubuntu 20 setcap does not work, instead;
+# On Ubuntu >=20 setcap does not work, instead;
 sudo chmod a+s /bin/ip
 xc nsadd 1          # Requires "sudo"
 # Or
@@ -32,7 +32,7 @@ netns. *There might be conflicts!*. No checks are made so be
 observant. However this uses the Docker network which is probably left
 alone by the NetworkManager and firewalls.
 
-<img src="xcluster-netns.svg" alt="Figure of xcluster netns" width="80%" />
+<img src="xcluster-netns.svg" alt="Figure of xcluster netns" width="70%" />
 
 Routing and masquerade is setup so the host network (and internet) is
 reachable from the netns. Also traffic from the ["External

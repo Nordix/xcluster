@@ -7,7 +7,7 @@ This is most for fun.
 
 Since the image does not have to be bootable this is a simple way.  We
 use the `images` script form "ovl/images" which in turn requires
-`diskim`.
+[diskim](https://github.com/lgekman/diskim).
 
 The "initfs" in `xcluster` kernels calls `/init` so we must ensure
 that it exists with a simple ovl. We must mount /sys and /proc since

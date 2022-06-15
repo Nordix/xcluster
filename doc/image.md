@@ -20,8 +20,8 @@ installed you will get a warning and an instruction when you source
 "diskim" is missing. Install with;
 
 wget -O - -q \
- https://github.com/lgekman/diskim/releases/download/v0.4.0/diskim-v0.4.0.tar.xz \
- | tar -I pxz -C /home/guest/xcluster/workspace -xf -
+ https://github.com/lgekman/diskim/releases/download/1.0.0/diskim-1.0.0.tar.xz \
+ | tar -I xz -C /home/guest/xcluster/workspace -xf -
 ```
 
 ## Extend the image
@@ -46,13 +46,9 @@ default image and extend the copy;
 ```
 export __image=$XCLUSTER_WORKSPACE/xcluster/my-hd.img
 cp $XCLUSTER_WORKSPACE/xcluster/hd.img $__image
-xc ximage systemd
+xc ximage iptools
 xc start
 ```
-
-The image is extended with the `systemd` overlay and VMs should now
-start with systemd.
-
 
 ## Kernel
 
@@ -76,9 +72,9 @@ xc kernel_build --menuconfig
 ### New kernel
 
 ```
-export __kver=linux-5.10.1
+export __kver=linux-5.18.2
 export __kcfg=$MY_CONFIGS/$__kver
-cp config/linux-5.9.1 $__kcfg
+cp config/linux-5.18.2 $__kcfg
 xc kernel_build --menuconfig
 ```
 

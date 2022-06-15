@@ -30,6 +30,9 @@ Verify that you have `xterm` installed and that is can start a window;
 ```
 which xterm
 xterm &
+# If you have ssh'ed to another machine, make sure "ssh -X" is used and do;
+xhost +
+# on the machine you ssh from.
 ```
 
 ## Kvm/qemu problems

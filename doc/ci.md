@@ -5,7 +5,7 @@ All CI environments are different but here are some general notes.
 
 ## Headless operation
 
-`Xcluste` can be started with consoles in
+`Xcluster` can be started with consoles in
 [GNU-screen](https://www.gnu.org/software/screen/) instead of `xterm`;
 
 ```
@@ -22,8 +22,11 @@ There is a screen on:
 ```
 
 After a failed test the console logs can be collected. There is no
-support for fetching logs from the VMs but it should not be hard to do
-with `ssh` and some scripting.
+automatic support for fetching logs from the VMs. But `xc rcp` can be used;
+
+```
+$XCLUSTER rsh 201 /var/log/messages /tmp/vm-201.syslog
+```
 
 
 ## Object Under Test (OUT)

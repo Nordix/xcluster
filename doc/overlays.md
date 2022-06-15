@@ -8,7 +8,7 @@ ovl directories. Example;
 
 ```
 # Start an xcluster with overlays
-xc mkcdrom systemd etcd; xc start
+xc mkcdrom network-topology iptools; xc start
 ```
 
 **NOTE**; You do not normally install SW on a running `xcluster`,
@@ -53,19 +53,25 @@ out-file as parameter. The out file may be "-" for 'stdout' which
 allows a neat trick for checking the contents of an overlay;
 
 ```
-> cd $($XCLUSTER ovld externalip)
-> ./tar - | tar t
+$ cd $($XCLUSTER ovld network-topology)
+$ ./tar - | tar t
+bin/
+bin/coredns
 etc/
 etc/init.d/
-etc/init.d/30router.rc
-etc/kubernetes/
-etc/kubernetes/mconnect.yaml
+etc/init.d/11local-dns.rc
+etc/init.d/11hosts.rc
+etc/init.d/11xnet.rc
+usr/
+usr/lib/
+usr/lib/network-topology.sh
 ```
 
 ## The SETUP variable
 
 A primitive way to allow variations for overlays. It is up to the
-"tar" script in the overlay to interpret the SETUP variable. Example;
+"tar" script in the overlay to interpret the SETUP variable (or any
+other variable). Example;
 
 ```
 SETUP=ipv6 xc mkcdrom etcd coredns k8s-config
@@ -82,7 +88,7 @@ Overlays may be cached. This server two purposes;
 Overlays are not cached automatically you must cache them;
 
 ```
-xc cache systemd etc
+xc cache iptools
 xc cache --list
 xc cache --clear   # Clears the cache
 ```

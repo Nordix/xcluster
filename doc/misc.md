@@ -6,13 +6,13 @@ particular order.
 
 ## cdo
 
-The `cdo` function (defined in `Envsettings`) let you cd to a ovl directory;
+The `cdo` function (defined in `Envsettings`) let you cd to a ovl directory.
+`cdo` have command competion in "bash".
 ```
-cdo metallb
+cdo kubernetes
+cdo kuber<tab>
+cdo <tab><tab>     # List all available ovl's
 ```
-
-`cdo` had command competion in "bash".
-
 
 ## Use the master branch with a binary release
 
@@ -25,8 +25,8 @@ XCDIR=$HOME/tmp   # Change to your preference
 mkdir -p $XCDIR
 cd $XCDIR
 git clone --depth 1 https://github.com/Nordix/xcluster.git
-curl -L https://github.com/Nordix/xcluster/releases/download/v2.2/xcluster-workspace-v2.2.tar.xz | tar xJ
-export XCLUSTER_WORKSPACE=$XCDIR/workspace
+# Assuming a binary release in $HOME/xcluster;
+export XCLUSTER_WORKSPACE=$HOME/xcluster/workspace
 cd $XCDIR/xcluster
 . ./Envsettings.k8s   # set XCLUSTER_WORKSPACE *before* sourcing!
 # Go on as usual. Download hd-k8s.img if needed.

@@ -4,7 +4,7 @@ The `xcluster` networking uses 2 setups;
 
 * User-space networking. This is used when `xcluster` is executed in
   main netns. It does not require root or sudo or any network
-  preparations.
+  preparations. It has however very bad performance.
 
 * Linux bridges and tap devices. This is used when `xcluster` is
   executed in it's own netns. This requires a network setup using
@@ -12,13 +12,16 @@ The `xcluster` networking uses 2 setups;
   `ip` program can run as non-root (using "setcap" or suid). This setup is
   much faster and closer to the real thing than user-space networking.
 
-The default network has 3 nets. The image shows the bridges;
+The base image only setup the Maintenance network (eth0) on the
+VMs. Other networks are configured by overlays, please see
+[ovl/network-topology](../ovl/network-topology/).
+The default network-topology has 3 networks;
 
-<img src="xcluster-network.svg" alt="Figure, xcluster network" width="80%" />
+<img src="xcluster-network.svg" alt="Figure, xcluster network" width="70%" />
 
- * Maintenance net - Intended mainly for control functions. All VMs shall
-   be reachable via this network.  The `vm` function for open a
-   terminal to a VM does a `telnet` on this net.
+ * Maintenance net - Intended for control functions. All VMs shall be
+   reachable via this network.  The `vm` function for open a terminal
+   to a VM does a `telnet` on this net.
 
  * Cluster net - This is the main cluster network. It is connected to
    cluster nodes for cluster signalling and to the routers for
@@ -26,17 +29,30 @@ The default network has 3 nets. The image shows the bridges;
    cluster setup.
 
  * External net - This represents the outside world, like the
-   "internet".
+   internet.
 
-The base image only setup the Internal net on the VMs. The other
-networks are configured by overlays please see
-[ovl/network-topology](../ovl/network-topology/).
+Start example;
+```
+xc mkcdrom network-topology iptools; xc start --ntesters=1
+```
 
-The addresses are assigned from the hostname of the VM. The last digit
-in the address is the number from the hostname, e.g. 1 for
-"vm-001". For now the hostname number is taken from the lsb of the MAC
-address on the interface towards the Internal net (eth0). This may
-however change for instance if the MAC addresses can't be controlled.
+Addresses are assigned from the hostname of the VM and the net. IPv6
+addresses are created by adding a "prefix" to the IPv4 address. Like
+the /96 translation described in
+[rfc6052](https://datatracker.ietf.org/doc/html/rfc6052). Example;
+
+```
+Xcluster standard prefix: 1000::1:0.0.0.0
+Hostname:  Network:   IPv4:              IPv6:
+vm-001       0        192.168.0.1/24     1000::1:192.168.0.1/120
+vm-201       1        192.168.1.201/24   1000::1:192.168.1.201/120
+vm-221       2        192.168.2.221/24   1000::1:192.168.2.221/120
+```
+
+Hostname and the maintenance network is setup in
+[10net.rc](../image/rootfs/etc/init.d/10net.rc) (which you *may*
+override in an ovl). Other networks are setup by
+[ovl/network-topology](../ovl/network-topology/) or by your own ovls.
 
 With user-space networking the internal net is a qemu [user
 network](https://wiki.qemu.org/Documentation/Networking#User_Networking_.28SLIRP.29).

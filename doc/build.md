@@ -21,7 +21,7 @@ apt install -y skopeo
 ```
 
 For image handling you will also need
-[docker](https://www.digitalocean.com/community/tutorials/how-to-install-and-use-docker-on-ubuntu-18-04).
+[docker](https://www.digitalocean.com/community/tutorials/how-to-install-and-use-docker-on-ubuntu-22-04).
 
 ## The $ARCHIVE
 
@@ -58,29 +58,29 @@ unpacked. Since this is used read-only it can be stored in a
 (semi-)permanent place.
 
 
-Make sure that the base archives are downloaded;
+Make sure all base archives are downloaded to $ARCHIVE;
 ```
-$ ./xcadmin.sh base_archives
-/home/guest/archive/diskim-v0.4.0.tar.xz
-/home/guest/archive/linux-5.4.2.tar.xz
+$ xcadmin base_archives
+/home/guest/archive/diskim-1.0.0.tar.xz
+/home/guest/archive/linux-5.18.1.tar.xz
 /home/guest/archive/busybox-1.30.1.tar.bz2
-/home/guest/archive/dropbear-2016.74.tar.bz2
-/home/guest/archive/iproute2-4.19.0.tar.xz
-/home/guest/archive/coredns_1.6.7_linux_amd64.tgz
+/home/guest/archive/dropbear-2020.81.tar.bz2
+/home/guest/archive/iproute2-5.18.0.tar.xz
+/home/guest/archive/coredns_1.8.1_linux_amd64.tgz
 ```
 
 Build the base system;
 ```
-$ ./xcadmin.sh build_base $XCLUSTER_WORKSPACE
+$ xcadmin build_base $XCLUSTER_WORKSPACE
 ... (lots of printouts)
-0   :2020-02-17-12:40:12: Build xcluster
-0   :2020-02-17-12:40:12: Coredns  installed
-0   :2020-02-17-12:40:12: Diskim installed
-130 :2020-02-17-12:42:22: Kernel built
-142 :2020-02-17-12:42:34: Busybox built
-151 :2020-02-17-12:42:43: Dropbear built
-158 :2020-02-17-12:42:50: Iproute2 built
-165 :2020-02-17-12:42:57: Image built
+0   :2022-06-15-08:17:34: Build xcluster
+0   :2022-06-15-08:17:34: Coredns  installed
+0   :2022-06-15-08:17:34: Diskim installed
+335 :2022-06-15-08:23:09: Kernel built
+354 :2022-06-15-08:23:28: Busybox built
+368 :2022-06-15-08:23:42: Dropbear built
+382 :2022-06-15-08:23:56: Iproute2 built
+386 :2022-06-15-08:24:00: Image built
 ```
 
 Test the build;
@@ -103,11 +103,6 @@ Unfortunately a `xcluster` binary release must be prepared for
 Kubernetes. This is for legacy reasons and because I can't really find
 a better way.
 
-When the pre-build cache archive is built, do;
-
-```
-./xcadmin.sh release --version=my-test
-```
 
 ### Pre-build cache archive
 
@@ -122,9 +117,6 @@ for i in $(./xcadmin.sh prepulled_images); do
   docker pull $i
 done
 ```
-
-[Cri-o](https://github.com/cri-o/cri-o) has not (yet) any binary
-release so it must be built from source.
 
 Then build the pre-built cache archive;
 ```
@@ -142,13 +134,17 @@ to execute "sudo" again (likely required for CI).
 Download more archives;
 ```
 $ ./xcadmin.sh k8s_archives
-/home/guest/archive/coredns_1.6.7_linux_amd64.tgz
-/home/guest/archive/kubernetes-server-v1.17.2-linux-amd64.tar.gz
-/home/guest/archive/mconnect-v2.0.gz
+/home/guest/archive/cni-plugins-linux-amd64-v1.0.1.tgz
+/home/guest/archive/etcd-v3.3.10-linux-amd64.tar.gz
+/home/guest/archive/kubernetes-server-v1.18.3-linux-amd64.tar.gz
+/home/guest/archive/mconnect.xz
+/home/guest/archive/xcluster-cache.tar
+/home/guest/archive/assign-lb-ip.xz
+/home/guest/archive/crio-v1.22.0.tar.gz
 ```
 
-The `kubernetes` and `mconnect` archive anes does not contain a
-version and must be renamed after download.
+The `kubernetes` archive does not contain a version and must be
+renamed after download.
 
 
 ```

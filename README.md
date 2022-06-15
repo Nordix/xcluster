@@ -164,7 +164,7 @@ curl -L https://github.com/Nordix/xcluster/releases/download/$ver/xcluster-$ver.
 cd $XCDIR/xcluster
 . ./Envsettings.k8s
 curl -L http://artifactory.nordix.org/artifactory/cloud-native/xcluster/images/hd-k8s.img.xz | xz -d > $__image
-xc start   # (no xterms? See below) (use "xc starts" to start without xterms)
+xc mkcdrom; xc start   # (no xterms? See below) (use "xc starts" to start without xterms)
 vm 2     # Opens a terminal on vm-002
 
 # In the terminal (on cluster) test things, for example;
