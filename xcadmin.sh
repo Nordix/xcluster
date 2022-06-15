@@ -239,12 +239,14 @@ cmd_build_base() {
 ##     Extend a base $XCLUSTER_WORKSPACE for use with with K8s.
 cmd_k8s_archives() {
 	cmd_env
+	# TODO; Handle versions better! Especially cni-plugins.
 	echo $ARCHIVE/cni-plugins-linux-amd64-v1.0.1.tgz
 	echo $ARCHIVE/etcd-v3.3.10-linux-amd64.tar.gz
 	echo $ARCHIVE/kubernetes-server-$__k8sver-linux-amd64.tar.gz
 	echo $ARCHIVE/mconnect.xz
 	echo $ARCHIVE/xcluster-cache.tar
 	echo $ARCHIVE/assign-lb-ip.xz
+	echo $ARCHIVE/crio-v1.22.0.tar.gz
 }
 
 cmd_k8s_workspace() {
