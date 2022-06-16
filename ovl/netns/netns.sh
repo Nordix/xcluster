@@ -85,7 +85,7 @@ test_start_empty() {
 	otc 1 version
 }
 
-##   test start
+##   test start (default)
 ##     Start cluster and setup
 test_start() {
 	test -n "$TOPOLOGY" && \
@@ -93,13 +93,35 @@ test_start() {
 	test_start_empty
 }
 
-##   test bridge
+##   test cni_bridge
 ##     Create 10 netns/vm assign net with CNI-bridge and test with ping
-test_bridge() {
+test_cni_bridge() {
 	test_start
-	otcw "cni_bridge_configure 172.16.0.0/24/28"
-	otcw "cni_bridge_start 10"
+	otcw cni_bridge_configure
+	otcw cni_bridge_start
 	otcw cni_bridge_ping
+	xcluster_stop
+}
+
+##   test cni_bridge
+##     Create PODs and assign net with CNI-bridge and test with ping
+test_cni_bridge() {
+	tlog "=== Test CNI-bridge"
+	test_start
+	otcw cni_bridge_configure
+	otcw cni_bridge_start
+	otcw cni_bridge_ping
+	xcluster_stop
+}
+
+##   test bridge
+##     Create PODs connected to a Linux bridge and test with ping
+test_bridge() {
+	tlog "=== Test Linux bridge"
+	test_start
+	otcw create_with_addresses
+	otcw linux_bridge
+	otcw bridge_ping
 	xcluster_stop
 }
 
