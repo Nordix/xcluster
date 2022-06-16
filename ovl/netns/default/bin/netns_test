@@ -39,25 +39,30 @@ dbg() {
 
 ## Test-cases;
 ##   Used environment variables with defaults;
-##     NPODS=4
 ##     ADRTEMPLATE=172.16.0.0/16/24
+##     NPODS=4
+##     PODIF=eth0
 ##     PREFIX=1000::1
 ##
 
 ##   version -- Log version
 cmd_tcase_version() {
 	log_version
+	tlog "ADRTEMPLATE=[$ADRTEMPLATE]"
+	tlog "NPODS=[$NPODS]"
+	tlog "PODIF=[$PODIF]"
+	tlog "PREFIX=[$PREFIX]"
 }
 ##   cni_bridge_configure -- Configure CNI-bridge
 cmd_tcase_cni_bridge_configure() {
-	tcase "Setup CNI-bridge. Template [$ADRTEMPLATE]"
-	cmd_cni_bridge_configure $ADRTEMPLATE
+	tcase "Setup CNI-bridge."
+	cmd_cni_bridge_configure
 }
 ##   cni_bridge_start -- Create netns using CNI-bridge
 cmd_tcase_cni_bridge_start() {
-	tcase "Start PODs with CNI-bridge [$NPODS]"
-	cmd_create $NPODS
-	cmd_cni_bridge_start $NPODS
+	tcase "Start PODs with CNI-bridge"
+	cmd_create
+	cmd_cni_bridge_start
 }
 ##   cni_bridge_ping -- Ping local PODs from main netns
 cmd_tcase_cni_bridge_ping() {
@@ -70,44 +75,67 @@ cmd_tcase_cni_bridge_ping() {
 		tex ping -c1 -W1 $adr || tdie "Ping $adr"
 	done
 }
-##   create - Create $NPODS PODs
-cmd_tcase_create() {
-	tcase "Create PODs [$NPODS]"
-	cmd_create $NPODS
-}
-##   create_veth - Create VETH pairs to PODs
-cmd_tcase_create_veth() {
-	tcase "Create VETH pairs to PODs"
-	cmd_veth $NPODS
-}
 ##   create_with_addresses - Create PODs and assign addresses
 cmd_tcase_create_with_addresses() {
-	tcase "Create PODs and assign addresses [$NPODS]"
-	cmd_create $NPODS
-	cmd_veth $NPODS
-	cmd_assign_addresses $ADRTEMPLATE $NPODS	
+	tcase "Create PODs and assign addresses"
+	cmd_create
+	cmd_veth
+	test "$RNDADR" = "yes" && __random=yes
+	cmd_assign_addresses
+}
+##   forward - Turn on IP forwarding
+cmd_tcase_forward() {
+	tcase "Turn on IP forwarding"
+	echo 1 > /proc/sys/net/ipv4/ip_forward
+	echo 1 > /proc/sys/net/ipv4/fib_multipath_hash_policy
+	echo 1 > /proc/sys/net/ipv4/conf/all/forwarding
+	echo 1 > /proc/sys/net/ipv6/conf/all/forwarding
 }
 ##   linux_bridge - Create a Linux bridge and connect PODs
 cmd_tcase_linux_bridge() {
 	tcase "Create a Linux bridge and connect PODs"
 	test -n "$BR" || BR=br0
 	ip link add name $BR type bridge || tdie
-	cmd_assign_bridge_address $ADRTEMPLATE $BR
-	__defaultgw=yes
-	cmd_connect_to_bridge $BR $NPODS
+	test "$RNDADR" = "yes" && __random=yes
+	cmd_assign_bridge_address $BR
+	cmd_connect_to_bridge $BR
 }
 ##   bridge_ping -- Ping local PODs from main netns
 cmd_tcase_bridge_ping() {
 	tcase "Ping local netns addresses"
 	local pod adr
-	for pod in $(cmd_name $NPODS); do
-		for adr in $(cmd_compute_address $ADRTEMPLATE $pod | cut -d/ -f1); do
+	for pod in $(cmd_name); do
+		for adr in $(cmd_compute_address $pod | cut -d/ -f1); do
 			#tlog "Ping $adr"
 			tex ping -c1 -W1 $adr || tdie "Ping $adr"
 		done
 	done
 }
+##   attach_eth_to_bridge -- Attach an external interface to the bridge
+cmd_tcase_attach_eth_to_bridge() {
+	# TODO - Allow to specify the dev
+	local dev=eth1
+	tcase "Attach [$dev] to bridge"
+	test -n "$BR" || BR=br0
+	local mynode=$(mynode)
+	ip addr flush dev $dev
+	ip link set dev $dev master $BR || tdie
+	ip addr add 192.168.1.$mynode/24 dev $BR || tdie
+	ip -6 addr add $PREFIX:192.168.1.$mynode/24 dev $BR || tdie
+}
 
+cmd_tcase_ping_all_random() {
+	local count=$((__nvm * NPODS + __nvm))
+	local a adr
+	for a in $(head -$count /etc/rnd-addresses); do
+		adr=$(ipu makeip --cidr=$ADRTEMPLATE --host=$a)
+		tlog "Ping $adr"
+		tex ping -c1 -W1 $adr || tdie $adr
+		adr=$(ipu makeip --cidr=$ADRTEMPLATE --host=$a --ipv6template=$PREFIX:0.0.0.0)
+		tlog "Ping $adr"
+		tex ping -c1 -W1 $adr || tdie $adr
+	done
+}
 
 ##
 ## Commands on nodes;
@@ -132,16 +160,15 @@ EOF
 	fi
 }
 ##   for [count] [first]
-##     Emit a sequence of <count> numbers starting with <first>
+##     Emit a sequence of <count> numbers starting with <first>.
+##     If <count> is not specified $NPODS is used.
 cmd_for() {
-	local count=1
+	local count=$NPODS
 	test -n "$1" && count=$1
 	local first=1
 	test -n "$2" && first=$2
-	local n
-	for n in $(seq $count); do
-		echo $((first + n - 1))
-	done
+	local last=$((first + count - 1))
+	seq $first $last
 }
 
 ##   name [count] [first]
@@ -191,39 +218,90 @@ cmd_exec() {
 	nsenter -n/var/run/netns/$name -u/var/run/utsns/$name $@
 }
 
-##   compute_address [--family=4|6] <addr-template> <pod>
+##   compute_address [--family=4|6] <pod>
 ##     Compute the addresses for a POD
 cmd_compute_address() {
-	test -n "$2" || die "Params missing"
+	test -n "$1" || die "Params missing"
 	cmd_prerequisites
-	local ipu_params=$(echo $2 | sed -E 's,vm-0*([0-9]+)-ns0*([0-9]+),--net=\1 --host=\2,')
+	local ipu_params=$(echo $1 | sed -E 's,vm-0*([0-9]+)-ns0*([0-9]+),--net=\1 --host=\2,')
 	test "$__family" != 6 && \
-		ipu makeip --cidr=$1 $ipu_params --subnet=2
+		ipu makeip --cidr=$ADRTEMPLATE $ipu_params --subnet=2
 	test "$__family" != 4 && \
-		ipu makeip --cidr=$1 $ipu_params --subnet=2 --ipv6template=$PREFIX:0.0.0.0
+		ipu makeip --cidr=$ADRTEMPLATE $ipu_params --subnet=2 --ipv6template=$PREFIX:0.0.0.0
 	return 0
 }
 
-##   assign_addresses <addr-template> [count] [first]
+# Assign random addresses to local PODs
+rndaddress_assign() {
+	local mynode=$(mynode)
+	local adr ns name family
+	for family in 4 6; do
+		ns=1
+		for adr in $(cmd_rndaddress_pods $mynode $family); do
+			name=$(cmd_name 1 $ns)
+			ip -$family -n $name addr add $adr dev eth0 || tdie
+			ns=$((ns + 1))
+		done
+	done
+}
+
+##   assign_addresses [--random] [count] [first]
 ##     Assign addresses to PODs
 cmd_assign_addresses() {
+	if test "$__random" = "yes"; then
+		rndaddress_assign
+		return 0
+	fi
 	local pod adr
-	test -n "$1" || die "No addr-template"
-	for pod in $(cmd_name $2 $3); do
+	for pod in $(cmd_name $1 $2); do
 		for __family in 4 6; do
-			adr=$(cmd_compute_address $1 $pod)
+			adr=$(cmd_compute_address $pod)
 			ip -$__family -n $pod addr replace $adr dev $PODIF
 		done
 	done
 }
-##   cni_bridge_configure <address-template>
+
+# The "/etc/rnd-addresses" is generated by the "./tar" script (so it's
+# the same on all nodes) and contain numbers 1-254 in random
+# order. The first $__nvm numbers are reserved for nodes, the rest is
+# sliced up to PODs.
+
+##   rndaddress_node <node> [family]
+##     Get a random address for a node. The address is taken from
+##     "/etc/rnd-addresses" which is the same on all nodes.
+cmd_rndaddress_node() {
+	test -n "$1" || tdie "Parameter missing"
+	local node=$1
+	local a=$(tail -n +$node /etc/rnd-addresses | head -1);
+	test "$2" != "6" && \
+		ipu makeip --cidr=$ADRTEMPLATE --host=$a --subnet=2
+	test "$2" != "4" && \
+		ipu makeip --cidr=$ADRTEMPLATE --host=$a --subnet=2 --ipv6template=$PREFIX:0.0.0.0
+
+}
+##   rndaddress_pods <node> [family]
+##     Print random addresses for $NPODS pods on a node.
+cmd_rndaddress_pods() {
+	test -n "$1" || tdie "Parameter missing"
+	local node=$1
+	local first=$(((node - 1) * NPODS + 1 + __nvm))
+	local a ns=1
+	for a in $(tail -n +$first /etc/rnd-addresses | head -$NPODS); do
+		test "$2" != "6" && \
+			ipu makeip --cidr=$ADRTEMPLATE --host=$a --subnet=2
+		test "$2" != "4" && \
+			ipu makeip --cidr=$ADRTEMPLATE --host=$a --subnet=2 --ipv6template=1000::1:0.0.0.0
+		ns=$((ns + 1))
+	done
+}
+
+##   cni_bridge_configure
 ##     Configure CNI-bridge
 cmd_cni_bridge_configure() {
-	test -n "$1" || die "No address"
 	cmd_prerequisites
 	test -x /opt/cni/bin/bridge || die "CNI-plugins not included"
-	local ipv4=$(ipu makeip --cidr=$1 --net=$(mynode) --subnet=2)
-	local ipv6=$(ipu makeip --cidr=$1 --net=$(mynode) --subnet=2 --ipv6template=$PREFIX:0.0.0.0)
+	local ipv4=$(ipu makeip --cidr=$ADRTEMPLATE --net=$(mynode) --subnet=2)
+	local ipv6=$(ipu makeip --cidr=$ADRTEMPLATE --net=$(mynode) --subnet=2 --ipv6template=$PREFIX:0.0.0.0)
 	mkdir -p /etc/cni/net.d
 	cat > /etc/cni/10-bridge.conf <<EOF
 {
@@ -243,15 +321,13 @@ cmd_cni_bridge_configure() {
 EOF
 }
 
-##   cni_bridge_start [count]
-##     Setup addresses for PODs using CNI-bridge . Logs like /tmp/vm-001-ns01.json
+##   cni_bridge_start
+##     Connect PODs using CNI-bridge. Logs like /tmp/vm-001-ns01.json
 cmd_cni_bridge_start() {
 	test -r /etc/cni/10-bridge.conf || die "Bridge not configured"
-	local count=1
-	test -n "$1" && count=$1
 	local n
 	# This takes an age so do it in parallel
-	for n in $(netns_test name $count); do
+	for n in $(cmd_name); do
 		# These takes >1s (because of DAD) so execute in parallel
 		CNI_CONTAINERID=$n CNI_NETNS=/var/run/netns/$n CNI_IFNAME=$PODIF \
 			CNI_PATH=/opt/cni/bin CNI_COMMAND=ADD /opt/cni/bin/bridge \
@@ -260,47 +336,66 @@ cmd_cni_bridge_start() {
 	wait
 }
 
-##   assign_bridge_address <address-template> <device>
-##     Assign addresses to a bridge and set default route in PODs
+##   assign_bridge_address [--random] <device>
+##     Assign addresses to a bridge
 cmd_assign_bridge_address() {
-	test -n "$2" || die "Param missing"
+	test -n "$1" || die "Param missing"
 	cmd_prerequisites
-	local adrtempl=$1
-	local br=$2
+	local br=$1
 	sysctl -qw net.ipv6.conf.$br.accept_dad=0 || die
 	ip link set up dev $br || die
+
 	local adr mynode
 	mynode=$(mynode)
 
-	adr=$(ipu makeip --cidr=$adrtempl --net=$(mynode) --subnet=2)
-	ip addr replace $adr dev $br || die
+	if test "$__random" = "yes"; then
+		adr=$(cmd_rndaddress_node $mynode 4)
+		ip addr replace $adr dev $br || die
+		adr=$(cmd_rndaddress_node $mynode 6)
+		ip -6 addr replace $adr dev $br || die
+		return 0
+	fi
 
-	adr=$(ipu makeip --cidr=$adrtempl --net=$(mynode) --subnet=2 --ipv6template=$PREFIX:0.0.0.0)
+	adr=$(ipu makeip --cidr=$ADRTEMPLATE --net=$mynode --subnet=2)
+	ip addr replace $adr dev $br || die
+	adr=$(ipu makeip --cidr=$ADRTEMPLATE --net=$mynode --subnet=2 --ipv6template=$PREFIX:0.0.0.0)
 	ip -6 addr replace $adr dev $br || die
 }
 
-##   connect_to_bridge [--defaultgw] <device> [count] [first]
-##     Connect PODs to a bridge. Optionally set default route in PODs,
+##   connect_to_bridge <bridge> [count] [first]
+##     Connect PODs to a bridge.
 cmd_connect_to_bridge() {
 	test -n "$1" || die "Param missing"
 	local pod br=$1
 	for pod in $(cmd_name $2 $3); do
 		ip link set dev $pod master $br || tdie
 	done
-
-	test "$__defaultgw" = "yes" || return 0
-
-	local adr family
-	for adr in $(ip -j addr show dev $br | \
-		jq -r '.[]|select(.addr_info)|.addr_info[]|select(.scope == "global")|.local'); do
-		family=4
-		echo $adr | grep -q : && family=6
-		for pod in $(cmd_name $2 $3); do
-			ip -$family -n $pod route replace default via $adr || die $adr
+}
+##   set_default_route [--bridge=device]
+##     Set default routes in local PODs. If --bridge is specified
+##     addresses are taken from that device.
+cmd_set_default_route() {
+	local adr family pod mynode
+	if test -n "$__bridge"; then
+		for adr in $(ip -j addr show dev $__bridge | \
+			jq -r '.[]|select(.addr_info)|.addr_info[]|select(.scope == "global")|.local'); do
+			family=4
+			echo $adr | grep -q : && family=6
+			for pod in $(cmd_name $2 $3); do
+				ip -$family -n $pod route replace default via $adr || die $adr
+			done
 		done
+		return 0
+	fi
+
+	mynode=$(mynode)
+	for pod in $(cmd_name $2 $3); do
+		adr=$(ipu makeip --cidr=$ADRTEMPLATE --net=$mynode --subnet=2 | cut -d/ -f1)
+		ip -4 -n $pod route replace default via $adr || die $adr
+		adr=$(ipu makeip --cidr=$ADRTEMPLATE --net=$mynode --subnet=2 --ipv6template=$PREFIX:0.0.0.0 | cut -d/ -f1)
+		ip -6 -n $pod route replace default via $adr || die $adr
 	done
 }
-
 
 test -r /usr/lib/xctest && . /usr/lib/xctest
 indent='  '

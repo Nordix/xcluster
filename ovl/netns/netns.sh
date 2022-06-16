@@ -94,16 +94,6 @@ test_start() {
 }
 
 ##   test cni_bridge
-##     Create 10 netns/vm assign net with CNI-bridge and test with ping
-test_cni_bridge() {
-	test_start
-	otcw cni_bridge_configure
-	otcw cni_bridge_start
-	otcw cni_bridge_ping
-	xcluster_stop
-}
-
-##   test cni_bridge
 ##     Create PODs and assign net with CNI-bridge and test with ping
 test_cni_bridge() {
 	tlog "=== Test CNI-bridge"
@@ -122,6 +112,20 @@ test_bridge() {
 	otcw create_with_addresses
 	otcw linux_bridge
 	otcw bridge_ping
+	xcluster_stop
+}
+
+##   test L2
+##     Create an L2 network with all PODS
+test_L2() {
+	tlog "=== Test L2 network"
+	export xcluster_RNDADR=yes
+	test_start
+	otcw forward
+	otcw create_with_addresses
+	otcw linux_bridge
+	otcw attach_eth_to_bridge
+	otc 1 ping_all_random
 	xcluster_stop
 }
 

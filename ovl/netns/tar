@@ -22,7 +22,6 @@ cniver=v1.0.1
 ar=$ARCHIVE/cni-plugins-linux-amd64-$cniver.tgz
 test -r $ar || ar=$HOME/Downloads/cni-plugins-linux-amd64-$cniver.tgz
 if test -r $ar; then
-	log "Including cni-plugins $cniver"
 	mkdir -p $tmp/opt/cni/bin
 	tar -C $tmp/opt/cni/bin -xf $ar
 fi
@@ -30,6 +29,9 @@ fi
 ipu=$HOME/bin/ipu
 test -x $ipu || ipu=$NFQLBDIR/bin/ipu
 test -x $ipu && cp $ipu $tmp/bin
+
+mkdir $tmp/etc
+seq 1 254 | shuf > $tmp/etc/rnd-addresses
 
 cd $tmp
 tar cf "$1" *

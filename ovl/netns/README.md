@@ -37,8 +37,9 @@ will not set the `utsns` so you will see the node hostname.
 
 Environment variables;
 ```
+export xcluster_NPODS=4
+export xcluster_ADRTEMPLATE=172.16.0.0/16/24
 export xcluster_PODIF=eth0
-export xcluster_PREFIX=1000::1
 ```
 
 ### Prerequisite
@@ -55,12 +56,6 @@ export NFQLBDIR=$HOME/tmp/nfqlb-1.0.0
 
 The tests uses environment variables to set the number of PODs per
 node and the address template.
-
-```
-# The defaults;
-export xcluster_NPODS=4
-export xcluster_ADRTEMPLATE=172.16.0.0/16/24
-```
 
 
 #### CNI-bridge
