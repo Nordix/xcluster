@@ -17,14 +17,13 @@ This ovl is intended to be used by other ovl's. Check the output from;
 ```
 ./default/bin/netns_test
 ```
-for the provided functions.
 
 Example;
 ```
 ./netns.sh test start > $log
 # On a VM;
 # Create 10 netns'es;
-netns_test create 1 10
+netns_test create 10
 # Check them;
 ip netns
 # Execute something in a netns;
@@ -45,18 +44,54 @@ export xcluster_PODIF=eth0
 ### Prerequisite
 
 All address function requires the `ipu` utility from
-[nfqlb](https://github.com/Nordix/nfqueue-loadbalancer/). A `nfqueue`
+[nfqlb](https://github.com/Nordix/nfqueue-loadbalancer/). A `nfqlb`
 release dir can be specified in $NFQLBDIR.
 
 ```
 export NFQLBDIR=$HOME/tmp/nfqlb-1.0.0
 ```
 
+## POD addresses
+
+PODs are assigned addresses from the $ADRTEMPLATE. The `ipu` program
+is used to create an address. Example;
+
+```
+# POD 3 on vm-002 may get addresses;
+ipu makeip --cidr=172.16.0.0/16/24 --net=2 --host=3
+ipu makeip --cidr=172.16.0.0/16/24 --net=2 --host=3 --ipv6template=1000::1:0.0.0.0
+```
+
+### Random addresses
+
+For flat networks the address assignment above is just "too structured".
+We want some more random. A file with random mumbers 1-254 is created
+by the `./tar` script so it's the same on all nodes.
+
+```
+seq 1 254 | shuf > $tmp/etc/rnd-addresses
+```
+
+The first $__nvm numbers are reserved for nodes (bridges), the rest is
+sliced up to PODs. The last byte for addresses is taken from
+`/etc/rnd-addresses`. Example;
+
+```
+# POD 3 on vm-002 may get addresses ($NPODS=pods-per-node);
+NPODS=4
+position=$((__nvm + 1 * NPODS + 3))
+tail +$position /etc/rnd-addresses | head -1
+netns_test rndaddress_pods 2  # print all random POD addresses on vm-002
+```
+
+
 ## Test
 
-The tests uses environment variables to set the number of PODs per
-node and the address template.
-
+```
+./netns.sh      # Help printout
+# Run a test;
+./netns.sh test bridge > $log
+```
 
 #### CNI-bridge
 

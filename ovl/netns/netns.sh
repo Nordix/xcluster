@@ -116,16 +116,30 @@ test_bridge() {
 }
 
 ##   test L2
-##     Create an L2 network with all PODS
+##     Create an L2 network with all PODS.
+##     WARNING: Doesn't work with xcluster in main netns!
 test_L2() {
 	tlog "=== Test L2 network"
 	export xcluster_RNDADR=yes
 	test_start
-	otcw forward
 	otcw create_with_addresses
 	otcw linux_bridge
 	otcw attach_eth_to_bridge
 	otc 1 ping_all_random
+	xcluster_stop
+}
+
+##   test L3
+##     Create an L3 network with all PODS.
+test_L3() {
+	tlog "=== Test L3 network"
+	test_start
+	otcw forward
+	otcw create_with_addresses
+	otcw linux_bridge
+	otcw default_route
+	otcw setup_routes
+	otc 1 ping_all_pods
 	xcluster_stop
 }
 

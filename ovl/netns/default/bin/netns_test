@@ -51,7 +51,6 @@ cmd_tcase_version() {
 	tlog "ADRTEMPLATE=[$ADRTEMPLATE]"
 	tlog "NPODS=[$NPODS]"
 	tlog "PODIF=[$PODIF]"
-	tlog "PREFIX=[$PREFIX]"
 }
 ##   cni_bridge_configure -- Configure CNI-bridge
 cmd_tcase_cni_bridge_configure() {
@@ -77,10 +76,14 @@ cmd_tcase_cni_bridge_ping() {
 }
 ##   create_with_addresses - Create PODs and assign addresses
 cmd_tcase_create_with_addresses() {
-	tcase "Create PODs and assign addresses"
+	if test "$RNDADR" = "yes"; then
+		tcase "Create PODs and assign random addresses"
+		__random=yes
+	else
+		tcase "Create PODs and assign addresses"
+	fi
 	cmd_create
 	cmd_veth
-	test "$RNDADR" = "yes" && __random=yes
 	cmd_assign_addresses
 }
 ##   forward - Turn on IP forwarding
@@ -123,17 +126,40 @@ cmd_tcase_attach_eth_to_bridge() {
 	ip addr add 192.168.1.$mynode/24 dev $BR || tdie
 	ip -6 addr add $PREFIX:192.168.1.$mynode/24 dev $BR || tdie
 }
-
+##   ping_all_random - Ping all random addresses
 cmd_tcase_ping_all_random() {
+	tcase "Ping all random addresses"
 	local count=$((__nvm * NPODS + __nvm))
 	local a adr
 	for a in $(head -$count /etc/rnd-addresses); do
 		adr=$(ipu makeip --cidr=$ADRTEMPLATE --host=$a)
-		tlog "Ping $adr"
+		#tlog "Ping $adr"
 		tex ping -c1 -W1 $adr || tdie $adr
 		adr=$(ipu makeip --cidr=$ADRTEMPLATE --host=$a --ipv6template=$PREFIX:0.0.0.0)
-		tlog "Ping $adr"
+		#tlog "Ping $adr"
 		tex ping -c1 -W1 $adr || tdie $adr
+	done
+}
+##   setup_routes - Setup routing to POD networks between nodes
+cmd_tcase_setup_routes() {
+	tcase "Setup routing to POD networks on other nodes"
+	cmd_setup_routes
+}
+##   default_route - Setup default routes in PODs
+cmd_tcase_default_route() {
+	tcase "Setup default routes in PODs"
+	__bridge=br0
+	cmd_set_default_route
+}
+##   ping_all_pods - Ping all PODs
+cmd_tcase_ping_all_pods() {
+	tcase "Ping all PODs"
+	local node adr
+	for node in $(seq 1 $__nvm); do
+		for adr in $(cmd_address_pods $node | cut -d/ -f1); do
+			#tlog "Ping $adr"
+			tex ping -c1 -W1 $adr || tdie $adr
+		done
 	done
 }
 
@@ -239,14 +265,15 @@ rndaddress_assign() {
 		ns=1
 		for adr in $(cmd_rndaddress_pods $mynode $family); do
 			name=$(cmd_name 1 $ns)
-			ip -$family -n $name addr add $adr dev eth0 || tdie
+			ip -$family -n $name addr add $adr dev eth0 || die
 			ns=$((ns + 1))
 		done
 	done
 }
 
 ##   assign_addresses [--random] [count] [first]
-##     Assign addresses to PODs
+##     Assign addresses to PODs. --random takes addresses from
+##     "/etc/rnd-addresses".
 cmd_assign_addresses() {
 	if test "$__random" = "yes"; then
 		rndaddress_assign
@@ -270,7 +297,7 @@ cmd_assign_addresses() {
 ##     Get a random address for a node. The address is taken from
 ##     "/etc/rnd-addresses" which is the same on all nodes.
 cmd_rndaddress_node() {
-	test -n "$1" || tdie "Parameter missing"
+	test -n "$1" || die "Parameter missing"
 	local node=$1
 	local a=$(tail -n +$node /etc/rnd-addresses | head -1);
 	test "$2" != "6" && \
@@ -282,7 +309,7 @@ cmd_rndaddress_node() {
 ##   rndaddress_pods <node> [family]
 ##     Print random addresses for $NPODS pods on a node.
 cmd_rndaddress_pods() {
-	test -n "$1" || tdie "Parameter missing"
+	test -n "$1" || die "Parameter missing"
 	local node=$1
 	local first=$(((node - 1) * NPODS + 1 + __nvm))
 	local a ns=1
@@ -292,6 +319,19 @@ cmd_rndaddress_pods() {
 		test "$2" != "4" && \
 			ipu makeip --cidr=$ADRTEMPLATE --host=$a --subnet=2 --ipv6template=1000::1:0.0.0.0
 		ns=$((ns + 1))
+	done
+}
+##   address_pods <node> [family]
+##     Print addresses for $NPODS pods on a node.
+cmd_address_pods() {
+	test -n "$1" || die "Parameter missing"
+	local node=$1
+	local pod
+	for pod in $(cmd_for); do
+		test "$2" != "6" && \
+			ipu makeip --cidr=$ADRTEMPLATE --net=$node --host=$pod --subnet=2
+		test "$2" != "4" && \
+			ipu makeip --cidr=$ADRTEMPLATE --net=$node --host=$pod --subnet=2 --ipv6template=1000::1:0.0.0.0
 	done
 }
 
@@ -368,7 +408,7 @@ cmd_connect_to_bridge() {
 	test -n "$1" || die "Param missing"
 	local pod br=$1
 	for pod in $(cmd_name $2 $3); do
-		ip link set dev $pod master $br || tdie
+		ip link set dev $pod master $br || die
 	done
 }
 ##   set_default_route [--bridge=device]
@@ -394,6 +434,24 @@ cmd_set_default_route() {
 		ip -4 -n $pod route replace default via $adr || die $adr
 		adr=$(ipu makeip --cidr=$ADRTEMPLATE --net=$mynode --subnet=2 --ipv6template=$PREFIX:0.0.0.0 | cut -d/ -f1)
 		ip -6 -n $pod route replace default via $adr || die $adr
+	done
+}
+
+##   setup_routes [--net=1]
+##     Setup routing to POD networks on other nodes
+cmd_setup_routes() {
+	local node adr via
+	local mynode=$(mynode)
+	local net=1
+	test -n "$__net" && net=$__net
+	for node in $(seq 1 $__nvm); do
+		test $node -eq $mynode && continue
+		adr=$(ipu makeip --cidr=$ADRTEMPLATE --net=$node --subnet=2)
+		via=192.168.$net.$node
+		ip route add $adr via $via
+		adr=$(ipu makeip --cidr=$ADRTEMPLATE --net=$node --subnet=2 --ipv6template=$PREFIX:0.0.0.0)
+		via=$PREFIX:192.168.$net.$node
+		ip -6 route add $adr via $via
 	done
 }
 
