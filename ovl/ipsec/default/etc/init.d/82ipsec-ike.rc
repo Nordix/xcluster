@@ -1,0 +1,37 @@
+#! /bin/sh
+. /etc/profile
+. /usr/lib/network-topology.sh
+
+vm() {
+	sysctl -w net.ipv4.conf.all.arp_announce=2
+	sysctl -w net.ipv4.conf.all.arp_ignore=1
+	sysctl -w net.ipv4.ip_nonlocal_bind=1
+	sysctl -w net.ipv6.ip_nonlocal_bind=1
+	sysctl -w net.ipv4.conf.all.proxy_arp=0
+
+	ip addr add 10.0.0.0/24 dev lo
+	ip -6 addr add 1000::/120 dev lo
+	ip -6 ro add local 1000::/120 dev lo
+}
+
+router() {
+	return 0
+}
+
+tester() {
+    /usr/local/sbin/ipsec start --nofork &
+    # Wait for charon to start
+    until pids=$(pidof charon); do   
+        sleep 1
+    done
+    /usr/local/sbin/swanctl --load-all --noprompt
+}
+
+case $(hostname) in
+    vm-0*)
+        vm;;
+    vm-20*)
+        router;;
+    vm-22*)
+        tester;;
+esac

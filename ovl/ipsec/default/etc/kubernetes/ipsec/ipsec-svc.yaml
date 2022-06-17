@@ -1,0 +1,18 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ipsec
+spec:
+  ipFamilyPolicy: PreferDualStack
+  externalTrafficPolicy: Local
+  selector:
+    app: ipsec-responder
+  ports:
+  - port: 500
+    name: isakmp
+    protocol: UDP
+  - port: 4500
+    name: isakmp-nat
+    protocol: UDP
+  type: LoadBalancer
