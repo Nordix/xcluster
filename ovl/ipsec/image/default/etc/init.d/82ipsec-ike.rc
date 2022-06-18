@@ -1,0 +1,10 @@
+#! /bin/sh
+. /etc/profile
+
+test "$NO_IPSEC" = "yes" && exit 0
+/usr/local/sbin/ipsec start --nofork &
+# Wait for charon to start
+until pids=$(pidof charon); do   
+    sleep 1
+done
+/usr/local/sbin/swanctl --load-all --noprompt

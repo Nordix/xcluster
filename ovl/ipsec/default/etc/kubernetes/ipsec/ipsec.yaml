@@ -1,0 +1,32 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ipsec-responder
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ipsec-responder
+  template:
+    metadata:
+      labels:
+        app: ipsec-responder
+    spec:
+      serviceAccount: default
+      nodeSelector:
+        kubernetes.io/hostname: vm-002
+      containers:
+      - name: ipsec-responder
+        imagePullPolicy: Always
+        image: registry.nordix.org/cloud-native/ipsec:latest
+        ports:
+        - containerPort: 500
+        - containerPort: 4500
+        securityContext:
+          capabilities:
+            add: ["NET_ADMIN"]
+        env:
+        - name: LOCAL_IP_ADDR
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP

@@ -1,0 +1,5 @@
+#! /bin/sh
+. /etc/profile
+test -n "$IPSEC_CMD" || IPSEC_CMD="tail -f /var/log/messages"
+echo "Executing [$IPSEC_CMD]"
+exec $IPSEC_CMD

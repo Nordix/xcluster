@@ -1,0 +1,31 @@
+#! /bin/sh
+# NOTE: A common pattern is to specify "-" (stdout) as out-file,
+#  so there must be NO log printouts to stdout!
+
+dir=$(dirname $0); dir=$(readlink -f $dir)
+tmp=/tmp/$USER/xcluster_$$
+die() {
+	echo "ERROR: $*" >&2
+	rm -rf $tmp
+	exit 1
+}
+log() {
+	echo "INFO: $*" >&2
+}
+
+mkdir -p $tmp
+
+test -n "$STRONGSWAN_WORKSPACE" || STRONGSWAN_WORKSPACE=/tmp/$USER/strongswan
+mkdir -p $tmp/usr/local
+cp -R $STRONGSWAN_WORKSPACE/usr/local/* $tmp/usr/local/
+
+#FIXME: xcluster-base doesn't seem to have libgcc_s.so.1
+mkdir -p $tmp/lib/x86_64-linux-gnu
+cp -L /lib/x86_64-linux-gnu/libgcc_s.so.1 $tmp/lib/x86_64-linux-gnu
+
+cp -R $dir/default/* $tmp
+
+cd $tmp
+tar cf "$1" *
+cd - > /dev/null
+rm -rf $tmp
