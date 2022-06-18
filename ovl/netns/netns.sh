@@ -143,6 +143,17 @@ test_L3() {
 	xcluster_stop
 }
 
+##   test ipvlan
+##     Create an ipvlan network with all PODS.
+test_ipvlan() {
+	tlog "=== Test ipvlan network"
+	test_start
+	otcw create
+	otcw ipvlan
+	otc 1 ping_all_random
+	xcluster_stop
+}
+
 . $($XCLUSTER ovld test)/default/usr/lib/xctest
 indent=''
 

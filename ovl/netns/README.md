@@ -21,13 +21,13 @@ This ovl is intended to be used by other ovl's. Check the output from;
 Example;
 ```
 ./netns.sh test start > $log
-# On a VM;
+# On vm-001;
 # Create 10 netns'es;
 netns_test create 10
 # Check them;
 ip netns
 # Execute something in a netns;
-netns_test exec 3 hostname
+netns_test exec vm-001-ns03 hostname
 ```
 
 The `netns_test exec` will set the hostname name space (uts) so the
@@ -83,6 +83,14 @@ position=$((__nvm + 1 * NPODS + 3))
 tail +$position /etc/rnd-addresses | head -1
 netns_test rndaddress_pods 2  # print all random POD addresses on vm-002
 ```
+
+## Direct access
+
+In some cases the `veth` pair is not needed, for instance for `ipvlan`
+and `macvlan`. The POD interface is directly attached to a physical device.
+
+<img src="netns-direct.svg" width="70%" />
+
 
 
 ## Test

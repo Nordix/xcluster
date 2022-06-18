@@ -74,6 +74,11 @@ cmd_tcase_cni_bridge_ping() {
 		tex ping -c1 -W1 $adr || tdie "Ping $adr"
 	done
 }
+##   create - Create PODs
+cmd_tcase_create() {
+	tcase "Create PODs"
+	cmd_create
+}
 ##   create_with_addresses - Create PODs and assign addresses
 cmd_tcase_create_with_addresses() {
 	if test "$RNDADR" = "yes"; then
@@ -162,6 +167,15 @@ cmd_tcase_ping_all_pods() {
 		done
 	done
 }
+##   ipvlan - Add ipvlan's to PODs
+cmd_tcase_ipvlan() {
+	tcase "Add ipvlan's to PODs"
+	cmd_add_ipvlan eth1
+	__random=yes
+	cmd_assign_addresses
+	cmd_assign_bridge_address ipvlan-eth1
+}
+
 
 ##
 ## Commands on nodes;
@@ -453,6 +467,20 @@ cmd_setup_routes() {
 		via=$PREFIX:192.168.$net.$node
 		ip -6 route add $adr via $via
 	done
+}
+##   add_ipvlan <master-dev>
+##     Add ipvlan's to PODs and "ipvlan-<master-dev>" in main netns
+cmd_add_ipvlan() {
+	test -n "$1" || die "Param missing"
+	local pod
+	for pod in $(cmd_name); do
+		ip link add link $1 name $pod type ipvlan mode l2 || die "link add"
+		ip link set netns $pod dev $pod || die "link set netns"
+		ip -n $pod link set name $PODIF dev $pod || die "link set name"
+		ip netns exec $pod sysctl -qw net.ipv6.conf.$PODIF.accept_dad=0 || die
+		ip -n $pod link set up dev $PODIF || die "link set up"
+	done
+	ip link add link $1 name ipvlan-$1 type ipvlan mode l2 || die "link add"
 }
 
 test -r /usr/lib/xctest && . /usr/lib/xctest
