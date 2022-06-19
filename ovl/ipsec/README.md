@@ -1,16 +1,23 @@
 # Xcluster/ovl - ipsec
 
 Test and experiments with IKE/IPSEC behind NAT using strongswan
+The following network topology is used:
+<img src="network-topology/ikev2-k8s.svg" alt="IKEv2 responder in a k8s pod" width="80%" />
 
 ## Build strongswan
 ```
 ./ipsec.sh build
 ```
 
-## Run tests
+## Basic example with IKEv2 responder in a pod
 ```
 ./ipsec.sh mkimage
-./ipsec.sh test 
+./ipsec.sh test start
+# Check the initiator and responder logs for debugging
+# On vm-002
+kubectl logs deploy/ipsec-responder
+# On vm-221
+cat /var/log/ipsec-initiate.log
 ```
 
 ## Notes on running Strongswan inside a pod (behind NAT)

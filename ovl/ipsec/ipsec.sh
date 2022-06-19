@@ -66,7 +66,7 @@ cmd_test() {
     test "$__xterm" = "yes" && start=start
     rm -f $XCLUSTER_TMP/cdrom.iso
 	rm -f $($XCLUSTER ovld ipsec)/captures/*.pcap
-	export xcluster_PROXY_MODE=iptables
+	#export xcluster_PROXY_MODE=iptables
 
     if test -n "$1"; then
         for t in $@; do
@@ -103,9 +103,11 @@ test_start() {
 	otc 201 "vip_route 192.168.1.2"
 	otc 1 deploy_ipsec_pods
 	otc 221 initiate
-	local __wait=15
+	local __wait=120
 	tlog "Wait $__wait seconds for IKE/CHILD SAs to be setup"
 	sleep $__wait
+	otc 221 initiator_list_sas
+	otc 2 responder_list_sas
 
 	otc 1 stop_all_tcpdump
 	otc 2 stop_all_tcpdump

@@ -59,6 +59,20 @@ cmd_tcase_initiate() {
 	nohup $cmd > $log 2>&1 &
 }
 
+cmd_tcase_initiator_list_sas() {
+	tcase "Initiator list SAs"
+	local cmd="/usr/local/sbin/swanctl --list-sas"
+	tlog $cmd
+	$cmd
+}
+
+cmd_tcase_responder_list_sas() {
+	tcase "Initiator list SAs"
+	local cmd="kubectl exec deploy/ipsec-responder -- /usr/local/sbin/swanctl --list-sas"
+	tlog $cmd
+	$cmd
+}
+
 cmd_tcase_vip_ecmp_route() {
 	local net=1
 	test -n "$1" && net=$1
