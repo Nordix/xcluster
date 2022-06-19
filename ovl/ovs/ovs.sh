@@ -48,6 +48,23 @@ cmd_env() {
 	eval $($XCLUSTER env)
 }
 
+##   man [command]
+##     Show a ovs man-page. List if no command is specified.
+cmd_man() {
+	cmd_env
+	MANPATH=$SYSD/usr/local/share/man
+	if test -z "$1"; then
+		local f
+		for f in $(find $MANPATH -type f); do
+			basename $f
+		done
+		return 0
+	fi
+	export MANPATH
+	xterm -bg '#ddd' -fg '#222' -geometry 80x45 -T $1 -e man $1 &
+}
+
+
 ##   test --list
 ##   test [--xterm] [test...] > logfile
 ##     Exec tests
@@ -68,47 +85,32 @@ cmd_test() {
             test_$t
         done
     else
-		test_default
+		test_L2
     fi      
 
     now=$(date +%s)
     tlog "Xcluster test ended. Total time $((now-begin)) sec"
 
 }
-
-test_start_base() {
+##   test start - Start cluster
+test_start() {
 	export __image=$XCLUSTER_HOME/hd.img
 	echo "$XOVLS" | grep -q private-reg && unset XOVLS
-	export __nrouters=0
+	test -n "$__nrouters" || export __nrouters=0
 	test -n "$TOPOLOGY" && \
 		. $($XCLUSTER ovld network-topology)/$TOPOLOGY/Envsettings
-	xcluster_start network-topology iptools ovs
+	xcluster_start network-topology iptools netns ovs
+	otc 1 version
 }
-
-test_default() {
-	tlog "=== ovs: Basic test"
-	test_start_base
+##   test L2 (default) - Setup an L2 network and test with ping
+test_L2() {
+	tlog "=== ovs: L2 network"
+	test_start
 	otcw create_br0
 	otcw create_netns
 	otcw add_ports
-	otcw ping_all
+	otc 1 ping_all
 	xcluster_stop
-}
-
-##   man [command]
-##     Show a ovs man-page. List if no command is specified.
-cmd_man() {
-	cmd_env
-	MANPATH=$SYSD/usr/local/share/man
-	if test -z "$1"; then
-		local f
-		for f in $(find $MANPATH -type f); do
-			basename $f
-		done
-		return 0
-	fi
-	export MANPATH
-	xterm -bg '#ddd' -fg '#222' -geometry 80x45 -T $1 -e man $1 &
 }
 
 ##

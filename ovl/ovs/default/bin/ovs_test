@@ -11,7 +11,7 @@ prg=$(basename $0)
 dir=$(dirname $0); dir=$(readlink -f $dir)
 me=$dir/$prg
 tmp=/tmp/${prg}_$$
-test -n "$DOMAIN" || DOMAIN=xcluster
+test -n "$PODIF" || export PODIF=hostname
 
 die() {
 	echo "ERROR: $*" >&2
@@ -32,54 +32,53 @@ log() {
 dbg() {
 	test -n "$__verbose" && echo "$prg: $*" >&2
 }
-
+cmd_tcase_version() {
+	netns_test tcase_version
+}
 cmd_tcase_create_br0() {
 	tcase "Create ovs bridge; br0"
 	ovs-vsctl add-br br0
+	ip addr flush dev eth1
 	ovs-vsctl add-port br0 eth1
+	local mynode=$(mynode)
+	ip addr add 192.168.1.$mynode/24 dev eth1
+	ip -6 addr add 1000::1:192.168.1.$mynode/120 dev eth1
+	netns_test assign_bridge_address --random br0
 }
 cmd_tcase_create_netns() {
-	tcase "Create netns; ns1, ns2"
-	create_netns ns1
-	create_netns ns2
+	tcase "Create netns"
+	netns_test create
 }
-create_netns() {
-	ip netns add $1
-	ip netns exec $1 ip link set up dev lo
-}
+# This seems like a bug reported and ignored since 2015;
+# https://mail.openvswitch.org/pipermail/ovs-discuss/2015-July/038205.html
+# We must inject ALL interfaces *first* and *then* rename them.
 cmd_tcase_add_ports() {
-	tcase "Add vanilla interfaces in netns's"
-	ovs-vsctl add-port br0 ns1 -- set Interface ns1 type=internal
-	ovs-vsctl add-port br0 ns2 -- set Interface ns2 type=internal
-	add_ports 1
-	add_ports 2
-}
-add_ports() {
-	local i=$(hostname | cut -d- -f2 | sed -re 's,^0+,,')
-	local ns=ns$1
-	local ip4=10.10.$i.$1
-	ip link set netns $ns $ns
-	ip netns exec $ns ip link set up dev $ns
-	ip netns exec $ns ip addr add $ip4/16 dev $ns
-	ip netns exec $ns ip -6 addr add 1100::$ip4/112 dev $ns
+	tcase "Add OVS internal interfaces in netns's"
+	local pod
+	for pod in $(netns_test name); do
+		#tlog "POD $pod"
+		ovs-vsctl add-port br0 $pod -- set Interface $pod type=internal
+		ip link set netns $pod $pod || tdie
+	done
+	local dev=$PODIF
+	for pod in $(netns_test name); do
+		if test "$PODIF" = "hostname"; then
+			dev=$pod
+		else
+			ip -n $pod link set name $dev dev $pod
+		fi
+		ip netns exec $pod sysctl -qw net.ipv6.conf.$dev.accept_dad=0
+		ip -n $pod link set up dev $dev
+	done
+	
+	netns_test assign_addresses --random || tdie
 }
 cmd_tcase_ping_all() {
-	tcase "Ping all from ns1 and ns2"
-	ping_all 1
-	ping_all 2
-}
-ping_all() {
-	local ns=ns$1
-	local i
-	for i in $(seq 1 $__nvm); do
-		ping_one $ns 10.10.$i.1 || tdie 10.10.$i.1
-		ping_one $ns 10.10.$i.2 || tdie 10.10.$i.2
-		tex ping_one $ns 1100::10.10.$i.1 || tdie 1100::10.10.$i.1
-		tex ping_one $ns 1100::10.10.$i.2 || tdie 1100::10.10.$i.2
-	done
-}
-ping_one() {
-	ip netns exec $1 ping -W1 -c1 $2
+	tcase "Ping all from main netns"
+	netns_test ping_all_random || tdie
+	local pod=$(netns_test name 1)
+	tcase "Ping all from POD [$pod]"
+	netns_test exec $pod netns_test ping_all_random
 }
 
 

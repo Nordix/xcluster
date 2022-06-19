@@ -8,6 +8,7 @@ network (as the image on https://www.openvswitch.org/ shows).
 
 Test;
 ```
+./ovs.sh   # Check help printouts
 ./ovs.sh test > $log
 ```
 
