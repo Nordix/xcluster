@@ -21,7 +21,7 @@ test -n "$STRONGSWAN_WORKSPACE" || STRONGSWAN_WORKSPACE=/tmp/$USER/strongswan
 mkdir -p $tmp/usr/local
 cp -R $STRONGSWAN_WORKSPACE/usr/local/* $tmp/usr/local/
 
-cp -R $dir/default/* $tmp
+cp -LR $dir/default/* $tmp
 
 #FIXME: xcluster-base doesn't seem to have libgcc_s.so.1
 mkdir -p $tmp/lib/x86_64-linux-gnu

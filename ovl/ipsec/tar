@@ -23,7 +23,7 @@ cp -R $STRONGSWAN_WORKSPACE/usr/local/* $tmp/usr/local/
 mkdir -p $tmp/lib/x86_64-linux-gnu
 cp -L /lib/x86_64-linux-gnu/libgcc_s.so.1 $tmp/lib/x86_64-linux-gnu
 
-cp -R $dir/default/* $tmp
+cp -LR $dir/default/* $tmp
 
 cd $tmp
 tar cf "$1" *
