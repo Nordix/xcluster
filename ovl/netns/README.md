@@ -39,6 +39,7 @@ Environment variables;
 export xcluster_NPODS=4
 export xcluster_ADRTEMPLATE=172.16.0.0/16/24
 export xcluster_PODIF=eth0
+#export xcluster_PODIF=hostname  # Use pod name as interface name
 ```
 
 ### Prerequisite
