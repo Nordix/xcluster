@@ -134,16 +134,7 @@ cmd_tcase_attach_eth_to_bridge() {
 ##   ping_all_random - Ping all random addresses
 cmd_tcase_ping_all_random() {
 	tcase "Ping all random addresses"
-	local count=$((__nvm * NPODS + __nvm))
-	local a adr
-	for a in $(head -$count /etc/rnd-addresses); do
-		adr=$(ipu makeip --cidr=$ADRTEMPLATE --host=$a)
-		#tlog "Ping $adr"
-		tex ping -c1 -W1 $adr || tdie $adr
-		adr=$(ipu makeip --cidr=$ADRTEMPLATE --host=$a --ipv6template=$PREFIX:0.0.0.0)
-		#tlog "Ping $adr"
-		tex ping -c1 -W1 $adr || tdie $adr
-	done
+	cmd_ping_all_random
 }
 ##   setup_routes - Setup routing to POD networks between nodes
 cmd_tcase_setup_routes() {
@@ -159,13 +150,7 @@ cmd_tcase_default_route() {
 ##   ping_all_pods - Ping all PODs
 cmd_tcase_ping_all_pods() {
 	tcase "Ping all PODs"
-	local node adr
-	for node in $(seq 1 $__nvm); do
-		for adr in $(cmd_address_pods $node | cut -d/ -f1); do
-			#tlog "Ping $adr"
-			tex ping -c1 -W1 $adr || tdie $adr
-		done
-	done
+	cmd_ping_all_pods
 }
 ##   ipvlan - Add ipvlan's to PODs
 cmd_tcase_ipvlan() {
@@ -177,6 +162,7 @@ cmd_tcase_ipvlan() {
 }
 
 
+# ----------------------------------------------------------------------
 ##
 ## Commands on nodes;
 
@@ -481,6 +467,32 @@ cmd_add_ipvlan() {
 		ip -n $pod link set up dev $PODIF || die "link set up"
 	done
 	ip link add link $1 name ipvlan-$1 type ipvlan mode l2 || die "link add"
+}
+##   ping_all_random
+##     Ping all random address, includes all bridges and all PODs.
+##     Ping functions can be called from within PODs with "ip netns exec".
+cmd_ping_all_random() {
+	local count=$((__nvm * NPODS + __nvm))
+	local a adr
+	for a in $(head -$count /etc/rnd-addresses); do
+		adr=$(ipu makeip --cidr=$ADRTEMPLATE --host=$a)
+		#log "Ping $adr"
+		tex ping -c1 -W1 $adr || tdie $adr
+		adr=$(ipu makeip --cidr=$ADRTEMPLATE --host=$a --ipv6template=$PREFIX:0.0.0.0)
+		#log "Ping $adr"
+		tex ping -c1 -W1 $adr || die $adr
+	done
+}
+##   ping_all_pods
+##     Ping all pods. Random addresses must NOT be used. Bridges are not pinged
+cmd_tcase_ping_all_pods() {
+	local node adr
+	for node in $(seq 1 $__nvm); do
+		for adr in $(cmd_address_pods $node | cut -d/ -f1); do
+			#log "Ping $adr"
+			tex ping -c1 -W1 $adr || die $adr
+		done
+	done
 }
 
 test -r /usr/lib/xctest && . /usr/lib/xctest
