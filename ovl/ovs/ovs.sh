@@ -48,6 +48,39 @@ cmd_env() {
 	eval $($XCLUSTER env)
 }
 
+##   build [--dest=$GOPATH/src/github.com/openvswitch/ovs]
+##     Clone/pull and build OVS.
+cmd_build() {
+	cmd_env
+	test -n "$__dest" || __dest=$GOPATH/src/github.com/openvswitch/ovs
+	if test -d $__dest; then
+		cd $__dest
+		git pull
+	else
+		local pdir=$(basename $__dest)
+		mkdir -p $pdir || die "mkdir $pdir"
+		cd $pdir
+		git clone https://github.com/openvswitch/ovs.git || die "git clone"
+		cd $__dest
+	fi
+
+	local bpflibd=$(readlink -f $__kobj/source)/tools/lib/bpf/build/usr
+	./boot.sh
+	if test -d $bpflibd; then
+		LDFLAGS=-L$bpflibd/lib64 CPPFLAGS=-I$bpflibd/include \
+			./configure --enable-afxdp
+	else
+		./configure
+	fi
+	make -j$(nproc) || die make
+	make DESTDIR=$SYSD install || die "make install"
+	if test -d $bpflibd; then
+		log "Building with XDP support"
+	else
+		log "Building WITHOUT XDP support"
+	fi
+}
+
 ##   man [command]
 ##     Show a ovs man-page. List if no command is specified.
 cmd_man() {
@@ -55,18 +88,20 @@ cmd_man() {
 	MANPATH=$SYSD/usr/local/share/man
 	if test -z "$1"; then
 		local f
+		mkdir -p $tmp
 		for f in $(find $MANPATH -type f); do
-			basename $f
+			basename $f >> $tmp/man
 		done
+		cat $tmp/man | sort | column
 		return 0
 	fi
 	export MANPATH
 	xterm -bg '#ddd' -fg '#222' -geometry 80x45 -T $1 -e man $1 &
 }
 
-
+##
 ##   test --list
-##   test [--xterm] [test...] > logfile
+##   test [--xterm] [--no-stop] [test...] > logfile
 ##     Exec tests
 ##
 cmd_test() {
@@ -106,10 +141,23 @@ test_start() {
 test_L2() {
 	tlog "=== ovs: L2 network"
 	test_start
-	otcw create_br0
+	otcw create_bridge
 	otcw create_netns
 	otcw add_ports
 	otc 1 ping_all
+	xcluster_stop
+}
+
+##   test basic_flow - Setup OpenFlow between 2 PODs on vm-002
+test_basic_flow() {
+	tlog "=== ovs: Basic OpenFlow"
+	export xcluster_PODIF=eth0
+	test_start
+	otcw create_ofbridge
+	otcw create_netns
+	otcw create_veth
+	otcw attach_veth
+	otc 2 "ping_negative --pod=vm-002-ns02 172.16.2.1"
 	xcluster_stop
 }
 

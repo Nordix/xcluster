@@ -12,6 +12,8 @@ dir=$(dirname $0); dir=$(readlink -f $dir)
 me=$dir/$prg
 tmp=/tmp/${prg}_$$
 test -n "$PODIF" || export PODIF=hostname
+test -n "$BR" || BR=br0
+test -n "$SWITCH" || SWITCH=tcp:127.0.0.1
 
 die() {
 	echo "ERROR: $*" >&2
@@ -32,32 +34,61 @@ log() {
 dbg() {
 	test -n "$__verbose" && echo "$prg: $*" >&2
 }
+## Test cases;
+##   version - Log versions
 cmd_tcase_version() {
 	netns_test tcase_version
+	tlog $(ovs-vsctl --version)
 }
-cmd_tcase_create_br0() {
-	tcase "Create ovs bridge; br0"
-	ovs-vsctl add-br br0
+##   create_bridge - Create ovs bridge
+cmd_tcase_create_bridge() {
+	tcase "Create ovs bridge; $BR"
+	ovs-vsctl add-br $BR
 	ip addr flush dev eth1
-	ovs-vsctl add-port br0 eth1
+	ovs-vsctl add-port $BR eth1
 	local mynode=$(mynode)
-	ip addr add 192.168.1.$mynode/24 dev eth1
-	ip -6 addr add 1000::1:192.168.1.$mynode/120 dev eth1
-	netns_test assign_bridge_address --random br0
+	ip addr add 192.168.1.$mynode/24 dev $BR
+	ip -6 addr add 1000::1:192.168.1.$mynode/120 dev $BR
+	netns_test assign_bridge_address --random $BR
 }
+##   create_ofbridge - Create ovs bridge with OpenFlow15
+cmd_tcase_create_ofbridge() {
+	tcase "Create ovs bridge with OpenFlow [$BR]"
+	# set-fail-mode secure disables the auto-L2 mode!!
+	ovs-vsctl \
+		-- add-br $BR \
+		-- set-controller $BR ptcp: \
+		-- set-fail-mode $BR secure
+}
+##   create_netns - Create PODs (network namespaces)
 cmd_tcase_create_netns() {
 	tcase "Create netns"
 	netns_test create
 }
+##   create_veth - Create veth pairs to PODs and assign addresses
+cmd_tcase_create_veth() {
+	tcase "Create veth and assign addresses"
+	netns_test veth || tdie
+	netns_test assign_addresses
+}
+##   attach_veth - Attach veth from PODs to an OVS bridge
+cmd_tcase_attach_veth() {
+	tcase "Attach veth from PODs to OVS bridge $BR"
+	local pod
+	for pod in $(netns_test name); do
+		ovs-vsctl add-port $BR $pod
+	done
+}
 # This seems like a bug reported and ignored since 2015;
 # https://mail.openvswitch.org/pipermail/ovs-discuss/2015-July/038205.html
 # We must inject ALL interfaces *first* and *then* rename them.
+##   add_ports - Add OVS internal interfaces in PODs
 cmd_tcase_add_ports() {
-	tcase "Add OVS internal interfaces in netns's"
+	tcase "Add OVS internal interfaces in PODs"
 	local pod
 	for pod in $(netns_test name); do
 		#tlog "POD $pod"
-		ovs-vsctl add-port br0 $pod -- set Interface $pod type=internal
+		ovs-vsctl add-port $BR $pod -- set Interface $pod type=internal
 		ip link set netns $pod $pod || tdie
 	done
 	local dev=$PODIF
@@ -73,6 +104,7 @@ cmd_tcase_add_ports() {
 	
 	netns_test assign_addresses --random || tdie
 }
+##   ping_all - Ping from main netns and from a POD
 cmd_tcase_ping_all() {
 	tcase "Ping all from main netns"
 	netns_test ping_all_random || tdie
@@ -80,6 +112,31 @@ cmd_tcase_ping_all() {
 	tcase "Ping all from POD [$pod]"
 	netns_test exec $pod netns_test ping_all_random
 }
+##   ping [--pod=] <address> - Ping an address
+cmd_tcase_ping() {
+	test -n "$1" || tdie "Parameter Missing"
+	if test -n "$__pod"; then
+		tcase "Ping in $__pod to $1"
+		netns_test exec $__pod -- ping -c1 -W1 $1 || tdie "Ping failed $1"
+	else
+		tcase "Ping in main netns to $1"
+		ping -c1 -W1 $1 || tdie "Ping failed $1"
+	fi
+	return 0
+}
+##   ping_negative [--pod=] <address> - Test that ping does NOT work
+cmd_tcase_ping_negative() {
+	test -n "$1" || tdie "Parameter Missing"
+	if test -n "$__pod"; then
+		tcase "Negative ping in $__pod to $1"
+		netns_test exec $__pod -- ping -c1 -W1 $1 && tdie "Ping succeeded $1"
+	else
+		tcase "Negative ping in main netns to $1"
+		ping -c1 -W1 $1 && tdie "Ping succeeded $1"
+	fi
+	return 0
+}
+
 
 
 . /etc/profile

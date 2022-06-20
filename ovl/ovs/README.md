@@ -10,6 +10,8 @@ Test;
 ```
 ./ovs.sh   # Check help printouts
 ./ovs.sh test > $log
+# On a VM
+ovs-vsctl --help
 ```
 
 Manual tests;
@@ -33,8 +35,14 @@ ping -c1 3000::$i
 
 ## Build
 
-Prerequisite; autoconf and libtool installed.
+Prerequisite; autoconf and libtool installed. For documentation also
+`sphinx-build` (sudo apt install python3-sphinx).
 
+```
+./ovs.sh build   # Will build with XDP support if available
+```
+
+Manual;
 ```
 # Clone;
 mkdir -p $GOPATH/src/github.com/openvswitch
