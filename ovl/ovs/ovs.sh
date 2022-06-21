@@ -159,8 +159,9 @@ test_L2() {
 test_basic_flow() {
 	tlog "=== ovs: Basic OpenFlow"
 	test_start
-	#otc 2 "noarp vm-002-ns01"
-	#otc 2 "noarp vm-002-ns02"
+	otc 2 "noarp vm-002-ns01"
+	otc 2 "noarp vm-002-ns02"
+	$XCLUSTER tcpdump --start 2 vm-002-ns01
 	$XCLUSTER tcpdump --start 2 vm-002-ns02
 	otc 2 create_ofbridge
 	otc 2 attach_veth
@@ -170,6 +171,7 @@ test_basic_flow() {
 	otc 2 "ping --pod=vm-002-ns02 172.16.2.1"
 	otc 2 "ping --pod=vm-002-ns02 1000::1:172.16.2.1"
 	tcase "Sleep 1s ..."; sleep 1
+	$XCLUSTER tcpdump --get 2 vm-002-ns01 >&2
 	$XCLUSTER tcpdump --get 2 vm-002-ns02 >&2
 	xcluster_stop
 }

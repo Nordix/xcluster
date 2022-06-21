@@ -17,7 +17,7 @@ an "internal" OVS port may be injected in the PODs, but an [old bug](
 https://mail.openvswitch.org/pipermail/ovs-discuss/2015-July/038205.html)
 makes naming of the interface inside the POD impossible.
 The name "POD" is used even though K8s is not used, please see
-[ovl/netns](../ovl/netns).
+[ovl/netns](../netns).
 
 
 ## Build
@@ -48,7 +48,7 @@ The `ovs` man-pages have also been built;
 
 See [afxdp doc](https://docs.openvswitch.org/en/latest/intro/install/afxdp/).
 
-You must first build `libbpf` in [ovl/xdp](../ovl/xdp). This will in
+You must first build `libbpf` in [ovl/xdp](../xdp). This will in
 turn require a locally built Linux kernel;
 
 ```
