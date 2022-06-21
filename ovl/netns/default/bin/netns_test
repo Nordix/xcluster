@@ -229,8 +229,10 @@ cmd_veth() {
 		test "$PODIF" = "hostname" && dev=$name
 		ip -n $name link set name $dev dev host
 		sysctl -qw net.ipv6.conf.$name.accept_dad=0 || die
+		sysctl -qw net.ipv6.conf.$name.accept_ra=0 || die
 		ip link set up dev $name || die
 		ip netns exec $name sysctl -qw net.ipv6.conf.$dev.accept_dad=0 || die
+		ip netns exec $name sysctl -qw net.ipv6.conf.$dev.accept_ra=0 || die
 		ip -n $name link set up dev $dev || die
 	done
 }
