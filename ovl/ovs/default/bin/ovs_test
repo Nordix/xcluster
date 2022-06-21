@@ -11,7 +11,7 @@ prg=$(basename $0)
 dir=$(dirname $0); dir=$(readlink -f $dir)
 me=$dir/$prg
 tmp=/tmp/${prg}_$$
-test -n "$PODIF" || export PODIF=hostname
+test -n "$PODIF" || export PODIF=eth0
 test -n "$BR" || BR=br0
 test -n "$SWITCH" || SWITCH=tcp:127.0.0.1
 
@@ -38,11 +38,12 @@ dbg() {
 ##   version - Log versions
 cmd_tcase_version() {
 	netns_test tcase_version
+	tlog "BR=[$BR]"
 	tlog $(ovs-vsctl --version)
 }
 ##   create_bridge - Create ovs bridge
 cmd_tcase_create_bridge() {
-	tcase "Create ovs bridge; $BR"
+	tcase "Create ovs bridge"
 	ovs-vsctl add-br $BR
 	ip addr flush dev eth1
 	ovs-vsctl add-port $BR eth1
@@ -57,8 +58,8 @@ cmd_tcase_create_ofbridge() {
 	# set-fail-mode secure disables the auto-L2 mode!!
 	ovs-vsctl \
 		-- add-br $BR \
-		-- set-controller $BR ptcp: \
 		-- set-fail-mode $BR secure
+#		-- set-controller $BR ptcp: \
 }
 ##   create_netns - Create PODs (network namespaces)
 cmd_tcase_create_netns() {
@@ -81,7 +82,9 @@ cmd_tcase_attach_veth() {
 }
 # This seems like a bug reported and ignored since 2015;
 # https://mail.openvswitch.org/pipermail/ovs-discuss/2015-July/038205.html
-# We must inject ALL interfaces *first* and *then* rename them.
+# We must inject ALL interfaces *first* and *then* rename them. And adding
+# a new POD would boot all interfaces out from the existing PODs, so this
+# is basically useless. Better to have unique interface names; PODIF=hostname.
 ##   add_ports - Add OVS internal interfaces in PODs
 cmd_tcase_add_ports() {
 	tcase "Add OVS internal interfaces in PODs"
@@ -136,8 +139,20 @@ cmd_tcase_ping_negative() {
 	fi
 	return 0
 }
-
-
+##   flow_connect_pods <pod1> <pod2> - Connect 2 local pods with OpenFlow
+cmd_tcase_flow_connect_pods() {
+	test -n "$2" || tdie "Parameter Missing"
+	tcase "OpenFlow connect $1 $2"
+	ovs-ofctl add-flow $BR in_port=$1,actions=output:$2 || tdie
+	ovs-ofctl add-flow $BR in_port=$2,actions=output:$1 || tdie
+}
+##   noarp <pod> - Set NOARP on interfaces
+cmd_tcase_noarp() {
+	test -n "$1" || tdie "Parameter Missing"
+	tcase "Set NOARP for $1"
+	ip link set arp off $1 || tdie
+	ip -n $1 link set arp off $PODIF
+}
 
 . /etc/profile
 . /usr/lib/xctest

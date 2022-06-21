@@ -48,20 +48,20 @@ cmd_env() {
 	eval $($XCLUSTER env)
 }
 
-##   build [--dest=$GOPATH/src/github.com/openvswitch/ovs]
+##   build [--dest=$GOPATH/src/github.com/openvswitch]
 ##     Clone/pull and build OVS.
 cmd_build() {
 	cmd_env
-	test -n "$__dest" || __dest=$GOPATH/src/github.com/openvswitch/ovs
-	if test -d $__dest; then
-		cd $__dest
+	test -n "$__dest" || __dest=$GOPATH/src/github.com/openvswitch
+	if test -d $__dest/ovs; then
+		cd $__dest/ovs
 		git pull
 	else
-		local pdir=$(basename $__dest)
-		mkdir -p $pdir || die "mkdir $pdir"
-		cd $pdir
-		git clone https://github.com/openvswitch/ovs.git || die "git clone"
+		mkdir -p $__dest || die "mkdir $__dest"
 		cd $__dest
+		git clone --depth 1 https://github.com/openvswitch/ovs.git \
+			|| die "git clone"
+		cd $__dest/ovs
 	fi
 
 	local bpflibd=$(readlink -f $__kobj/source)/tools/lib/bpf/build/usr
@@ -120,15 +120,15 @@ cmd_test() {
             test_$t
         done
     else
-		test_L2
+		test_start
     fi      
 
     now=$(date +%s)
     tlog "Xcluster test ended. Total time $((now-begin)) sec"
 
 }
-##   test start - Start cluster
-test_start() {
+##   test start_empty - Start an empty cluster
+test_start_empty() {
 	export __image=$XCLUSTER_HOME/hd.img
 	echo "$XOVLS" | grep -q private-reg && unset XOVLS
 	test -n "$__nrouters" || export __nrouters=0
@@ -137,10 +137,17 @@ test_start() {
 	xcluster_start network-topology iptools netns ovs
 	otc 1 version
 }
-##   test L2 (default) - Setup an L2 network and test with ping
+##   test start (default) - Start with PODs, and veth's (no bridge)
+test_start() {
+	test_start_empty
+	otcw create_netns
+	otcw create_veth
+}
+##   test L2 - Setup an L2 network without VETH's and test with ping
 test_L2() {
-	tlog "=== ovs: L2 network"
-	test_start
+	tlog "=== ovs: L2 network without VETH's"
+	test -n "$xcluster_PODIF" || export xcluster_PODIF=hostname
+	test_start_empty
 	otcw create_bridge
 	otcw create_netns
 	otcw add_ports
@@ -151,13 +158,19 @@ test_L2() {
 ##   test basic_flow - Setup OpenFlow between 2 PODs on vm-002
 test_basic_flow() {
 	tlog "=== ovs: Basic OpenFlow"
-	export xcluster_PODIF=eth0
 	test_start
-	otcw create_ofbridge
-	otcw create_netns
-	otcw create_veth
-	otcw attach_veth
+	#otc 2 "noarp vm-002-ns01"
+	#otc 2 "noarp vm-002-ns02"
+	$XCLUSTER tcpdump --start 2 vm-002-ns02
+	otc 2 create_ofbridge
+	otc 2 attach_veth
 	otc 2 "ping_negative --pod=vm-002-ns02 172.16.2.1"
+	tcase "Sleep 4s ..."; sleep 4
+	otc 2 "flow_connect_pods vm-002-ns01 vm-002-ns02"
+	otc 2 "ping --pod=vm-002-ns02 172.16.2.1"
+	otc 2 "ping --pod=vm-002-ns02 1000::1:172.16.2.1"
+	tcase "Sleep 1s ..."; sleep 1
+	$XCLUSTER tcpdump --get 2 vm-002-ns02 >&2
 	xcluster_stop
 }
 
