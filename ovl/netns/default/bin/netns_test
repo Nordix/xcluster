@@ -220,7 +220,7 @@ cmd_create() {
 }
 
 ##   veth [count] [first]
-##     Create veth to PODs. Link is "up" and "dad" disabled
+##     Create veth to PODs. Link is "up" and "dad", "ra", link-local disabled
 cmd_veth() {
 	local name dev=$PODIF
 	for name in $(cmd_name $1 $2); do
@@ -230,9 +230,11 @@ cmd_veth() {
 		ip -n $name link set name $dev dev host
 		sysctl -qw net.ipv6.conf.$name.accept_dad=0 || die
 		sysctl -qw net.ipv6.conf.$name.accept_ra=0 || die
-		ip link set up dev $name || die
+		sysctl -qw net.ipv6.conf.$name.addr_gen_mode=1 || die
 		ip netns exec $name sysctl -qw net.ipv6.conf.$dev.accept_dad=0 || die
 		ip netns exec $name sysctl -qw net.ipv6.conf.$dev.accept_ra=0 || die
+		ip netns exec $name sysctl -qw net.ipv6.conf.$dev.addr_gen_mode=1 || die
+		ip link set up dev $name || die
 		ip -n $name link set up dev $dev || die
 	done
 }
