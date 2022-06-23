@@ -182,13 +182,13 @@ test_load_balancing() {
 	tlog "=== ovs: OpenFlow load-balancing"
 	test -n "$__nvm" || export __nvm=1
 	test_start
-	otc 1 "noarp --mac=0:0:0:0:0:1"
 	otc 1 "create_ofbridge --configure --mac=0:0:0:0:0:1"
-	otc 1 attach_veth
+	otc 1 "attach_veth --noarp --mac=0:0:0:0:0:1"
+	otc 1 "add_vip 10.0.0.0"
 	otc 1 add_lbgroup
 	otc 1 flow_pod_to_bridge
-	otc 1 "add_vip 10.0.0.0"
 	otc 1 mconnect_server
+	otc 1 "mconnect 10.0.0.0"
 	xcluster_stop	
 }
 

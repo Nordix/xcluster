@@ -42,17 +42,21 @@ dbg() {
 ## Commands;
 ##
 
-##   noarp [--mac=] [pods...]
-##     Set noarp and remove any ipv6 link-local address. Optionally set MAC.
-cmd_noarp() {
+##   attach_veth [--noarp] [--mac=] [pods...]
+##     Attach PODs via veth to OvS ports. Optionally set noarp and MAC
+cmd_attach_veth() {
 	local pods pod
 	if test -n "$1"; then
 		pods=$@
 	else
 		pods=$(netns_test name)
 	fi
+
 	for pod in $pods; do
-		dbg "Set noarp in POD [$pod]"
+		dbg "Attach POD [$pod], mac=$__mac, noarp=$__noarp"
+		test -n "$__mac" && \
+			ip -n $pod link set address $__mac dev $PODIF
+		ovs-vsctl add-port $BR $pod
 		# Remove generated link-local address for the old MAC.
 		# (not needed if generation of link-local addresses is disabled)
 		local adr=$(ip -n $pod -6 -j addr show dev $PODIF | \
@@ -61,11 +65,11 @@ cmd_noarp() {
 			dbg "Removing link-local address [$adr]"
 			ip -n $pod -6 addr del $adr/64 dev $PODIF
 		fi
-		# (to set noarp on this side of the veth may not be necessary)
-		ip link set arp off $pod
-		test -n "$__mac" && \
-			ip -n $pod link set address $__mac dev $PODIF
-		ip -n $pod link set arp off $PODIF
+		if test "$__noarp" = "yes"; then
+			# (to set noarp on this side of the veth may not be necessary)
+			ip link set arp off $pod
+			ip -n $pod link set arp off $PODIF
+		fi
 	done
 }
 
@@ -136,11 +140,9 @@ cmd_tcase_create_veth() {
 ##   attach_veth - Attach veth from PODs to an OVS bridge
 cmd_tcase_attach_veth() {
 	tcase "Attach veth from PODs to OVS bridge $BR"
-	local pod
-	for pod in $(netns_test name); do
-		ovs-vsctl add-port $BR $pod
-	done
+	cmd_attach_veth $@
 }
+
 # This seems like a bug reported and ignored since 2015;
 # https://mail.openvswitch.org/pipermail/ovs-discuss/2015-July/038205.html
 # We must inject ALL interfaces *first* and *then* rename them. And adding
@@ -236,7 +238,7 @@ cmd_tcase_add_lbgroup() {
 			group_id=0,command_bucket_id=last,bucket=bucket_id:$bucket_id,weight=1,actions=output:$pod
 		bucket_id=$((bucket_id + 1))
 	done
-	ovs-ofctl add-flow br0 in_port=br0,actions=group:0
+	ovs-ofctl add-flow $BR in_port=$BR,actions=group:0
 }
 ##   flow_pod_to_bridge - Connect PODs to bridge (one-way)
 cmd_tcase_flow_pod_to_bridge() {
@@ -252,6 +254,13 @@ cmd_tcase_mconnect_server() {
 	for pod in $(netns_test name); do
 		netns_test exec $pod -- mconnect -server -address [::]:5001 > /dev/null 2>&1 &
 	done
+}
+cmd_tcase_mconnect() {
+	local adr=$1
+	tcase "Mconnect to $adr, $PREFIX:$adr"
+	test -n "$1" || tdie "Parameter missing"
+	do_mconnect $adr
+	do_mconnect "[$PREFIX:$adr]"
 }
 
 

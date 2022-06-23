@@ -130,12 +130,77 @@ wireshark /tmp/vm-002-vm-002-ns02.pcap &
 
 ## Load-balancing
 
+To load-balance between ports a "group" is used. The test script
+`ovs_test` is used for some tedious configurations. Check it to see how
+it's done.
+
 ```
-./ovs.sh test --no-stop load_balancing > $log
-# On vm-001
+./ovs.sh test --nvm=1 start > $log
+# On vm-001;
+# Use the test script to setup the bridge
+ovs_test ofbridge --configure --mac=0:0:0:0:0:1
+ifconfig br0  # Note NOARP and the MAC
+
+ovs-ofctl add-group br0 group_id=0,type=select,selection_method=hash
 ovs-ofctl dump-groups br0
-mconnect -address 10.0.0.0:5001 -nconn 100
 ```
+
+Now we have a "group". It is currently empty but we will add some
+"buckets" that contains "actions", for instance an outout port.
+
+```
+ovs_test attach_veth --noarp --mac=0:0:0:0:0:1
+ovs-vsctl show   # We have some ports, add buckets
+ovs-ofctl insert-buckets br0 \
+  group_id=0,command_bucket_id=last,bucket=bucket_id:1,weight=1,actions=output:vm-001-ns01
+ovs-ofctl insert-buckets br0 \
+  group_id=0,command_bucket_id=last,bucket=bucket_id:2,weight=1,actions=output:vm-001-ns02
+ovs-ofctl dump-groups br0
+# Add a flow that directs packet on br0 to our new group
+ovs-ofctl add-flow br0 in_port=br0,actions=group:0
+```
+
+The load-balancing is done. Packets entering the bridge `br0` will be
+load-balanced between the 2 PODs. But there is more to be done, we
+have no VIP address and no return-flow from the PODs.
+
+```
+ovs_test add_vip 10.0.0.0   # Add VIP addresses to all PODs
+ip netns exec vm-001-ns01 ip addr show eth0
+ip ro add 10.0.0.0/32 dev br0
+ip -6 ro add 1000::1:10.0.0.0/128 dev br0
+ovs-ofctl add-flow br0 in_port=vm-001-ns01,actions=output:br0
+ovs-ofctl add-flow br0 in_port=vm-001-ns02,actions=output:br0
+```
+
+Now everything is in place. Start `mconnect` servers in the PODs and
+test.
+
+```
+ovs_test tcase_mconnect_server > /dev/null
+mconnect -address [1000::1:10.0.0.0]:5001 -nconn 100
+```
+
+
+Automatic test;
+```
+./ovs.sh test load_balancing > $log
+```
+
+
+### About MAC addresses
+
+Unless you start a "normal" bridge that have L2-learning (as a HW
+switch) the OvS bridge doesn't care about MAC addresses, but Linux
+does! If a packet enters via OvS (and veth) with a MAC that doesn't
+match the interface then Linux will discard the packet.
+
+For load-balancing that means that all targets must have the same MAC
+address.
+
+You may have noticed that in these examples *all* interfaces are setup
+with the same MAC `0:0:0:0:0:1`. That is just a convenient way of
+making Linux accept all packets without too much configuration.
 
 
 ## Other Info
