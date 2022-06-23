@@ -4,16 +4,20 @@
 ##
 ##   Test script for ovs executed in xcluster.
 ##
-## Commands;
+## Env;
+##   PODIF=eth0 - Interface name inside PODs
+##   BR=br0 - Bridge name
 ##
 
 prg=$(basename $0)
 dir=$(dirname $0); dir=$(readlink -f $dir)
 me=$dir/$prg
 tmp=/tmp/${prg}_$$
+
+test -r /etc/profile && . /etc/profile
+test -n "$PREFIX" || PREFIX=1000::1
 test -n "$PODIF" || export PODIF=eth0
 test -n "$BR" || BR=br0
-test -n "$SWITCH" || SWITCH=tcp:127.0.0.1
 
 die() {
 	echo "ERROR: $*" >&2
@@ -34,6 +38,67 @@ log() {
 dbg() {
 	test -n "$__verbose" && echo "$prg: $*" >&2
 }
+
+## Commands;
+##
+
+##   noarp [--mac=] [pods...]
+##     Set noarp and remove any ipv6 link-local address. Optionally set MAC.
+cmd_noarp() {
+	local pods pod
+	if test -n "$1"; then
+		pods=$@
+	else
+		pods=$(netns_test name)
+	fi
+	for pod in $pods; do
+		dbg "Set noarp in POD [$pod]"
+		# Remove generated link-local address for the old MAC.
+		# (not needed if generation of link-local addresses is disabled)
+		local adr=$(ip -n $pod -6 -j addr show dev $PODIF | \
+			jq -r '.[].addr_info|.[]|select(.scope == "link")|.local')
+		if echo $adr | grep -q : ;then
+			dbg "Removing link-local address [$adr]"
+			ip -n $pod -6 addr del $adr/64 dev $PODIF
+		fi
+		# (to set noarp on this side of the veth may not be necessary)
+		ip link set arp off $pod
+		test -n "$__mac" && \
+			ip -n $pod link set address $__mac dev $PODIF
+		ip -n $pod link set arp off $PODIF
+	done
+}
+
+##   ofbridge [--mac=] [--configure]
+##     Create an OpenFlow bridge
+cmd_ofbridge() {
+	# set-fail-mode secure disables the auto-L2 mode!!
+	ovs-vsctl \
+		-- add-br $BR \
+		-- set-fail-mode $BR secure
+	ovs-vsctl set bridge $BR other-config:hwaddr=$__mac
+	sysctl -qw net.ipv6.conf.$BR.accept_dad=0
+	sysctl -qw net.ipv6.conf.$BR.accept_ra=0
+	sysctl -qw net.ipv6.conf.$BR.addr_gen_mode=1
+	test "$__configure" = "yes" || return 0
+	ip link set up dev $BR
+	ip link set arp off $BR
+	netns_test assign_bridge_address $BR
+}
+
+##   add_vip <ipv4>
+##     Add VIP address to PODs
+cmd_add_vip() {
+	test -n "$1" || die "Parameter missing"
+	local pod ipv4=$1
+	for pod in $(netns_test name); do
+		ip -n $pod addr add $ipv4/32 dev $PODIF || die "add $ipv4/32"
+		ip -n $pod -6 addr add $PREFIX:$ipv4/128 dev $PODIF \
+			|| die "add $PREFIX:$ipv4/128"
+	done
+}
+
+##
 ## Test cases;
 ##   version - Log versions
 cmd_tcase_version() {
@@ -49,17 +114,13 @@ cmd_tcase_create_bridge() {
 	ovs-vsctl add-port $BR eth1
 	local mynode=$(mynode)
 	ip addr add 192.168.1.$mynode/24 dev $BR
-	ip -6 addr add 1000::1:192.168.1.$mynode/120 dev $BR
+	ip -6 addr add $PREFIX:192.168.1.$mynode/120 dev $BR
 	netns_test assign_bridge_address --random $BR
 }
-##   create_ofbridge - Create ovs bridge with OpenFlow15
+##   create_ofbridge - Create ovs bridge with OpenFlow
 cmd_tcase_create_ofbridge() {
 	tcase "Create ovs bridge with OpenFlow [$BR]"
-	# set-fail-mode secure disables the auto-L2 mode!!
-	ovs-vsctl \
-		-- add-br $BR \
-		-- set-fail-mode $BR secure
-#		-- set-controller $BR ptcp: \
+	cmd_ofbridge
 }
 ##   create_netns - Create PODs (network namespaces)
 cmd_tcase_create_netns() {
@@ -150,27 +211,51 @@ cmd_tcase_flow_connect_pods() {
 	ovs-ofctl add-flow $BR in_port=$1,actions=output:$2 || tdie
 	ovs-ofctl add-flow $BR in_port=$2,actions=output:$1 || tdie
 }
-##   noarp <pod> - Set NOARP on interfaces
+##   noarp [pod...] - Set NOARP on interfaces
 # NOARP implies a pre-set MAC address. For OVS load-balancing all
 # target-ports must have the same MAC.
 cmd_tcase_noarp() {
-	test -n "$1" || tdie "Parameter Missing"
-	local pod=$1
-	tcase "Set NOARP for $pod"
-	if false; then
-		# Remove generated link-local address for the old MAC.
-		# Not needed since generation of link-local addresses is disabled.
-		local adr=$(ip -n $pod -6 -j addr show dev $PODIF | \
-			jq -r '.[].addr_info|.[]|select(.scope == "link")|.local')
-		ip -n $pod -6 addr del $adr/64 dev $PODIF || tdie
-	fi
-	ip link set arp off $1 || tdie
-	ip -n $pod link set address 0:0:0:0:0:1 dev $PODIF
-	ip -n $pod link set arp off $PODIF
+	tcase "Set NOARP for $1"
+	cmd_noarp $@
+}
+##   add_vip <ipv4> - Add a VIP to PODs
+cmd_tcase_add_vip() {
+	tcase "Add VIP [$1]"
+	test -n "$1" || tdie "Parameter missing"
+	cmd_add_vip $1
+	ip ro add $1/32 dev $BR
+	ip -6 ro add $PREFIX:$1/128 dev $BR
+}
+##   add_lbgroup - Add a group to the bridge with load-balancing to PODs
+cmd_tcase_add_lbgroup() {
+	tcase "Add a load-balancing group"
+	ovs-ofctl add-group $BR group_id=0,type=select,selection_method=hash
+	local pod bucket_id=1
+	for pod in $(netns_test name); do
+		ovs-ofctl insert-buckets br0 \
+			group_id=0,command_bucket_id=last,bucket=bucket_id:$bucket_id,weight=1,actions=output:$pod
+		bucket_id=$((bucket_id + 1))
+	done
+	ovs-ofctl add-flow br0 in_port=br0,actions=group:0
+}
+##   flow_pod_to_bridge - Connect PODs to bridge (one-way)
+cmd_tcase_flow_pod_to_bridge() {
+	tcase "Add flow PODs->bridge (one-way)"
+	local pod
+	for pod in $(netns_test name); do
+		ovs-ofctl add-flow $BR in_port=$pod,actions=output:$BR
+	done
+}
+cmd_tcase_mconnect_server() {
+	tcase "Start mconnect servers in PODs"
+	local pod
+	for pod in $(netns_test name); do
+		netns_test exec $pod -- mconnect -server -address [::]:5001 > /dev/null 2>&1 &
+	done
 }
 
-. /etc/profile
-. /usr/lib/xctest
+
+test -r /usr/lib/xctest && . /usr/lib/xctest
 indent='  '
 
 

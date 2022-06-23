@@ -155,25 +155,41 @@ test_L2() {
 	xcluster_stop
 }
 
-##   test basic_flow - Setup OpenFlow between 2 PODs on vm-002
+##   test basic_flow - Setup OpenFlow between 2 PODs on vm-001
 test_basic_flow() {
 	tlog "=== ovs: Basic OpenFlow"
+	test -n "$__nvm" || export __nvm=1
 	test_start
-	otc 2 "noarp vm-002-ns01"
-	otc 2 "noarp vm-002-ns02"
-	$XCLUSTER tcpdump --start 2 vm-002-ns01
-	$XCLUSTER tcpdump --start 2 vm-002-ns02
-	otc 2 create_ofbridge
-	otc 2 attach_veth
-	otc 2 "ping_negative --pod=vm-002-ns02 172.16.2.1"
+	otc 1 "noarp --mac=0:0:0:0:0:1 vm-001-ns01"
+	otc 1 "noarp --mac=0:0:0:0:0:1 vm-001-ns02"
+	$XCLUSTER tcpdump --start 1 vm-001-ns01
+	$XCLUSTER tcpdump --start 1 vm-001-ns02
+	otc 1 create_ofbridge
+	otc 1 attach_veth
+	otc 1 "ping_negative --pod=vm-001-ns02 172.16.1.1"
 	tcase "Sleep 4s ..."; sleep 4
-	otc 2 "flow_connect_pods vm-002-ns01 vm-002-ns02"
-	otc 2 "ping --pod=vm-002-ns02 172.16.2.1"
-	otc 2 "ping --pod=vm-002-ns02 1000::1:172.16.2.1"
+	otc 1 "flow_connect_pods vm-001-ns01 vm-001-ns02"
+	otc 1 "ping --pod=vm-001-ns02 172.16.1.1"
+	otc 1 "ping --pod=vm-001-ns02 1000::1:172.16.1.1"
 	tcase "Sleep 1s ..."; sleep 1
-	$XCLUSTER tcpdump --get 2 vm-002-ns01 >&2
-	$XCLUSTER tcpdump --get 2 vm-002-ns02 >&2
+	$XCLUSTER tcpdump --get 1 vm-001-ns01 >&2
+	$XCLUSTER tcpdump --get 1 vm-001-ns02 >&2
 	xcluster_stop
+}
+
+##   test load_balancing - Setup and test load-balancing with OpenFlow
+test_load_balancing() {
+	tlog "=== ovs: OpenFlow load-balancing"
+	test -n "$__nvm" || export __nvm=1
+	test_start
+	otc 1 "noarp --mac=0:0:0:0:0:1"
+	otc 1 "create_ofbridge --configure --mac=0:0:0:0:0:1"
+	otc 1 attach_veth
+	otc 1 add_lbgroup
+	otc 1 flow_pod_to_bridge
+	otc 1 "add_vip 10.0.0.0"
+	otc 1 mconnect_server
+	xcluster_stop	
 }
 
 ##

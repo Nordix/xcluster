@@ -39,6 +39,13 @@ fi
 
 $XCLUSTER install_prog --dest=$tmp jq
 
+ar=$ARCHIVE/mconnect.xz
+if test -r $ar; then
+	xzcat $ar > $tmp/bin/mconnect
+	chmod a+x $tmp/bin/mconnect
+	log "Including mconnect $($tmp/bin/mconnect -version)"
+fi
+
 cd $tmp
 tar cf "$1" *
 cd - > /dev/null

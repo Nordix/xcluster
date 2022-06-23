@@ -128,6 +128,15 @@ wireshark /tmp/vm-002-vm-002-ns02.pcap &
 ```
 
 
+## Load-balancing
+
+```
+./ovs.sh test --no-stop load_balancing > $log
+# On vm-001
+ovs-ofctl dump-groups br0
+mconnect -address 10.0.0.0:5001 -nconn 100
+```
+
 
 ## Other Info
 
