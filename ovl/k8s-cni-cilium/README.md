@@ -10,7 +10,7 @@ SCTP is not supported, issue [#5719](https://github.com/cilium/cilium/issues/571
 A manifest (yaml) is generated with `helm` and will be used by default;
 
 ```
-ver=v1.10.4
+ver=v1.11.6
 mkdir -p $GOPATH/src/github.com/cilium
 cd $GOPATH/src/github.com/cilium
 rm -rf cilium
