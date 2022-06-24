@@ -135,27 +135,30 @@ To load-balance between ports a "group" is used. The test script
 it's done.
 
 ```
-./ovs.sh test --nvm=1 start > $log
+xcluster_NPODS=2 ./ovs.sh test --nvm=1 start > $log
 # On vm-001;
 # Use the test script to setup the bridge
 ovs_test ofbridge --configure --mac=0:0:0:0:0:1
 ifconfig br0  # Note NOARP and the MAC
 
+# Attach the veth's from the PODs and set the same MAC
+ovs_test attach_veth --noarp --mac=0:0:0:0:0:1
+ovs-vsctl show
+```
+
+Load-balancing uses a "group". It is empty from start but we will add
+some "buckets" that contains "actions", for instance an outout port.
+
+```
 ovs-ofctl add-group br0 group_id=0,type=select,selection_method=hash
 ovs-ofctl dump-groups br0
-```
 
-Now we have a "group". It is currently empty but we will add some
-"buckets" that contains "actions", for instance an outout port.
-
-```
-ovs_test attach_veth --noarp --mac=0:0:0:0:0:1
-ovs-vsctl show   # We have some ports, add buckets
 ovs-ofctl insert-buckets br0 \
   group_id=0,command_bucket_id=last,bucket=bucket_id:1,weight=1,actions=output:vm-001-ns01
 ovs-ofctl insert-buckets br0 \
   group_id=0,command_bucket_id=last,bucket=bucket_id:2,weight=1,actions=output:vm-001-ns02
 ovs-ofctl dump-groups br0
+
 # Add a flow that directs packet on br0 to our new group
 ovs-ofctl add-flow br0 in_port=br0,actions=group:0
 ```
@@ -179,6 +182,7 @@ test.
 ```
 ovs_test tcase_mconnect_server > /dev/null
 mconnect -address [1000::1:10.0.0.0]:5001 -nconn 100
+mconnect -address 10.0.0.0:5001 -nconn 100
 ```
 
 
