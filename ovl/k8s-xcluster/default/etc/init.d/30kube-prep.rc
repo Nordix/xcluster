@@ -40,6 +40,7 @@ mount -t tmpfs tmpfs /sys/fs/cgroup
 for d in cpuset memory; do
 	mkdir /sys/fs/cgroup/$d
 	mount -t cgroup cgroup /sys/fs/cgroup/$d
+	# https://github.com/cri-o/cri-o/issues/5335
 	echo 1 > /sys/fs/cgroup/$d/cgroup.clone_children
 done
 mount --make-rshared /
