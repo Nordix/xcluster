@@ -191,7 +191,6 @@ Automatic test;
 ./ovs.sh test load_balancing > $log
 ```
 
-
 ### About MAC addresses
 
 Unless you start a "normal" bridge that have L2-learning (as a HW
@@ -207,6 +206,109 @@ with the same MAC `0:0:0:0:0:1`. That is just a convenient way of
 making Linux accept all packets without too much configuration.
 
 
+
+## SDN controller
+
+OpenFlow switches are normally used in Software Defined Networks
+[SDN](https://en.wikipedia.org/wiki/Software-defined_networking). In
+SDN the switches are managed by an `SDN controller`. There are
+[many available](https://en.wikipedia.org/wiki/List_of_SDN_controller_software)
+and `ovs` includes the `ovs-testcontroller`.
+
+<img src="sdn.svg" width="40%" />
+
+
+ovs-testcontroller example;
+```
+./ovs.sh test start > $log
+# On vm-001;
+ovs_test ofbridge
+ovs_test attach_veth
+ovs-vsctl set-controller br0 ptcp:  # listen on tcp (passive?)
+ovs-vsctl show
+ovs-ofctl dump-flows tcp:127.0.0.1
+
+netns_test exec vm-001-ns01 -- ping -c1 -W1 172.16.1.2
+ovs-testcontroller tcp:127.0.0.1 --wildcards
+netns_test exec vm-001-ns01 -- ping -c1 -W1 172.16.1.2
+ovs-ofctl show tcp:127.0.0.1
+ovs-ofctl dump-flows tcp:127.0.0.1
+```
+
+### SDN controller on your host
+
+If you plan to test an advanced SDN controller it is a good idea to
+run the controller on your host rather than try to squeeze it into the
+rather limited `xcluster` VMs. Use the xcluster maintenance network
+(192.168.0.0/24) as control network (will not work with `xcluster` in
+main netns with user-space networking).
+
+```
+# On host
+./ovs.sh test start > $log
+eval $(./ovs.sh env | grep SYSD)
+alias ovs-testcontroller=$SYSD/usr/local/bin/ovs-testcontroller
+alias ovs-ofctl=$SYSD/usr/local/bin/ovs-ofctl
+# On vm-001
+ovs_test ofbridge
+ovs_test attach_veth
+ovs-vsctl set-controller br0 ptcp:
+# Back on host
+ovs-ofctl show tcp:192.168.0.1
+ovs-testcontroller tcp:192.168.0.1 --wildcards \
+  --unixctl=/tmp/$USER/ovs-testcontroller.ctl
+# On vm-001, test with ping as before
+```
+
+
+### SDN controller in docker or main netns
+
+If you want to control OvS in `xcluster` VMs from docker or your main
+netns you must create your `xcluster` netns with;
+
+```
+$ xc nsadd_docker 1   # (or another index)
+xcluster.sh: Xcluster netns; 172.17.0.51/16
+...
+```
+
+Then in docker containers or main netns set a route to the `xcluster`
+maintenance network. Example;
+
+```
+sudo ip route add 192.168.0.0/24 via 172.17.0.51
+```
+
+The address is of the `host1` interface in the xcluster netns. It is
+printed when you created it.
+
+Then when you start `xcluster` (in the xcluster netns) set the
+`xcluster_DOCKER_NET` variable;
+
+```
+export xcluster_DOCKER_NET=172.17.0.0/16
+./ovs.sh test start > $log
+```
+
+You should now be able to ping any `xcluster` VM from main netns or
+from a docker container;
+
+```
+ping 192.168.0.1
+```
+
+
+### The Faucet SDN controller in docker
+
+The [Faucet](https://github.com/faucetsdn/faucet) can be installed in
+docker.
+
+```
+docker pull faucet/faucet:latest
+```
+
+
+
 ## Other Info
 
 In no particular order or usefulness.
@@ -218,6 +320,8 @@ In no particular order or usefulness.
 * https://www.linuxtechi.com/install-use-openvswitch-kvm-centos-7-rhel-7/
 * https://arthurchiao.art/blog/ovs-deep-dive-6-internal-port/
 * https://arthurchiao.art/blog/ovs-deep-dive-1-vswitchd/
+* http://yuba.stanford.edu/~casado/of-sw.html
+* https://en.wikipedia.org/wiki/List_of_SDN_controller_software
 
 
 ```

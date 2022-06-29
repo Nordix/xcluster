@@ -80,7 +80,7 @@ cmd_ofbridge() {
 	ovs-vsctl \
 		-- add-br $BR \
 		-- set-fail-mode $BR secure
-	ovs-vsctl set bridge $BR other-config:hwaddr=$__mac
+	test -n "$__mac" && ovs-vsctl set bridge $BR other-config:hwaddr=$__mac
 	sysctl -qw net.ipv6.conf.$BR.accept_dad=0
 	sysctl -qw net.ipv6.conf.$BR.accept_ra=0
 	sysctl -qw net.ipv6.conf.$BR.addr_gen_mode=1
