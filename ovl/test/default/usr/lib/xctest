@@ -2,8 +2,6 @@
 ##
 ## Library functions for tests in "xcluster".
 ##
-##  Perform selftest with;
-##    selftest=yes $($XCLUSTER ovld test)/default/usr/lib/xctest
 ##
 ## On-cluster Functions
 ## --------------------
@@ -99,7 +97,6 @@ push() {
 }
 ##  pop variable
 ##    Example; "pop __timeout"
-##
 pop() {
 	local s=$(eval echo \$stack$1)
 	eval $1=$(echo $s | cut -d, -f1)
@@ -214,7 +211,6 @@ test_coredns() {
 
 ##  test_deployment <deployment> [timeout]
 ##    Verify that all PODs in a deployment are ready
-##
 test_deployment() {
 	tcase "Checking Deployment [$1]"
 	test -n "$1" || tdie "No deployment"
@@ -239,7 +235,6 @@ deployment_nready() {
 
 ##  test_daemonset <daemonset> [timeout]
 ##    Verify that all PODs in a deployment are ready
-##
 test_daemonset() {
 	mkdir -p $tmp
 	local nodes=$(kubectl get nodes -o json | jq '.items|length')
@@ -349,7 +344,6 @@ kubectl_exec() {
 
 ##  start_mconnect <manifest>
 ##    Starts "mconnect" and wait to 4 replicas become "Running".
-##
 start_mconnect() {
 	tcase "Start mconnect"
 	tex "$kubectl apply -f $1" || return 1
@@ -359,7 +353,6 @@ start_mconnect() {
 ##  check_mconnect_result <file.json>
 ##    Check the result of an "mconnect". The number of connections must be 100
 ##    and the number of targets 4.
-##
 check_mconnect_result() {
 	cat $1 | jq .
 	local v i=0
@@ -399,14 +392,15 @@ do_mconnect() {
 }
 
 
-##  log_versions
+##  log_version
 ##    Log versions of various things
 ##
 log_version() {
 	. /etc/os-release
 	test "$VERSION" != "1.0" && tlog "Xcluster: $VERSION"
 	which kubectl > /dev/null || return 0
-	tlog "$(kubectl version --short=true | grep Server)"
+	local ver=$(kubectl version --short=true 2> /dev/null | grep Server)
+	tlog "$ver"
 	tlog "$(uname -s -r -v)"
 	tlog "CNI-plugin; $(cni_plugin_info)"
 	tlog "Proxy-$(grep mode /etc/kubernetes/kube-proxy.config)"
