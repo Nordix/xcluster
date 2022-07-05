@@ -26,12 +26,12 @@ DIRS := $(O)/usrsctpt $(O)/lib/test
 SRC := $(wildcard usrsctpt/*.c lib/*.c)
 OBJ := $(SRC:%.c=$(O)/%.o)
 
-NFQLB_VER := 0.6.0
+NFQLB_VER := 1.0.0
 NFQLB_AR := $(ARCHIVE)/nfqlb-$(NFQLB_VER).tar.xz
 NFQLB_DIR := $(O)/nfqlb-$(NFQLB_VER)
 
 $(O)/%.o : %.c
-	$(CC) -c $(CFLAGS) -pthread -Wall -I$(NFQLB_DIR)/include -I$(USRSCTPD)/include -Ilib $< -o $@
+	$(CC) -c $(CFLAGS) -pthread -Wall -Ilib -I$(NFQLB_DIR)/include -I$(USRSCTPD)/include $< -o $@
 
 .PHONY: all static
 all: $(NFQLB_DIR) $(X)

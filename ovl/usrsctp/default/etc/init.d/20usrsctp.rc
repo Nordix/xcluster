@@ -13,6 +13,11 @@ vm() {
 	ip addr add 10.0.0.0/24 dev lo
 	ip -6 addr add 1000::/120 dev lo
 	ip -6 ro add local 1000::/120 dev lo
+	
+	mkdir -p /sys/kernel/tracing
+	#mount -t debugfs none /sys/kernel/debug
+	mount -t tracefs nodev /sys/kernel/tracing
+	echo 1 > /sys/kernel/tracing/events/printk/enable
 }
 
 router() {

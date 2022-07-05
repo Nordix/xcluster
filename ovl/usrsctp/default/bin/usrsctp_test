@@ -16,7 +16,7 @@ test -n "$PREFIX" || PREFIX=1000::1
 test -n "$FIRST_WORKER" || FIRST_WORKER=1
 client_yamld=/etc/kubernetes/usrsctp-client
 server_yamld=/etc/kubernetes/usrsctp-server
-kpng_yamld=/etc/kubernetes/kpng-nfqlb
+kpng_yamld=/etc/kubernetes/kpng-lb-proxier
 
 die() {
 	echo "ERROR: $*" >&2
@@ -48,7 +48,25 @@ cmd_tcase_check_nodes() {
 cmd_tcase_deploy_kpng_pods() {
 	tcase "Deploy KPNG pods"
 	apply_k8s $kpng_yamld
-	test_daemonset kpng-nfqlb-proxy 180
+	test_daemonset kpng-lb-proxier 180
+}
+
+cmd_tcase_test_conntrack() {
+	__timeout=40
+	__conns=4
+	test -n "$1" && __conns="$1"
+	tcase "$proto conntrack info"
+	pushv $__timeout
+	tex "test_connections sctp $__conns" || tdie "Mismatch in number of expected connections"
+	# Print conntrack if this succeeds
+	tlog "Show all $proto connections"
+	conntrack -p $proto -L
+}
+test_connections() {
+	proto="$1"
+	num_of_conns=1
+	test -n "$2" && num_of_conns="$2"
+	test $(conntrack -p $1 -L | wc -l) -eq $2
 }
 
 cmd_tcase_deploy_client_pods() {

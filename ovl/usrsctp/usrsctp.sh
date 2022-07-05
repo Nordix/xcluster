@@ -88,7 +88,6 @@ test_start() {
 	export __image
 	test -r $__image || die "Not readable [$__image]"
 
-	xcluster_prep
 	xcluster_start iptools network-topology usrsctp
 
 	otc 1 check_namespaces
@@ -109,7 +108,6 @@ test_k8s_client() {
 	export __image
 	test -r $__image || die "Not readable [$__image]"
 
-	xcluster_prep
 	xcluster_start iptools network-topology usrsctp
 
 	otc 1 check_namespaces
@@ -148,12 +146,11 @@ test_k8s_server() {
 	export __image
 	test -r $__image || die "Not readable [$__image]"
 
-	xcluster_prep
 	xcluster_start iptools network-topology usrsctp
 
 	otc 1 check_namespaces
 	otc 1 check_nodes
-#	otc 1 deploy_kpng_pods
+	otc 1 deploy_kpng_pods
 	otc 1 deploy_server_pods
 
 	otc 201 "vip_route 192.168.1.2"
@@ -162,46 +159,29 @@ test_k8s_server() {
 	# otc 202 "vip_ecmp_route 2"
 
 	otc 2 "start_tcpdump_proc_ns usrsctpt"
-	otc 1 "start_tcpdump eth1"
-	otc 1 "start_tcpdump eth2"
-	otc 2 "start_tcpdump eth1"
-	otc 2 "start_tcpdump eth2"
-	otc 201 "start_tcpdump eth1"
-	otc 201 "start_tcpdump eth2"
-	otc 202 "start_tcpdump eth1"
-	otc 202 "start_tcpdump eth2"
-	otc 221 "start_tcpdump eth1"
-	otc 221 "start_tcpdump eth2"
-	otc 222 "start_tcpdump eth1"
-	otc 222 "start_tcpdump eth2"
+	# otc 2 "start_tcpdump eth1"
+	# otc 2 "start_tcpdump eth2"
+	# otc 221 "start_tcpdump eth1"
+	# otc 221 "start_tcpdump eth2"
 
 	otc 221 "start_client 6001"
 	otc 222 "start_client 6002"
-	tlog "Sleep for 30 seconds for the client to finish"
-	sleep 30
 
-	otc 1 stop_all_tcpdump
+	otc 2 "test_conntrack 4"
+	otc 2 "test_conntrack 0"
+
 	otc 2 stop_all_tcpdump
-	otc 201 stop_all_tcpdump
-	otc 202 stop_all_tcpdump
-	otc 221 stop_all_tcpdump
-	otc 222 stop_all_tcpdump
+	# otc 221 stop_all_tcpdump
 
-	sleep 10
+	sleep 5
 
-	rcp 1 /var/log/*.pcap captures/
 	rcp 2 /var/log/*.pcap captures/
-	rcp 201 /var/log/*.pcap captures/
-	rcp 202 /var/log/*.pcap captures/
-	rcp 221 /var/log/*.pcap captures/
-	rcp 222 /var/log/*.pcap captures/
+	# rcp 221 /var/log/*.pcap captures/
 }
 
 test_k8s_server_calico() {
 	. ./network-topology/Envsettings
 
-	test -n "$__mode" || __mode=dual-stack
-	export xcluster___mode=$__mode
 	# Test with k8s-xcluster;
 	__image=$XCLUSTER_HOME/hd-k8s-xcluster-$__k8sver.img
 	test -r $__image || __image=$XCLUSTER_HOME/hd-k8s-xcluster.img
@@ -210,49 +190,37 @@ test_k8s_server_calico() {
 	export XCTEST_HOOK=$($XCLUSTER ovld k8s-xcluster)/xctest-hook
 	export xcluster_FIRST_WORKER=2
 
-	xcluster_prep $__mode
 	xcluster_start k8s-cni-calico iptools network-topology usrsctp
 
 	otc 1 check_namespaces
 	otc 1 check_nodes
 	otc 1 deploy_kpng_pods
-#	otc 1 deploy_server_pods
+	otc 1 deploy_server_pods
 
 	otc 201 "vip_route 192.168.1.2"
 	otc 202 "vip_route 192.168.2.2"
 	# otc 201 vip_ecmp_route
 	# otc 202 "vip_ecmp_route 2"
 
-	otc 2 "start_tcpdump_proc_ns usrsctpt"
-	otc 2 "start_tcpdump eth1"
-	otc 2 "start_tcpdump eth2"
-	otc 201 "start_tcpdump eth1"
-	otc 201 "start_tcpdump eth2"
-	otc 202 "start_tcpdump eth1"
-	otc 202 "start_tcpdump eth2"
-	otc 221 "start_tcpdump eth1"
-	otc 221 "start_tcpdump eth2"
-	otc 222 "start_tcpdump eth1"
-	otc 222 "start_tcpdump eth2"
+	# otc 2 "start_tcpdump_proc_ns usrsctpt"
+	# otc 2 "start_tcpdump eth1"
+	# otc 2 "start_tcpdump eth2"
+	# otc 221 "start_tcpdump eth1"
+	# otc 221 "start_tcpdump eth2"
 
 	otc 221 "start_client 6001"
-	otc 222 "start_client 6001"
-	tlog "Sleep for 120 seconds for the client to finish"
-	sleep 120
+	otc 222 "start_client 6002"
 
-	otc 2 stop_all_tcpdump
-	otc 201 stop_all_tcpdump
-	otc 202 stop_all_tcpdump
-	otc 221 stop_all_tcpdump
-	otc 222 stop_all_tcpdump
+	otc 2 "test_conntrack 4"
+	otc 2 "test_conntrack 0"
 
-	sleep 10
+	# otc 2 stop_all_tcpdump
+	# otc 221 stop_all_tcpdump
 
-	rcp 2 /var/log/*.pcap captures/
-	rcp 201 /var/log/*.pcap captures/
-	rcp 202 /var/log/*.pcap captures/
-	rcp 221 /var/log/*.pcap captures/
-	rcp 222 /var/log/*.pcap captures/
+	# sleep 10
+
+	# rcp 2 /var/log/*.pcap captures/
+	# rcp 221 /var/log/*.pcap captures/
 }
 
 ##   nfqlb_download
