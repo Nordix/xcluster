@@ -5,8 +5,11 @@
 The new [registrar](https://github.com/spiffe/spire/tree/main/support/k8s/k8s-workload-registrar)
 configuration is used.
 
-The main intended usage is for [nsm-test](https://github.com/Nordix/nsm-test/tree/master/ovl). We attempt to be as close to the older NSM spire setup as possible
-so the "spiffeid" is;
+The main intended usage is for
+[nsm-test](https://github.com/Nordix/nsm-test/tree/master/ovl). We
+attempt to be as close to the older NSM spire setup as possible so the
+"spiffeid" is;
+
 ```
 spiffe://example.org/ns/default/sa/default
 ```

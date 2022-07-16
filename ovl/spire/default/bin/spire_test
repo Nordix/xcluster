@@ -63,6 +63,9 @@ cmd_tcase_start_spire_registrar() {
 	kubectl apply -f $yamld || tdie
 	kubectl="kubectl -n spire"
     test_statefulset spire-server 180
+	local ver=$($kubectl exec spire-server-0 -c spire-server \
+		-- ./bin/spire-server --version 2>&1)
+	tlog "Spire version [$ver]"
     test_daemonset spire-agent 120
 	kubectl apply -f /etc/kubernetes/default-spiffeid.yaml || tdie
 }
