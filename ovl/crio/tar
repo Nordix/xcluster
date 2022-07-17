@@ -16,28 +16,16 @@ log() {
 test -n "$1" || die "No out-file"
 mkdir -p $tmp/bin
 
-test -n "$__criover" || __criover=crio-v1.22.0
-ar=$__criover.tar.gz
-test -r $ARCHIVE/$ar || die "Not readable [$ARCHIVE/$ar]"
+eval $($dir/crio.sh env | grep -E '__crioar|__criover')
+test -r $__crioar || die "Not readable [$__crioar]"
 log "Using cri-o binary release $__criover"
-tar -C $tmp --strip-components=1 -xf $ARCHIVE/$ar cri-o/bin
-
-if test "$CRIO_LOCAL" = "yes"; then
-	log "Using local built cri-o"
-	criod=$GOPATH/src/github.com/cri-o/cri-o
-	for n in crio pinns crio-status; do
-		f=$criod/bin/$n
-		test -x $f || die "Not executable [$f]"
-		cp $f $tmp/bin
-	done
-fi
+tar -C $tmp --strip-components=1 -xf $__crioar cri-o/bin
 
 # (until we have some hooks...)
 mkdir -p $tmp/usr/share/containers/oci/hooks.d
 
-test -d $dir/default && cp -r $dir/default/* $tmp
-
-$XCLUSTER cplib --dest=$tmp $tmp/bin/*
+cp -r $dir/default/* $tmp
+test "$CRIO_TEST" = "yes" && cp -r $dir/test/* $tmp
 
 cd $tmp
 tar cf "$1" *

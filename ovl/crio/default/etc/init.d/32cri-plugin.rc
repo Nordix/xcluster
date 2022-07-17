@@ -14,9 +14,11 @@ test $i -le 200 || exit 0
 test -n "$FIRST_WORKER" -a $i -lt "$FIRST_WORKER" && exit 0
 
 # Cri-o *requires* a default route to start(?!)
-ip route add default via 192.168.1.201
+ip route add default via 192.168.0.250
 crio > /var/log/crio.log 2>&1 &
 sleep 0.2
+
+crictl config --set runtime-endpoint=unix:///var/run/crio/crio.sock
 
 cat > /etc/cri-plugin.rc <<EOF
 # CRI options to "kubelet";
@@ -24,6 +26,5 @@ CRI_OPTS="--container-runtime=remote --container-runtime-endpoint=unix:///var/ru
 EOF
 
 cat >> /root/.profile <<EOF
-alias cri="crictl --runtime-endpoint=unix:///var/run/crio/crio.sock"
-alias images="crictl --runtime-endpoint=unix:///var/run/crio/crio.sock images"
+alias images="crictl images"
 EOF

@@ -3,17 +3,35 @@
 [Cri-o](https://github.com/cri-o/cri-o) is used as CRI-plugin for
 Kubernetes in `xcluster`.
 
+Related links;
+
+* https://kubernetes.io/docs/tutorials/security/seccomp/
 
 ## Cri-o static release bundle
 
 Cri-o have a binary release since v1.18. It can't be downloaded with
-"curl" so follow the link and store it in $ARCHIVE.
+"curl" so follow the link on the [release page](
+https://github.com/cri-o/cri-o/releases) and store it in $ARCHIVE.
 
 ```
-ver=v1.18.3
-ar=crio-$ver.tar.gz
+ver=v1.24.1
+ar=cri-o.amd64.$ver.tar.gz
 mv $HOME/Downloads/$ar $ARCHIVE/$ar
+tar -C default --strip-components=1 -xf $ARCHIVE/$ar cri-o/etc/crio.conf
 ```
+
+## Test
+
+```
+./crio.sh    # help printout
+./crio.sh test start > $log
+# On vm-001
+crictl version
+crictl pull docker.io/library/alpine:latest
+images
+```
+
+
 
 ## Build
 
