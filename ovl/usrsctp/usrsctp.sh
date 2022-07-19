@@ -72,32 +72,12 @@ cmd_test() {
             test_$t
         done
     else
-		test_start
+		test_k8s_server
     fi      
 
     now=$(date +%s)
     tlog "Xcluster test ended. Total time $((now-begin)) sec"
 
-}
-
-test_start() {
-	. ./network-topology/Envsettings
-
-	__image=$XCLUSTER_HOME/hd-k8s-$__k8sver.img
-	test -r $__image || __image=$XCLUSTER_HOME/hd-k8s.img
-	export __image
-	test -r $__image || die "Not readable [$__image]"
-
-	xcluster_start iptools network-topology usrsctp
-
-	otc 1 check_namespaces
-	otc 1 check_nodes
-	otc 221 start_server
-
-	otc 201 vip_ecmp_route
-	otc 202 "vip_ecmp_route 2"
-
-	otc 1 deploy_client_pods
 }
 
 test_k8s_client() {
@@ -119,6 +99,46 @@ test_k8s_client() {
 
 	otc 2 "start_tcpdump eth1"
 	otc 2 "start_tcpdump eth2"
+	otc 221 "start_tcpdump eth1"
+	otc 221 "start_tcpdump eth2"
+
+	otc 2 deploy_client_pods
+	otc 2 "start_tcpdump_proc_ns usrsctpt"
+
+	tlog "Sleep for 60 seconds for the client to finish"
+	sleep 60
+	#otc 1 start_client_interactive
+
+	otc 2 stop_all_tcpdump
+	otc 221 stop_all_tcpdump
+
+	sleep 10
+
+	rcp 2 /var/log/*.pcap captures/
+	rcp 221 /var/log/*.pcap captures/
+}
+
+test_k8s_client_calico() {
+	. ./network-topology/Envsettings
+
+	# Test with k8s-xcluster;
+	__image=$XCLUSTER_HOME/hd-k8s-xcluster-$__k8sver.img
+	test -r $__image || __image=$XCLUSTER_HOME/hd-k8s-xcluster.img
+	export __image
+	test -r $__image || die "Not readable [$__image]"
+	export XCTEST_HOOK=$($XCLUSTER ovld k8s-xcluster)/xctest-hook
+	export xcluster_FIRST_WORKER=2
+
+	$($XCLUSTER ovld images)/images.sh lreg_preload k8s-cni-calico
+	xcluster_start k8s-cni-calico iptools network-topology usrsctp
+
+	otc 1 check_namespaces
+	otc 1 check_nodes
+	otc 221 start_server
+
+	otc 201 vip_ecmp_route
+	otc 202 "vip_ecmp_route 2"
+
 	otc 221 "start_tcpdump eth1"
 	otc 221 "start_tcpdump eth2"
 
@@ -190,6 +210,7 @@ test_k8s_server_calico() {
 	export XCTEST_HOOK=$($XCLUSTER ovld k8s-xcluster)/xctest-hook
 	export xcluster_FIRST_WORKER=2
 
+	$($XCLUSTER ovld images)/images.sh lreg_preload k8s-cni-calico
 	xcluster_start k8s-cni-calico iptools network-topology usrsctp
 
 	otc 1 check_namespaces
@@ -202,7 +223,7 @@ test_k8s_server_calico() {
 	# otc 201 vip_ecmp_route
 	# otc 202 "vip_ecmp_route 2"
 
-	# otc 2 "start_tcpdump_proc_ns usrsctpt"
+	otc 2 "start_tcpdump_proc_ns usrsctpt"
 	# otc 2 "start_tcpdump eth1"
 	# otc 2 "start_tcpdump eth2"
 	# otc 221 "start_tcpdump eth1"
@@ -214,12 +235,12 @@ test_k8s_server_calico() {
 	otc 2 "test_conntrack 4"
 	otc 2 "test_conntrack 0"
 
-	# otc 2 stop_all_tcpdump
+	otc 2 stop_all_tcpdump
 	# otc 221 stop_all_tcpdump
 
-	# sleep 10
+	sleep 5
 
-	# rcp 2 /var/log/*.pcap captures/
+	rcp 2 /var/log/*.pcap captures/
 	# rcp 221 /var/log/*.pcap captures/
 }
 
