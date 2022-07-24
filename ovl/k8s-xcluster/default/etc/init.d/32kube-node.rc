@@ -46,8 +46,7 @@ run_kubelet() {
 		--node-ip=$NODE_IP $CRI_OPTS $fg_param \
 		--register-node=true --kubeconfig $KUBECONFIG \
 		--cluster-dns=$DNS_ADR --cluster-domain=$DOMAIN \
-		--runtime-cgroups=/systemd/system.slice \
-		--kubelet-cgroups=/systemd/system.slice > /var/log/kubelet.log 2>&1
+		--runtime-cgroups=/ --kubelet-cgroups=/ > /var/log/kubelet.log 2>&1
 }
 
 run_kube_proxy() {

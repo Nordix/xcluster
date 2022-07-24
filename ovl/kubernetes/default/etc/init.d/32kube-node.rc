@@ -43,8 +43,8 @@ run_kubelet() {
 		--register-node=true --kubeconfig $KUBECONFIG $fg_param \
 		--cluster-dns=$DNS_ADR \
 		--cluster-domain=$DOMAIN \
-		--runtime-cgroups=/systemd/system.slice \
-		--kubelet-cgroups=/systemd/system.slice >> /var/log/kubelet.log 2>&1
+		--runtime-cgroups=/ \
+		--kubelet-cgroups=/ >> /var/log/kubelet.log 2>&1
 }
 
 run_kube_proxy() {

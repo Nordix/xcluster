@@ -35,15 +35,8 @@ fi
 # Work around for bad install of dropbear
 test -r /usr/bin/dbclient || ln /bin/dbclient /usr/bin/dbclient
 
-mount -t tmpfs tmpfs /sys/fs/cgroup
-for d in cpuset memory; do
-	mkdir /sys/fs/cgroup/$d
-	mount -t cgroup cgroup /sys/fs/cgroup/$d
-	# https://github.com/cri-o/cri-o/issues/5335
-	echo 1 > /sys/fs/cgroup/$d/cgroup.clone_children
-done
+mount -t cgroup2 cgroup2 /sys/fs/cgroup
 mount --make-rshared /
-
 mkdir -p /var/lib/kubelet
 
 echo 1 > /proc/sys/net/core/fb_tunnels_only_for_init_net
