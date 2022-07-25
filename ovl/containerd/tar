@@ -1,0 +1,35 @@
+#! /bin/sh
+# NOTE: A common pattern is to specify "-" (stdout) as out-file,
+#  so there must be NO log printouts to stdout!
+
+dir=$(dirname $0); dir=$(readlink -f $dir)
+tmp=/tmp/tmp/$USER/xcluster_$$
+die() {
+	echo "ERROR: $*" >&2
+	rm -rf $tmp
+	exit 1
+}
+log() {
+	echo "INFO: $*" >&2
+}
+
+test -n "$1" || die "No out-file"
+
+mkdir -p $tmp
+cp -R $dir/default/* $tmp
+
+mkdir -p $tmp/bin
+$dir/containerd.sh install $tmp/bin
+$XCLUSTER cplib --dest=$tmp $tmp/bin/containerd
+$dir/containerd.sh install_crictl $tmp/bin
+
+mkdir -p $tmp/opt/cni/bin
+x=$($XCLUSTER ovld cni-plugins)/cni-plugins.sh
+$x install --dest=$tmp/opt/cni/bin || die
+
+test "$CONTAINERD_TEST" = "yes" && cp -R $dir/test/* $tmp
+
+cd $tmp
+tar cf "$1" *
+cd - > /dev/null
+rm -rf $tmp
