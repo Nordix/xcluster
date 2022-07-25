@@ -14,15 +14,17 @@ log() {
 }
 
 test -n "$1" || die "No out-file"
+out=$1
+shift
 
-mkdir -p $tmp
-cp -R $dir/default/* $tmp
+$dir/cni-plugins.sh archive > /dev/null || die "Missing archive"
 
 mkdir -p $tmp/opt/cni/bin
-x=$($XCLUSTER ovld cni-plugins)/cni-plugins.sh
-$x install --dest=$tmp/opt/cni/bin || die
-		
+$dir/cni-plugins.sh install --dest=$tmp/opt/cni/bin $@ || die
+
+test "$CNI_PLUGIN_TEST" = "yes" && cp -R $dir/test/* $tmp
+
 cd $tmp
-tar cf "$1" *
+tar cf "$out" *
 cd - > /dev/null
 rm -rf $tmp

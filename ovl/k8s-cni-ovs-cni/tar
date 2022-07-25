@@ -22,10 +22,9 @@ cp -R $dir/default/* $tmp
 ovsd=$($XCLUSTER ovld ovs)
 $ovsd/tar - | tar -C $tmp -x
 
-f=$ARCHIVE/cni-plugins-linux-amd64-v1.0.1.tgz
-test -r $f || die "Not readable [$f]"
 mkdir -p $tmp/opt/cni/bin
-tar -C $tmp/opt/cni/bin -xf $f ./host-local ./bridge ./loopback
+x=$($XCLUSTER ovld cni-plugins)/cni-plugins.sh
+$x install --dest=$tmp/opt/cni/bin host-local bridge loopback || die
 
 cd $tmp
 tar cf "$1" *

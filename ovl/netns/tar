@@ -18,13 +18,9 @@ test -n "$1" || die "No out-file"
 mkdir -p $tmp
 cp -R $dir/default/* $tmp
 
-cniver=v1.0.1
-ar=$ARCHIVE/cni-plugins-linux-amd64-$cniver.tgz
-test -r $ar || ar=$HOME/Downloads/cni-plugins-linux-amd64-$cniver.tgz
-if test -r $ar; then
-	mkdir -p $tmp/opt/cni/bin
-	tar -C $tmp/opt/cni/bin -xf $ar
-fi
+mkdir -p $tmp/opt/cni/bin
+x=$($XCLUSTER ovld cni-plugins)/cni-plugins.sh
+$x install --dest=$tmp/opt/cni/bin || die
 
 ipu=$HOME/bin/ipu
 test -x $ipu || ipu=$NFQLBDIR/bin/ipu
