@@ -31,7 +31,7 @@ if mount -t iso9660 /dev/vdb /mnt > /dev/null 2>&1; then
 fi
 
 sysctl -p > /dev/null
-depmod
+test -d /lib/modules && depmod
 ldconfig
 
 test -r /etc/init.d/init.hook && . /etc/init.d/init.hook

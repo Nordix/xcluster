@@ -11,5 +11,5 @@ test -n "$rootdevice" || exec /bin/busybox ash
 
 mkdir /mnt
 mount $rootdevice /mnt
-cp -R /lib/modules /mnt/lib
+test -d /lib/modules && cp -R /lib/modules /mnt/lib
 exec switch_root /mnt /init

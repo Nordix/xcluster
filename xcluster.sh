@@ -358,8 +358,10 @@ cmd_emit_cpio_list() {
 	cmd_env
 	test -n "$__tmp" || __tmp=$tmp
 	mkdir -p $__tmp
-	INSTALL_MOD_PATH=$__tmp make -C $__kobj modules_install 1>&2 > /dev/null \
-		|| die "Failed to install modules from [$__kobj]"
+	if grep -q "^CONFIG_MODULES=y" $__kcfg; then
+		INSTALL_MOD_PATH=$__tmp make -C $__kobj modules_install 1>&2 > /dev/null \
+			|| die "Failed to install modules from [$__kobj]"
+	fi
 	cmd_cpio_list $__tmp
 	cmd_cpio_list $dir/image/initfs
 	cat <<EOF
