@@ -398,10 +398,10 @@ do_mconnect() {
 log_version() {
 	. /etc/os-release
 	test "$VERSION" != "1.0" && tlog "Xcluster: $VERSION"
+	tlog "$(uname -s -r -v)"
 	which kubectl > /dev/null || return 0
 	local ver=$(kubectl version --short=true 2> /dev/null | grep Server)
 	tlog "$ver"
-	tlog "$(uname -s -r -v)"
 	tlog "CNI-plugin; $(cni_plugin_info)"
 	tlog "Proxy-$(grep mode /etc/kubernetes/kube-proxy.config)"
 	if which containerd > /dev/null; then
