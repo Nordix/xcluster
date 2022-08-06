@@ -45,7 +45,9 @@ mkdir -p /tmp/xdptest
 make -C src O=/tmp/xdptest
 ```
 
-## xdp-tutorial
+## xdp-tutorial OBSOLETE?
+
+**This seem to be un-maintained. It doesn't work on recent kernels**
 
 The tutorial at;
 
@@ -75,7 +77,30 @@ cdo xdp
 ./xdp.sh libbpf_link
 ```
 
-### HW offload for virtio
+### The examples
+
+General build;
+```
+x=basic01-xdp-pass
+cd $GOPATH/src/github.com/xdp-project/xdp-tutorial/$x
+make USER_LIBS=-lz
+# (do NOT do 'make clean'. Wipes libbpf!)
+```
+
+The `xdp-tutorial` examples are installed on `/root`. If the example
+is not built the directory will be empty. The first example is shown
+below;
+
+```
+cdo xdp
+./xdp.sh test start > $log
+# On vm-001
+cd /root/basic01-xdp-pass
+./xdp_pass_user --dev eth1
+ping 192.168.1.2
+```
+
+## HW offload for virtio
 
 The `virtio` networking used in `xcluster` has support for HW offload
 but "multiqueue" setup must be used. This is setup on the host side by
@@ -113,29 +138,6 @@ ERR: ifindex(3) link set xdp fd failed (12): Cannot allocate memory
 You can still load the examples by using the "--skb-mode" option to
 skip hw offload.
 
-
-### The examples
-
-General build;
-```
-x=basic01-xdp-pass
-cd $GOPATH/src/github.com/xdp-project/xdp-tutorial/$x
-make USER_LIBS=-lz
-# (do NOT do 'make clean'. Wipes libbpf!)
-```
-
-The `xdp-tutorial` examples are installed on `/root`. If the example
-is not built the directory will be empty. The first example is shown
-below;
-
-```
-cdo xdp
-./xdp.sh test start > $log
-# On vm-001
-cd /root/basic01-xdp-pass
-./xdp_pass_user --dev eth1
-ping 192.168.1.2
-```
 
 
 ## Local examples

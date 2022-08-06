@@ -32,9 +32,8 @@ dbg() {
 	test -n "$__verbose" && echo "$prg: $*" >&2
 }
 
-##  env
-##    Print environment.
-##
+##   env
+##     Print environment.
 cmd_env() {
 
 	if test "$cmd" = "env"; then
@@ -47,6 +46,62 @@ cmd_env() {
 	eval $($XCLUSTER env)
 }
 
+##   libbpf_build
+##     Build libbpf and bpftool for the current kernel ($__kver)
+cmd_libbpf_build() {
+	eval $($XCLUSTER env | grep -E '^KERNELDIR|__kver')
+	test -n "$KERNELDIR" || die 'Not set [$KERNELDIR]'
+	local kdir=$KERNELDIR/$__kver
+	test -d "$kdir" || die "Not a directory [$kdir]"
+	cd $kdir/tools/lib/bpf || die cd
+	make -j$(nproc) || die "Make libbpf"
+	make DESTDIR=root prefix=/usr install || die "Make libbpf install"
+	make DESTDIR=$XCLUSTER_WORKSPACE/sys prefix=/usr install \
+		|| die "Make libbpf install sys"
+	cd $kdir/tools/bpf/bpftool
+	CLANG=Nope make -j$(nproc) || die "Make bpftool"
+}
+
+##   perf_build
+##     Build the kernel "perf" tool
+cmd_perf_build() {
+	eval $($XCLUSTER env | grep -E '^KERNELDIR|__kver')
+	test -n "$KERNELDIR" || die 'Not set [$KERNELDIR]'
+	local kdir=$KERNELDIR/$__kver
+	test -d "$kdir" || die "Not a directory [$kdir]"
+	cd $kdir/tools/perf || die cd
+	make || die "Make perf"
+}
+
+##   libxdp_build
+##     Build static libxdp. Requires libbpf
+cmd_libxdp_build() {
+	local d=$GOPATH/src/github.com/xdp-project/xdp-tools
+	test -d $d || die "Not a directory [$d]"
+	cmd_libbpf_link
+	cd $d
+	./configure
+	# Dynamic libs doesn't work since libbpf.a is not built with -fPIC
+	export BUILD_STATIC_ONLY=1
+	make -j$(nproc) || die make
+	make DESTDIR=$XCLUSTER_WORKSPACE/sys install || die "make install"
+}
+
+##   libbpf_link
+##     Create a link to libbpf in the xdp-tutorial and xdp-tools dirs
+cmd_libbpf_link() {
+	eval $($XCLUSTER env | grep -E '^KERNELDIR|__kver')
+	local kdir=$KERNELDIR/$__kver
+	local d
+	for d in $GOPATH/src/github.com/xdp-project/xdp-tutorial \
+		$GOPATH/src/github.com/xdp-project/xdp-tools/lib; do
+		mkdir -p $d/libbpf || die
+		rm -f $d/libbpf/src
+		ln -s $kdir/tools/lib/bpf $d/libbpf/src
+	done
+}
+
+##
 ##   test --list
 ##   test [--xterm] [test...] > logfile
 ##     Exec tests
@@ -91,41 +146,6 @@ test_basic() {
 	tlog "=== xdp: Basic test"
 	test_start
 	xcluster_stop
-}
-
-##  perf_build
-##    Build the kernel "perf" tool
-cmd_perf_build() {
-	eval $($XCLUSTER env | grep -E '^KERNELDIR|__kver')
-	test -n "$KERNELDIR" || die 'Not set [$KERNELDIR]'
-	local kdir=$KERNELDIR/$__kver
-	test -d "$kdir" || die "Not a directory [$kdir]"
-	cd $kdir/tools/perf || die cd
-	make || die "Make perf"
-}
-
-##  libbpf_build
-##    Build libbpf and bpftool for the current kernel ($__kver)
-cmd_libbpf_build() {
-	eval $($XCLUSTER env | grep -E '^KERNELDIR|__kver')
-	test -n "$KERNELDIR" || die 'Not set [$KERNELDIR]'
-	local kdir=$KERNELDIR/$__kver
-	test -d "$kdir" || die "Not a directory [$kdir]"
-	cd $kdir/tools/lib/bpf || die cd
-	make -j$(nproc) || die "Make libbpf"
-	make DESTDIR=build prefix=/usr install || die "Make libbpf install"
-	cd $kdir/tools/bpf/bpftool
-	CLANG=Nope make -j$(nproc) || die "Make bpftool"
-}
-
-##  libbpf_link
-##    Create a link to libbpf in the xdp-tutorial dir
-cmd_libbpf_link() {
-	local d=$GOPATH/src/github.com/xdp-project/xdp-tutorial
-	mkdir -p $d/libbpf || die
-	eval $($XCLUSTER env | grep -E '^KERNELDIR|__kver')
-	local kdir=$KERNELDIR/$__kver
-	ln -s $kdir/tools/lib/bpf $d/libbpf/src
 }
 
 . $($XCLUSTER ovld test)/default/usr/lib/xctest
