@@ -32,6 +32,12 @@ cdo xdp
 ./xdp.sh perf_build
 ```
 
+Optionally `libxdp` can be cloned and built;
+```
+#sudo ln -s x86_64-linux-gnu/asm /usr/include/asm
+./xdp.sh libxdp_build
+```
+
 This is suddenly needed on Ubuntu 20;
 ```
 sudo chmod u+s /usr/lib/qemu/qemu-bridge-helper
