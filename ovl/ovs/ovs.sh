@@ -64,7 +64,7 @@ cmd_build() {
 		cd $__dest/ovs
 	fi
 
-	local bpflibd=$(readlink -f $__kobj/source)/tools/lib/bpf/build/usr
+	local bpflibd=$(readlink -f $__kobj/source)/tools/lib/bpf/root/usr
 	./boot.sh
 	if test -d $bpflibd; then
 		LDFLAGS=-L$bpflibd/lib64 CPPFLAGS=-I$bpflibd/include \
