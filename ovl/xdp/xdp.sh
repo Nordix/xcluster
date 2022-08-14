@@ -59,7 +59,7 @@ cmd_libbpf_build() {
 	make DESTDIR=$XCLUSTER_WORKSPACE/sys prefix=/usr install \
 		|| die "Make libbpf install sys"
 	cd $kdir/tools/bpf/bpftool
-	CLANG=Nope make -j$(nproc) || die "Make bpftool"
+	make -j$(nproc) || die "Make bpftool"
 }
 
 ##   perf_build
