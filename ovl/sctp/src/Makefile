@@ -26,16 +26,14 @@ DIRS := $(O)/sctpt $(O)/lib/test
 SRC := $(wildcard sctpt/*.c lib/*.c)
 OBJ := $(SRC:%.c=$(O)/%.o)
 
-NFQLB_VER := 0.6.0
-NFQLB_AR := $(HOME)/Downloads/nfqlb-$(NFQLB_VER).tar.xz
-NFQLB_DIR := $(O)/nfqlb-$(NFQLB_VER)
+NFQLB_DIR ?= $(HOME)/tmp/nfqlb
 
 $(O)/%.o : %.c
 	$(CC) -c $(CFLAGS) -pthread -Wall -I$(NFQLB_DIR)/include -Ilib $< -o $@
 
 .PHONY: all static
-all: $(NFQLB_DIR) $(X)
-static: $(NFQLB_DIR) $(X)
+all: $(X)
+static: $(X)
 static: LDFLAGS := -static -Wl,--whole-archive -lpthread -Wl,--no-whole-archive
 
 $(X): $(OBJ)
@@ -56,11 +54,6 @@ test: $(TEST_PROGS)
 $(DIRS):
 	@mkdir -p $(DIRS)
 
-$(NFQLB_DIR): $(NFQLB_AR)
-	@mkdir -p $(O)
-	tar -C $(O) -xf $(NFQLB_AR)
-	@touch $(NFQLB_DIR)
-
 .PHONY: clean
 clean:
 	rm -rf $(X) $(OBJ)
@@ -71,7 +64,3 @@ help:
 	@echo "Binary:"
 	@echo "  $(X)"
 
-.PHONY: ver
-ver:
-	@echo "NFQLB_VER=$(NFQLB_VER)"
-	@echo "NFQLB_DIR=$(NFQLB_DIR)"

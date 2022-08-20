@@ -59,6 +59,7 @@ static int cmdCtraffic(int argc, char **argv)
 	char const* clients = "1";
 	char const* duration = "10";
 	char const* shm = "sctpstats";
+	char const* loglevelarg = NULL;
 	struct Option options[] = {
 		{"help", NULL, 0,
 		 "ctraffic [options]\n"
@@ -74,7 +75,8 @@ static int cmdCtraffic(int argc, char **argv)
 		{0, 0, 0, 0}
 	};
 	(void)parseOptionsOrDie(argc, argv, options);
-	loginit(stderr);
+	if (loglevelarg != NULL)
+		LOG_SET_LEVEL(atoi(loglevelarg));
 
 	if (atoi(port) == 0)
 		die("Invalid port [%s]\n", port);
@@ -149,6 +151,7 @@ static int cmdStats(int argc, char **argv)
 	char const* buckets = "16";
 	char const* interval = "1000";
 	char const* shm = "sctpstats";
+	char const* loglevelarg = NULL;
 	struct Option options[] = {
 		{"help", NULL, 0,
 		 "stats [options] (init|clear|show|json)\n"
@@ -160,7 +163,8 @@ static int cmdStats(int argc, char **argv)
 		{0, 0, 0, 0}
 	};
 	int nopt = parseOptionsOrDie(argc, argv, options);
-	loginit(stderr);
+	if (loglevelarg != NULL)
+		LOG_SET_LEVEL(atoi(loglevelarg));
 	argc -= nopt;
 	argv += nopt;
 	debug("Cmd: %s\n", argc > 0 ? *argv : "(none)");
@@ -228,19 +232,19 @@ static void* clientThread(void* _arg)
 	}
 
 	DEBUG{
-		logf("Client %u: Connected\n", arg->id);
+		logp("Client %u: Connected\n", arg->id);
 		struct sockaddr* addrs;
 		int cnt;
 		cnt = sctp_getladdrs(sd, 0, &addrs);
 		if (cnt <= 0)
 			die("sctp_getladdrs %d\n", cnt);
-		logf("Local addresses\n");
+		logp("Local addresses\n");
 		printAddrs("  ", addrs, cnt);
 		sctp_freeladdrs(addrs);
 		cnt = sctp_getpaddrs(sd, 0, &addrs);
 		if (cnt <= 0)
 			die("sctp_getpaddrs %d\n", cnt);
-		logf("Peer addresses\n");
+		logp("Peer addresses\n");
 		printAddrs("  ", addrs, cnt);
 		sctp_freepaddrs(addrs);		
 	}

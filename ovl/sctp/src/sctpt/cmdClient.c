@@ -25,6 +25,7 @@ static int cmdClient(int argc, char **argv)
 	char const* addr = "::1";
 	char const* laddr = "::1";
 	char const* port = "6000";
+	char const* loglevelarg = NULL;
 	struct Option options[] = {
 		{"help", NULL, 0,
 		 "client [options]\n"
@@ -36,7 +37,8 @@ static int cmdClient(int argc, char **argv)
 		{0, 0, 0, 0}
 	};
 	(void)parseOptionsOrDie(argc, argv, options);
-	loginit(stderr);
+	if (loglevelarg != NULL)
+		LOG_SET_LEVEL(atoi(loglevelarg));
 
 	if (atoi(port) == 0)
 		die("Invalid port [%s]\n", port);
@@ -88,19 +90,19 @@ static int cmdClient(int argc, char **argv)
 		die("fcntl O_NONBLOCK %s\n", strerror(errno));
 
 	INFO{
-		logf("Connected\n");
+		logp("Connected\n");
 		struct sockaddr* addrs;
 		int cnt;
 		cnt = sctp_getladdrs(sd, 0, &addrs);
 		if (cnt <= 0)
 			die("sctp_getladdrs %d\n", cnt);
-		logf("Local addresses\n");
+		logp("Local addresses\n");
 		printAddrs("  ", addrs, cnt);
 		sctp_freeladdrs(addrs);
 		cnt = sctp_getpaddrs(sd, 0, &addrs);
 		if (cnt <= 0)
 			die("sctp_getpaddrs %d\n", cnt);
-		logf("Peer addresses\n");
+		logp("Peer addresses\n");
 		printAddrs("  ", addrs, cnt);
 		sctp_freepaddrs(addrs);		
 	}
