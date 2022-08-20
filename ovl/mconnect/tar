@@ -22,9 +22,17 @@ mkdir -p $tmp/bin
 f=$GOPATH/src/github.com/Nordix/mconnect/image/mconnect
 test -x $f || f=$GOPATH/bin/mconnect
 test -x $f || f=$XCLUSTER_WORKSPACE/bin/mconnect
-test -x $f || die "Not executable [$f]"
-strip $f
-cp $f $tmp/bin
+if ! test -x $f; then
+	# Check if mconnect.xz is downloaded
+	ar=$ARCHIVE/mconnect.xz
+	test -r $ar || ar=$HOME/Downloads/mconnect.xz
+	test -r $ar || die "Could not find mconnect"
+	xz -cd $ar > $tmp/bin/mconnect || die "xz -cd $ar"
+	chmod a+x $tmp/bin/mconnect
+else
+	strip $f
+	cp $f $tmp/bin
+fi
 
 cd $tmp
 tar cf "$1" *
