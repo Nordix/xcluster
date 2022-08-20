@@ -59,11 +59,17 @@ n=$GOPATH/bin/coredns
 test -x $n || n=$(dirname $XCLUSTER)/bin/coredns
 test -x $n && cp $n $tmp/bin
 
-jq=$(which jq)
-test -n "$jq" && cp $jq $tmp/bin
 f=$GOPATH/src/github.com/Nordix/assign-lb-ip/assign-lb-ip
 test -x $f || f=$GOPATH/bin/assign-lb-ip
-test -x $f && cp $f $tmp/bin
+if ! test -x $f; then
+	ar=$ARCHIVE/assign-lb-ip.xz
+	test -r $ar || ar=$HOME/Downloads/assign-lb-ip.xz
+	test -r $ar || die "Can't find [assign-lb-ip]"
+	xz -cd $ar > $tmp/bin/assign-lb-ip
+	chmod a+x $tmp/bin/assign-lb-ip
+else
+	test -x $f && cp $f $tmp/bin
+fi
 
 # CNI-plugin loopback (required by K8s (kubelet))
 mkdir -p $tmp/opt/cni/bin
