@@ -162,6 +162,7 @@ test_basic_flow() {
 	test_start
 	otc 1 "noarp --mac=0:0:0:0:0:1 vm-001-ns01"
 	otc 1 "noarp --mac=0:0:0:0:0:1 vm-001-ns02"
+	tcase "Start tcpdump on vm-001"
 	$XCLUSTER tcpdump --start 1 vm-001-ns01
 	$XCLUSTER tcpdump --start 1 vm-001-ns02
 	otc 1 create_ofbridge

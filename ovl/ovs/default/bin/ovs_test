@@ -102,6 +102,14 @@ cmd_add_vip() {
 	done
 }
 
+##   noarp [interfaces...]
+cmd_noarp() {
+	local iface
+	for iface in $@; do
+		ip link set arp off $iface || die "Failed noarp on [$iface]"
+	done
+}
+
 ##
 ## Test cases;
 ##   version - Log versions

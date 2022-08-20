@@ -124,7 +124,7 @@ ovs-ofctl dump-flows br0
 Automatic test;
 ```
 ./ovs.sh test basic_flow > $log
-wireshark /tmp/vm-002-vm-002-ns02.pcap &
+wireshark /tmp/vm-001-vm-001-ns02.pcap &
 ```
 
 
