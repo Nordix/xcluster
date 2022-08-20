@@ -24,6 +24,7 @@ $x install --dest=$tmp/opt/cni/bin || die
 
 ipu=$HOME/bin/ipu
 test -x $ipu || ipu=$NFQLBDIR/bin/ipu
+test -x $ipu || ipu=$HOME/tmp/nfqlb/bin/ipu
 test -x $ipu && cp $ipu $tmp/bin
 
 mkdir $tmp/etc
