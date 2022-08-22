@@ -79,17 +79,10 @@ cmd_test() {
 }
 
 test_start_empty() {
-	test "$__version" || __version=0.10.0
-	export __version
-	export xcluster___version=$__version
-	test -n "$__mode" || __mode=dual-stack
-	export xcluster___mode=$__mode
-	xcluster_prep $__mode
+	test -n "$__nrouters" || export __nrouters=0
 	xcluster_start k8s-test spire
-
 	otc 1 check_namespaces
 	otc 1 check_nodes
-	otcr vip_routes
 }
 test_start_registrar() {
 	test_start_empty

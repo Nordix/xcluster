@@ -61,9 +61,13 @@ unset otcprog
 ## Update
 
 ```
+mkdir -p $GOPATH/src/github.com/spiffe
+git clone https://github.com/spiffe/spire.git $GOPATH/src/github.com/spiffe/spire
+cd $GOPATH/src/github.com/spiffe/spire
 git fetch --tags
 git branch -a
 git checkout v1.2.1
+cdo spire
 meld $GOPATH/src/github.com/spiffe/spire/support/k8s/k8s-workload-registrar/mode-crd/config default/etc/kubernetes/spire
 images getimages default/
 grep :1.1.0 default/etc/kubernetes/spire/*
