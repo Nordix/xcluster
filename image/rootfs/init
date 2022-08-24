@@ -20,6 +20,7 @@ mount /dev/pts
 mount -o remount -w /
 mdev -s
 mount /dev/mqueue
+mount -t cgroup2 cgroup2 /sys/fs/cgroup
 
 # Get data from cdrom
 mkdir -p /mnt
