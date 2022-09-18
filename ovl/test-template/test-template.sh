@@ -78,13 +78,10 @@ cmd_test() {
 ##   test start_empty
 ##     Start a K8s cluster and setup routes
 test_start_empty() {
-	test -n "$__mode" || __mode=dual-stack
 	xcluster_start test-template
-
 	otc 1 check_namespaces
 	otc 1 check_nodes
-	otc 201 set_vip_routes
-	otc 202 set_vip_routes
+	otcr set_vip_routes
 }
 ##   test start
 ##     Start a K8s cluster with test servers
