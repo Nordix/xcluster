@@ -1,0 +1,4 @@
+#! /bin/sh
+cat /proc/cmdline | grep -q 'apparmor=0' && exit 0
+mount -t securityfs securityfs /sys/kernel/security
+

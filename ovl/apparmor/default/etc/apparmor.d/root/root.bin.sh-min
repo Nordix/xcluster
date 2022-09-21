@@ -1,0 +1,9 @@
+/root/bin/sh {
+	/etc/ld.so.cache r,
+	/lib/x86_64-linux-gnu/libm.so.6 mr,
+	/lib/x86_64-linux-gnu/libresolv.so.2 mr,
+	/lib/x86_64-linux-gnu/libc.so.6 mr,
+	/dev/tty wr,
+	/root/.ash_history r,
+	/etc/passwd r,
+}

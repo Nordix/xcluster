@@ -1,0 +1,3 @@
+/root/bin/echo {
+	/lib/** mr,
+}

@@ -1,0 +1,21 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: alpine-apparmor
+spec:
+  selector:
+    matchLabels:
+      app: alpine-apparmor
+  replicas: 4
+  template:
+    metadata:
+      labels:
+        app: alpine-apparmor
+      annotations:
+        container.apparmor.security.beta.kubernetes.io/alpine: runtime/default
+    spec:
+      containers:
+      - name: alpine
+        image: docker.io/library/alpine:latest
+        imagePullPolicy: IfNotPresent
+        command: ["tail", "-f", "/dev/null"]
