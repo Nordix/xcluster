@@ -22,7 +22,7 @@ crictl config --set runtime-endpoint=unix:///var/run/crio/crio.sock
 
 cat > /etc/cri-plugin.rc <<EOF
 # CRI options to "kubelet";
-CRI_OPTS="--container-runtime=remote --container-runtime-endpoint=unix:///var/run/crio/crio.sock --image-service-endpoint=unix:///var/run/crio/crio.sock"
+CRI_OPTS="--container-runtime=remote --container-runtime-endpoint=unix:///var/run/crio/crio.sock --image-service-endpoint=unix:///var/run/crio/crio.sock $CRI_OPTS"
 EOF
 
 cat >> /root/.profile <<EOF
