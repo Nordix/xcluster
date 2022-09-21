@@ -12,3 +12,10 @@ if test "$ULOGD" = "yes"; then
     # start ulogd as a daemon
     ulogd -d
 fi
+
+if test "$IPTABLES_MODE" = "nft"; then
+	for n in '' -save -restore; do
+		ln -sf xtables-$IPTABLES_MODE-multi /usr/sbin/iptables$n
+		ln -sf xtables-$IPTABLES_MODE-multi /usr/sbin/ip6tables$n
+	done
+fi
