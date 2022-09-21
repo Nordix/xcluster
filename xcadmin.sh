@@ -284,7 +284,7 @@ cmd_cache_refresh() {
 	log "cache_refresh rebuild"
 	$XCLUSTER cache --clear
 	local o
-	for o in iptools images crio; do
+	for o in iptools images crio containerd; do
 		log "Caching ovl [$o]"
 		$XCLUSTER cache $o || die "Failed"
 	done
