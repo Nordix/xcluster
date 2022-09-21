@@ -36,7 +36,7 @@ dbg() {
 ##     Print environment.
 cmd_env() {
 
-	test -n "$__criover" || __criover=cri-o.amd64.v1.24.1
+	test -n "$__criover" || __criover=cri-o.amd64.v1.25.0
 	test -n "$__crioar" || __crioar=$ARCHIVE/$__criover.tar.gz
 	if test "$cmd" = "env"; then
 		set | grep -E '^(__.*)='
