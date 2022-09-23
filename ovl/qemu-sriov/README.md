@@ -8,30 +8,36 @@ having an emulated NIC with SR-IOV support to let you test and develop
 sr-iov applications with qemu instead of buying (and maintaining)
 expensive HW.
 
+Support for SR-IOV was added to `qemu` in commit `7c0fa8dff`. It is
+included in qemu `v7.0.0` (git tag --contains 7c0fa8dff).
+
+There is no nic emulation that supports SR-IOV in `qemu` yet. An
+emulation of `igb/igbvf` is provided by @knuto in https://github.com/knuto/qemu,
+but packet handling is [not supported](https://github.com/knuto/qemu/issues/5).
+
 
 ## Build
 
-Qemu has not support for SR-IOV but is supported by
-https://github.com/knuto/qemu. *NOTE* that actual packet handling is
-[not supported](https://github.com/knuto/qemu/issues/4#issuecomment-928006345)
-(yet).
+We use a `qemu` [clone on Nordix](https://github.com/Nordix/qemu) with
+the `igb/igbvf` patch from @knuto applied.
+
 
 Build a local qemu;
 ```
 # Clone;
-QEMUDIR=$GOPATH/src/github.com/knuto/qemu
+QEMUDIR=$GOPATH/src/github.com/qemu/qemu  # (set by; . ./Envsettings)
 mkdir -p $(dirname $QEMUDIR)
 cd $(dirname $QEMUDIR)
-#git clone -b sriov_patches_v14 https://github.com/knuto/qemu.git
-git clone -b sriov_patches_v14 git@github.com:Nordix/qemu-knuto.git qemu
+git clone -b nic-igb git@github.com:Nordix/qemu.git
 cd $QEMUDIR
-git remote add upstream https://github.com/knuto/qemu.git
+git remote add upstream https://github.com/qemu/qemu.git
 git remote set-url --push upstream no_push
 git remote -v
 # Rebase;
 cd $QEMUDIR
 git fetch upstream
-git rebase upstream/sriov_patches_v14
+git rebase upstream/master
+
 # Build;
 cd $QEMUDIR
 mkdir build
@@ -43,25 +49,16 @@ make DESTDIR=$PWD/sys install
 ./qemu-system-x86_64 -M ?  # -m q35 must be used!
 ```
 
-The `xcluster` kernel must be re-built with support for the Intel
-`igb` nic;
+## Basic test
+
+Requirement; `xcluster` must be started in an own [netns](
+https://github.com/Nordix/xcluster/blob/master/doc/netns.md).
 
 ```
 cdo qemu-sriov
-QEMUDIR=$GOPATH/src/github.com/knuto/qemu
-. ./Envsettings
-xc kernel_build
-```
-
-## Usage
-
-Basic test;
-```
-cdo qemu-sriov
-QEMUDIR=$GOPATH/src/github.com/knuto/qemu
 . ./Envsettings
 #$__kvm -nic model=help
-XOVLS='' xc mkcdrom xnet iptools qemu-sriov
+XOVLS='' xc mkcdrom xnet lspci iptools qemu-sriov
 xc starts --image=$XCLUSTER_WORKSPACE/xcluster/hd.img --nrouters=0 --nvm=1
 # On vm-001
 lspci | grep 82576
