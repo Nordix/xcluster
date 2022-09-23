@@ -32,8 +32,8 @@ dbg() {
 	test -n "$__verbose" && echo "$prg: $*" >&2
 }
 
-##  env
-##    Print environment.
+##   env
+##     Print environment.
 ##
 cmd_env() {
 
@@ -67,9 +67,8 @@ cmd_test() {
             test_$t
         done
     else
-        for t in basic; do
-            test_$t
-        done
+		test_vfs
+		test_packet_handling
     fi      
 
     now=$(date +%s)
@@ -77,15 +76,46 @@ cmd_test() {
 
 }
 
-test_start() {
+##   test start_empty
+##     Starts an empty cluster. Prerequisite; . ./Envsettings
+test_start_empty() {
+	test -n "$__kvm" -a -n "$__net_setup" -a -n "$__kvm_opt" || \
+		tdie "Not sourced; . ./Envsettings"
 	export __image=$XCLUSTER_HOME/hd.img
+	export __nrouters=0
 	echo "$XOVLS" | grep -q private-reg && unset XOVLS
-	test -n "$TOPOLOGY" && \
-		. $($XCLUSTER ovld network-topology)/$TOPOLOGY/Envsettings
-	xcluster_start network-topology iptools qemu-sriov
+	xcluster_start lspci iptools qemu-sriov
 }
 
+##   test start
+##     Starts a cluster with igb modules loaded . Prerequisite; . ./Envsettings
+test_start() {
+	test_start_empty
+	otcw modprobe
+}
 
+##   test vfs
+##     Create VFs
+test_vfs() {
+	tlog "=== Create VFs"
+	test_start
+	otc 1 "create_vfs"
+	xcluster_stop
+}
+
+##   test packet_handling
+##     Bring eth1 up on vm-001 and vm-002 and test traffic
+##     NOTE; this doesn't work yet!
+test_packet_handling() {
+	tlog "=== Bring eth1 up on vm-001 and vm-002 and test traffic"
+	test_start
+	otc 1 "ifup eth1 192.168.1.1"
+	otc 2 "ifup eth1 192.168.1.2"
+	otc 1 "ping 192.168.1.2"
+	xcluster_stop
+}
+
+##
 . $($XCLUSTER ovld test)/default/usr/lib/xctest
 indent=''
 

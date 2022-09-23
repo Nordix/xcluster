@@ -11,7 +11,7 @@ prg=$(basename $0)
 dir=$(dirname $0); dir=$(readlink -f $dir)
 me=$dir/$prg
 tmp=/tmp/${prg}_$$
-test -n "$DOMAIN" || DOMAIN=xcluster
+test -n "$PREFIX" || PREFIX=1000::1
 
 die() {
 	echo "ERROR: $*" >&2
@@ -33,23 +33,54 @@ dbg() {
 	test -n "$__verbose" && echo "$prg: $*" >&2
 }
 
-cmd_tcase_check_namespaces() {
-	test_namespaces
-	tlog "$(kubectl version --short=true | grep Server)"
+
+##   tcase_modprobe
+##     Load the igb modules
+cmd_tcase_modprobe() {
+	tcase "Load the igb modules"
+	# Check that eth1 doesn't exist (since igb isn't loaded yet)
+	ip link show dev eth1 2>&1 && tdie "Eth1 exist. Modules already loaded?"
+	modprobe igb || tdie "modprobe igb"
+	modprobe igbvf || tdie "modprobe igbvf"
+	# Now eth1 should exist
+	ip link show dev eth1 || tdie "Eth1 was not created"
+	# Check the PF
+	check_82576 1 || tdie "Check PF"
 }
-cmd_tcase_check_nodes() {
-	test_nodes
+##   tcase_create_vfs
+##     Create 2 VFs
+cmd_tcase_create_vfs() {
+	tcase "Create 2 VFs"
+	# Check that we only have the PF
+	check_82576 1 || tdie "Check PF"
+	echo 2 > /sys/bus/pci/devices/0000:01:00.0/sriov_numvfs || tdie "Create VFs"
+	check_82576 3 || tdie "Check VFs"
+	/bin/lspci | grep Virtual 1>&2
 }
-cmd_tcase_check_coredns() {
-	test_coredns
+check_82576() {
+	# Just "lspci" doesn't work. Some BusyBox thing?
+	local n=$(/bin/lspci | grep 82576 | wc -l)
+	echo "Found 82576 devices [$n], expected [$1]"
+	test $n -eq $1
 }
-cmd_tcase_check_metric_server() {
-	kubectl="kubectl -n kube-system"
-	test_deployment metrics-server 180
+##   tcase_ifup dev ipv4
+##     Bring up an interface and set addresses
+cmd_tcase_ifup() {
+	tcase "Bring up dev [$1]"
+	test -n "$1" || tdie "No dev"
+	test -n "$2" || tdie "No address"
+	local dev=$1
+	local adr=$2
+	ip link set up dev $dev || die "Up $dev"
+	ip addr add $adr/24 dev $dev || tdie "Assign $adr"
+	ip -6 addr add $PREFIX:$adr/120 dev $dev || tdie "Assign $PREFIX:$adr"
 }
-cmd_tcase_start_template_no_k8s() {
-	$kubectl apply -f /etc/kubernetes/qemu-sriov/qemu-sriov.yaml
-	test_deployment qemu-sriov 180
+##   tcase_ping addr
+##     Ping address
+cmd_tcase_ping() {
+	tcase "Ping [$1]"
+	test -n "$1" || tdie "No address"
+	ping -c1 -W1 $1 || tdie "Ping [$1]"
 }
 
 . /etc/profile

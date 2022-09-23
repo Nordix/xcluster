@@ -49,7 +49,7 @@ make DESTDIR=$PWD/sys install
 ./qemu-system-x86_64 -M ?  # -m q35 must be used!
 ```
 
-## Basic test
+## Manual basic test
 
 Requirement; `xcluster` must be started in an own [netns](
 https://github.com/Nordix/xcluster/blob/master/doc/netns.md).
@@ -68,4 +68,15 @@ ls /sys/bus/pci/devices/0000:01:00.0/
 echo 2 > /sys/bus/pci/devices/0000:01:00.0/sriov_numvfs
 lspci | grep 82576
 ```
+
+## Test
+
+```
+./qemu-sriov.sh                   # Help printout
+./qemu-sriov.sh test > $log       # Default tests
+```
+
+Current status;
+* ./qemu-sriov.sh test vfs -- Works
+* ./qemu-sriov.sh test packet_handling -- Does NOT work
 

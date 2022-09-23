@@ -20,7 +20,7 @@ dev=igb
 
 b0=$(printf '%02x' $nodeid)
 if test $n -gt 0 ; then
-    echo "$opt -device pcie-root-port,slot=2,id=pcie_port.2"
+	echo "$opt -device pcie-root-port,slot=2,id=pcie_port.2"
 	echo "$opt -netdev tap,id=net$n,script=no,downscript=/tmp/rmtap,ifname=$tap"
 	echo "$opt -device $dev,bus=pcie_port.2,netdev=net$n,mac=00:00:00:01:0$b1:$b0"
 else
