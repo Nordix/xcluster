@@ -64,7 +64,6 @@ static int cmdNoInteractiveClient(int argc, char **argv)
 	usrsctp_sysctl_set_sctp_blackhole(2);
 	usrsctp_sysctl_set_sctp_no_csum_on_loopback(0);
 	usrsctp_sysctl_set_sctp_heartbeat_interval_default(10000);
-	usrsctp_sysctl_set_sctp_nat_lite(1);
 
 	struct socket* sock = usrsctp_socket(AF_INET6, SOCK_STREAM, IPPROTO_SCTP, NULL, NULL, 0, NULL);
 	if (sock == NULL)

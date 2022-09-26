@@ -80,13 +80,12 @@ cmd_tcase_deploy_server_pods() {
 	apply_k8s $server_yamld
 	test_deployment usrsctp-server 180
 	assign-lb-ip -svc usrsctp -ip 10.0.0.72,1000::72
-	assign-lb-ip -svc usrsctp-alternate -ip 10.0.0.200,1001::200
 }
 
 cmd_tcase_start_server() {
 	local i=$(mynode)
 	tcase "Start server"
-	local cmd="usrsctpt server --log=7 --addr=192.168.3.$i,192.168.4.$i --port=7003"
+	local cmd="usrsctpt server --log=7 --addr=192.168.3.$i --port=7003"
 	local log=/var/log/usrsctp-server.log
 	tlog $cmd
 	nohup $cmd > $log 2>&1 &
@@ -99,7 +98,7 @@ cmd_tcase_start_client() {
 	test -n "$1" && lport="$1"
 	local i=$(mynode)
 	tcase "Start client"
-	local cmd="usrsctpt niclient --log=7 --addr=10.0.0.72,10.0.0.200 --port=7002 --laddr=192.168.3.$i,192.168.4.$i --lport=$lport"
+	local cmd="usrsctpt niclient --log=7 --addr=10.0.0.72 --port=7002 --laddr=192.168.3.$i --lport=$lport"
 	local log=/var/log/usrsctp-client-$lport.log
 	tlog $cmd
 	nohup $cmd > $log 2>&1 &

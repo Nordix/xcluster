@@ -1,4 +1,4 @@
 #! /bin/sh
 . /etc/profile
 test "$NO_CLIENTS" = "yes" && exit 0
-usrsctpt niclient --log=7 --addr=192.168.3.221,192.168.4.221 --port=7003 --laddr="$LOCAL_IP_ADDR" --lport=7003 &
+usrsctpt niclient --log=7 --addr=192.168.3.221 --port=7003 --laddr="$LOCAL_IP_ADDR" --lport=7003 &

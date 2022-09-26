@@ -105,9 +105,8 @@ test_k8s_client() {
 	otc 2 deploy_client_pods
 	otc 2 "start_tcpdump_proc_ns usrsctpt"
 
-	tlog "Sleep for 60 seconds for the client to finish"
-	sleep 60
-	#otc 1 start_client_interactive
+	otc 2 "test_conntrack 2"
+	otc 2 "test_conntrack 0"
 
 	otc 2 stop_all_tcpdump
 	otc 221 stop_all_tcpdump
@@ -145,9 +144,8 @@ test_k8s_client_calico() {
 	otc 2 deploy_client_pods
 	otc 2 "start_tcpdump_proc_ns usrsctpt"
 
-	tlog "Sleep for 60 seconds for the client to finish"
-	sleep 60
-	#otc 1 start_client_interactive
+	otc 2 "test_conntrack 2"
+	otc 2 "test_conntrack 0"
 
 	otc 2 stop_all_tcpdump
 	otc 221 stop_all_tcpdump
@@ -170,33 +168,30 @@ test_k8s_server() {
 
 	otc 1 check_namespaces
 	otc 1 check_nodes
-	otc 1 deploy_kpng_pods
+	# otc 1 deploy_kpng_pods
 	otc 1 deploy_server_pods
 
-	otc 201 "vip_route 192.168.1.2"
-	otc 202 "vip_route 192.168.2.2"
-	# otc 201 vip_ecmp_route
-	# otc 202 "vip_ecmp_route 2"
+	otc 201 vip_ecmp_route
+	otc 202 "vip_ecmp_route 2"
 
 	otc 2 "start_tcpdump_proc_ns usrsctpt"
-	# otc 2 "start_tcpdump eth1"
-	# otc 2 "start_tcpdump eth2"
-	# otc 221 "start_tcpdump eth1"
-	# otc 221 "start_tcpdump eth2"
+	otc 1 "start_tcpdump eth1"
+	otc 2 "start_tcpdump eth1"
 
 	otc 221 "start_client 6001"
 	otc 222 "start_client 6002"
 
-	otc 2 "test_conntrack 4"
+	otc 2 "test_conntrack 2"
 	otc 2 "test_conntrack 0"
 
 	otc 2 stop_all_tcpdump
-	# otc 221 stop_all_tcpdump
+	otc 1 stop_all_tcpdump
 
 	sleep 5
 
 	rcp 2 /var/log/*.pcap captures/
-	# rcp 221 /var/log/*.pcap captures/
+	rcp 1 /var/log/*.pcap captures/
+
 }
 
 test_k8s_server_calico() {
@@ -215,33 +210,25 @@ test_k8s_server_calico() {
 
 	otc 1 check_namespaces
 	otc 1 check_nodes
-	otc 1 deploy_kpng_pods
+	# otc 1 deploy_kpng_pods
 	otc 1 deploy_server_pods
 
-	otc 201 "vip_route 192.168.1.2"
-	otc 202 "vip_route 192.168.2.2"
-	# otc 201 vip_ecmp_route
-	# otc 202 "vip_ecmp_route 2"
+	otc 201 vip_ecmp_route
+	otc 202 "vip_ecmp_route 2"
 
 	otc 2 "start_tcpdump_proc_ns usrsctpt"
-	# otc 2 "start_tcpdump eth1"
-	# otc 2 "start_tcpdump eth2"
-	# otc 221 "start_tcpdump eth1"
-	# otc 221 "start_tcpdump eth2"
 
 	otc 221 "start_client 6001"
 	otc 222 "start_client 6002"
 
-	otc 2 "test_conntrack 4"
+	otc 2 "test_conntrack 2"
 	otc 2 "test_conntrack 0"
 
 	otc 2 stop_all_tcpdump
-	# otc 221 stop_all_tcpdump
 
 	sleep 5
 
 	rcp 2 /var/log/*.pcap captures/
-	# rcp 221 /var/log/*.pcap captures/
 }
 
 ##   nfqlb_download

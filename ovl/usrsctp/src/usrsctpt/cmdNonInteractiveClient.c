@@ -57,10 +57,6 @@ static int cmdNoInteractiveClient(int argc, char **argv)
 	if (lcnt < 0)
 		die("Invalid local addresses [%s]\n", laddr);
 
-	// logf("Sleep 10 seconds before start");
-	// sleep(10);
-	// logf("Sleep done, starting program");
-
 	usrsctp_init(atoi(lencapport), NULL, debug_printf_stack);
 #ifdef SCTP_DEBUG
 	usrsctp_sysctl_set_sctp_debug_on(SCTP_DEBUG_ALL);
@@ -68,7 +64,6 @@ static int cmdNoInteractiveClient(int argc, char **argv)
 	usrsctp_sysctl_set_sctp_blackhole(2);
 	usrsctp_sysctl_set_sctp_no_csum_on_loopback(0);
 	usrsctp_sysctl_set_sctp_heartbeat_interval_default(10000);
-	usrsctp_sysctl_set_sctp_nat_lite(1);
 
 	struct socket* sock = usrsctp_socket(AF_INET6, SOCK_STREAM, IPPROTO_SCTP, NULL, NULL, 0, NULL);
 	if (sock == NULL)
