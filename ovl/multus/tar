@@ -29,19 +29,10 @@ else
 	cp -R $dir/default/* $tmp
 fi
 
-find_ar() {
-	ar=$HOME/Downloads/$1
-	test -r $ar && return 0
-	ar=$ARCHIVE/$1
-	test -r $ar && return 0
-	die "Archive not found [$1]"
-}
-
-__multusver=3.8
-log "Using Multus $__multusver"
-find_ar multus-cni_${__multusver}_linux_amd64.tar.gz
+ar=$($dir/multus.sh archive)
+eval $($dir/multus.sh env | grep __multus_ver=)
 mkdir -p $tmp/opt/cni/bin
-tar -C $tmp/opt/cni/bin --strip-components=1 -xf $ar multus-cni_${__multusver}_linux_amd64/multus-cni
+tar -C $tmp/opt/cni/bin --strip-components=1 -xf $ar multus-cni_${__multus_ver}_linux_amd64/multus-cni
 
 mkdir -p $tmp/opt/cni/bin
 x=$($XCLUSTER ovld cni-plugins)/cni-plugins.sh

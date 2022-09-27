@@ -1,0 +1,21 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: multus-install
+spec:
+  selector:
+    matchLabels:
+      app: multus-install
+  template:
+    metadata:
+      labels:
+        app: multus-install
+    spec:
+      initContainers:
+      - name: multus-install
+        image: registry.nordix.org/cloud-native/multus-installer:3.9
+        imagePullPolicy: IfNotPresent
+      containers:
+      - name: pause
+        image: k8s.gcr.io/pause:3.6
+        imagePullPolicy: IfNotPresent

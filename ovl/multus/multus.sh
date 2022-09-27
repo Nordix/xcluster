@@ -36,19 +36,59 @@ dbg() {
 ##    Print environment.
 ##
 cmd_env() {
+	test -n "$__multus_ver" || __multus_ver=3.9
+    test -n "$__tag" || __tag="registry.nordix.org/cloud-native/multus-installer:$__multus_ver"
 
 	if test "$cmd" = "env"; then
 		set | grep -E '^(__.*)='
 		return 0
 	fi
 
-	test -n "$__cniver" || __cniver=v1.0.1
 	test -n "$xcluster_DOMAIN" || xcluster_DOMAIN=xcluster
 	test -n "$XCLUSTER" || die 'Not set [$XCLUSTER]'
 	test -x "$XCLUSTER" || die "Not executable [$XCLUSTER]"
 	eval $($XCLUSTER env)
 }
+##   version
+##     Print multus version
+cmd_version() {
+	cmd_env
+	echo $__multus_ver
+}
+##   archive
+##     Prints the multus archive (or fail).
+cmd_archive() {
+	cmd_env
+	local ar=multus-cni_${__multus_ver}_linux_amd64.tar.gz
+	if test -r $ARCHIVE/$ar; then
+		echo $ARCHIVE/$ar
+		return 0
+	fi
+	test -r $HOME/Downloads/$ar || die "Not found [$ar]"
+	echo $HOME/Downloads/$ar
+}
+##   cparchives <dest>
+##     Copy cni-plugin and multus archives to <dest>
+cmd_cparchives() {
+	test -n "$1" || die "No dest"
+	test -d "$1" || die "Not a directory [$1]"
+	cmd_archive > /dev/null
+	local cnish=$($XCLUSTER ovld cni-plugins)/cni-plugins.sh
+	test -x $cnish || die "Not executable [$cnish]"
+	$cnish archive > /dev/null || die
 
+	local ar=$(cmd_archive)
+	cp $(cmd_archive) $($cnish archive) $1
+}
+##   mkimage [--tag=]
+##     Create the docker image and upload it to the local registry.
+cmd_mkimage() {
+    cmd_env
+    local imagesd=$($XCLUSTER ovld images)
+    $imagesd/images.sh mkimage --force --upload --strip-host --tag=$__tag $dir/image
+}
+
+##
 ##   test --list
 ##   test [--xterm] [test...] > logfile
 ##     Exec tests
@@ -81,11 +121,7 @@ cmd_test() {
 ##     Start without PODs
 test_start_empty() {
 	# Pre-checks
-	test -x $ARCHIVE/multus-cni || die "Not executable [$ARCHIVE/multus-cni]"
-	local ar=$ARCHIVE/cni-plugins-linux-amd64-$__cniver.tgz
-	test -r "$ar" || die "Not readable [$ar]"
-	export __cniver
-	tlog "Using cni-plugins $__cniver"
+	cmd_archive > /dev/null
 	export TOPOLOGY=multilan-router
 	. $($XCLUSTER ovld network-topology)/$TOPOLOGY/Envsettings
 	xcluster_start multus
@@ -93,21 +129,20 @@ test_start_empty() {
 	otc 1 check_namespaces
 	otc 1 check_nodes
 	otcr vip_routes
-	otcw "ifup eth2"
-	otcw "ifup eth3"
-	otcw "ifup eth4"
-	otc 1 start_multus
 }
 ##   test start
 ##     Start with Alpine POD
 test_start() {
 	test_start_empty
-	otc 1 alpine
+	otcw "ifup eth2"
+	otcw "ifup eth3"
+	otcw "ifup eth4"
+	otc 1 start_multus
 }
 ##   test start_server
 ##     Start with multus_proxy and multus_service_controller
 test_start_server() {
-	test_start_empty
+	test_start
 	otc 2 multus_service_controller
 	otcw multus_proxy
 	otc 1 multus_server
@@ -116,9 +151,9 @@ test_start_server() {
 ##   test basic (default)
 ##     Execute basic tests
 test_basic() {
-	test -n "$__mode" || __mode=dual-stack
 	tlog "=== multus: Basic test"
 	test_start
+	otc 1 alpine
 	otc 1 check_interfaces
 	otc 1 ping
 	xcluster_stop

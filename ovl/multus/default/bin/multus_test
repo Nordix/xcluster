@@ -54,8 +54,9 @@ cmd_tcase_start_multus() {
 	kubectl apply -f $yamld/multus-crd-ipvlan.yaml || tdie
 	kubectl apply -f $yamld/multus-crd-macvlan.yaml || tdie
 	kubectl apply -f $yamld/multus-crd-host-device.yaml || tdie
-	kubectl apply -f /etc/kubernetes/whereabouts/whereabouts.cni.cncf.io_ippools.yaml || tdie
-	kubectl apply -f /etc/kubernetes/whereabouts/whereabouts.cni.cncf.io_overlappingrangeipreservations.yaml || tdie
+	local d=/etc/kubernetes/whereabouts
+	kubectl apply -f $d/whereabouts.cni.cncf.io_ippools.yaml || tdie
+	kubectl apply -f $d/whereabouts.cni.cncf.io_overlappingrangeipreservations.yaml || tdie
 }
 
 cmd_tcase_alpine() {
