@@ -131,7 +131,7 @@ test_start_empty() {
 	otcr vip_routes
 }
 ##   test start
-##     Start with Alpine POD
+##     Start with Multus
 test_start() {
 	test_start_empty
 	otcw "ifup eth2"

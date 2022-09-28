@@ -4,6 +4,7 @@
 
 dir=$(dirname $0); dir=$(readlink -f $dir)
 tmp=/tmp/$USER/xcluster_$$
+
 die() {
 	echo "ERROR: $*" >&2
 	rm -rf $tmp
@@ -15,9 +16,23 @@ log() {
 
 test -n "$1" || die "No out-file"
 
+msh=$dir/../multus.sh
+csh=$($XCLUSTER ovld cni-plugins)/cni-plugins.sh
+test -x $csh || die "Not executable"
+
 mkdir -p $tmp/root
 cp -R $dir/default/* $tmp
-$dir/../multus.sh cparchives $tmp/root || die "cp archives"
+$msh cparchives $tmp/root || die "cp archives"
+
+f=$tmp/root/multus-installer.sh
+v=$($msh version)
+sed -i -e "s,__multus_ver=unknown,__multus_ver=$v," $f
+v=$($csh version)
+sed -i -e "s,__cnibin_ver=unknown,__cnibin_ver=$v," $f
+
+f=$(which kubectl)
+mkdir -p $tmp/bin
+cp -L $f $tmp/bin
 
 cd $tmp
 tar cf "$1" *
