@@ -16,7 +16,7 @@ log() {
 mkdir -p $tmp
 test -n "$1" || die "No out-file"
 cp -R $dir/default/* $tmp
-eval $(make -s -C $dir/src ver)
+: "${NFQLB_DIR:=$HOME/tmp/nfqlb}"
 nfqlb=$NFQLB_DIR/bin/nfqlb
 if test -x $nfqlb; then
 	log "Including nfqlb"

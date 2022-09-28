@@ -93,6 +93,7 @@ test_k8s_client() {
 	otc 1 check_namespaces
 	otc 1 check_nodes
 	otc 221 start_server
+	otc 2 "check_discard_init"
 
 	otc 201 vip_ecmp_route
 	otc 202 "vip_ecmp_route 2"
@@ -134,6 +135,7 @@ test_k8s_client_calico() {
 	otc 1 check_namespaces
 	otc 1 check_nodes
 	otc 221 start_server
+	otc 2 "check_discard_init"
 
 	otc 201 vip_ecmp_route
 	otc 202 "vip_ecmp_route 2"
@@ -170,6 +172,7 @@ test_k8s_server() {
 	otc 1 check_nodes
 	# otc 1 deploy_kpng_pods
 	otc 1 deploy_server_pods
+	otc 2 "check_discard_init"
 
 	otc 201 vip_ecmp_route
 	otc 202 "vip_ecmp_route 2"
@@ -212,6 +215,7 @@ test_k8s_server_calico() {
 	otc 1 check_nodes
 	# otc 1 deploy_kpng_pods
 	otc 1 deploy_server_pods
+	otc 2 "check_discard_init"
 
 	otc 201 vip_ecmp_route
 	otc 202 "vip_ecmp_route 2"
@@ -234,7 +238,7 @@ test_k8s_server_calico() {
 ##   nfqlb_download
 ##     Download a nfqlb release to $ARCHIVE
 cmd_nfqlb_download() {
-	eval $(make -s -C $dir/src ver)
+	NFQLB_VER="1.0.0"
 	local ar=nfqlb-$NFQLB_VER.tar.xz
 	local f=$ARCHIVE/$ar
 	if test -r $f; then

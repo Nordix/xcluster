@@ -51,13 +51,28 @@ cmd_tcase_deploy_kpng_pods() {
 	test_daemonset kpng-lb-proxier 180
 }
 
+cmd_tcase_check_discard_init() {
+	__timeout=120
+	__discard=0
+	test -n "$1" && __discard="$1"
+	pushv $__timeout
+	tex "nf_ct_sctp_check discard_init $__discard"
+}
+
+nf_ct_sctp_check() {
+	__key="$1"
+	__value="$2"
+	test $(cat /proc/net/netfilter/nf_ct_sctp | awk -F": " -v key="$__key" '$1==key {print $2}') -eq $__value
+}
+
 cmd_tcase_test_conntrack() {
-	__timeout=40
+	__timeout=120
 	__conns=4
 	test -n "$1" && __conns="$1"
 	tcase "$proto conntrack info"
 	pushv $__timeout
-	tex "test_connections sctp $__conns" || tdie "Mismatch in number of expected connections"
+	# tex "test_connections sctp $__conns" || tdie "Mismatch in number of expected connections"
+	tex "test_connections sctp $__conns"
 	# Print conntrack if this succeeds
 	tlog "Show all $proto connections"
 	conntrack -p $proto -L
