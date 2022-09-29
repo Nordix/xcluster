@@ -104,7 +104,6 @@ spec:
       labels:
         app: multus-install
     spec:
-      #hostNetwork: true
       serviceAccountName: multus
       initContainers:
       - name: multus-install
@@ -130,9 +129,3 @@ spec:
           hostPath:
             path: /etc/cni
             type: DirectoryOrCreate
----
-apiVersion: "k8s.cni.cncf.io/v1"
-kind: NetworkAttachmentDefinition
-metadata:
-  namespace: kube-system
-  name: kindnet

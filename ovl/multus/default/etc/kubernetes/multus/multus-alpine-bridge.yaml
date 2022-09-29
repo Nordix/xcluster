@@ -1,0 +1,30 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: multus-alpine-bridge
+spec:
+  selector:
+    matchLabels:
+      app: multus-alpine-bridge
+  template:
+    metadata:
+      labels:
+        app: multus-alpine-bridge
+      annotations:
+        k8s.v1.cni.cncf.io/networks: '[
+            { "name": "bridge2" }
+        ]'
+    spec:
+      containers:
+      - name: multus-alpine-bridge
+        image: docker.io/library/alpine:latest
+        imagePullPolicy: IfNotPresent
+        command:
+          - /bin/sh
+          - "-c"
+          - "sleep 60m"
+        env:
+          - name: NODE_NAME
+            valueFrom:
+              fieldRef:
+                fieldPath: spec.nodeName

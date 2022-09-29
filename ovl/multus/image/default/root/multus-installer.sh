@@ -52,6 +52,11 @@ cmd_install_binaries() {
 	ar=cni-plugins-linux-amd64-${__cnibin_ver}.tgz
 	test -r "$dir/$ar" || die "Not readable [$ar]"
 	tar -C $__dest -xf $dir/$ar
+
+	local f
+	for f in whereabouts node-annotation; do
+		test -x $dir/$f && cp $dir/$f $__dest
+	done
 }
 
 ##   enable

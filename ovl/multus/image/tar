@@ -34,6 +34,15 @@ f=$(which kubectl)
 mkdir -p $tmp/bin
 cp -L $f $tmp/bin
 
+test -n "$WHEREABOUTS_DIR" || WHEREABOUTS_DIR=$GOPATH/src/github.com/k8snetworkplumbingwg/whereabouts
+f=$WHEREABOUTS_DIR/bin/whereabouts
+test -x $f && cp $f $tmp/root
+
+test -n "$NODEANNOTATION_DIR" || NODEANNOTATION_DIR=$GOPATH/src/github.com/Nordix/ipam-node-annotation
+f=$NODEANNOTATION_DIR/node-annotation
+test -x $f && cp $f $tmp/root
+
+
 cd $tmp
 tar cf "$1" *
 cd - > /dev/null

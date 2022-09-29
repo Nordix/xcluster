@@ -41,10 +41,15 @@ $x install --dest=$tmp/opt/cni/bin || die
 if test "$SETUP" != "None"; then
 	test -n "$WHEREABOUTS_DIR" || WHEREABOUTS_DIR=$GOPATH/src/github.com/k8snetworkplumbingwg/whereabouts
 	f=$WHEREABOUTS_DIR/bin/whereabouts
-	test -x $f || die "Can't find whereabouts"
+	test -x $f || die "Not executable [$f]"
 	cp $f $tmp/opt/cni/bin
 	mkdir -p $tmp/etc/kubernetes
 	cp -r $WHEREABOUTS_DIR/doc/crds $tmp/etc/kubernetes/whereabouts
+
+	test -n "$NODEANNOTATION_DIR" || NODEANNOTATION_DIR=$GOPATH/src/github.com/Nordix/ipam-node-annotation
+	f=$NODEANNOTATION_DIR/node-annotation
+	test -x $f || die "Not executable [$f]"
+	cp $f $tmp/opt/cni/bin
 fi
 
 mkdir -p $tmp/bin

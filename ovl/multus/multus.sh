@@ -143,6 +143,7 @@ test_start() {
 ##     Start with multus_proxy and multus_service_controller
 test_start_server() {
 	test_start
+	otc 1 crds
 	otc 2 multus_service_controller
 	otcw multus_proxy
 	otc 1 multus_server
@@ -151,11 +152,22 @@ test_start_server() {
 ##   test basic (default)
 ##     Execute basic tests
 test_basic() {
-	tlog "=== multus: Basic test"
+	tlog "=== Execute basic tests"
 	test_start
+	otc 1 crds
 	otc 1 alpine
 	otc 1 check_interfaces
 	otc 1 ping
+	xcluster_stop
+}
+
+##   test annotation
+##     Test with node-annotation IPAM
+test_annotation() {
+	tlog "=== Test with node-annotation IPAM"
+	test_start
+	otcw annotate
+	otc 1 bridge
 	xcluster_stop
 }
 

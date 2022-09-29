@@ -50,6 +50,10 @@ cmd_tcase_start_multus() {
 	tcase "Start multus"
 	kubectl apply -f $yamld/multus-crd.yaml || tdie
 	kubectl apply -n kube-system -f $yamld/multus-crd-bridge.yaml || tdie
+}
+
+cmd_tcase_crds() {
+	tcase "Load CRDs (whereabouts)"
 	#kubectl apply -n kube-system -f $yamld/multus-crd-bridge-spec.yaml || tdie
 	kubectl apply -f $yamld/multus-crd-ipvlan.yaml || tdie
 	kubectl apply -f $yamld/multus-crd-macvlan.yaml || tdie
@@ -118,12 +122,29 @@ cmd_tcase_ifup() {
 	ip link set up dev $1 || tdie
 }
 
+##   tcase_annotate
+##     Annotate the own node with address ranges
+cmd_tcase_annotate() {
+	local n=$(mynode)
+	kubectl annotate node $(hostname) example.com/bridge-ranges="\"ranges\": [
+  [ { \"subnet\": \"4000::16.0.$n.0/120\" } ],
+  [ { \"subnet\": \"16.0.$n.0/24\" } ]
+]"
+}
+##   tcase_bridge
+##     Start a bridge network using node-annotation IPAM
+cmd_tcase_bridge() {
+	tcase "Start a bridge network using node-annotation IPAM"
+	kubectl apply -f $yamld/multus-crd-bridge2.yaml || tdie
+	kubectl apply -f $yamld/multus-alpine-bridge.yaml || tdie
+	#test_daemonset multus-alpine-bridge 180
+}
 
 . /etc/profile
 . /usr/lib/xctest
 indent='  '
 
-
+##
 # Get the command
 cmd=$1
 shift
