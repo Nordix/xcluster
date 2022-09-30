@@ -55,6 +55,7 @@ cmd_tcase_check_discard_init() {
 	__timeout=120
 	__discard=0
 	test -n "$1" && __discard="$1"
+	tcase "Wait for discard_init: $__discard"
 	pushv $__timeout
 	tex "nf_ct_sctp_check discard_init $__discard"
 }
@@ -67,21 +68,20 @@ nf_ct_sctp_check() {
 
 cmd_tcase_test_conntrack() {
 	__timeout=120
+	__proto=sctp
 	__conns=4
 	test -n "$1" && __conns="$1"
-	tcase "$proto conntrack info"
+	tcase "$__proto conntrack info"
 	pushv $__timeout
-	# tex "test_connections sctp $__conns" || tdie "Mismatch in number of expected connections"
-	tex "test_connections sctp $__conns"
-	# Print conntrack if this succeeds
-	tlog "Show all $proto connections"
-	conntrack -p $proto -L
+	tex "test_assured_connections $__proto $__conns"
 }
-test_connections() {
+
+test_assured_connections() {
 	proto="$1"
 	num_of_conns=1
 	test -n "$2" && num_of_conns="$2"
-	test $(conntrack -p $1 -L | wc -l) -eq $2
+	conntrack -p $1 -L
+	test $(conntrack -p $1 -L 2> /dev/null | grep ASSURED | wc -l) -eq $2
 }
 
 cmd_tcase_deploy_client_pods() {
@@ -97,10 +97,13 @@ cmd_tcase_deploy_server_pods() {
 	assign-lb-ip -svc usrsctp -ip 10.0.0.72,1000::72
 }
 
-cmd_tcase_start_server() {
-	local i=$(mynode)
+cmd_tcase_start_server_vm() {
+	__laddr=192.168.1.2
+	__lport=7002
+	test -n "$1" && __laddr="$1"
+	test -n "$2" && __lport="$2"
 	tcase "Start server"
-	local cmd="usrsctpt server --log=7 --addr=192.168.3.$i --port=7003"
+	local cmd="usrsctpt server --log=7 --addr=$__laddr --port=$__lport"
 	local log=/var/log/usrsctp-server.log
 	tlog $cmd
 	nohup $cmd > $log 2>&1 &
@@ -108,13 +111,50 @@ cmd_tcase_start_server() {
 	tex "pgrep usrsctpt" || tdie
 }
 
-cmd_tcase_start_client() {
-	lport=7002
-	test -n "$1" && lport="$1"
-	local i=$(mynode)
+cmd_tcase_start_server_router() {
+	__laddr=192.168.3.221
+	__lport=7003
+	test -n "$1" && __laddr="$1"
+	test -n "$2" && __lport="$2"
+	tcase "Start server"
+	local cmd="usrsctpt server --log=7 --addr=$__laddr --port=$__lport"
+	local log=/var/log/usrsctp-server.log
+	tlog $cmd
+	nohup $cmd > $log 2>&1 &
+	tlog "Check usrsctpt has started"
+	tex "pgrep usrsctpt" || tdie
+}
+
+cmd_tcase_start_client_vm() {
+	__raddr=192.168.3.221
+	__rport=7003
+	__laddr=192.168.1.2
+	__lport=7003
+	test -n "$1" && __raddr="$1"
+	test -n "$2" && __rport="$2"
+	test -n "$3" && __laddr="$3"
+	test -n "$4" && __lport="$4"
 	tcase "Start client"
-	local cmd="usrsctpt niclient --log=7 --addr=10.0.0.72 --port=7002 --laddr=192.168.3.$i --lport=$lport"
-	local log=/var/log/usrsctp-client-$lport.log
+	local cmd="usrsctpt niclient --log=7 --addr=$__raddr --port=$__rport --laddr=$__laddr --lport=$__lport"
+	local log=/var/log/usrsctp-client-$__lport.log
+	tlog $cmd
+	nohup $cmd > $log 2>&1 &
+	tlog "Check usrsctpt has started"
+	tex "pgrep usrsctpt" || tdie
+}
+
+cmd_tcase_start_client_router() {
+	__raddr=10.0.0.72
+	__rport=7002
+	__laddr=192.168.3.221
+	__lport=7002
+	test -n "$1" && __raddr="$1"
+	test -n "$2" && __rport="$2"
+	test -n "$3" && __laddr="$3"
+	test -n "$4" && __lport="$4"
+	tcase "Start client"
+	local cmd="usrsctpt niclient --log=7 --addr=$__raddr --port=$__rport --laddr=$__laddr --lport=$__lport"
+	local log=/var/log/usrsctp-client-$__lport.log
 	tlog $cmd
 	nohup $cmd > $log 2>&1 &
 	tlog "Check usrsctpt has started"

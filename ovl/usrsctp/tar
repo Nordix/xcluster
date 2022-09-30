@@ -16,6 +16,10 @@ log() {
 mkdir -p $tmp
 test -n "$1" || die "No out-file"
 cp -R $dir/default/* $tmp
+# copy usrsctp specific topology files
+test -n "$USRSCTP_TOPOLOGY" || USRSCTP_TOPOLOGY=k8s
+test -d $dir/network-topology/$USRSCTP_TOPOLOGY && cp -R $dir/network-topology/$USRSCTP_TOPOLOGY/* $tmp
+
 : "${NFQLB_DIR:=$HOME/tmp/nfqlb}"
 nfqlb=$NFQLB_DIR/bin/nfqlb
 if test -x $nfqlb; then

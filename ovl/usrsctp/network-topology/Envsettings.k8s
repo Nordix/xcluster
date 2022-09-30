@@ -1,6 +1,6 @@
 #! /bin/sh
 
-export USRSCTP_TOPOLOGY=nat
+export USRSCTP_TOPOLOGY=k8s
 export __nvm=2
 export __nrouters=2
 export __ntesters=2

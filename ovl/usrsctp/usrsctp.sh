@@ -77,11 +77,127 @@ cmd_test() {
 
     now=$(date +%s)
     tlog "Xcluster test ended. Total time $((now-begin)) sec"
+}
 
+test_client() {
+	. ./network-topology/Envsettings
+
+	export __image=$XCLUSTER_HOME/hd.img
+	test -r $__image || die "Not readable [$__image]"
+
+	xcluster_start iptools network-topology usrsctp
+
+	otc 201 "check_discard_init"
+	otc 221 "start_server_router 192.168.3.221 7003"
+	otc 222 "start_server_router 192.168.3.222 7003"
+
+	otc 201 vip_ecmp_route
+	otc 202 "vip_ecmp_route 2"
+
+	otc 1 "start_tcpdump eth1"
+	otc 2 "start_tcpdump eth1"
+	otc 221 "start_tcpdump eth1"
+	otc 222 "start_tcpdump eth1"
+
+	otc 1 "start_client_vm 192.168.3.221 7003 192.168.1.1 7003"
+	otc 2 "start_client_vm 192.168.3.222 7003 192.168.1.2 7003"
+
+	otc 201 "test_conntrack 2"
+	otc 201 "test_conntrack 0"
+
+	otc 1 stop_all_tcpdump
+	otc 2 stop_all_tcpdump
+	otc 221 stop_all_tcpdump
+	otc 222 stop_all_tcpdump
+
+	sleep 5
+
+	rcp 1 /var/log/*.pcap captures/
+	rcp 2 /var/log/*.pcap captures/
+	rcp 221 /var/log/*.pcap captures/
+	rcp 222 /var/log/*.pcap captures/
+}
+
+test_client_mh() {
+	. ./network-topology/Envsettings
+
+	export __image=$XCLUSTER_HOME/hd.img
+	test -r $__image || die "Not readable [$__image]"
+
+	xcluster_start iptools network-topology usrsctp
+
+	otc 201 "check_discard_init"
+	otc 202 "check_discard_init"
+	otc 221 "start_server_router 192.168.3.221,192.168.4.221 7003"
+	otc 222 "start_server_router 192.168.3.222,192.168.4.222 7003"
+
+	otc 201 vip_ecmp_route
+	otc 202 "vip_ecmp_route 2"
+
+	otc 2 "start_tcpdump eth1"
+	otc 2 "start_tcpdump eth2"
+	otc 221 "start_tcpdump eth1"
+	otc 221 "start_tcpdump eth2"
+
+	otc 1 "start_client_vm 192.168.3.221,192.168.4.221 7003 192.168.1.1 7003"
+	otc 2 "start_client_vm 192.168.3.222,192.168.4.222 7003 192.168.1.2 7003"
+
+	otc 201 "test_conntrack 2"
+	otc 202 "test_conntrack 2"
+	otc 201 "test_conntrack 0"
+	otc 202 "test_conntrack 0"
+
+	otc 2 stop_all_tcpdump
+	otc 221 stop_all_tcpdump
+
+	sleep 5
+
+	rcp 2 /var/log/*.pcap captures/
+	rcp 221 /var/log/*.pcap captures/
+}
+
+test_server() {
+	. ./network-topology/Envsettings
+
+	export __image=$XCLUSTER_HOME/hd.img
+	test -r $__image || die "Not readable [$__image]"
+
+	xcluster_start iptools network-topology usrsctp
+
+	otc 201 "check_discard_init"
+	otc 202 "check_discard_init"
+	otc 1 "start_server_vm 192.168.1.1 7003"
+	otc 2 "start_server_vm 192.168.1.2 7003"
+
+	otc 201 vip_ecmp_route
+	otc 202 "vip_ecmp_route 2"
+
+	otc 1 "start_tcpdump eth1"
+	otc 2 "start_tcpdump eth1"
+	otc 221 "start_tcpdump eth1"
+	otc 222 "start_tcpdump eth1"
+
+	otc 221 "start_client_router 192.168.3.201 7003 192.168.3.221 6001"
+	otc 222 "start_client_router 192.168.3.201 7003 192.168.3.222 6002"
+
+	otc 201 "test_conntrack 2"
+	otc 201 "test_conntrack 0"
+
+	otc 1 stop_all_tcpdump
+	otc 2 stop_all_tcpdump
+	otc 221 stop_all_tcpdump
+	otc 222 stop_all_tcpdump
+
+	sleep 5
+
+	rcp 1 /var/log/*.pcap captures/
+	rcp 2 /var/log/*.pcap captures/
+	rcp 221 /var/log/*.pcap captures/
+	rcp 222 /var/log/*.pcap captures/
 }
 
 test_k8s_client() {
-	. ./network-topology/Envsettings
+	. ./network-topology/Envsettings.k8s
 
 	__image=$XCLUSTER_HOME/hd-k8s-$__k8sver.img
 	test -r $__image || __image=$XCLUSTER_HOME/hd-k8s.img
@@ -92,7 +208,7 @@ test_k8s_client() {
 
 	otc 1 check_namespaces
 	otc 1 check_nodes
-	otc 221 start_server
+	otc 221 start_server_router
 	otc 2 "check_discard_init"
 
 	otc 201 vip_ecmp_route
@@ -112,14 +228,14 @@ test_k8s_client() {
 	otc 2 stop_all_tcpdump
 	otc 221 stop_all_tcpdump
 
-	sleep 10
+	sleep 5
 
 	rcp 2 /var/log/*.pcap captures/
 	rcp 221 /var/log/*.pcap captures/
 }
 
 test_k8s_client_calico() {
-	. ./network-topology/Envsettings
+	. ./network-topology/Envsettings.k8s
 
 	# Test with k8s-xcluster;
 	__image=$XCLUSTER_HOME/hd-k8s-xcluster-$__k8sver.img
@@ -134,7 +250,7 @@ test_k8s_client_calico() {
 
 	otc 1 check_namespaces
 	otc 1 check_nodes
-	otc 221 start_server
+	otc 221 start_server_router
 	otc 2 "check_discard_init"
 
 	otc 201 vip_ecmp_route
@@ -152,14 +268,14 @@ test_k8s_client_calico() {
 	otc 2 stop_all_tcpdump
 	otc 221 stop_all_tcpdump
 
-	sleep 10
+	sleep 5
 
 	rcp 2 /var/log/*.pcap captures/
 	rcp 221 /var/log/*.pcap captures/
 }
 
 test_k8s_server() {
-	. ./network-topology/Envsettings
+	. ./network-topology/Envsettings.k8s
 
 	__image=$XCLUSTER_HOME/hd-k8s-$__k8sver.img
 	test -r $__image || __image=$XCLUSTER_HOME/hd-k8s.img
@@ -181,8 +297,8 @@ test_k8s_server() {
 	otc 1 "start_tcpdump eth1"
 	otc 2 "start_tcpdump eth1"
 
-	otc 221 "start_client 6001"
-	otc 222 "start_client 6002"
+	otc 221 "start_client_router 10.0.0.72 7002 192.168.3.221 6001"
+	otc 222 "start_client_router 10.0.0.72 7002 192.168.3.222 6002"
 
 	otc 2 "test_conntrack 2"
 	otc 2 "test_conntrack 0"
@@ -198,7 +314,7 @@ test_k8s_server() {
 }
 
 test_k8s_server_calico() {
-	. ./network-topology/Envsettings
+	. ./network-topology/Envsettings.k8s
 
 	# Test with k8s-xcluster;
 	__image=$XCLUSTER_HOME/hd-k8s-xcluster-$__k8sver.img
@@ -222,8 +338,8 @@ test_k8s_server_calico() {
 
 	otc 2 "start_tcpdump_proc_ns usrsctpt"
 
-	otc 221 "start_client 6001"
-	otc 222 "start_client 6002"
+	otc 221 "start_client_router 10.0.0.72 7002 192.168.3.221 6001"
+	otc 222 "start_client_router 10.0.0.72 7002 192.168.3.222 6002"
 
 	otc 2 "test_conntrack 2"
 	otc 2 "test_conntrack 0"
@@ -247,6 +363,34 @@ cmd_nfqlb_download() {
 		local url=https://github.com/Nordix/nfqueue-loadbalancer
 		curl -L $url/releases/download/$NFQLB_VER/$ar > $f
 	fi
+}
+
+##   usrsctp_build
+##     Build usrsctp master in $HOME/tmp/usrsctp/
+cmd_usrsctp_build() {
+	# download
+	USRSCTP_VER=master
+	local zip=$USRSCTP_VER.zip
+	local f=$ARCHIVE/usrsctp-$zip
+	if test -r $f; then
+		log "Already downloaded [$f]"
+	else
+		local url=https://github.com/sctplab/usrsctp
+		curl -L $url/archive/refs/heads/$zip > $f
+	fi
+
+	# extract
+	tmpdir=/tmp/$USER/usrsctp
+	rm -r $tmpdir/*
+	unzip -o -d $tmpdir $f
+	mv $tmpdir/*/* $tmpdir
+
+	# build
+	cd $tmpdir
+	./bootstrap
+	./configure --prefix=/
+	cd -
+	DESTDIR=$HOME/tmp/usrsctp make -C $tmpdir install
 }
 
 ##   mkimage [--tag=registry.nordix.org/cloud-native/sctp-test:latest]
