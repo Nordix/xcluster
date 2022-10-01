@@ -1,8 +1,9 @@
 apiVersion: apps/v1
-kind: DaemonSet
+kind: Deployment
 metadata:
   name: multus-alpine-bridge
 spec:
+  replicas: 10
   selector:
     matchLabels:
       app: multus-alpine-bridge

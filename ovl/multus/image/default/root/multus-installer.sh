@@ -153,10 +153,18 @@ EOF
 ##   install
 ##     Install and enable multus and cni-plugins
 cmd_install() {
+	if test -r /opt/cni/bin/sentinel; then
+		if cmp -s $dir/sentinel /opt/cni/bin/sentinel; then
+			log "Multus already installed"
+			cat $dir/sentinel >&2
+			return 0
+		fi
+	fi
 	log "Installing Multus..."
 	cmd_install_binaries
 	cmd_generate_kubeconfig
 	cmd_enable
+	cp $dir/sentinel /opt/cni/bin/sentinel
 	log "Multus installed"
 }
 

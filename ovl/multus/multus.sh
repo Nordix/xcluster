@@ -118,7 +118,7 @@ cmd_test() {
 }
 
 ##   test start_empty
-##     Start without PODs
+##     Start without Multus
 test_start_empty() {
 	# Pre-checks
 	cmd_archive > /dev/null
@@ -165,7 +165,10 @@ test_basic() {
 ##     Test with node-annotation IPAM
 test_annotation() {
 	tlog "=== Test with node-annotation IPAM"
-	test_start
+	test_start_empty
+	tcase "Apply Multus installer"
+	kubectl apply -f $dir/default/etc/kubernetes/multus/multus-install.yaml \
+		|| tdie "Multus installer"
 	otcw annotate
 	otc 1 bridge
 	xcluster_stop

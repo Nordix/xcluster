@@ -23,13 +23,17 @@ test -x $csh || die "Not executable"
 mkdir -p $tmp/root
 cp -R $dir/default/* $tmp
 $msh cparchives $tmp/root || die "cp archives"
+uuid > $tmp/root/sentinel
 
 f=$tmp/root/multus-installer.sh
 v=$($msh version)
 sed -i -e "s,__multus_ver=unknown,__multus_ver=$v," $f
+echo "multus_ver=$v" >> $tmp/root/sentinel
 v=$($csh version)
 sed -i -e "s,__cnibin_ver=unknown,__cnibin_ver=$v," $f
+echo "cnibin_ver=$v" >> $tmp/root/sentinel
 
+which kubectl > /dev/null || die "No kubectl"
 f=$(which kubectl)
 mkdir -p $tmp/bin
 cp -L $f $tmp/bin
@@ -41,6 +45,7 @@ test -x $f && cp $f $tmp/root
 test -n "$NODEANNOTATION_DIR" || NODEANNOTATION_DIR=$GOPATH/src/github.com/Nordix/ipam-node-annotation
 f=$NODEANNOTATION_DIR/node-annotation
 test -x $f && cp $f $tmp/root
+
 
 
 cd $tmp

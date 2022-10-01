@@ -132,12 +132,23 @@ cmd_tcase_annotate() {
 ]"
 }
 ##   tcase_bridge
-##     Start a bridge network using node-annotation IPAM
+##     Start a bridge network using node-annotation IPAM. Start
+##     an Alpine Deployment with "net1" interfaces and check addresses.
 cmd_tcase_bridge() {
 	tcase "Start a bridge network using node-annotation IPAM"
 	kubectl apply -f $yamld/multus-crd-bridge2.yaml || tdie
 	kubectl apply -f $yamld/multus-alpine-bridge.yaml || tdie
-	#test_daemonset multus-alpine-bridge 180
+	test_deployment multus-alpine-bridge 180
+	mkdir -p $tmp
+	local pod
+	for pod in $($kubectl get pods -l app=multus-alpine-bridge -o name); do
+		log "Check POD $pod ..."
+		$kubectl exec $pod -- ip addr show dev net1 > $tmp/adr || \
+			tdie "Get addresses"
+		cat $tmp/adr
+		grep -E '16\.0\.[0-9]+\.[0-9]+/24' $tmp/adr || tdie "IPv4 address"
+		grep -E '4000::1000:[0-9a-f]+/120' $tmp/adr || tdie "IPv6 address"
+	done
 }
 
 . /etc/profile
