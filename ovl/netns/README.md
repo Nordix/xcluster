@@ -122,3 +122,15 @@ The output (json) from the `bridge` cni-plugin is stored in files on
 ```
 cat /tmp/$(hostname)-ns* | jq -r .ips[].address | cut -d/ -f1
 ```
+
+## Isolated bridges
+
+It should be possible to use the same addresses on isolated bridges.
+
+<img src="dual-bridges.svg" width="50%" />
+
+```
+./netns.sh test --no-stop dual_bridges_vlan > $log
+```
+
+Ping `172.16.0.100` from any POD on `vm-001`.

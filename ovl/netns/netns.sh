@@ -154,6 +154,35 @@ test_ipvlan() {
 	xcluster_stop
 }
 
+##   test dual_bridges
+##     Two separated bridges+pods with the same addresses.
+test_dual_bridges() {
+	tlog "=== Two separated bridges+pods with the same addresses"
+	export TOPOLOGY=multilan-router
+	export __nrouters=2
+	export __nvm=1
+	test_start
+	otc 202 "xnetns eth3 eth4"
+	otc 1 "xbridge br2 eth2"
+	otc 1 "xbridge br3 eth3"
+	xcluster_stop
+}
+##   test dual_bridges_vlan
+##     Two separated bridges+pods with external vlan.
+test_dual_bridges_vlan() {
+	tlog "=== Two separated bridges+pods with external vlan"
+	export TOPOLOGY=multilan-router
+	export __nrouters=2
+	export __nvm=1
+	test_start
+	otc 202 "create_vlans eth3.100 eth3.200"
+	otc 202 "xnetns eth3.100 eth3.200"
+	otc 1 "create_vlans eth2.100 eth2.200"
+	otc 1 "xbridge br2 eth2.100"
+	otc 1 "xbridge br3 eth2.200"
+	xcluster_stop
+}
+
 . $($XCLUSTER ovld test)/default/usr/lib/xctest
 indent=''
 
