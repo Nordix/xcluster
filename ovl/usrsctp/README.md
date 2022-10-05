@@ -23,10 +23,22 @@ Client tests
 ```
 
 ## Single/multi homed endpoint tests with router as NAT/middlebox
-Client tests
+### Client tests
+
 ```
 ./usrsctp.sh test client
 ./usrsctp.sh test client_mh
+```
+### Server tests
+Static DNAT rules are added on the vm-201 and vm-202 to route packets to the correct server endpoint
+```
+iptables -t nat -A PREROUTING -j DNAT -s 192.168.3.221 --to-destination 192.168.1.1
+iptables -t nat -A PREROUTING -j DNAT -s 192.168.3.222 --to-destination 192.168.1.2
+iptables -t nat -A PREROUTING -j DNAT -s 192.168.4.221 --to-destination 192.168.2.1
+iptables -t nat -A PREROUTING -j DNAT -s 192.168.4.222 --to-destination 192.168.2.2
+```
+```
+./usrsctp.sh test server
 ```
 
 ### Test environment

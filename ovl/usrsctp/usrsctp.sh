@@ -1,8 +1,8 @@
 #! /bin/sh
 ##
-## sctp.sh --
+## usrsctp.sh --
 ##
-##   Help script for the xcluster ovl/sctp.
+##   Help script for the xcluster ovl/usrsctp.
 ##
 ## Commands;
 ##
