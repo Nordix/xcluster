@@ -20,12 +20,4 @@ spec:
       - name: multus-alpine-bridge
         image: docker.io/library/alpine:latest
         imagePullPolicy: IfNotPresent
-        command:
-          - /bin/sh
-          - "-c"
-          - "sleep 60m"
-        env:
-          - name: NODE_NAME
-            valueFrom:
-              fieldRef:
-                fieldPath: spec.nodeName
+        command: ["tail", "-f", "/dev/null"]
