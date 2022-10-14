@@ -51,11 +51,13 @@ cmd_env() {
 	fi
 }
 
-##   build
-##     Build kernel with menu-config
+##   build [--menuconfig]
+##     Build a static kernel
 cmd_build() {
-	cmd_env
-	$XCLUSTER kernel_build --menuconfig
+	cd $dir
+	. ./Envsettings
+	export __menuconfig
+	$XCLUSTER kernel_build
 }
 
 ##

@@ -1,0 +1,4 @@
+export __kver=linux-6.0
+export __kcfg=$PWD/config/$__kver
+export __kobj=$XCLUSTER_WORKSPACE/xcluster/obj-static-$__kver
+export __kbin=$XCLUSTER_WORKSPACE/xcluster/bzImage-static-$__kver
