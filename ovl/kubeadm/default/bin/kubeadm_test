@@ -65,7 +65,11 @@ cmd_tcase_init_dual_stack() {
 	tcase "Init dual-stack"
 	test -n "$1" || tdie "No k8s version"
 	sed -i -e "s,v1.17.0,$1," /etc/kubeadm-config.yaml
-	kubeadm init --config /etc/kubeadm-config.yaml 2>&1 || tdie
+	mkdir -p $tmp
+	if ! kubeadm init --config /etc/kubeadm-config.yaml --ignore-preflight-errors=all > $tmp/log 2>&1; then
+		cat $tmp/log
+		tdie "kubeadm init"
+	fi
 }
 
 cmd_tcase_init_ipv4() {

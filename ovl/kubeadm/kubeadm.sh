@@ -86,7 +86,7 @@ cmd_test() {
     tlog "Xcluster test ended. Total time $((now-begin)) sec"
 
 }
-
+##   test start
 test_start() {
 	cmd_env
 	cmd_cache_images 2>&1
@@ -95,15 +95,9 @@ test_start() {
 	unset XOVLS
 	xcluster_start xnet env test crio images iptools kubeadm private-reg k8s-cni-$__cni $@
 }
-
-test_start_ipv4() {
-	export SETUP=ipv4
-	test_start $@
-}
-
+##   test install
 test_install() {
 	tlog "=== kubeadm: Install k8s $__k8sver"
-	export xcluster___mode=dual-stack
 	test_start $@
 
 	otc 1 "pull_images $__k8sver"
@@ -125,45 +119,13 @@ test_install() {
 
 	xcluster_stop
 }
-
-test_install_ipv4() {
-	tlog "=== kubeadm: Install k8s ipv4-only $__k8sver"
-	test_start_ipv4 $@
-
-	otc 1 "pull_images $__k8sver"
-	otc 1 "init_ipv4 $__k8sver"
-	otc 1 check_namespaces
-	otc 1 rm_coredns_deployment
-	otc 1 install_cni
-	otc 1 coredns_k8s
-	
-	for i in $(seq 2 $__nvm); do
-		otc $i join
-		otc $i coredns_k8s
-		otc $i get_kubeconfig
-	done
-
-	otc 1 "check_nodes $__nvm"
-	otc 1 check_nodes_ready
-	otc 1 untaint_master
-	otcr get_kubeconfig
-	
-	xcluster_stop
-}
-
+##   test template
 test_test_template() {
 	push __no_stop yes
 	test_install test-template mconnect
 	pop __no_stop
 	otcw masquerade
 	subtest test-template basic
-}
-
-test_test_template4() {
-	push __no_stop yes
-	test_install_ipv4 test-template mconnect
-	pop __no_stop
-	subtest test-template basic4
 }
 
 test_mserver() {
@@ -173,13 +135,6 @@ test_mserver() {
 	subtest mserver basic
 }
 
-test_mserver4() {
-	push __no_stop yes
-	test_install_ipv4 mserver mconnect
-	pop __no_stop
-	subtest mserver basic4
-}
-
 subtest() {
 	local ovl=$1
 	shift
@@ -187,10 +142,11 @@ subtest() {
 	test -x $x || tdie "Not executable [$x]"
 	$x test --cluster-domain=cluster.local --no-start --no-stop=$__no_stop $@ || tdie
 }
+##
+
 
 ##   cache_images
 ##     Download the K8s release images to the local private registry.
-##
 cmd_cache_images() {
 	cmd_env
 	local i images
@@ -210,6 +166,7 @@ cmd_otc() {
 	otc $__vm $@
 }
 
+##
 . $($XCLUSTER ovld test)/default/usr/lib/xctest
 indent=''
 
