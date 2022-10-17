@@ -257,7 +257,7 @@ cmd_lreg_preload() {
 
 ##
 cmd_get_regip() {
-	local regip=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' registry)
+	local regip=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{println .IPAddress}}{{end}}' registry | head -1)
 	test -n "$regip" || die "Can't get address of the local registry"
 	echo $regip
 }
