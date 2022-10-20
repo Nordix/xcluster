@@ -53,7 +53,7 @@ case $(hostname) in
 esac
 
 
-test -n "XLAN_TEMPLATE" || exit 0
+test -n "$XLAN_TEMPLATE" || exit 0
 
 # Configure extra networks
 
