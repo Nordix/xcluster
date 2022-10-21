@@ -5,7 +5,7 @@ Tests and setups with
 and [SLAAC](https://en.wikipedia.org/wiki/IPv6#Stateless_address_autoconfiguration_(SLAAC)).
 
 DHCP is widely used for IPv4 (and quite simple) but [DHCPv6](
-https://www.rfc-editor.org/rfc/rfc8415.html is more complicated), so
+https://www.rfc-editor.org/rfc/rfc8415.html) is more complicated, so
 this ovl focuses most on that.
 
 Keywords: SLAAC
