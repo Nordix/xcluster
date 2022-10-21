@@ -267,11 +267,13 @@ test_cni_bridge() {
 	test_start netns
 	otc 202 "radvd_start --mask=64 eth3"
 	otc 202 "dhcpd eth3"
+	otc 1 cni_dhcp_start
 	otc 1 netns
 	otc 1 "bridge_create eth2"
 	otc 1 "bridge_config eth2"
 	otc 1 "bridge_start eth2"
 	otc 1 "bridge_check_slaac eth2"
+	otc 1 "bridge_check_dhcp eth2"
 	xcluster_stop
 }
 
