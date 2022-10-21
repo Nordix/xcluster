@@ -1,0 +1,31 @@
+#! /bin/sh
+# NOTE: A common pattern is to specify "-" (stdout) as out-file,
+#  so there must be NO log printouts to stdout!
+
+dir=$(dirname $0); dir=$(readlink -f $dir)
+tmp=/tmp/$USER/xcluster_$$
+die() {
+	echo "ERROR: $*" >&2
+	rm -rf $tmp
+	exit 1
+}
+log() {
+	echo "INFO: $*" >&2
+}
+
+test -n "$1" || die "No out-file"
+
+mkdir -p $tmp
+cp -R $dir/default/* $tmp
+
+$XCLUSTER install_prog --dest=$tmp envsubst
+$dir/dhcp.sh isc_binary > /dev/null || die "Dhcpd not built"
+x=$($dir/dhcp.sh isc_binary)
+cp $x $tmp/bin
+x=$($dir/dhcp.sh radvd_binary)
+cp $x $tmp/bin
+
+cd $tmp
+tar cf "$1" *
+cd - > /dev/null
+rm -rf $tmp

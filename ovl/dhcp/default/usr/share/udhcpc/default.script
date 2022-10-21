@@ -1,0 +1,98 @@
+#! /bin/sh
+##
+## default.script --
+##
+##  Udhcp script
+##
+## Commands;
+##
+
+prg=$(basename $0)
+dir=$(dirname $0); dir=$(readlink -f $dir)
+tmp=/tmp/${prg}_$$
+
+die() {
+    echo "ERROR: $*" >&2
+    rm -rf $tmp
+    exit 1
+}
+help() {
+    grep '^##' $0 | cut -c3-
+    rm -rf $tmp
+    exit 0
+}
+test -n "$1" || help
+echo "$1" | grep -qi "^help\|-h" && help
+
+log() {
+	echo "$prg: $*" >&2
+}
+dbg() {
+	test -n "$__verbose" && echo "$prg: $*" >&2
+}
+
+##   env
+##     Print environment.
+cmd_env() {
+	test "$cmd" = "env" && set | grep -E '^(__.*|ARCHIVE)='
+	test -n "$__family" || __family=-4
+}
+
+##   deconfig
+cmd_deconfig() {
+	echo "Called: deconfig $@"
+	echo "interface $interface"
+	cmd_env
+	ip $__family addr flush dev $interface scope global
+}
+##   bound
+cmd_bound() {
+	echo "Called: bound $@"
+	echo "interface $interface"
+	echo "serverid $serverid"
+	cmd_env
+	if test "$__family" = "-6"; then
+		if test -n "$__mask"; then
+			echo "IP $ipv6/$__mask"
+			ip $__family addr add $ipv6/$__mask dev $interface
+		else
+			ip $__family addr add $ipv6 dev $interface
+		fi
+	else
+		echo "IP $ip/$mask"
+		ip $__family addr add $ip/$mask dev $interface
+	fi
+}
+##   leasefail
+cmd_leasefail() {
+	echo "Called: leasefail $@"
+	echo "interface $interface"
+}
+
+
+##
+# Get the command
+cmd=$1
+shift
+grep -q "^cmd_$cmd()" $0 $hook || die "Invalid command [$cmd]"
+
+while echo "$1" | grep -q '^--'; do
+    if echo $1 | grep -q =; then
+	o=$(echo "$1" | cut -d= -f1 | sed -e 's,-,_,g')
+	v=$(echo "$1" | cut -d= -f2-)
+	eval "$o=\"$v\""
+    else
+	o=$(echo "$1" | sed -e 's,-,_,g')
+	eval "$o=yes"
+    fi
+    shift
+done
+unset o v
+long_opts=`set | grep '^__' | cut -d= -f1`
+
+# Execute command
+trap "die Interrupted" INT TERM
+cmd_$cmd "$@"
+status=$?
+rm -rf $tmp
+exit $status
