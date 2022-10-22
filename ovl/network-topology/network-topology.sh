@@ -69,7 +69,7 @@ cmd_test() {
         done
     else
         for t in xnet dual_path multihop zones backend multilan \
-			multilan_router evil_tester diamond x_diamond; do
+			multilan_router evil_tester diamond; do
 			# Invoke $me rather than call the function to avoid
 			# lingering Envsettings
             $me test $t || die "FAILED: $t"

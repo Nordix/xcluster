@@ -1,5 +1,6 @@
 #! /bin/sh
 . /usr/lib/network-topology.sh
+test -n "$PREFIX" || PREFIX=1000::1
 
 vm() {
 	ifsetup eth1 1
@@ -10,7 +11,7 @@ vm() {
     ip ro replace default $targets
     targets=''
     for i in $(seq 201 $lastrouter); do
-        targets="$targets nexthop via 1000::1:192.168.1.$i"
+        targets="$targets nexthop via $PREFIX:192.168.1.$i"
     done
     ip -6 ro replace default $targets
 }
@@ -47,7 +48,7 @@ tester222() {
     ip ro replace default $targets
     targets=''
     for i in $(seq 201 $lastrouter); do
-        targets="$targets nexthop via 1000::1:192.168.3.$i"
+        targets="$targets nexthop via $PREFIX:192.168.3.$i"
     done
     ip -6 ro replace default $targets
 }

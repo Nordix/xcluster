@@ -1,6 +1,6 @@
 #! /bin/sh
-. /etc/profile
 . /usr/lib/network-topology.sh
+test -n "$PREFIX" || PREFIX=1000::1
 
 test -n "$__nrouters" || __nrouters=2
 
@@ -13,7 +13,7 @@ vm() {
 	ip ro replace default $targets
 	targets=''
 	for i in $(seq 201 $lastrouter); do
-		targets="$targets nexthop via 1000::1:192.168.1.$i"
+		targets="$targets nexthop via $PREFIX:192.168.1.$i"
 	done
 	ip -6 ro replace default $targets
 }
@@ -37,7 +37,7 @@ tester() {
 	ip ro replace default $targets
 	targets=''
 	for i in $(seq 201 $lastrouter); do
-		targets="$targets nexthop via 1000::1:192.168.2.$i"
+		targets="$targets nexthop via $PREFIX:192.168.2.$i"
 	done
 	ip -6 ro replace default $targets
 }
@@ -57,7 +57,6 @@ test -n "$XLAN_TEMPLATE" || exit 0
 
 # Configure extra networks
 
-test -n "$PREFIX" || PREFIX=1000::1
 i=$(hostname | cut -d- -f2 | sed -re 's,^0+,,')
 
 # ifup <net> <interface>
@@ -73,7 +72,7 @@ ifup() {
 	sysctl -qw net.ipv6.conf.$iface.accept_dad=0
 	ip link set $iface up
 	ip addr add $adr/$m4 dev $iface
-	ip -6 addr add 1000::1:$adr/$m6 dev $iface
+	ip -6 addr add $PREFIX:$adr/$m6 dev $iface
 }
 
 vm_x() {
