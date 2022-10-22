@@ -42,6 +42,7 @@ cmd_env() {
 		retrun 0
 	fi
 
+	test -n "$xcluster_PREFIX" || export xcluster_PREFIX=1000::1
 	test -n "$XCLUSTER" || die 'Not set [$XCLUSTER]'
 	test -x "$XCLUSTER" || die "Not executable [$XCLUSTER]"
 	eval $($XCLUSTER env)
@@ -118,7 +119,7 @@ test_basic() {
 	otc 203 intermediate
 	otc 204 intermediate
 	otc 1 "ping 192.168.2.221"
-	otc 1 "ping 1000::1:192.168.2.221"
+	otc 1 "ping $xcluster_PREFIX:192.168.2.221"
 	xcluster_stop
 }
 
@@ -136,7 +137,7 @@ test_basic_sr() {
 	local n
 	for n in $(seq 1 $__nvm); do
 		otc 221 "ping 192.168.1.$n"
-		otc 221 "ping 1000::1:192.168.1.$n"
+		otc 221 "ping $xcluster_PREFIX:192.168.1.$n"
 	done
 	xcluster_stop
 }

@@ -11,7 +11,9 @@ prg=$(basename $0)
 dir=$(dirname $0); dir=$(readlink -f $dir)
 me=$dir/$prg
 tmp=/tmp/${prg}_$$
+. /etc/profile
 test -n "$DOMAIN" || DOMAIN=xcluster
+test -n "$PREFIX" || PREFIX=1000::1
 
 die() {
 	echo "ERROR: $*" >&2
@@ -78,10 +80,10 @@ edgeVM() {
 	local eg=$1
 	local in=$2
 	local me=$(hostname | sed -e 's,vm-,,')
-	local nexthop=1000::1:192.168.3.203
-	test $eg -eq 204 && nexthop=1000::1:192.168.4.204
+	local nexthop=$PREFIX:192.168.3.203
+	test $eg -eq 204 && nexthop=$PREFIX:192.168.4.204
 	ip route add 192.168.2.0/24 encap mpls $me via inet6 $nexthop
-	ip -6 route add 1000::1:192.168.2.0/24 encap mpls $me via inet6 $nexthop
+	ip -6 route add $PREFIX:192.168.2.0/24 encap mpls $me via inet6 $nexthop
 	ip -f mpls route add $in dev lo
 }
 
@@ -89,22 +91,22 @@ edgeTESTER() {
 	local eg=$1
 	local in=$2
 	local me=$(hostname | sed -e 's,vm-,,')
-	local nexthop=1000::1:192.168.5.203
-	test $eg -eq 204 && nexthop=1000::1:192.168.6.204
+	local nexthop=$PREFIX:192.168.5.203
+	test $eg -eq 204 && nexthop=$PREFIX:192.168.6.204
 	ip route add 192.168.1.0/24 encap mpls $me via inet6 $nexthop
-	ip -6 route add 1000::1:192.168.1.0/24 encap mpls $me via inet6 $nexthop
+	ip -6 route add $PREFIX:192.168.1.0/24 encap mpls $me via inet6 $nexthop
 	ip -f mpls route add $in dev lo
 }
 cmd_tcase_intermediate() {
 	tcase "Setup MPLS on an intermediate router"
 	case $(hostname) in
 		vm-203)
-			ip -f mpls route add 201 as 203 via inet6 1000::1:192.168.5.202
-			ip -f mpls route add 202 as 203 via inet6 1000::1:192.168.3.201
+			ip -f mpls route add 201 as 203 via inet6 $PREFIX:192.168.5.202
+			ip -f mpls route add 202 as 203 via inet6 $PREFIX:192.168.3.201
 			;;
 		vm-204)
-			ip -f mpls route add 201 as 204 via inet6 1000::1:192.168.6.202
-			ip -f mpls route add 202 as 204 via inet6 1000::1:192.168.4.201
+			ip -f mpls route add 201 as 204 via inet6 $PREFIX:192.168.6.202
+			ip -f mpls route add 202 as 204 via inet6 $PREFIX:192.168.4.201
 			;;
 		*)
 			tdie "Not a router"
@@ -115,9 +117,9 @@ cmd_tcase_sr_vm() {
 	tcase "Setup endpoint SR on a vm via [$1]"
 	test -n "$1" || die "No via"
 	ip route replace 192.168.2.221/32 encap mpls $1/202/221 \
-		via inet6 1000::1:192.168.1.201
-	ip -6 route replace 1000::1:192.168.2.221/128 encap mpls $1/202/221 \
-		via inet6 1000::1:192.168.1.201
+		via inet6 $PREFIX:192.168.1.201
+	ip -6 route replace $PREFIX:192.168.2.221/128 encap mpls $1/202/221 \
+		via inet6 $PREFIX:192.168.1.201
 }
 
 cmd_tcase_sr_tester() {
@@ -127,9 +129,9 @@ cmd_tcase_sr_tester() {
 	for n in $(seq 1 $__nvm); do
 		l=$((n + 100))
 		ip route replace 192.168.1.$n/32 encap mpls $1/201/$l \
-			via inet6 1000::1:192.168.2.202 || tdie
-		ip -6 route replace 1000::1:192.168.1.$n/128 encap mpls $1/201/$l \
-			via inet6 1000::1:192.168.2.202 || tdie
+			via inet6 $PREFIX:192.168.2.202 || tdie
+		ip -6 route replace $PREFIX:192.168.1.$n/128 encap mpls $1/201/$l \
+			via inet6 $PREFIX:192.168.2.202 || tdie
 	done
 }
 
@@ -138,25 +140,25 @@ cmd_tcase_sr_router() {
 	local n l
 	case $(hostname) in
 		vm-201)
-			ip -f mpls route add 203 via inet6 1000::1:192.168.3.203
-			ip -f mpls route add 204 via inet6 1000::1:192.168.4.204
+			ip -f mpls route add 203 via inet6 $PREFIX:192.168.3.203
+			ip -f mpls route add 204 via inet6 $PREFIX:192.168.4.204
 			for n in $(seq 1 $__nvm); do
 				l=$((n + 100))
-				ip -f mpls route add $l via inet6 1000::1:192.168.1.$n
+				ip -f mpls route add $l via inet6 $PREFIX:192.168.1.$n
 			done
 			;;
 		vm-202)
-			ip -f mpls route add 203 via inet6 1000::1:192.168.5.203
-			ip -f mpls route add 204 via inet6 1000::1:192.168.6.204
-			ip -f mpls route add 221 via inet6 1000::1:192.168.2.221
+			ip -f mpls route add 203 via inet6 $PREFIX:192.168.5.203
+			ip -f mpls route add 204 via inet6 $PREFIX:192.168.6.204
+			ip -f mpls route add 221 via inet6 $PREFIX:192.168.2.221
 			;;
 		vm-203)
-			ip -f mpls route add 201 via inet6 1000::1:192.168.3.201
-			ip -f mpls route add 202 via inet6 1000::1:192.168.5.202
+			ip -f mpls route add 201 via inet6 $PREFIX:192.168.3.201
+			ip -f mpls route add 202 via inet6 $PREFIX:192.168.5.202
 			;;		
 		vm-204)
-			ip -f mpls route add 201 via inet6 1000::1:192.168.4.201
-			ip -f mpls route add 202 via inet6 1000::1:192.168.6.202
+			ip -f mpls route add 201 via inet6 $PREFIX:192.168.4.201
+			ip -f mpls route add 202 via inet6 $PREFIX:192.168.6.202
 			;;		
 		*)
 			tdie "Not a router"

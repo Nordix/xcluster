@@ -34,19 +34,19 @@ using MPLS.
 # On vm-001
 ping 192.168.2.221    # Doesn't work
 # On vm-201
-ip route add 192.168.2.0/24 encap mpls 201 via inet6 1000::1:192.168.3.203
-ip route add 1000::1:192.168.2.0/120 encap mpls 201 via inet6 1000::1:192.168.3.203
+ip route add 192.168.2.0/24 encap mpls 201 via inet6 $PREFIX:192.168.3.203
+ip route add $PREFIX:192.168.2.0/120 encap mpls 201 via inet6 $PREFIX:192.168.3.203
 ip -f mpls route add 203 dev lo
 # On vm-202
-ip route add 192.168.1.0/24 encap mpls 202 via inet6 1000::1:192.168.5.203
-ip route add 1000::1:192.168.1.0/120 encap mpls 202 via inet6 1000::1:192.168.5.203
+ip route add 192.168.1.0/24 encap mpls 202 via inet6 $PREFIX:192.168.5.203
+ip route add $PREFIX:192.168.1.0/120 encap mpls 202 via inet6 $PREFIX:192.168.5.203
 ip -f mpls route add 203 dev lo
 # On vm-203
-ip -f mpls route add 201 as 203 via inet6 1000::1:192.168.5.202
-ip -f mpls route add 202 as 203 via inet6 1000::1:192.168.3.201
+ip -f mpls route add 201 as 203 via inet6 $PREFIX:192.168.5.202
+ip -f mpls route add 202 as 203 via inet6 $PREFIX:192.168.3.201
 # On vm-001
 ping 192.168.2.221    # Works!
-ping 1000::1:192.168.2.221
+ping $PREFIX:192.168.2.221
 ```
 
 I direct packets to `lo` for decapsulation. Is there a better way?
@@ -71,14 +71,14 @@ Routing is about source routing so we will add multiple labels at the
 starting endpoint. Example;
 
 ```
-ip route add 192.168.2.221/32 encap mpls 203/202/221 via inet6 1000::1:192.168.1.201
+ip route add 192.168.2.221/32 encap mpls 203/202/221 via inet6 $PREFIX:192.168.1.201
 ```
 
 The MPLS-SR aware routers must be configured to consume the top label
 and forward the packet. Example;
 
 ```
-ip -f mpls route add 203 via inet6 1000::1:192.168.3.203
+ip -f mpls route add 203 via inet6 $PREFIX:192.168.3.203
 ```
 
 ### Manual test
@@ -102,18 +102,18 @@ becomes 101, etc.
 
 ```
 # On vm-001
-ip route add 192.168.2.221/32 encap mpls 203/202/221 via inet6 1000::1:192.168.1.201
+ip route add 192.168.2.221/32 encap mpls 203/202/221 via inet6 $PREFIX:192.168.1.201
 # On vm-201
-ip -f mpls route add 203 via inet6 1000::1:192.168.3.203
-ip -f mpls route add 101 via inet6 1000::1:192.168.1.1
+ip -f mpls route add 203 via inet6 $PREFIX:192.168.3.203
+ip -f mpls route add 101 via inet6 $PREFIX:192.168.1.1
 # On vm-203
-ip -f mpls route add 201 via inet6 1000::1:192.168.3.201
-ip -f mpls route add 202 via inet6 1000::1:192.168.5.202
+ip -f mpls route add 201 via inet6 $PREFIX:192.168.3.201
+ip -f mpls route add 202 via inet6 $PREFIX:192.168.5.202
 # On vm-202
-ip -f mpls route add 203 via inet6 1000::1:192.168.5.203
-ip -f mpls route add 221 via inet6 1000::1:192.168.2.221
+ip -f mpls route add 203 via inet6 $PREFIX:192.168.5.203
+ip -f mpls route add 221 via inet6 $PREFIX:192.168.2.221
 # On vm-221
-ip route add 192.168.1.1/32 encap mpls 203/201/101 via inet6 1000::1:192.168.2.202
+ip route add 192.168.1.1/32 encap mpls 203/201/101 via inet6 $PREFIX:192.168.2.202
 ping 192.168.1.1   # Works
 ```
 
