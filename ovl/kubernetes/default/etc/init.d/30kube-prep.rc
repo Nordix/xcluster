@@ -2,6 +2,7 @@
 
 export PATH="/bin:/sbin:/usr/bin:/usr/sbin"
 . /etc/profile
+test -n "$PREFIX" || PREFIX=1000::1
 
 die() {
 	echo "$@"
@@ -24,11 +25,10 @@ if test -n "$PROXY_MODE" -a "$PROXY_MODE" != "ipvs"; then
    iptables -t nat -N KUBE-MARK-DROP
 fi
 
-# The tailing ':' makes sure this doesn't match an ipv6 address
-if test -n "$IPV6_PREFIX"; then
-	sed -i -e "s,192.168.1.1:,[${IPV6_PREFIX}192.168.1.1]:," \
+if test "$BASE_FAMILY" = "IPv6"; then
+	sed -i -e "s,192.168.1.1:,[$PREFIX:192.168.1.1]:," \
 		/etc/kubernetes/kubeconfig
-	sed -i -e "s,192.168.1.1:,[${IPV6_PREFIX}192.168.1.1]:," \
+	sed -i -e "s,192.168.1.1:,[$PREFIX:192.168.1.1]:," \
 		/etc/kubernetes/kubeconfig.token
 fi
 

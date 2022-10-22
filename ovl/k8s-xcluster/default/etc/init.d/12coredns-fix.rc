@@ -5,14 +5,14 @@ die() {
 }
 
 . /etc/profile
+test -n "$PREFIX" || PREFIX=1000::1
+test -n "$DOMAIN" || DOMAIN=xcluster
+test -n "$KUBECONFIG" || KUBECONFIG=/etc/kubernetes/kubeconfig.token
 
 hostname | grep -Eq 'vm-[0-9]+$' || die "Invalid hostname [$(hostname)]"
 i=$(hostname | cut -d- -f2 | sed -re 's,^0+,,')
 
 killall coredns
-
-test -n "$DOMAIN" || DOMAIN=xcluster
-test -n "$KUBECONFIG" || KUBECONFIG=/etc/kubernetes/kubeconfig.token
 
 if grep -q 'token:' $KUBECONFIG; then
 	cat > /etc/Corefile <<EOF
@@ -39,8 +39,9 @@ EOF
 EOF
 fi
 
-test -n "$IPV6_PREFIX" && \
-	sed -i -e "s,192.168.1.1,[${IPV6_PREFIX}192.168.1.1]," /etc/Corefile
+if test "$BASE_FAMILY" = "IPv6"; then
+	sed -i -e "s,192.168.1.1,[$PREFIX:192.168.1.1]," /etc/Corefile
+fi
 
 run_coredns() {
 	coredns -conf /etc/Corefile >> /var/log/coredns.log 2>&1

@@ -2,6 +2,7 @@
 
 export PATH="/bin:/sbin:/usr/bin:/usr/sbin"
 . /etc/profile
+test -n "$PREFIX" || PREFIX=1000::1
 
 die() {
         echo "$@"
@@ -17,16 +18,10 @@ echo ",$MASTERS," | grep -q ",$(hostname)," || exit 0
 CLUSTER_CIDR=11.0.0.0/16,1100::/48
 SERVICE_RANGE=12.0.0.0/16,fd00:4000::/112
 
-if test -z "$BASE_FAMILY"; then
-	BASE_FAMILY=IPv4
-	test -n "$IPV6_PREFIX" && BASE_FAMILY=IPv6
-fi
-test -n "$IPV6_PREFIX" || IPV6_PREFIX=1000::1:
-
 ADVERTISE_ADR=192.168.1.$i
 if test "$BASE_FAMILY" = "IPv6"; then
 	SERVICE_RANGE=fd00:4000::/112,12.0.0.0/16
-	ADVERTISE_ADR=${IPV6_PREFIX}192.168.1.$i
+	ADVERTISE_ADR=$PREFIX:192.168.1.$i
 fi
 
 test -n "$FEATURE_GATES" && fg_param="--feature-gates $FEATURE_GATES"

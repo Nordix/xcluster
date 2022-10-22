@@ -12,7 +12,7 @@ log=/tmp/$USER/xcluster/test.log  # $log is assumed to be set from now on
 # Variations; single-stack and dual-stack with IPv6 as "main"
 ./ctraffic.sh test --mode=ipv4 start > $log
 ./ctraffic.sh test --mode=ipv6 start > $log
-xcluster_IPV6_PREFIX=1000::1: ./ctraffic.sh test start > $log
+xcluster_BASE_FAMILY=IPv6 ./ctraffic.sh test start > $log
 ```
 
 Test;

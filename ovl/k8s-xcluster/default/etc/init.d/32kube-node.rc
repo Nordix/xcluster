@@ -2,6 +2,8 @@
 
 export PATH="/bin:/sbin:/usr/bin:/usr/sbin"
 . /etc/profile
+test -n "$PREFIX" || PREFIX=1000::1
+test -n "$DOMAIN" || DOMAIN=xcluster
 
 die() {
 	echo "$@"
@@ -12,31 +14,19 @@ hostname | grep -Eq 'vm-[0-9]+$' || die "Invalid hostname [$(hostname)]"
 i=$(hostname | cut -d- -f2 | sed -re 's,^0+,,')
 test $i -le 200 || exit 0
 test $i -eq 1 && exit 0
-test -n "$DOMAIN" || DOMAIN=xcluster
 
-if test -z "$BASE_FAMILY"; then
-	BASE_FAMILY=IPv4
-	test -n "$IPV6_PREFIX" && BASE_FAMILY=IPv6
-fi
-test -n "$IPV6_PREFIX" || IPV6_PREFIX=1000::1:
+# Read $CRI_OPTS;
+test -r /etc/cri-plugin.rc && . /etc/cri-plugin.rc
 
 DNS_ADR=192.168.1.$i
+NODE_IP=192.168.1.$i,$PREFIX:192.168.1.$i
 if test "$BASE_FAMILY" = "IPv6"; then
 	f=/etc/kubernetes/kube-proxy.config
 	sed -i -e 's%11.0.0.0/16,1100::/48%1100::/48,11.0.0.0/16%' $f
 	sed -i -e 's,bindAddress: 0.0.0.0,bindAddress: "::1",' $f
-    DNS_ADR=${IPV6_PREFIX}192.168.1.$i
+    DNS_ADR=$PREFIX:192.168.1.$i
+	NODE_IP=$PREFIX:192.168.1.$i,192.168.1.$i
 fi
-
-# From v1.20 dual-stack node addresses are supported
-NODE_IP=192.168.1.$i,${IPV6_PREFIX}192.168.1.$i
-if kubectl version --short --client | grep -q v1.1; then
-	NODE_IP=192.168.1.$i
-	test "$BASE_FAMILY" = "IPv6" && NODE_IP=${IPV6_PREFIX}192.168.1.$i
-fi
-
-# Read $CRI_OPTS;
-test -r /etc/cri-plugin.rc && . /etc/cri-plugin.rc
 
 test -n "$FEATURE_GATES" && fg_param="--feature-gates $FEATURE_GATES"
 
