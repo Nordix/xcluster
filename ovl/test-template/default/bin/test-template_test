@@ -105,7 +105,7 @@ cmd_tcase_check_pod_addresses() {
 	local pod=$(get_pod alpine)
 	test -n "$pod" || tdie "Can't find an alpine POD"
 	local adrs=$(get_global_addresses $pod)
-	tlog "POD addresses [$adrs]"
+	tlog "Addresses in $pod [$adrs]"
 	for adr in $adrs; do
 		if echo $adr | grep -q : ; then
 			found=$((found+100))

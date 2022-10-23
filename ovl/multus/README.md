@@ -142,3 +142,10 @@ nc -w 1 -v multus-service 5001
 apk add iptables ip6tables
 iptables -t nat -L -nv
 ```
+
+
+## References
+
+In no particular order or importance.
+
+* https://vincent.bernat.ch/en/blog/2017-linux-bridge-isolation

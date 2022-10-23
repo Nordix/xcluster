@@ -81,6 +81,7 @@ pods -n red | grep $(hostname)
 aa-status
 
 # seccomp
+pods -n red | grep $(hostname)
 pod=proxy-trench-a-6sdfn
 kubectl exec -n red $pod -- cat /proc/1/status | grep -i seccomp
 crictl ps
@@ -136,6 +137,7 @@ aa-enabled
 mount -t securityfs securityfs /sys/kernel/security
 aa-enabled
 aa-status
+./forwarder-test.sh kind_stop_e2e
 ```
 
 
