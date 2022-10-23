@@ -25,6 +25,11 @@ cp $x $tmp/bin
 x=$($dir/dhcp.sh radvd_binary)
 cp $x $tmp/bin
 
+test -n "$NFQLBDIR" || NFQLBDIR=$HOME/tmp/nfqlb
+x=$NFQLBDIR/bin/ipu
+test -x $x || die "Not executable [$x]"
+cp $x $tmp/bin
+
 cd $tmp
 tar cf "$1" *
 cd - > /dev/null

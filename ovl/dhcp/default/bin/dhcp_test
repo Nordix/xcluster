@@ -80,45 +80,58 @@ cmd_tcase_udhcpd4() {
 	return 0
 }
 
-##   dhcpd - Setup a ISC dhcp server
-cmd_tcase_dhcpd() {
+##   dhcpd4 - Setup a ISC dhcp server
+cmd_tcase_dhcpd4() {
 	tcase "Setup a ISC dhcp server [$1]"
 	test -n "$1" || tdie "No interface"
 	test "$(hostname)" = "vm-202" || die "Must run on vm-202"
-	set_net $1
-	local iface=$1
-	local cfg lf log
-	mkdir -p /var/db
+	test -n "$__prefix" || tdie "No prefix"
 
-	# IPv4
-	ip addr add 192.168.$net.202/24 dev $iface
-	export RSTART=192.168.$net.1
-	export REND=192.168.$net.20
-	export SUBNET="192.168.$net.0 netmask 255.255.255.0"
+	local cfg log cidr mask adr lf iface
+	iface=$1
+	cidr=$(echo $__prefix | cut -d/ -f1)
+	mask=$(echo $__prefix | cut -d/ -f2)
+	test "$mask" = "24" || tdie "Can only handle /24"
+	adr=$(ipu makeip --cidr=$cidr/24/24 --host=202)
 	log=/var/log/dhcpd4.$iface
 	lf=/var/db/dhcpd4.$iface.leases
 	cfg=/etc/dhcp/dhcp4.$iface.conf
-	envsubst < /etc/dhcp/dhcp4.conf > $cfg
-	touch $lf
-	dhcpd -d -cf $cfg -lf $lf --no-pid $iface > $log 2>&1 &
 
-	# IPv6
-	test -n "$__mask" || __mask=64
-	ip -6 addr replace $PREFIX:192.168.$net.202/$__mask dev $iface
-	export RSTART=$PREFIX:192.168.$net.1
-	export REND=$PREFIX:192.168.$net.20
-	if test "$__mask" = "64"; then
-		export SUBNET="1000::/$__mask"
-	else
-		export SUBNET="$PREFIX:192.168.$net.0/$__mask"
-	fi
+	tlog "Local address on $iface; $adr/$mask"
+	ip addr replace $adr/$mask dev $iface
+	export RSTART=$(ipu makeip --cidr=$cidr/24/24 --host=1)
+	export REND=$(ipu makeip --cidr=$cidr/24/24 --host=20)
+	export SUBNET="$cidr netmask 255.255.255.0"
+	envsubst < /etc/dhcp/dhcp4.conf > $cfg
+	cat $cfg
+	mkdir -p /var/db; touch $lf
+	dhcpd -d -cf $cfg -lf $lf --no-pid $iface > $log 2>&1 &
+}
+##   dhcpd6 - Setup a ISC dhcpv6 server
+cmd_tcase_dhcpd6() {
+	tcase "Setup a ISC dhcpv6 server [$1]"
+	test -n "$1" || tdie "No interface"
+	test "$(hostname)" = "vm-202" || die "Must run on vm-202"
+	test -n "$__prefix" || tdie "No prefix"
+
+	local cfg log cidr mask adr lf iface
+	iface=$1
+	cidr=$(echo $__prefix | cut -d/ -f1)
+	cidr=$(ipu makeip --cidr=$cidr/128)  # (normalize)
+	mask=$(echo $__prefix | cut -d/ -f2)
+	adr=$(ipu makeip --cidr=$cidr/120/120 --host=202)
 	log=/var/log/dhcpd6.$iface
 	lf=/var/db/dhcpd6.$iface.leases
 	cfg=/etc/dhcp/dhcp6.$iface.conf
-	envsubst < /etc/dhcp/dhcp6.conf > $cfg
-	touch $lf
-	dhcpd -6 -d -cf $cfg -lf $lf --no-pid $iface > $log 2>&1 &
 
+	tlog "Local address on $iface; $adr/$mask"
+	ip -6 addr add $adr/$mask dev $iface
+	export RSTART=$(ipu makeip --cidr=$cidr/120/120 --host=1)
+	export REND=$(ipu makeip --cidr=$cidr/120/120 --host=20)
+	export SUBNET="$__prefix"
+	envsubst < /etc/dhcp/dhcp6.conf > $cfg
+	mkdir -p /var/db; touch $lf
+	dhcpd -6 -d -cf $cfg -lf $lf --no-pid $iface > $log 2>&1 &
 }
 
 ##   acquire4 - Acquire an IPv4 address
@@ -152,19 +165,18 @@ cmd_tcase_acquire6() {
 cmd_tcase_radvd_start() {
 	tcase "Start router advertisement daemon [$1]"
 	test -n "$1" || tdie "No interface"
-	test -n "$__mask" || __mask=64
-	set_net $1
-	local cfg log X
+	test -n "$__prefix" || fd00:100::/64
+	local cfg log cidr mask adr
+	cidr=$(echo $__prefix | cut -d/ -f1)
+	mask=$(echo $__prefix | cut -d/ -f2)
+	adr=$(ipu makeip --cidr=$cidr/120/120 --host=202)
 	export IFACE=$1
-	ip -6 addr replace $PREFIX:192.168.$net.202/$__mask dev $IFACE
-	if test "$__mask" = "64"; then
-		export IPREFIX=1000::/$__mask
-	else
-		X=$(printf "%04x" $((net * 256)))
-		export IPREFIX=$PREFIX:c0a8:$X/$__mask
-	fi
+	export IPREFIX=$__prefix
 	cfg=/etc/radvd/radvd.$IFACE.conf
 	log=/var/log/radvd.$IFACE
+
+	tlog "Local address on $IFACE [$adr]"
+	ip -6 addr replace $adr/$mask dev $IFACE
 	envsubst < /etc/radvd/radvd.conf > $cfg
 	radvd -n -d 5 -C $cfg -m stderr > $log 2>&1 &
 }
@@ -232,12 +244,12 @@ cmd_tcase_bridge_check_slaac() {
 	local n ip
 	for n in $(netns_test name); do
 		tex "chk_slaac $1 $n" || die "No IPv6 adr in [$n]"
-		ip=$(ip -n $n addr show dev br-$1 scope global | grep 'inet6 1000' | grep -oE '[0-9a-f][0-9a-f:]+/[0-9]+')
+		ip=$(ip -n $n addr show dev br-$1 scope global | grep 'inet6 ' | grep -oE '[0-9a-f][0-9a-f:]+/[0-9]+')
 		tlog "$n [$ip]"
 	done
 }
 chk_slaac() {
-	ip -n $2 addr show dev br-$1 scope global | grep 'inet6 1000:'
+	ip -n $2 addr show dev br-$1 scope global | grep 'inet6 '
 }
 ##   cni_dhcp_start - Start dhcp CNI-plugin daemon
 cmd_tcase_cni_dhcp_start() {

@@ -42,6 +42,7 @@ cmd_env() {
 	fi
 
 	test -n "$ARCHIVE" || ARCHIVE=$HOME/Downloads
+	test -n "$NFQLBDIR" || export NFQLBDIR=$HOME/tmp/nfqlb
 	test -n "$__iscver" || __iscver=4.4.3-P1
 	test -n "$__radvdver" || __radvdver=2.19
 	test -n "$XCLUSTER" || die 'Not set [$XCLUSTER]'
@@ -216,7 +217,8 @@ test_basic() {
 	tlog "=== Setup a ISC dhcpd on vm-202 and acquire addresses"
 	test_start
 	test -n "$__mask" || __mask=120
-	otc 202 "dhcpd --mask=$__mask eth3"
+	otc 202 "dhcpd4 --prefix=192.168.3.0/24 eth3"
+	otc 202 "dhcpd6 --prefix=fd00:100::192.168.3.0/120 eth3"
 	otc 1 "acquire4 eth2"
 	#$XCLUSTER tcpdump --start 2 eth2; sleep 1
 	otc 2 "acquire6 --mask=$__mask eth2"
@@ -228,9 +230,12 @@ test_basic() {
 test_all_nets() {
 	tlog "=== Setup a ISC dhcpd and acquire addresses on all networks"
 	test_start
-	otc 202 "dhcpd --mask=120 eth3"
-	otc 202 "dhcpd --mask=120 eth4"
-	otc 202 "dhcpd --mask=120 eth5"
+	otc 202 "dhcpd4 --prefix=192.168.3.0/24 eth3"
+	otc 202 "dhcpd4 --prefix=192.168.4.0/24 eth4"
+	otc 202 "dhcpd4 --prefix=192.168.5.0/24 eth5"
+	otc 202 "dhcpd6 --prefix=fd00:100::192.168.3.0/120 eth3"
+	otc 202 "dhcpd6 --prefix=fd00:100::192.168.4.0/120 eth4"
+	otc 202 "dhcpd6 --prefix=fd00:100::192.168.5.0/120 eth5"
 	otcw "acquire4 eth2"
 	otcw "acquire6 --mask=120 eth2"
 	otcw "acquire4 eth3"
@@ -244,7 +249,7 @@ test_all_nets() {
 test_radvd() {
 	tlog "=== Use radvd to send router advertisement"
 	test_start
-	otc 202 "radvd_start --mask=64 eth4"
+	otc 202 "radvd_start --prefix=fd00:100::/64 eth4"
 	otcw "slaac eth3"
 	xcluster_stop
 }
@@ -253,8 +258,10 @@ test_radvd() {
 test_dhcpv6() {
 	tcase "Use DHCPv6 and RA to setup /120 addresses"
 	test_start
-	test -n "$__mask" || __mask=120
-	otc 202 "radvd_start --mask=$__mask eth3"
+	test -n "$__template" || __template="fd00:100::192.168.0.0/112/120"
+	local prefix=$($NFQLBDIR/bin/ipu makeip --cidr=$__template --net=3 --subnet=2)
+	tlog "Prefix $prefix"
+	otc 202 "radvd_start --prefix=$prefix eth3"
 	tcase "Sleep 2..."; sleep 2
 	otc 202 "dhcpd --mask=$__mask eth3"
 	otc 1  "acquire6 eth2"
@@ -265,15 +272,15 @@ test_dhcpv6() {
 test_cni_bridge() {
 	tcase "DHCP and SLAAC with the bridge CNI-plugin"
 	test_start netns
-	otc 202 "radvd_start --mask=64 eth3"
-	otc 202 "dhcpd eth3"
+	otc 202 "radvd_start --prefix=fd00:100::/64  eth3"
+	otc 202 "dhcpd4 --prefix=192.168.3.0/24 eth3"
 	otc 1 cni_dhcp_start
 	otc 1 netns
 	otc 1 "bridge_create eth2"
 	otc 1 "bridge_config eth2"
 	otc 1 "bridge_start eth2"
-	otc 1 "bridge_check_slaac eth2"
 	otc 1 "bridge_check_dhcp eth2"
+	otc 1 "bridge_check_slaac eth2"
 	xcluster_stop
 }
 
