@@ -27,6 +27,7 @@
  * [k8s-pv](./ovl/k8s-pv/README.md) - K8s Persistent Volumes
  * [k8s-sctp](./ovl/k8s-sctp/README.md) 
  * [k8s-xcluster](./ovl/k8s-xcluster/README.md) - Kubernetes in `xcluster` with downloaded CNI-plugin.
+ * [kselftest](./ovl/kselftest/README.md) - Use kernel selftests on `xcluster`
  * [kubeadm](./ovl/kubeadm/README.md) - Install K8s on `xcluster` with kubeadm
  * [kubernetes](./ovl/kubernetes/README.md) - A [Kubernetes](https://kubernetes.io/) cluster with built-in CNI-plugin.
  * [load-balancer](./ovl/load-balancer/README.md) - Different LB experiments

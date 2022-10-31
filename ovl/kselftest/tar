@@ -1,0 +1,36 @@
+#! /bin/sh
+# NOTE: A common pattern is to specify "-" (stdout) as out-file,
+#  so there must be NO log printouts to stdout!
+
+dir=$(dirname $0); dir=$(readlink -f $dir)
+tmp=/tmp/$USER/xcluster_$$
+die() {
+	echo "ERROR: $*" >&2
+	rm -rf $tmp
+	exit 1
+}
+log() {
+	echo "INFO: $*" >&2
+}
+
+mkdir -p $tmp
+test -n "$1" || die "No out-file"
+cp -R $dir/default/* $tmp
+: "${KERNELDIR:=$HOME/tmp/linux}"
+ksrc=$KERNELDIR/$__kver
+if test -d $ksrc; then
+	log "Including kernel source"
+	mkdir -p $tmp/kernel
+	cp -r $ksrc/* $tmp/kernel/
+	make -s -C $tmp/kernel/tools/ selftests_install
+	$XCLUSTER install_prog --dest=$tmp make
+	$XCLUSTER install_prog --dest=$tmp lscpu
+	$XCLUSTER install_prog --dest=$tmp taskset
+else
+	log "Kernel source not included"
+fi
+
+cd $tmp
+tar cf "$1" *
+cd - > /dev/null
+rm -rf $tmp
