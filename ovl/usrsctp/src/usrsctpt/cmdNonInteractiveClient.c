@@ -103,7 +103,7 @@ static int cmdNoInteractiveClient(int argc, char **argv)
 	socklen_t infolen = (socklen_t)sizeof(struct sctp_rcvinfo);
 	int flags = 0;
 
-	for (int i = 0; i < 100; i++) {
+	for (int i = 0; i < 10; i++) {
 		strncpy(buffer, send_string, strlen(send_string));
 		printf("send> %s\n", buffer); fflush(stdout);
 
@@ -122,6 +122,7 @@ static int cmdNoInteractiveClient(int argc, char **argv)
 		}
 		buffer[rc - 1] = 0;
 		printf("recv> %s\n", buffer); fflush(stdout);
+		sleep(SLEEP);
 	}
 
 	usrsctp_close(sock);

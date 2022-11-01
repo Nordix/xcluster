@@ -81,7 +81,7 @@ test_assured_connections() {
 	num_of_conns=1
 	test -n "$2" && num_of_conns="$2"
 	conntrack -p $1 -L
-	test $(conntrack -p $1 -L 2> /dev/null | grep ASSURED | wc -l) -eq $2
+	test $(conntrack -p $1 -L 2> /dev/null | grep ESTABLISHED | wc -l) -eq $2
 }
 
 cmd_tcase_deploy_client_pods() {

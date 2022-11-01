@@ -80,14 +80,14 @@ cmd_test() {
 }
 
 test_client() {
-	. ./network-topology/Envsettings
+	. ./network-topology/nat/Envsettings
 
 	export __image=$XCLUSTER_HOME/hd.img
 	test -r $__image || die "Not readable [$__image]"
 
 	xcluster_start iptools network-topology usrsctp
 
-	otc 201 "check_discard_init"
+	# otc 201 "check_discard_init"
 	otc 221 "start_server_router 192.168.3.221 7003"
 	otc 222 "start_server_router 192.168.3.222 7003"
 
@@ -119,7 +119,7 @@ test_client() {
 }
 
 test_client_mh() {
-	. ./network-topology/Envsettings
+	. ./network-topology/nat/Envsettings
 
 	export __image=$XCLUSTER_HOME/hd.img
 	test -r $__image || die "Not readable [$__image]"
@@ -157,7 +157,7 @@ test_client_mh() {
 }
 
 test_server() {
-	. ./network-topology/Envsettings
+	. ./network-topology/nat/Envsettings
 
 	export __image=$XCLUSTER_HOME/hd.img
 	test -r $__image || die "Not readable [$__image]"
@@ -197,7 +197,7 @@ test_server() {
 }
 
 test_k8s_client() {
-	. ./network-topology/Envsettings.k8s
+	. ./network-topology/k8s/Envsettings
 
 	__image=$XCLUSTER_HOME/hd-k8s-$__k8sver.img
 	test -r $__image || __image=$XCLUSTER_HOME/hd-k8s.img
@@ -209,7 +209,7 @@ test_k8s_client() {
 	otc 1 check_namespaces
 	otc 1 check_nodes
 	otc 221 start_server_router
-	otc 2 "check_discard_init"
+	# otc 2 "check_discard_init"
 
 	otc 201 vip_ecmp_route
 	otc 202 "vip_ecmp_route 2"
@@ -235,7 +235,7 @@ test_k8s_client() {
 }
 
 test_k8s_client_calico() {
-	. ./network-topology/Envsettings.k8s
+	. ./network-topology/k8s/Envsettings
 
 	# Test with k8s-xcluster;
 	__image=$XCLUSTER_HOME/hd-k8s-xcluster-$__k8sver.img
@@ -251,7 +251,7 @@ test_k8s_client_calico() {
 	otc 1 check_namespaces
 	otc 1 check_nodes
 	otc 221 start_server_router
-	otc 2 "check_discard_init"
+	# otc 2 "check_discard_init"
 
 	otc 201 vip_ecmp_route
 	otc 202 "vip_ecmp_route 2"
@@ -275,7 +275,7 @@ test_k8s_client_calico() {
 }
 
 test_k8s_server() {
-	. ./network-topology/Envsettings.k8s
+	. ./network-topology/k8s/Envsettings
 
 	__image=$XCLUSTER_HOME/hd-k8s-$__k8sver.img
 	test -r $__image || __image=$XCLUSTER_HOME/hd-k8s.img
@@ -288,7 +288,7 @@ test_k8s_server() {
 	otc 1 check_nodes
 	# otc 1 deploy_kpng_pods
 	otc 1 deploy_server_pods
-	otc 2 "check_discard_init"
+	# otc 2 "check_discard_init"
 
 	otc 201 vip_ecmp_route
 	otc 202 "vip_ecmp_route 2"
@@ -314,7 +314,7 @@ test_k8s_server() {
 }
 
 test_k8s_server_calico() {
-	. ./network-topology/Envsettings.k8s
+	. ./network-topology/k8s/Envsettings
 
 	# Test with k8s-xcluster;
 	__image=$XCLUSTER_HOME/hd-k8s-xcluster-$__k8sver.img
@@ -331,7 +331,7 @@ test_k8s_server_calico() {
 	otc 1 check_nodes
 	# otc 1 deploy_kpng_pods
 	otc 1 deploy_server_pods
-	otc 2 "check_discard_init"
+	# otc 2 "check_discard_init"
 
 	otc 201 vip_ecmp_route
 	otc 202 "vip_ecmp_route 2"
