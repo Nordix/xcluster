@@ -125,7 +125,7 @@ cmd_tcase_dhcpd6() {
 	cfg=/etc/dhcp/dhcp6.$iface.conf
 
 	tlog "Local address on $iface; $adr/$mask"
-	ip -6 addr add $adr/$mask dev $iface
+	ip -6 addr replace $adr/$mask dev $iface
 	export RSTART=$(ipu makeip --cidr=$cidr/120/120 --host=1)
 	export REND=$(ipu makeip --cidr=$cidr/120/120 --host=20)
 	export SUBNET="$__prefix"
@@ -175,9 +175,13 @@ cmd_tcase_radvd_start() {
 	cfg=/etc/radvd/radvd.$IFACE.conf
 	log=/var/log/radvd.$IFACE
 
-	tlog "Local address on $IFACE [$adr]"
+	tlog "Local address on $IFACE [$adr/$mask]"
 	ip -6 addr replace $adr/$mask dev $IFACE
 	envsubst < /etc/radvd/radvd.conf > $cfg
+	if test "$__manage" = "yes"; then
+		# Set the "ManagedFlag"
+		sed -i -e '/AdvSendAdvert on;/a  AdvManagedFlag on;' $cfg
+	fi
 	radvd -n -d 5 -C $cfg -m stderr > $log 2>&1 &
 }
 ##   slaac - Check SLAAC address
@@ -193,6 +197,7 @@ cmd_tcase_netns() {
 	tcase "Create Network Name spaces"
 	netns_test create
 }
+
 ##   bridge_create <iface> - Create a bridge and enslave the interface
 cmd_tcase_bridge_create() {
 	tcase "Create a bridge and enslave [$1]"
@@ -236,6 +241,22 @@ cmd_tcase_bridge_start() {
 			< $cfg > /tmp/$n.json &
 	done
 	wait
+}
+##   setup_vlan --tag=tag <iface> -- Setup a VLAN interfce
+cmd_tcase_setup_vlan() {
+	tcase "Setup VLAN [$1.$__tag]"
+	test -n "$1" || tdie "No interface"
+	test -n "$__tag" || tdie "No tag"
+	test -n "$1" && iface=$1
+	ip link show $iface.$__tag 2>&1 && return 0
+	ip link show $iface 2>&1 || tdie "invalid iface $iface"
+
+    echo 0 > /proc/sys/net/ipv6/conf/$iface/accept_dad
+    ip link set up $iface
+    ethtool -K $iface tx off
+    ip link add link $iface name $iface.$__tag type vlan id $__tag
+    echo 0 > /proc/sys/net/ipv6/conf/$iface.$__tag/accept_dad
+    ip link set up dev $iface.$__tag
 }
 ##   bridge_check_slaac - Check SLAAC addresses in PODs
 cmd_tcase_bridge_check_slaac() {

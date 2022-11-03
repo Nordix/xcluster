@@ -19,11 +19,15 @@ mkdir -p $tmp
 cp -R $dir/default/* $tmp
 
 $XCLUSTER install_prog --dest=$tmp envsubst
-$dir/dhcp.sh isc_binary > /dev/null || die "Dhcpd not built"
-x=$($dir/dhcp.sh isc_binary)
+$dir/dhcp.sh isc_dir > /dev/null || die isc_dir
+d=$($dir/dhcp.sh isc_dir)
+x=$d/dhcpd
 cp $x $tmp/bin
-x=$($dir/dhcp.sh radvd_binary)
-cp $x $tmp/bin
+$dir/dhcp.sh radvd_dir > /dev/null || die radvd_dir
+d=$($dir/dhcp.sh radvd_dir)
+for x in radvd radvdump; do
+	cp $d/$x $tmp/bin
+done
 
 test -n "$NFQLBDIR" || NFQLBDIR=$HOME/tmp/nfqlb
 x=$NFQLBDIR/bin/ipu

@@ -78,13 +78,13 @@ cmd_radvd_build() {
 	make -j$(nproc) || die make
 	make DESTDIR=$d/sys install || die "make install"
 }
-##   radvd_binary
-cmd_radvd_binary() {
+##   radvd_dir
+cmd_radvd_dir() {
 	cmd_env
 	local d=$XCLUSTER_WORKSPACE/radvd-$__radvdver
 	local x=$d/sys/usr/local/sbin/radvd
 	test -x $x || die "Not executable [$x]"
-	echo $x
+	echo $d
 }
 ##   radvd_man [page]
 ##     Displays a radvd man page
@@ -153,14 +153,14 @@ cmd_isc_man() {
 	cat $tmp/man | sort | column			
 }
 
-##   isc_binary
-##     Print the "dhcpd" binary or die trying
-cmd_isc_binary() {
+##   isc_dir
+##     Print the "dhcpd" directory or die trying
+cmd_isc_dir() {
 	cmd_env
-	local dir=$XCLUSTER_WORKSPACE/dhcp-$__iscver
+	local d=$XCLUSTER_WORKSPACE/dhcp-$__iscver/sys/usr/sbin
 	local x=$dir/sys/usr/sbin/dhcpd
-	test -x $x || die "Not executable [$x]"
-	echo $x
+	test -x $d/dhcpd || die "Not executable [$d/dhcpd]"
+	echo $d
 }
 
 ##
@@ -218,7 +218,7 @@ test_basic() {
 	test_start
 	test -n "$__mask" || __mask=120
 	otc 202 "dhcpd4 --prefix=192.168.3.0/24 eth3"
-	otc 202 "dhcpd6 --prefix=fd00:100::192.168.3.0/120 eth3"
+	otc 202 "dhcpd6 --prefix=fd00:100::/$__mask eth3"
 	otc 1 "acquire4 eth2"
 	#$XCLUSTER tcpdump --start 2 eth2; sleep 1
 	otc 2 "acquire6 --mask=$__mask eth2"
@@ -261,9 +261,9 @@ test_dhcpv6() {
 	test -n "$__template" || __template="fd00:100::192.168.0.0/112/120"
 	local prefix=$($NFQLBDIR/bin/ipu makeip --cidr=$__template --net=3 --subnet=2)
 	tlog "Prefix $prefix"
-	otc 202 "radvd_start --prefix=$prefix eth3"
+	otc 202 "radvd_start --prefix=$prefix --manage eth3"
 	tcase "Sleep 2..."; sleep 2
-	otc 202 "dhcpd --mask=$__mask eth3"
+	otc 202 "dhcpd6 --prefix=$prefix eth3"
 	otc 1  "acquire6 eth2"
 	xcluster_stop
 }
@@ -283,7 +283,18 @@ test_cni_bridge() {
 	otc 1 "bridge_check_slaac eth2"
 	xcluster_stop
 }
-
+##   test vlan
+##     DHCP and SLAAC on VLAN interfaces
+test_vlan() {
+	tcase "DHCP and SLAAC on VLAN interfaces"
+	test_start
+	otc 202 "setup_vlan --tag=100 eth3"
+	otc 202 "radvd_start --prefix=fd00:100::/64  eth3.100"
+	otc 202 "dhcpd4 --prefix=192.168.3.0/24 eth3.100"
+	otcw "setup_vlan --tag=100 eth2"
+	otcw "acquire4 eth2.100"
+	xcluster_stop	
+}
 
 . $($XCLUSTER ovld test)/default/usr/lib/xctest
 indent=''

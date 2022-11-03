@@ -76,6 +76,7 @@ RA messages are used to generate addresses with
 ```
 
 
+
 ## DHCPv6 and Router Advertisement messages
 
 Even if DHCPv6 is used (instead of SLAAC) [RAs are still needed](
