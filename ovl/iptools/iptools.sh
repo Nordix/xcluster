@@ -112,11 +112,14 @@ build_iproute2() {
 	d=$XCLUSTER_WORKSPACE/$1
 	test -d $__kobj/sys/include || cmd_build_kernel_headers
 	rm -fr $d
-	ar=$1.tar.gz
+	ar=$1.tar.xz
 	tar -C $XCLUSTER_WORKSPACE -xf $ARCHIVE/$ar || die tar
 	cd $d
 	make KERNEL_INCLUDE=$__kobj/sys/include || die make
 	make DESTDIR=$d/sys install || die "make install"
+	cd man
+	make || die "make man"
+	make DESTDIR=$d/sys/man install || die "make install man"
 	echo "Built at [$d]"
 }
 
@@ -169,7 +172,7 @@ conntrack_tools_ver=1.4.6
 ipvsadm_ver=1.31
 ipset7_ver=7.15
 ipset_ver=6.38
-iproute2_ver=5.19.0
+iproute2_ver=6.0.0
 ulogd_ver=2.0.7
 ver() {
 	eval "echo \$${1}_ver"
@@ -177,6 +180,29 @@ ver() {
 
 # ----------------------------------------------------------------------
 #
+cmd_man() {
+	if test -z "$MANPATH"; then
+		xterm -bg '#ddd' -fg '#222' -geometry 80x43 -T $1 -e man $1 &
+		return 0
+	fi
+
+	if test -z "$1"; then
+		local f
+		mkdir -p $tmp
+		for f in $(find $MANPATH/ -type f); do
+			basename $f >> $tmp/man
+		done
+		cat $tmp/man | sort | column
+		return 0
+	fi
+	export MANPATH
+	xterm -bg '#ddd' -fg '#222' -geometry 80x43 -T $1 -e man $1 &
+}
+##   man_iproute2 [page]
+cmd_man_iproute2() {
+	export MANPATH=$XCLUSTER_WORKSPACE/iproute2-$iproute2_ver/sys/man
+	cmd_man $@
+}
 
 cmd_build_kernel_headers() {
 	eval $($XCLUSTER env | grep -E '__kver|__kobj|KERNELDIR')
@@ -213,7 +239,6 @@ cmd_download() {
 }
 
 ##   build [items...]
-##
 cmd_build() {
 	if test -n "$1"; then
 		for n in $@; do
@@ -227,6 +252,7 @@ cmd_build() {
 }
 
 
+##
 # Check the hook
 if test -r $hook; then
 	. $hook
