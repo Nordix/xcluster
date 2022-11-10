@@ -141,6 +141,11 @@ cmd_tcase_setup_routes() {
 	tcase "Setup routing to POD networks on other nodes"
 	cmd_setup_routes
 }
+##   setup_overlay - Setup network overlay and routing
+cmd_tcase_setup_overlay() {
+	tcase "Setup network overlay and routing"
+	cmd_setup_overlay
+}
 ##   default_route - Setup default routes in PODs
 cmd_tcase_default_route() {
 	tcase "Setup default routes in PODs"
@@ -323,7 +328,7 @@ cmd_rndaddress_pods() {
 		test "$2" != "6" && \
 			ipu makeip --cidr=$ADRTEMPLATE --host=$a --subnet=2
 		test "$2" != "4" && \
-			ipu makeip --cidr=$ADRTEMPLATE --host=$a --subnet=2 --ipv6template=1000::1:0.0.0.0
+			ipu makeip --cidr=$ADRTEMPLATE --host=$a --subnet=2 --ipv6template=$PREFIX:0.0.0.0
 		ns=$((ns + 1))
 	done
 }
@@ -337,7 +342,7 @@ cmd_address_pods() {
 		test "$2" != "6" && \
 			ipu makeip --cidr=$ADRTEMPLATE --net=$node --host=$pod --subnet=2
 		test "$2" != "4" && \
-			ipu makeip --cidr=$ADRTEMPLATE --net=$node --host=$pod --subnet=2 --ipv6template=1000::1:0.0.0.0
+			ipu makeip --cidr=$ADRTEMPLATE --net=$node --host=$pod --subnet=2 --ipv6template=$PREFIX:0.0.0.0
 	done
 }
 
@@ -461,6 +466,29 @@ cmd_setup_routes() {
 		ip -6 route add $adr via $via
 	done
 }
+##   setup_overlay [--net=1]
+##     Setup network overlay and routing
+cmd_setup_overlay() {
+	local node adr via dev src
+	local mynode=$(mynode)
+	local net=1
+	test -n "$__net" && net=$__net
+	dev=eth$net
+
+	ip link add ip6tnl6 type ip6tnl dev $dev external
+	ip link set up dev ip6tnl6
+
+	src=$(ipu linklocal 00:00:00:01:$net:$mynode)
+	for node in $(seq 1 $__nvm); do
+		test $node -eq $mynode && continue
+		via=$PREFIX:192.168.$net.$node
+		#via=$(ipu linklocal 00:00:00:01:$net:$node)
+		adr=$(ipu makeip --cidr=$ADRTEMPLATE --net=$node --subnet=2)
+		ip route add $adr dev ip6tnl6 encap ip6 dst $via
+		adr=$(ipu makeip --cidr=$ADRTEMPLATE --net=$node --subnet=2 --ipv6template=$PREFIX:0.0.0.0)
+		ip -6 route add $adr dev ip6tnl6 encap ip6 dst $via
+	done
+}
 ##   add_ipvlan <master-dev>
 ##     Add ipvlan's to PODs and "ipvlan-<master-dev>" in main netns
 cmd_add_ipvlan() {
@@ -493,7 +521,7 @@ cmd_ping_all_random() {
 }
 ##   ping_all_pods
 ##     Ping all pods. Random addresses must NOT be used. Bridges are not pinged
-cmd_tcase_ping_all_pods() {
+cmd_ping_all_pods() {
 	local node adr
 	for node in $(seq 1 $__nvm); do
 		for adr in $(cmd_address_pods $node | cut -d/ -f1); do
@@ -542,7 +570,7 @@ cmd_tcase_xnetns() {
 		ip -n $name link set up dev $iface
 		adr=$(ipu makeip --cidr=$ADRTEMPLATE --subnet=2 --host=100)
 		ip -n $name addr add $adr dev $iface
-		adr=$(ipu makeip --cidr=$ADRTEMPLATE --subnet=2 --host=100 --ipv6template=1000::1:0.0.0.0)
+		adr=$(ipu makeip --cidr=$ADRTEMPLATE --subnet=2 --host=100 --ipv6template=$PREFIX:0.0.0.0)
 		ip -6 -n $name addr add $adr dev $iface
 	done
 }

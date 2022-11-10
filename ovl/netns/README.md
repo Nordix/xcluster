@@ -134,3 +134,26 @@ It should be possible to use the same addresses on isolated bridges.
 ```
 
 Ping `172.16.0.100` from any POD on `vm-001`.
+
+
+## Network overlay
+
+In some environments only node addresses are allowed on the network,
+i.e. no generated POD addresses are allowed. In that case we need a
+network overlay.
+
+We assume that all nodes have ipv6 addresses assigned by the
+infra-structure owner (possibly by SLAAC). This makes it possible to
+create an overlay that carry both ipv4 and ipv6 (any addresses) but
+only exposes the node's official addresses. First choice may be
+`vxlan` which seem to be most commonly used for network overlays, but
+there is a [setup
+problem](https://serverfault.com/questions/1115128/how-to-setup-tunnel-vxlan-using-ip-encap-for-ipv6-on-linux),
+so
+[ip6tnl](https://developers.redhat.com/blog/2019/05/17/an-introduction-to-linux-virtual-interfaces-tunnels#ip6tnl_tunnel)
+is used instead.
+
+#### Link-local addresses
+
+I *should* be possible to use ipv6 link-local addresses but they are
+rejected by the `ip` program.

@@ -143,6 +143,20 @@ test_L3() {
 	xcluster_stop
 }
 
+##   test L3_overlay
+##     Create an L3 network with network overlay
+test_L3_overlay() {
+	tlog "=== Test L3 overlay network"
+	test_start
+	otcw forward
+	otcw create_with_addresses
+	otcw linux_bridge
+	otcw default_route
+	otcw setup_overlay
+	otc 1 ping_all_pods
+	xcluster_stop
+}
+
 ##   test ipvlan
 ##     Create an ipvlan network with all PODS.
 test_ipvlan() {
