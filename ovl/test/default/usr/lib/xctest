@@ -241,19 +241,31 @@ test_daemonset() {
 	tcase "Checking DaemonSet [$1] (nodes=$nodes)"
 	$kubectl get daemonset $1 -o json > $tmp/out || tdie
 	local desired=$(cat $tmp/out | jq -r .status.desiredNumberScheduled)
+	# daemonset.status.desiredNumberScheduled=0 for some time in v1.26.0-beta.0
+	# https://github.com/kubernetes/kubernetes/issues/113844
+	# TODO; This is a hack. re-write the desired/ready tests
+	while test $desired -eq 0; do
+		echo "Nodes=$nodes, desired=$desired"
+		sleep 1
+		$kubectl get daemonset $1 -o json > $tmp/out || tdie
+		desired=$(cat $tmp/out | jq -r .status.desiredNumberScheduled)
+	done
 	test $nodes -eq $desired || tlog "Nodes=$nodes but desired=$desired"
 	local selector=$(get_selector < $tmp/out)
 	test -n "$2" && pushv $2
-	tex "daemonset_ready $1 $desired" || tdie
+	tex "daemonset_ready $1" || tdie
+	desired=$(cat $tmp/out | jq -r .status.desiredNumberScheduled)
 	tex "npods $selector $desired" || tdie
 	tex "check_pods_ready $selector" || tdie
 	test -n "$2" && popv
 	return 0	
 }
 daemonset_ready() {
-	local ready=$($kubectl get daemonset $1 -o json | jq -r .status.numberReady)
-	echo "DaemonSet [$1], ready=$ready"
-	test $2 -eq $ready
+	$kubectl get daemonset $1 -o json > $tmp/out || tdie
+	local desired=$(cat $tmp/out | jq -r .status.desiredNumberScheduled)
+	local ready=$(cat $tmp/out | jq -r .status.numberReady)
+	echo "DaemonSet [$1], ready=$ready, desired=$desired"
+	test $desired -eq $ready
 }
 get_selector() {
 	jq -r '.spec.selector.matchLabels|to_entries[0]|.key + "=" + .value'
