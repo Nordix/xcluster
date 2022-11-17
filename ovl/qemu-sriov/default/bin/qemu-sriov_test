@@ -75,6 +75,21 @@ cmd_tcase_ifup() {
 	ip addr add $adr/24 dev $dev || tdie "Assign $adr"
 	ip -6 addr add $PREFIX:$adr/120 dev $dev || tdie "Assign $PREFIX:$adr"
 }
+cmd_tcase_wait_for_link_up() {
+	local timeout=10
+	local state="UP"
+	local dev="eth1"
+	test -n "$1" && dev="$1"
+	tcase "Wait for link $dev $state"
+	pushv $timeout
+	tex "check_link_state $dev $state"
+}
+check_link_state() {
+	dev="$1"
+	state="$2"
+	echo "$(ip link show dev $dev | grep 'state' | cut -d ' ' -f9)"
+	test $(ip link show dev $dev | grep 'state' | cut -d ' ' -f9) == $state
+}
 ##   tcase_ping addr
 ##     Ping address
 cmd_tcase_ping() {
