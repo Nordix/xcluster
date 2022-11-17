@@ -28,7 +28,7 @@ Build a local qemu;
 QEMUDIR=$GOPATH/src/github.com/qemu/qemu  # (set by; . ./Envsettings)
 mkdir -p $(dirname $QEMUDIR)
 cd $(dirname $QEMUDIR)
-git clone -b nic-igb git@github.com:Nordix/qemu.git
+git clone -b igb-device git@github.com:Nordix/qemu.git
 cd $QEMUDIR
 git remote add upstream https://github.com/qemu/qemu.git
 git remote set-url --push upstream no_push
@@ -69,6 +69,19 @@ echo 2 > /sys/bus/pci/devices/0000:01:00.0/sriov_numvfs
 lspci | grep 82576
 ```
 
+## KVM permissions
+If your user doesn't have permissions for KVM, an error like this is displayed
+```
+bash-5.1$ $__kvm
+Could not access KVM kernel module: Permission denied
+qemu-system-x86_64: failed to initialize kvm: Permission denied
+```
+
+Make sure your user is part of kvm group and check the permissions for /dev/kvm
+```
+chown root:kvm /dev/kvm
+chmod 660 /dev/kvm
+```
 ## Test
 
 ```

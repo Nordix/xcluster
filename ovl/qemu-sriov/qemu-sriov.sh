@@ -82,7 +82,8 @@ test_start_empty() {
 	test -n "$__kvm" -a -n "$__net_setup" -a -n "$__kvm_opt" || \
 		tdie "Not sourced; . ./Envsettings"
 	export __image=$XCLUSTER_HOME/hd.img
-	export __nrouters=0
+	test -n "$__nvm" || __nvm=2
+	test -n "$__nrouters" || __nrouters=0
 	echo "$XOVLS" | grep -q private-reg && unset XOVLS
 	xcluster_start lspci iptools qemu-sriov
 }
@@ -110,7 +111,9 @@ test_packet_handling() {
 	tlog "=== Bring eth1 up on vm-001 and vm-002 and test traffic"
 	test_start
 	otc 1 "ifup eth1 192.168.1.1"
+	otc 1 "wait_for_link_up eth1"
 	otc 2 "ifup eth1 192.168.1.2"
+	otc 2 "wait_for_link_up eth1"
 	otc 1 "ping 192.168.1.2"
 	xcluster_stop
 }
