@@ -34,7 +34,6 @@ dbg() {
 
 ##   env
 ##     Print environment.
-##
 cmd_env() {
 
     test -n "$__tag" || __tag="registry.nordix.org/cloud-native/mserver:latest"
@@ -48,11 +47,19 @@ cmd_env() {
 	test -x "$XCLUSTER" || die "Not executable [$XCLUSTER]"
 	eval $($XCLUSTER env)
 }
+##   mkimage [--tag=registry.nordix.org/cloud-native/mserver:latest]
+##     Create image and upload to local regisytry
+cmd_mkimage() {
+	cmd_env
+	local images=$($XCLUSTER ovld images)/images.sh
+	test -x $images || die "Not executable [$images]"
+	test -n "$__version" || __version=latest
+	$images mkimage --tag=$__tag --force --upload --strip-host ./image
+}
 
-##   test --list
+##
 ##   test [--xterm] [test...] > logfile
 ##     Exec tests
-##
 cmd_test() {
 	if test "$__list" = "yes"; then
         grep '^test_' $me | cut -d'(' -f1 | sed -e 's,test_,,'
@@ -121,19 +128,8 @@ test_sctpt() {
 	xcluster_stop
 }
 
-##
-##   mkimage [--tag=registry.nordix.org/cloud-native/mserver:latest]
-##     Create image and upload to local regisytry
-cmd_mkimage() {
-	cmd_env
-	local images=$($XCLUSTER ovld images)/images.sh
-	test -x $images || die "Not executable [$images]"
-	test -n "$__version" || __version=latest
-	$images mkimage --tag=$__tag --force --upload --strip-host ./image
-}
 
 ##
-
 . $($XCLUSTER ovld test)/default/usr/lib/xctest
 indent=''
 
