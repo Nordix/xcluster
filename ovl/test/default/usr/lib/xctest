@@ -521,7 +521,7 @@ vip_route() {
 		hops6="$hops6 nexthop via $PREFIX:192.168.$net.$i"
 	done
 	ip ro replace 10.0.0.0/24 $hops4|| tdie "Ipv4 routes"
-	ip -6 ro replace 1000::1:10.0.0.0/120 $hops6 || tdie "Ipv6 routes"
+	ip -6 ro replace $PREFIX:10.0.0.0/120 $hops6 || tdie "Ipv6 routes"
 	ip -6 ro replace 1000::/120 $hops6 || tdie "Ipv6 routes"
 }
 

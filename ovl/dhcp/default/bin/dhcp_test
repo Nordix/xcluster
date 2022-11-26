@@ -165,7 +165,7 @@ cmd_tcase_acquire6() {
 cmd_tcase_radvd_start() {
 	tcase "Start router advertisement daemon [$1]"
 	test -n "$1" || tdie "No interface"
-	test -n "$__prefix" || fd00:100::/64
+	test -n "$__prefix" || __prefix=fd00:100::/64
 	local cfg log cidr mask adr
 	cidr=$(echo $__prefix | cut -d/ -f1)
 	mask=$(echo $__prefix | cut -d/ -f2)
