@@ -36,7 +36,7 @@ dbg() {
 ##    Print environment.
 ##
 cmd_env() {
-	test -n "$__multus_ver" || __multus_ver=3.9
+	test -n "$__multus_ver" || __multus_ver=3.9.2
     test -n "$__tag" || __tag="registry.nordix.org/cloud-native/multus-installer:$__multus_ver"
 
 	if test "$cmd" = "env"; then

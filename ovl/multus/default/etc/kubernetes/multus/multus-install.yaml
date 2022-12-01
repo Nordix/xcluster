@@ -109,7 +109,7 @@ spec:
       - name: multus-install
         securityContext:
           privileged: true  
-        image: registry.nordix.org/cloud-native/multus-installer:3.9
+        image: registry.nordix.org/cloud-native/multus-installer:3.9.2
         volumeMounts:
           - mountPath: /opt/cni/bin
             name: cni-bin
