@@ -12,6 +12,9 @@ dir=$(dirname $0); dir=$(readlink -f $dir)
 me=$dir/$prg
 tmp=/tmp/${prg}_$$
 test -n "$PREFIX" || PREFIX=1000::1
+yamld=/etc/kubernetes/sriov
+test_yamld=/etc/kubernetes/test
+multus_yamld=/etc/kubernetes/multus
 
 die() {
 	echo "ERROR: $*" >&2
@@ -33,17 +36,22 @@ dbg() {
 	test -n "$__verbose" && echo "$prg: $*" >&2
 }
 
-
+cmd_tcase_check_namespaces() {
+    test_namespaces $1
+}
+cmd_tcase_check_nodes() {
+    test_nodes
+}
 ##   tcase_modprobe
 ##     Load the igb modules
 cmd_tcase_modprobe() {
+	test -n "$1" || tdie "No dev"
+	local dev=$1
 	tcase "Load the igb modules"
-	# Check that eth1 doesn't exist (since igb isn't loaded yet)
-	ip link show dev eth1 2>&1 && tdie "Eth1 exist. Modules already loaded?"
+	ip link show dev $dev 2>&1 && tlog "$dev exist. Modules already loaded?" && return
 	modprobe igb || tdie "modprobe igb"
 	modprobe igbvf || tdie "modprobe igbvf"
-	# Now eth1 should exist
-	ip link show dev eth1 || tdie "Eth1 was not created"
+	ip link show dev $dev || tdie "$dev was not created"
 	# Check the PF
 	check_82576 1 || tdie "Check PF"
 }
@@ -63,9 +71,15 @@ check_82576() {
 	echo "Found 82576 devices [$n], expected [$1]"
 	test $n -eq $1
 }
+cmd_tcase_ifup() {
+	tcase "Bring up dev [$1]"
+	test -n "$1" || tdie "No dev"
+	local dev=$1
+	ip link set up dev $dev || die "Up $dev"
+}
 ##   tcase_ifup dev ipv4
 ##     Bring up an interface and set addresses
-cmd_tcase_ifup() {
+cmd_tcase_ifup_addr() {
 	tcase "Bring up dev [$1]"
 	test -n "$1" || tdie "No dev"
 	test -n "$2" || tdie "No address"
@@ -90,12 +104,43 @@ check_link_state() {
 	echo "$(ip link show dev $dev | grep 'state' | cut -d ' ' -f9)"
 	test $(ip link show dev $dev | grep 'state' | cut -d ' ' -f9) == $state
 }
+cmd_tcase_wait_for_ping() {
+	local timeout=10
+	local addr="$1"
+	tcase "Wait for ping $addr"
+	pushv $timeout
+	tex "ping -c1 -W1 $addr"
+}
 ##   tcase_ping addr
 ##     Ping address
 cmd_tcase_ping() {
 	tcase "Ping [$1]"
 	test -n "$1" || tdie "No address"
 	ping -c1 -W1 $1 || tdie "Ping [$1]"
+}
+cmd_tcase_deploy_multus() {
+	tcase "Deploy Multus installer"
+	$kubectl apply -f $multus_yamld/multus-install.yaml
+	kubectl="kubectl -n kube-system" test_daemonset multus-install 180
+}
+cmd_tcase_deploy_whereabouts() {
+	tcase "Deploy whereabouts"
+	local d=/etc/kubernetes/whereabouts
+	$kubectl apply -f $d/whereabouts.cni.cncf.io_ippools.yaml || tdie
+	$kubectl apply -f $d/whereabouts.cni.cncf.io_overlappingrangeipreservations.yaml || tdie
+
+}
+cmd_tcase_deploy_sriov_daemonsets() {
+	tcase "Deploy SRIOV daemonsets"
+	apply_k8s $yamld
+	kubectl="kubectl -n kube-system" test_daemonset kube-sriov-cni-ds-amd64 180
+	kubectl="kubectl -n kube-system" test_daemonset kube-sriov-device-plugin-amd64 180
+}
+cmd_tcase_deploy_test_deployments() {
+	tcase "Deploy test deployments"
+	apply_k8s $test_yamld
+	test_deployment test-deploy1 180
+	test_deployment test-deploy2 180
 }
 
 . /etc/profile

@@ -93,3 +93,36 @@ Current status;
 * ./qemu-sriov.sh test vfs -- Works
 * ./qemu-sriov.sh test packet_handling -- Does NOT work
 
+## SRIOV cni and device plugins
+## Build
+
+Build sriov-cni;
+```
+# Clone;
+SRIOV_CNI_DIR=$GOPATH/src/github.com/k8snetworkplumbingwg/sriov-cni  # (set by; . ./Envsettings)
+mkdir -p $(dirname $SRIOV_CNI_DIR)
+cd $(dirname $SRIOV_CNI_DIR)
+git clone git@github.com/k8snetworkplumbingwg/sriov-cni.git
+cd $SRIOV_CNI_DIR
+
+# Build;
+cd $SRIOV_CNI_DIR
+make
+docker build . -t registry.nordix.org/cloud-native/sriov-cni:latest
+images lreg_upload --force --strip-host registry.nordix.org/cloud-native/sriov-cni:latest
+```
+
+Build sriov-network-device-plugin;
+```
+# Clone;
+SRIOV_DP_DIR=$GOPATH/src/github.com/k8snetworkplumbingwg/sriov-network-device-plugin  # (set by; . ./Envsettings)
+mkdir -p $(dirname $SRIOV_DP_DIR)
+cd $(dirname $SRIOV_DP_DIR)
+git clone -b igb-device git@github.com/k8snetworkplumbingwg/sriov-cni.git
+cd $SRIOV_DP_DIR
+
+# Build;
+cd $SRIOV_DP_DIR
+TAG=registry.nordix.org/cloud-native/sriov-network-device-plugin:latest make image
+images lreg_upload --force --strip-host registry.nordix.org/cloud-native/sriov-network-device-plugin:latest
+```

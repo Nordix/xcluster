@@ -1,0 +1,3 @@
+
+. ./Envsettings
+export __net_setup=$PWD/config/net-setup-netns-k8s.sh

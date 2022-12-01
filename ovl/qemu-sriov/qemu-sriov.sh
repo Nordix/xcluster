@@ -85,14 +85,66 @@ test_start_empty() {
 	test -n "$__nvm" || __nvm=2
 	test -n "$__nrouters" || __nrouters=0
 	echo "$XOVLS" | grep -q private-reg && unset XOVLS
-	xcluster_start lspci iptools qemu-sriov
+	xcluster_start lspci iptools iperf qemu-sriov
+}
+
+##   test start_empty
+##     Starts an empty cluster.
+test_start_k8s() {
+	. ./Envsettings.k8s
+	test -n "$__kvm" -a -n "$__net_setup" -a -n "$__kvm_opt" || \
+		tdie "Not sourced; . ./Envsettings.k8s"
+
+	# Test with k8s-xcluster;
+	__image=$XCLUSTER_HOME/hd-k8s-xcluster-$__k8sver.img
+	test -r $__image || __image=$XCLUSTER_HOME/hd-k8s-xcluster.img
+	export __image
+	test -r $__image || die "Not readable [$__image]"
+	export XCTEST_HOOK=$($XCLUSTER ovld k8s-xcluster)/xctest-hook
+	export xcluster_FIRST_WORKER=2
+
+	# Test with k8s;
+	# __image=$XCLUSTER_HOME/hd-k8s-$__k8sver.img
+	# test -r $__image || __image=$XCLUSTER_HOME/hd-k8s.img
+	# export __image
+	# test -r $__image || die "Not readable [$__image]"
+	export TOPOLOGY="multilan"
+	. $($XCLUSTER ovld network-topology)/$TOPOLOGY/Envsettings
+	export __nets_vm=0,1,3
+	export __nvm=3
+	export __nrouters=0
+	xcluster_start multus k8s-cni-calico lspci iptools network-topology iperf qemu-sriov
+
+	otc 1 check_namespaces
+	otc 1 check_nodes
+
+	otcw "modprobe eth2"
+	otc 2 "ifup eth2"
+	otc 2 "wait_for_link_up eth2"
+	otc 3 "ifup eth2"
+	otc 3 "wait_for_link_up eth2"
+
+	# otc 2 "ifup_addr eth2 192.168.3.1"
+	# otc 2 "wait_for_link_up eth2"
+	# otc 3 "ifup_addr eth2 192.168.3.2"
+	# otc 3 "wait_for_link_up eth2"
+	# otc 2 "wait_for_ping 192.168.3.2"
+
+	# otc 2 "create_vfs"
+	# otc 3 "create_vfs"
+
+	# otc 1 deploy_whereabouts
+	# otc 1 deploy_multus
+	# otc 1 deploy_sriov_daemonsets
+
+	# otc 1 deploy_test_deployments
 }
 
 ##   test start
 ##     Starts a cluster with igb modules loaded . Prerequisite; . ./Envsettings
 test_start() {
 	test_start_empty
-	otcw modprobe
+	otcw "modprobe eth1"
 }
 
 ##   test vfs
@@ -110,11 +162,11 @@ test_vfs() {
 test_packet_handling() {
 	tlog "=== Bring eth1 up on vm-001 and vm-002 and test traffic"
 	test_start
-	otc 1 "ifup eth1 192.168.1.1"
+	otc 1 "ifup_addr eth1 192.168.1.1"
 	otc 1 "wait_for_link_up eth1"
-	otc 2 "ifup eth1 192.168.1.2"
+	otc 2 "ifup_addr eth1 192.168.1.2"
 	otc 2 "wait_for_link_up eth1"
-	otc 1 "ping 192.168.1.2"
+	otc 1 "wait_for_ping 192.168.1.2"
 	xcluster_stop
 }
 
