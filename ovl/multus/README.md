@@ -35,6 +35,15 @@ but *it is not altered*. CNI-plugins are installed in `/opt/cni/bin/`
 and a Network Attachment Definition (NAD) is created for the original
 K8s CNI-plugin.
 
+Tested (just simple deployment) with the following K8s base CNI-plugins;
+
+* kindnet
+* flannel
+* calico
+* cilium
+* antrea
+
+
 
 ### Life cycle
 
