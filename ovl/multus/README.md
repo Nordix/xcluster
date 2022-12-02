@@ -6,12 +6,66 @@ Kubernetes xcluster. The
 IPAM is used for the `ipvlan` example only since it doesn't support dual-stack.
 
 
-## Install
+## Multus Installer
+
+The Multus [Quickstart Installation
+Guide](https://github.com/k8snetworkplumbingwg/multus-cni#quickstart-installation-guide)
+can't be applied without tweaks. For instance, it assumes flannel. To
+overcome the shortcomings a `multus-installer` image is provided. It
+can be applied without modifications in most cases, e.g. in a
+[KinD](https://kind.sigs.k8s.io/) cluster;
+
+```
+kubectl apply -f https://raw.githubusercontent.com/Nordix/xcluster/master/ovl/multus/multus-install.yaml
+```
+
+The structure in `/etc/cni/` is altered. Example from KinD:
+
+```
+# Before:
+/etc/cni/net.d/10-kindnet.conflist
+# After;
+/etc/cni/net.d/multus.d/multus.kubeconfig
+/etc/cni/net.d/10-multus.conf
+/etc/cni/multus/net.d/kindnet.conflist
+```
+
+The original CNI-plugin config is moved to `/etc/cni/multus/net.d/`,
+but *it is not altered*. CNI-plugins are installed in `/opt/cni/bin/`
+and a Network Attachment Definition (NAD) is created for the original
+K8s CNI-plugin.
+
+
+### Life cycle
+
+The installation is done in an initContainer and then the POD is
+paused (the main container image is "pause"). Installation is done
+once, so you *may* remove the `multus-installer` after installation.
+The version of the `multus-installer` image is the same as the version
+of Multus it has installed.
+
+The logs shows the install process;
+```
+> kubectl logs -n kube-system multus-install-q9cjh -c multus-install
+Installing cni-bin:v1.1.1 and multus:3.9.2 in /opt/cni/bin
+multus-installer.sh: Installing Multus...
+multus-installer.sh: Generate; /etc/cni/net.d/multus.d/multus.kubeconfig
+multus-installer.sh: Current net config; /etc/cni/net.d/10-kindnet.conflist, net=kindnet
+networkattachmentdefinition.k8s.cni.cncf.io/kindnet created
+multus-installer.sh: Multus enabled
+multus-installer.sh: Multus installed
+```
+
+
+### Build
 
 Download multus and the cni-plugins to $HOME/Downloads or $ARCHIVE.
 
-* multus-cni_3.8_linux_amd64.tar.gz
-* cni-plugins-linux-amd64-v1.0.1.tgz
+Get versions;
+```
+./multus.sh version
+$($XCLUSTER ovld cni-plugins)/cni-plugins.sh version
+```
 
 Whereabouts must be cloned and built locally;
 ```
@@ -22,7 +76,13 @@ cd $WHEREABOUTS_DIR
 ./hack/build-go.sh
 ```
 
-## Usage
+Build the image;
+```
+./multus.sh mkimage
+```
+
+
+## Test in xcluster
 
 The [multinet](../network-topology/README.md#multinet)
 network-topology is used which provides additional networks for the

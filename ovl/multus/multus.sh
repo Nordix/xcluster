@@ -167,7 +167,7 @@ test_annotation() {
 	tlog "=== Test with node-annotation IPAM"
 	test_start_empty
 	tcase "Apply Multus installer"
-	kubectl apply -f $dir/default/etc/kubernetes/multus/multus-install.yaml \
+	kubectl apply -f $dir/multus-install.yaml \
 		|| tdie "Multus installer"
 	otcw annotate
 	otc 1 bridge

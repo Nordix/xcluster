@@ -40,12 +40,17 @@ cp -L $f $tmp/bin
 
 test -n "$WHEREABOUTS_DIR" || WHEREABOUTS_DIR=$GOPATH/src/github.com/k8snetworkplumbingwg/whereabouts
 f=$WHEREABOUTS_DIR/bin/whereabouts
-test -x $f && cp $f $tmp/root
+if test -x $f; then
+	log "Including whereabouts ipam"
+	cp $f $tmp/root
+fi
 
 test -n "$NODEANNOTATION_DIR" || NODEANNOTATION_DIR=$GOPATH/src/github.com/Nordix/ipam-node-annotation
 f=$NODEANNOTATION_DIR/node-annotation
-test -x $f && cp $f $tmp/root
-
+if test -x $f; then
+	log "Including node-annotation ipam"
+	cp $f $tmp/root
+fi
 
 
 cd $tmp
