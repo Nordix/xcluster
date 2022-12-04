@@ -1,3 +1,6 @@
 
 . ./Envsettings
+SRIOV_CNI_DIR=$GOPATH/src/github.com/k8snetworkplumbingwg/sriov-cni
+SRIOV_DP_DIR=$GOPATH/src/github.com/k8snetworkplumbingwg/sriov-network-device-plugin
+
 export __net_setup=$PWD/config/net-setup-netns-k8s.sh

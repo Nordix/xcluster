@@ -94,7 +94,10 @@ Current status;
 * ./qemu-sriov.sh test packet_handling -- Does NOT work
 
 ## SRIOV cni and device plugins
-## Build
+We need SRIOV CNI and device plugins to orchestrate discovery of
+the SRIOV VFs and assigning them to the pods.
+
+### Build
 
 Build sriov-cni;
 ```
@@ -125,4 +128,10 @@ cd $SRIOV_DP_DIR
 cd $SRIOV_DP_DIR
 TAG=registry.nordix.org/cloud-native/sriov-network-device-plugin:latest make image
 images lreg_upload --force --strip-host registry.nordix.org/cloud-native/sriov-network-device-plugin:latest
+```
+
+### Test with k8s
+```
+./qemu-sriov.sh                         # Help printout
+./qemu-sriov.sh test start_k8s > $log   # Default k8s test
 ```

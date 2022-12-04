@@ -103,11 +103,6 @@ test_start_k8s() {
 	export XCTEST_HOOK=$($XCLUSTER ovld k8s-xcluster)/xctest-hook
 	export xcluster_FIRST_WORKER=2
 
-	# Test with k8s;
-	# __image=$XCLUSTER_HOME/hd-k8s-$__k8sver.img
-	# test -r $__image || __image=$XCLUSTER_HOME/hd-k8s.img
-	# export __image
-	# test -r $__image || die "Not readable [$__image]"
 	export TOPOLOGY="multilan"
 	. $($XCLUSTER ovld network-topology)/$TOPOLOGY/Envsettings
 	export __nets_vm=0,1,3
@@ -124,20 +119,14 @@ test_start_k8s() {
 	otc 3 "ifup eth2"
 	otc 3 "wait_for_link_up eth2"
 
-	# otc 2 "ifup_addr eth2 192.168.3.1"
-	# otc 2 "wait_for_link_up eth2"
-	# otc 3 "ifup_addr eth2 192.168.3.2"
-	# otc 3 "wait_for_link_up eth2"
-	# otc 2 "wait_for_ping 192.168.3.2"
+	otc 2 "create_vfs"
+	otc 3 "create_vfs"
 
-	# otc 2 "create_vfs"
-	# otc 3 "create_vfs"
+	otc 1 deploy_whereabouts
+	otc 1 deploy_multus
+	otc 1 deploy_sriov_daemonsets
 
-	# otc 1 deploy_whereabouts
-	# otc 1 deploy_multus
-	# otc 1 deploy_sriov_daemonsets
-
-	# otc 1 deploy_test_deployments
+	otc 1 deploy_test_deployments
 }
 
 ##   test start
