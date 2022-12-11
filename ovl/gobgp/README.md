@@ -1,5 +1,4 @@
-Xcluster ovl - gobgp
-====================
+# Xcluster ovl - gobgp
 
 Use [gobgp](https://github.com/osrg/gobgp) (BGP in golang) in xcluster
 routers. Gobgp with the `zebra` backend is started on router and

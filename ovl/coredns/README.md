@@ -1,6 +1,6 @@
 # Xcluster ovl - CoreDNS
 
-* CoreDNS POD in `xcluster` (obsolete)
+CoreDNS POD in `xcluster` (obsolete)
 
 `Xcluster` uses node-local `coredns` instances running in main netns
 on each node. This ovl is kept for tests, e.g for

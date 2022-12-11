@@ -7,6 +7,8 @@ Related links;
 
 * https://kubernetes.io/docs/tutorials/security/seccomp/
 
+* [Mock cri-o](https://github.com/HonakerM/mock-cri/tree/mocked-release-1.24)
+
 ## Cri-o static release bundle
 
 Cri-o have a binary release since v1.18. It can't be downloaded with

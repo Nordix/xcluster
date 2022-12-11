@@ -1,6 +1,6 @@
 # Xcluster/ovl - k8s-cni-kube-router
 
-* Use the `kube-router` turn-key solution
+Use the `kube-router` turn-key solution
 
 
 ## Prep

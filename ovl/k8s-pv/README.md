@@ -1,9 +1,6 @@
 # Xcluster/ovl - k8s-pv
 
-
-K8s [persistent-volumes](https://kubernetes.io/docs/concepts/storage/persistent-volumes/) in xcluster.
-
-Based on [rancher/local-path-provisioner](https://github.com/rancher/local-path-provisioner).
+K8s [persistent-volumes](https://kubernetes.io/docs/concepts/storage/persistent-volumes/) in xcluster. Based on [rancher/local-path-provisioner](https://github.com/rancher/local-path-provisioner).
 
 ## Usage
 

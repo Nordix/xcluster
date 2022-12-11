@@ -1,5 +1,6 @@
 # Xcluster ovl - k8s-cni-xcluster
 
+Use the [xcluster-cni](https://github.com/Nordix/xcluster-cni) CNI-plugin.
 
 ## Usage
 

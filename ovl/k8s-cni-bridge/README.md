@@ -1,7 +1,5 @@
 # Xcluster/ovl - k8s-cni-bridge
 
-* Use the `bridge` CNI-plugin and `host-local` ipam.
-
 The `k8s-cni-bridge` is a xcluster-only cni plugin. It *always* assign
 dual-stack addresses to PODs. The order of the address families can be
 controlled with;

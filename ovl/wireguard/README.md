@@ -1,6 +1,6 @@
 # Xcluster ovl - WireGuard
 
-* Use [WireGuard](https://www.wireguard.com/) in `xcluster`.
+Use [WireGuard](https://www.wireguard.com/) in `xcluster`.
 
 WireGuard in in the kernel source-tree from `linux-5.6`;
 

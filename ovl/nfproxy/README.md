@@ -1,6 +1,6 @@
 # Xcluster/ovl - nfproxy
 
-* Experiments with https://github.com/sbezverk/nfproxy
+Experiments with https://github.com/sbezverk/nfproxy
 
 Comments about `service.kubernetes.io/service-proxy-name`:
 https://github.com/kubernetes/kubernetes/issues/92369#issuecomment-650034563

@@ -1,10 +1,9 @@
 # Xcluster/ovl - network-topology
 
-* Network topologies in xcluster
+Various network topology setups are defined in this ovl.
 
 Keywords: topology, DAD (multilan_router)
 
-Various network topology setups are defined in this ovl.
 
 The maintenance network 0 (eth0) is alway setup but is not shown here.
 

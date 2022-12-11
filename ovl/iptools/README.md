@@ -1,10 +1,7 @@
-Xcluster overlay - iptools
-==========================
+# Xcluster overlay - iptools
 
-Overlay that installs some ip tools
-
-Intended for experiments with the latest iptools. The `ntf` program
-for configuring the
+Overlay that installs some ip tools. Intended for experiments with
+the latest iptools. The `ntf` program for configuring the
 [nftables](https://netfilter.org/projects/nftables/index.html) is
 included.
 

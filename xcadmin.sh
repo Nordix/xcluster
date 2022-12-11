@@ -132,7 +132,9 @@ EOF
 	done
 }
 slogan() {
-	head -4 $f | grep '^-'
+	# Assuming the second paragraph surrounded by '\n' is a slogan
+	# (is there a better way to extract the paragraph?)
+	head -24 $1 | sed -e 's,^$,\x0,' | tr '\n' ' ' | tail -z -n +2 | head -z -n 1
 }
 
 cmd_mark() {

@@ -3,7 +3,9 @@
 You can use a local, private, unsecure docker registry for downloading
 images to `xcluster`. This is almost as fast as pre-pulled images and
 *way* faster than downloading from internet (especially on mobile
-network). Useful for;
+network).
+
+Useful for;
 
  * Cache images for faster and safer download
 

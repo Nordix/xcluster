@@ -1,5 +1,4 @@
-Xcluster overlay - etcd
-=======================
+# Xcluster overlay - etcd
 
 The [etcd](https://github.com/coreos/etcd) distributed key-value store.
 

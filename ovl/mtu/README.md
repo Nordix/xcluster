@@ -1,6 +1,6 @@
 # Xcluster ovl - mtu
 
-* Tests with different MTU sizes with and without Kubernetes.
+Tests with different MTU sizes with and without Kubernetes.
 
 Test jumbo frames in the K8s network with different CNI-plugins
 (currently only [xcluster-cni](https://github.com/Nordix/xcluster-cni)).

@@ -1,8 +1,7 @@
 # Xcluster ovl - kubeadm
 
-* Install Kubernetes with `kubeadm` in xcluster.
-
-[kubeadm](https://github.com/kubernetes/kubeadm) is the "standard"
+Install Kubernetes with `kubeadm` in xcluster.
+[kubeadm](https://github.com/kubernetes/kubeadm) is the standard
 installation tool for Kubernetes.
 
 ## Prepare

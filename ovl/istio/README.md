@@ -1,5 +1,7 @@
 # Xcluster/ovl - istio
 
+The [Istio](https://istio.io/) service mesh in `xcluster`.
+
 ## Getting started
 
 * https://istio.io/latest/docs/setup/getting-started/
