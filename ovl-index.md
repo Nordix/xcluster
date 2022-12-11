@@ -1,10 +1,10 @@
 # Overlay index
 
  * [apparmor](./ovl/apparmor/README.md)  Experiments and examples with [Apparmor](https://apparmor.net/) and [seccomp](https://en.wikipedia.org/wiki/Seccomp). 
+ * [attic](./ovl/attic/README.md)  These OVLs are obsolete and unmaintained 
  * [cert-manager](./ovl/cert-manager/README.md)  The [cert-manager](https://github.com/jetstack/cert-manager) on xcluster. 
  * [cni-plugins](./ovl/cni-plugins/README.md)  Installs [cni-plugins](https://github.com/containernetworking/plugins) in `/opt/cni/bin`. The intention is to have a uniform way of installing cni-plugins rather than letting every ovl using it's own way. 
  * [containerd](./ovl/containerd/README.md)  [Containerd](https://containerd.io/) in `xcluster`. 
- * [coredns](./ovl/coredns/README.md)  CoreDNS POD in `xcluster` (obsolete) 
  * [crio](./ovl/crio/README.md)  [Cri-o](https://github.com/cri-o/cri-o) is used as CRI-plugin for Kubernetes in `xcluster`. 
  * [ctraffic](./ovl/ctraffic/README.md)  Adds the [ctraffic](https://github.com/Nordix/ctraffic) continuous traffic test program. 
  * [dhcp](./ovl/dhcp/README.md)  Tests and setups with [DHCP](https://en.wikipedia.org/wiki/Dynamic_Host_Configuration_Protocol) and [SLAAC](https://en.wikipedia.org/wiki/IPv6#Stateless_address_autoconfiguration_(SLAAC)). 
@@ -24,7 +24,6 @@
  * [k8s-cni-calico](./ovl/k8s-cni-calico/README.md)  Use [project calico](https://www.projectcalico.org/) in `xcluster`. 
  * [k8s-cni-cilium](./ovl/k8s-cni-cilium/README.md)  The [cilium](https://github.com/cilium/cilium) CNI-plugin, 
  * [k8s-cni-flannel](./ovl/k8s-cni-flannel/README.md)  Use the [flannel](https://github.com/flannel-io/flannel) CNI-plugin in `xcluster`. 
- * [k8s-cni-kube-router](./ovl/k8s-cni-kube-router/README.md)  Use the `kube-router` turn-key solution 
  * [k8s-cni-ovs-cni](./ovl/k8s-cni-ovs-cni/README.md)  Use CNI-plugin [ovs-cni](https://github.com/k8snetworkplumbingwg/ovs-cni) in `xcluster`. 
  * [k8s-cni-xcluster](./ovl/k8s-cni-xcluster/README.md)  Use the [xcluster-cni](https://github.com/Nordix/xcluster-cni) CNI-plugin. 
  * [k8s-pv](./ovl/k8s-pv/README.md)  K8s [persistent-volumes](https://kubernetes.io/docs/concepts/storage/persistent-volumes/) in xcluster. Based on [rancher/local-path-provisioner](https://github.com/rancher/local-path-provisioner). 
@@ -43,7 +42,6 @@
  * [multus](./ovl/multus/README.md)  Use [multus](https://github.com/k8snetworkplumbingwg/multus-cni) in a Kubernetes xcluster. The [whereabouts](https://github.com/k8snetworkplumbingwg/whereabouts) IPAM is used for the `ipvlan` example only since it doesn't support dual-stack. 
  * [netns](./ovl/netns/README.md)  Multiple Network Namespaces (netns) and interconnect. The Network Namespaces are called "PODs" in this document even though K8s is not used. 
  * [network-topology](./ovl/network-topology/README.md)  Various network topology setups are defined in this ovl. 
- * [nfproxy](./ovl/nfproxy/README.md)  Experiments with https://github.com/sbezverk/nfproxy 
  * [ovs](./ovl/ovs/README.md)  Tests and experiments with [Open vSwitch](https://www.openvswitch.org/) (OVS). OVS is used in the xcluster VMs, *not on the host* as a VM-VM network (as the image on [www.openvswitch.org](https://www.openvswitch.org/) shows). 
  * [podsec](./ovl/podsec/README.md)  Encrypts all pod-to-pod traffic between pods on different nodes in a K8s cluster. Traffic between pods on the same node is not encrypted. 
  * [private-reg](./ovl/private-reg/README.md)  You can use a local, private, unsecure docker registry for downloading images to `xcluster`. This is almost as fast as pre-pulled images and *way* faster than downloading from internet (especially on mobile network). 
