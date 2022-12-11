@@ -36,7 +36,7 @@ vm-250 -          Reserved
  * [Networking](doc/networking.md). Default network and DNS setup.
  * [Network name space](doc/netns.md). Setup a netns for running `xcluster`.
  * [Overlays](doc/overlays.md). How they work and how they are created
- * [Overlay index](ovl-index.md)
+ * [Overlay index](ovl/README.md)
  * [Disk-image and kernel](doc/image.md). How they are created and extended.
  * [Build from scratch](doc/build.md). If the binary release can't be used.
  * [Xcluster for CI](doc/ci.md). Headless operation.
