@@ -4,15 +4,9 @@ Use [project calico](https://www.projectcalico.org/) in `xcluster`.
 
 ## Usage
 
-Pre-load the local registry;
+Start, preload if needed;
 ```
-for x in $(images lreg_missingimages .); do
-  images lreg_cache $n
-done
-```
-
-Start;
-```
+#images lreg_preload k8s-cni-calico
 xcadmin k8s_test --cni=calico test-template start_empty > $log
 ```
 
@@ -27,13 +21,14 @@ xcadmin k8s_test --cni=calico test-template > $log
 ```
 cdo k8s-cni-calico
 curl https://docs.projectcalico.org/manifests/calico.yaml -O
-# Check the xcluster specific config.
-meld calico-orig.yaml default/etc/kubernetes/load/calico.yaml &
-# Make the corresponding in the new "calico.yaml"
+# Check the xcluster specific config. (3-way diff)
 cp calico.yaml calico-new.yaml
-ec calico-new.yaml
+meld calico-orig.yaml default/etc/kubernetes/load/calico.yaml calico-new.yaml &
+# Make the corresponding in the new "calico.yaml"
+#cp calico.yaml calico-new.yaml
+#ec calico-new.yaml
 cp calico-new.yaml default/etc/kubernetes/load/calico.yaml
-images lreg_missingimages default
+images lreg_preload default
 # Cache images
 # Test!
 mv -f calico.yaml calico-orig.yaml
