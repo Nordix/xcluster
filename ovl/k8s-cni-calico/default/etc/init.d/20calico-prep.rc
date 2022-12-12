@@ -9,11 +9,32 @@ die() {
 
 hostname | grep -Eq 'vm-[0-9]+$' || die "Invalid hostname [$(hostname)]"
 i=$(hostname | cut -d- -f2 | sed -re 's,^0+,,')
+test $i -lt $FIRST_WORKER && exit 0
 
-echo 1 > /proc/sys/net/ipv6/conf/all/forwarding
-echo 1 > /proc/sys/net/ipv4/ip_forward
-ip6tables -t nat -I POSTROUTING 1 -s 1100::/16 ! -d 1100::/16 -j MASQUERADE
+vpp() {
+	mkdir -p /sys/fs/bpf
+	mount -t bpf none /sys/fs/bpf
+	mkdir -p /sys/kernel/debug
+	mount -t debugfs none /sys/kernel/debug
+}
 
-if test -n "$CNI_MTU"; then
-	sed -i -e "s,1440,$CNI_MTU," /etc/kubernetes/load/calico.yaml
-fi
+standard() {
+	cp /etc/kubernetes/calico/calico.yaml \
+		/etc/kubernetes/calico/calicoctl.yaml \
+		/etc/kubernetes/load
+	echo 1 > /proc/sys/net/ipv6/conf/all/forwarding
+	echo 1 > /proc/sys/net/ipv4/ip_forward
+	ip6tables -t nat -I POSTROUTING 1 -s 1100::/16 ! -d 1100::/16 -j MASQUERADE
+
+	if test -n "$CNI_MTU"; then
+		sed -i -e "s,1440,$CNI_MTU," /etc/kubernetes/load/calico.yaml
+	fi
+}
+
+mkdir -p /etc/kubernetes/load
+case $CALICO_BACKEND in
+	vpp)
+		vpp;;
+	*)
+		standard;;
+esac
