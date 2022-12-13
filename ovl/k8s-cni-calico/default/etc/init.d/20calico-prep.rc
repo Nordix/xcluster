@@ -1,4 +1,9 @@
 #! /bin/sh
+#
+# Most of the Calico start-up has been moved to;
+# /etc/kubernetes/init.d/50calico.sh
+#
+
 . /etc/profile
 export PATH="/bin:/sbin:/usr/bin:/usr/sbin"
 
@@ -9,19 +14,33 @@ die() {
 
 hostname | grep -Eq 'vm-[0-9]+$' || die "Invalid hostname [$(hostname)]"
 i=$(hostname | cut -d- -f2 | sed -re 's,^0+,,')
+
+if test -r /usr/lib/network-topology.sh; then
+	. /usr/lib/network-topology.sh
+	ifsetup eth2 3
+fi
+
+f=/etc/kubernetes/calico/calico.yaml
+ver=$(grep '  image:' $f | grep -o "calico/cni:.*" | uniq)
+if test -z "$CALICO_BACKEND"; then
+	CALICO_BACKEND=legacy
+	echo 'CALICO_BACKEND=legacy' >> /etc/profile
+	echo "CNI_INFO=$ver" >> /etc/profile
+else
+	echo "CNI_INFO=$ver/$CALICO_BACKEND" >> /etc/profile
+fi
+
+# Exit now if we are on the (out-of-cluster) K8s controller node
 test $i -lt $FIRST_WORKER && exit 0
 
-vpp() {
+bpf() {
 	mkdir -p /sys/fs/bpf
 	mount -t bpf none /sys/fs/bpf
 	mkdir -p /sys/kernel/debug
 	mount -t debugfs none /sys/kernel/debug
 }
 
-standard() {
-	cp /etc/kubernetes/calico/calico.yaml \
-		/etc/kubernetes/calico/calicoctl.yaml \
-		/etc/kubernetes/load
+legacy() {
 	echo 1 > /proc/sys/net/ipv6/conf/all/forwarding
 	echo 1 > /proc/sys/net/ipv4/ip_forward
 	ip6tables -t nat -I POSTROUTING 1 -s 1100::/16 ! -d 1100::/16 -j MASQUERADE
@@ -31,10 +50,5 @@ standard() {
 	fi
 }
 
-mkdir -p /etc/kubernetes/load
-case $CALICO_BACKEND in
-	vpp)
-		vpp;;
-	*)
-		standard;;
-esac
+echo $CALICO_BACKEND | grep -qi legacy && legacy
+echo $CALICO_BACKEND | grep -qi bpf && bpf
