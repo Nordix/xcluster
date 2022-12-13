@@ -395,7 +395,7 @@ cmd_k8s_test() {
 	test -x $script || die "Not executable [$script]"
 	shift
 
-	export __list __no_stop
+	export __list __no_stop __no_start
 	echo "$@" | grep -q start && export __mode
 	$script test $@
 }
