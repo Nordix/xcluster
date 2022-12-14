@@ -33,6 +33,8 @@ fi
 # Exit now if we are on the (out-of-cluster) K8s controller node
 test $i -lt $FIRST_WORKER && exit 0
 
+modprobe vhost_net
+
 bpf() {
 	mkdir -p /sys/fs/bpf
 	mount -t bpf none /sys/fs/bpf

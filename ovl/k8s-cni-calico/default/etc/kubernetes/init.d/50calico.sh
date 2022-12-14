@@ -34,10 +34,24 @@ log() {
 cmd_env() {
 	test "$cmd" = "env" && set | grep -E '^(__.*|ARCHIVE)='
 }
+##   bpf
+##     Install the eBPF data-plane
+cmd_bpf() {
+	local f=/etc/kubernetes/calico/calico.yaml
+	sed -i -e '/FELIX_BPFENABLED/{n;s/false/true/}' $f
+	kubectl create -f $f
+}
+##   vpp
+##     Install the VPP data-plane
+cmd_vpp() {
+	kubectl create -f /etc/kubernetes/calico/calico-vpp-nohuge.yaml
+	cmd_install vpp
+}
 ##   operator
 ##     Install the Tigera operator
 cmd_operator() {
 	kubectl create -f /etc/kubernetes/calico/tigera-operator.yaml
+	kubectl create -n tigera-operator -f /etc/kubernetes/calico/apiserver-configmap.yaml
 }
 ##   legacy
 ##     Start with the calico.yaml manifest
@@ -45,7 +59,7 @@ cmd_legacy() {
 	kubectl create -f /etc/kubernetes/calico/calico.yaml
 }
 ##   install [item]
-##     Install Calico. Requires the operator.
+##     Install Calico using the Tigera operator
 cmd_install() {
 	local item
 	if test -n "$1"; then
@@ -62,7 +76,9 @@ cmd_start() {
 	test -n "$CALICO_BACKEND" || CALICO_BACKEND=legacy
 	echo "$CALICO_BACKEND" | grep -q legacy && cmd_legacy
 	echo "$CALICO_BACKEND" | grep -q operator && cmd_operator
+	echo "$CALICO_BACKEND" | grep -q vpp && cmd_vpp
 	echo "$CALICO_BACKEND" | grep -q install- && cmd_install
+	echo "$CALICO_BACKEND" | grep -q bpf && cmd_bpf
 }
 
 ##

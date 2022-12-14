@@ -4573,6 +4573,8 @@ spec:
               value: "true"
             - name: FELIX_USAGEREPORTINGENABLED
               value: "false"
+            - name: FELIX_BPFENABLED
+              value: "false"
           securityContext:
             privileged: true
           resources:
