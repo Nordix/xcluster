@@ -35,10 +35,10 @@ dbg() {
 ##   env
 ##     Print environment.
 cmd_env() {
-	test -n "$__containerd_ver" || __containerd_ver=1.6.8
+	test -n "$__containerd_ver" || __containerd_ver=1.6.13
 	test -n "$__containerd_ar" || __containerd_ar=containerd-$__containerd_ver-linux-amd64.tar.gz
 
-	test -n "$__crictl_ver" || __crictl_ver=v1.25.0
+	test -n "$__crictl_ver" || __crictl_ver=v1.26.0
 	test -n "$__crictl_ar" ||  __crictl_ar=crictl-$__crictl_ver-linux-amd64.tar.gz
 
 	if test "$cmd" = "env"; then
@@ -90,7 +90,24 @@ cmd_install_crictl() {
 	log "Installing crictl [$__crictl_ver]"
 	tar -C $dest -xf $ar || die tar
 }
-
+##   download
+cmd_download() {
+	cmd_env
+	local url ar
+	
+	if ! (cmd_archive) > /dev/null 2>&1; then
+		url=https://github.com/containerd/containerd/releases/download
+		ar=$ARCHIVE/$__containerd_ar
+		mkdir -p $ARCHIVE
+		curl -L $url/v$__containerd_ver/$__containerd_ar > $ar
+	fi
+	cmd_archive
+	ar=$ARCHIVE/$__crictl_ar
+	if ! test -r $ar; then
+		url=https://github.com/kubernetes-sigs/cri-tools/releases/download
+		curl -L $url/$__crictl_ver/$__crictl_ar > $ar
+	fi
+}
 
 ##
 ##   test [--xterm] [--no-stop] [test...] > logfile
