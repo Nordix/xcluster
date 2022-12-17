@@ -597,7 +597,8 @@ otc() {
 }
 otcw() {
 	local x
-	for x in $(seq 1 $__nvm); do
+	test -n "$xcluster_FIRST_WORKER" || xcluster_FIRST_WORKER=1
+	for x in $(seq $xcluster_FIRST_WORKER $__nvm); do
 		otc $x "$@"
 	done
 }
