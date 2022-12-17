@@ -86,7 +86,16 @@ cmd_install() {
 	strip $__dest/* > /dev/null 2>&1
 	return 0
 }
-
+##   download
+cmd_download() {
+	cmd_env
+	if ! (cmd_archive) > /dev/null 2>&1; then
+		local ar=$ARCHIVE/$__cni_plugin_ar
+		local url=https://github.com/containernetworking/plugins/releases/download
+		curl -L $url/$__cniver/$__cni_plugin_ar > $ar
+	fi
+	cmd_archive
+}
 ##
 ##   test [--xterm] [--no-stop] [test...] > logfile
 ##     Exec tests
