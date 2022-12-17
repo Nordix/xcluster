@@ -13,14 +13,14 @@ me=$dir/$prg
 tmp=/tmp/${prg}_$$
 
 die() {
-    echo "ERROR: $*" >&2
-    rm -rf $tmp
-    exit 1
+	echo "ERROR: $*" >&2
+	rm -rf $tmp
+	exit 1
 }
 help() {
-    grep '^##' $0 | cut -c3-
-    rm -rf $tmp
-    exit 0
+	grep '^##' $0 | cut -c3-
+	rm -rf $tmp
+	exit 0
 }
 test -n "$1" || help
 echo "$1" | grep -qi "^help\|-h" && help
@@ -36,22 +36,34 @@ dbg() {
 ##     Print environment.
 cmd_env() {
 
-	test -n "$__criover" || __criover=cri-o.amd64.v1.25.0
+	test -n "$__criover" || __criover=cri-o.amd64.v1.25.1
 	test -n "$__crioar" || __crioar=$ARCHIVE/$__criover.tar.gz
+
 	if test "$cmd" = "env"; then
 		set | grep -E '^(__.*)='
 		return 0
 	fi
 
-	test -r $__crioar || die "Not readable [$__crioar]"
 	test -n "$XCLUSTER" || die 'Not set [$XCLUSTER]'
 	test -x "$XCLUSTER" || die "Not executable [$XCLUSTER]"
 	eval $($XCLUSTER env)
+}
+##   download
+cmd_download() {
+	cmd_env
+	if test -r "$__crioar"; then
+		log "Already downloaded"
+		return 0
+	fi
+	local url=https://storage.googleapis.com/cri-o/artifacts
+	mkdir -p $(dirname $__crioar)
+	curl -L $url/$__criover.tar.gz > $__crioar
 }
 ##   man [page]
 ##     Show a cri-o man-page from the current release
 cmd_man() {
 	cmd_env
+	test -r $__crioar || die "Not readable [$__crioar]"
 	MANPATH=/tmp/$USER/cri-o/man
 	if ! test -d $MANPATH; then
 		mkdir -p /tmp/$USER
@@ -77,20 +89,21 @@ cmd_man() {
 ##
 cmd_test() {
 	cmd_env
-    start=starts
-    test "$__xterm" = "yes" && start=start
-    rm -f $XCLUSTER_TMP/cdrom.iso
+	test -r $__crioar || die "Not readable [$__crioar]"
+	start=starts
+	test "$__xterm" = "yes" && start=start
+	rm -f $XCLUSTER_TMP/cdrom.iso
 
-    if test -n "$1"; then
-        for t in $@; do
-            test_$t
-        done
-    else
-        test_start
-    fi      
+	if test -n "$1"; then
+		for t in $@; do
+			test_$t
+		done
+	else
+		test_start
+	fi		
 
-    now=$(date +%s)
-    tlog "Xcluster test ended. Total time $((now-begin)) sec"
+	now=$(date +%s)
+	tlog "Xcluster test ended. Total time $((now-begin)) sec"
 }
 
 ##   test start_empty
