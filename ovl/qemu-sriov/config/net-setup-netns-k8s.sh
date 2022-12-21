@@ -10,7 +10,7 @@ tap=${dev}_t$nodeid
 b1=$n
 
 dut=igb
-num_queues=16
+num_queues=1
 mq=""
 
 if test $n -gt 1; then

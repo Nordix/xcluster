@@ -7,7 +7,7 @@ spec:
   selector:
     matchLabels:
       app: test-deploy1
-  replicas: 1
+  replicas: 2
   template:
     metadata:
       labels:
@@ -37,7 +37,7 @@ spec:
   selector:
     matchLabels:
       app: test-deploy2
-  replicas: 1
+  replicas: 2
   template:
     metadata:
       labels:

@@ -88,8 +88,8 @@ test_start_empty() {
 	xcluster_start lspci iptools iperf qemu-sriov
 }
 
-##   test start_empty
-##     Starts an empty cluster.
+##   test start_k8s
+##     Starts an k8s environment with two pods using emulated VFs.
 test_start_k8s() {
 	. ./Envsettings.k8s
 	test -n "$__kvm" -a -n "$__net_setup" -a -n "$__kvm_opt" || \
@@ -114,10 +114,11 @@ test_start_k8s() {
 	otc 1 check_nodes
 
 	otcw "modprobe eth2"
-	otc 2 "ifup eth2"
+	otc 2 "ifup_addr eth2 192.168.3.21"
 	otc 2 "wait_for_link_up eth2"
-	otc 3 "ifup eth2"
+	otc 3 "ifup_addr eth2 192.168.3.22"
 	otc 3 "wait_for_link_up eth2"
+	otc 2 "wait_for_ping 192.168.3.22"
 
 	otc 2 "create_vfs"
 	otc 3 "create_vfs"
@@ -127,6 +128,7 @@ test_start_k8s() {
 	otc 1 deploy_sriov_daemonsets
 
 	otc 1 deploy_test_deployments
+	otc 2 "wait_for_ping 192.168.3.22"
 }
 
 ##   test start
