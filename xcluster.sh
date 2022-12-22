@@ -431,9 +431,16 @@ cmd_iproute2_build() {
 		tar -C $(dirname $d) -xf $ar || die "Failed to unpack [$ar]"
 	fi
 
+	local kdir=$KERNELDIR/$__kver
+	test -d "$kdir" || die "Not a directory [$kdir]"
+	cd $kdir/tools/lib/bpf || die cd
+	make -j$(nproc) || die "Make libbpf"
+	make DESTDIR=$XCLUSTER_WORKSPACE/sys prefix=/usr install \
+		|| die "Make libbpf install sys"
+
 	if ! test -x $d/ip/ip; then
 		cd $d
-		./configure
+		./configure --libbpf_dir=$XCLUSTER_WORKSPACE/sys
 		KERNEL_INCLUDE=$__kobj/include \
 			make -j $(nproc) || die "Make iproute2 failed"
 	fi
