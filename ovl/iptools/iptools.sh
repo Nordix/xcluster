@@ -115,6 +115,7 @@ build_iproute2() {
 	ar=$1.tar.xz
 	tar -C $XCLUSTER_WORKSPACE -xf $ARCHIVE/$ar || die tar
 	cd $d
+	./configure --libbpf_dir=$XCLUSTER_WORKSPACE/sys
 	make KERNEL_INCLUDE=$__kobj/sys/include || die make
 	make DESTDIR=$d/sys install || die "make install"
 	cd man
