@@ -1,8 +1,8 @@
 #! /bin/sh
 ##
-## usrsctp.sh --
+## kselftest.sh --
 ##
-##   Help script for the xcluster ovl/usrsctp.
+##   Help script for the xcluster ovl/kselftest.
 ##
 ## Commands;
 ##
@@ -36,9 +36,6 @@ dbg() {
 ##    Print environment.
 ##
 cmd_env() {
-
-	test -n "$__tag" || __tag="registry.nordix.org/cloud-native/usrsctp-test:latest"
-
 	if test "$cmd" = "env"; then
 		set | grep -E '^(__.*)='
 		return 0
