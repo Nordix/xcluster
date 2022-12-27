@@ -100,16 +100,17 @@ chmod 660 /dev/kvm
 ## Test
 
 ```
-./qemu-sriov.sh                   # Help printout
-./qemu-sriov.sh test > $log       # Default tests without K8s
-./qemu-sriov.sh start_k8s         # Test with K8s. Requires images (see below)
+./qemu-sriov.sh                       # Help printout
+./qemu-sriov.sh test > $log           # Default tests without K8s
+images lreg_preload default           # Pre-load the local registry
+./qemu-sriov.sh test start_k8s > $log # Test with K8s.
 ```
 
 
-## SRIOV cni and device plugins
+## Locally built sriov images
 
-We need SRIOV CNI and device plugins to orchestrate discovery of
-the SRIOV VFs and assigning them to the pods.
+This shouldn't be needed normally. The `image:` lines in manifests in the
+`default/` directory must be updated manually.
 
 ```
 ./qemu-sriov.sh clone_sriov

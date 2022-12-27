@@ -26,7 +26,7 @@ spec:
         effect: NoSchedule
       containers:
       - name: kube-sriov-cni
-        image: registry.nordix.org/cloud-native/sriov-cni:latest
+        image: ghcr.io/k8snetworkplumbingwg/sriov-cni:latest
         imagePullPolicy: IfNotPresent
         securityContext:
           allowPrivilegeEscalation: false

@@ -42,14 +42,14 @@ cmd_env() {
 		retrun 0
 	fi
 
-	repo=registry.nordix.org/cloud-native
+	test -n "$__repo" || __repo=registry.nordix.org/cloud-native
 	images=$($XCLUSTER ovld images)/images.sh
 	test -n "$XCLUSTER" || die 'Not set [$XCLUSTER]'
 	test -x "$XCLUSTER" || die "Not executable [$XCLUSTER]"
 	eval $($XCLUSTER env)
 }
 
-##   build_sriov_images [--local]
+##   build_sriov_images [--repo=registry.nordix.org/cloud-native] [--local]
 ##     Build sriov-cni and sriov-network-device-plugin images.
 ##     Clone if necessary. --local builds sriov-network-device-plugin
 ##     with a local Dockerfile.
@@ -58,15 +58,15 @@ cmd_build_sriov_images() {
 	cmd_clone_sriov
 	cd $SRIOV_CNI_DIR
 	make || dir "Make sriov-cni"
-	local tag=$repo/sriov-cni:latest
-	docker build . -t $repo/sriov-cni:latest
+	local tag=$__repo/sriov-cni:latest
+	docker build . -t $__repo/sriov-cni:latest
 	$images lreg_upload --force --strip-host $tag
 	if test "$__local" = "yes"; then
 		cmd_build_local_dev_plugin
 		return
 	fi
 	cd $SRIOV_DP_DIR
-	tag=$repo/sriov-network-device-plugin:latest
+	tag=$__repo/sriov-network-device-plugin:latest
 	make TAG=$tag image || die "make sriov-network-device-plugin"
 	$images lreg_upload --force --strip-host $tag
 }
@@ -84,12 +84,12 @@ cmd_build_local_dev_plugin() {
 		make || die "make ddptool"
 		cd $SRIOV_DP_DIR
 	fi
-	local tag=$repo/sriov-network-device-plugin:latest
+	local tag=$__repo/sriov-network-device-plugin:latest
 	docker build -f $dir/config/Dockerfile.device-plugin -t $tag . || die "docker build"
 	$images lreg_upload --force --strip-host $tag
 }
 ##   clone_sriov
-##     These will be cloned if needed;
+##     These will be cloned to $SRIOV_CNI_DIR $SRIOV_DP_DIR and if needed;
 ##     - github.com/k8snetworkplumbingwg/sriov-cni
 ##     - github.com/k8snetworkplumbingwg/sriov-network-device-plugin
 cmd_clone_sriov() {
@@ -202,8 +202,7 @@ test_vfs() {
 }
 
 ##   test packet_handling
-##     Bring eth1 up on vm-001 and vm-002 and test traffic
-##     NOTE; this doesn't work yet!
+##     Bring eth1 (PF) up on vm-001 and vm-002 and test traffic
 test_packet_handling() {
 	tlog "=== Bring eth1 up on vm-001 and vm-002 and test traffic"
 	test_start
