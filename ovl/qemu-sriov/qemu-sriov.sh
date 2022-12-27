@@ -78,10 +78,12 @@ cmd_build_local_dev_plugin() {
 	fi
 	cd $SRIOV_DP_DIR
 	make build || die "make-device-plugin build"
-	cd build
-	test -r ddptool.txt || tar xf ../images/ddptool-1.0.1.12.tar.gz
-	make || die "make ddptool"
-	cd $SRIOV_DP_DIR
+	if ! test -x build/ddptool; then
+		cd build
+		tar xf ../images/ddptool-1.0.1.12.tar.gz
+		make || die "make ddptool"
+		cd $SRIOV_DP_DIR
+	fi
 	local tag=$repo/sriov-network-device-plugin:latest
 	docker build -f $dir/config/Dockerfile.device-plugin -t $tag . || die "docker build"
 	$images lreg_upload --force --strip-host $tag
