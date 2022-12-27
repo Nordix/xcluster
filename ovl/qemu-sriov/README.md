@@ -11,15 +11,12 @@ expensive HW.
 Support for SR-IOV was added to `qemu` in commit `7c0fa8dff`. It is
 included in qemu `v7.0.0` (git tag --contains 7c0fa8dff).
 
-There is no nic emulation that supports SR-IOV in `qemu` yet. An
-emulation of `igb/igbvf` is provided by @knuto in https://github.com/knuto/qemu,
-but packet handling is [not supported](https://github.com/knuto/qemu/issues/5).
-
+A NIC that supports SR-IOV in `qemu` is on it's way. It is built on the
+Intel `igb` emulation by @knuto. Packet handling was [not implemented](
+https://github.com/knuto/qemu/issues/5) but is now added in a
+[clone on Nordix](https://github.com/Nordix/qemu/tree/igb-device).
 
 ## Build
-
-We use a `qemu` [clone on Nordix](https://github.com/Nordix/qemu) with
-the `igb/igbvf` patch from @knuto applied.
 
 
 Build a local qemu;
@@ -57,9 +54,7 @@ https://github.com/Nordix/xcluster/blob/master/doc/netns.md).
 ```
 cdo qemu-sriov
 . ./Envsettings
-#$__kvm -nic model=help
-XOVLS='' xc mkcdrom xnet lspci iptools qemu-sriov
-xc starts --image=$XCLUSTER_WORKSPACE/xcluster/hd.img --nrouters=0 --nvm=1
+./qemu-sriov.sh test start_empty > $log
 # On vm-001
 lspci | grep 82576
 modprobe igb
@@ -69,7 +64,26 @@ echo 2 > /sys/bus/pci/devices/0000:01:00.0/sriov_numvfs
 lspci | grep 82576
 ```
 
+For non-xcluster users, here is the `ps` printout as a hint:
+```
+$HOME/go/src/github.com/qemu/qemu/build/qemu-system-x86_64 -enable-kvm \
+  -kernel $HOME/tmp/xcluster/workspace/xcluster/bzImage-linux-6.1 \
+  -drive file=/tmp/${USER}/xcluster/${USER}_xcluster1/hd-1.img,if=virtio \
+  -nographic -smp 2 -k sv -m 1024 -monitor telnet::4001,server,nowait \
+  -drive file=/tmp/${USER}/xcluster/${USER}_xcluster1/cdrom.iso,if=virtio,media=cdrom \
+  -netdev tap,id=net0,script=no,downscript=/tmp/rmtap,ifname=xcbr0_t1 \
+  -device virtio-net-pci,netdev=net0,mac=00:00:00:01:00:01 \
+  -device pcie-root-port,slot=1,id=pcie_port.1 \
+  -netdev tap,id=net1,script=no,downscript=/tmp/rmtap,ifname=xcbr1_t1,queues=4 \
+  -device igb,bus=pcie_port.1,netdev=net1,mac=00:00:00:01:01:01 \
+  -M q35 -object rng-random,filename=/dev/urandom,id=rng0 \
+  -device virtio-rng-pci,rng=rng0,max-bytes=1024,period=80000 \
+  -cpu qemu64,+sse4.2,+sse4.1,+ssse3 -append noapic root=/dev/vda rw init=/init
+```
+The important stuff is the `igb` device and `-M q35`.
+
 ## KVM permissions
+
 If your user doesn't have permissions for KVM, an error like this is displayed
 ```
 bash-5.1$ $__kvm
@@ -82,56 +96,24 @@ Make sure your user is part of kvm group and check the permissions for /dev/kvm
 chown root:kvm /dev/kvm
 chmod 660 /dev/kvm
 ```
+
 ## Test
 
 ```
 ./qemu-sriov.sh                   # Help printout
-./qemu-sriov.sh test > $log       # Default tests
+./qemu-sriov.sh test > $log       # Default tests without K8s
+./qemu-sriov.sh start_k8s         # Test with K8s. Requires images (see below)
 ```
 
-Current status;
-* ./qemu-sriov.sh test vfs -- Works
-* ./qemu-sriov.sh test packet_handling -- Does NOT work
 
 ## SRIOV cni and device plugins
+
 We need SRIOV CNI and device plugins to orchestrate discovery of
 the SRIOV VFs and assigning them to the pods.
 
-### Build
-
-Build sriov-cni;
 ```
-# Clone;
-SRIOV_CNI_DIR=$GOPATH/src/github.com/k8snetworkplumbingwg/sriov-cni  # (set by; . ./Envsettings)
-mkdir -p $(dirname $SRIOV_CNI_DIR)
-cd $(dirname $SRIOV_CNI_DIR)
-git clone git@github.com/k8snetworkplumbingwg/sriov-cni.git
-cd $SRIOV_CNI_DIR
-
-# Build;
-cd $SRIOV_CNI_DIR
-make
-docker build . -t registry.nordix.org/cloud-native/sriov-cni:latest
-images lreg_upload --force --strip-host registry.nordix.org/cloud-native/sriov-cni:latest
-```
-
-Build sriov-network-device-plugin;
-```
-# Clone;
-SRIOV_DP_DIR=$GOPATH/src/github.com/k8snetworkplumbingwg/sriov-network-device-plugin  # (set by; . ./Envsettings)
-mkdir -p $(dirname $SRIOV_DP_DIR)
-cd $(dirname $SRIOV_DP_DIR)
-git clone -b igb-device git@github.com/k8snetworkplumbingwg/sriov-cni.git
-cd $SRIOV_DP_DIR
-
-# Build;
-cd $SRIOV_DP_DIR
-TAG=registry.nordix.org/cloud-native/sriov-network-device-plugin:latest make image
-images lreg_upload --force --strip-host registry.nordix.org/cloud-native/sriov-network-device-plugin:latest
-```
-
-### Test with k8s
-```
-./qemu-sriov.sh                         # Help printout
-./qemu-sriov.sh test start_k8s > $log   # Default k8s test
+./qemu-sriov.sh clone_sriov
+./qemu-sriov.sh build_sriov_images
+# If that doesn't work, try
+./qemu-sriov.sh build_sriov_images --local
 ```
