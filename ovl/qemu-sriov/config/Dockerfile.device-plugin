@@ -1,0 +1,12 @@
+FROM alpine:3
+RUN apk add --no-cache hwdata-pci
+WORKDIR /
+
+LABEL io.k8s.display-name="SRIOV Network Device Plugin"
+
+COPY ./build/sriovdp ./build/ddptool /usr/bin/
+COPY ./images/entrypoint.sh /
+
+RUN rm -rf /var/cache/apk/*
+
+ENTRYPOINT ["/entrypoint.sh"]

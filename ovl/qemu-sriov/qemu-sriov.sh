@@ -42,15 +42,67 @@ cmd_env() {
 		retrun 0
 	fi
 
+	repo=registry.nordix.org/cloud-native
+	images=$($XCLUSTER ovld images)/images.sh
 	test -n "$XCLUSTER" || die 'Not set [$XCLUSTER]'
 	test -x "$XCLUSTER" || die "Not executable [$XCLUSTER]"
 	eval $($XCLUSTER env)
 }
 
-##   test --list
-##   test [--xterm] [test...] > logfile
-##     Exec tests
+##   build_sriov_images [--local]
+##     Build sriov-cni and sriov-network-device-plugin images.
+##     Clone if necessary. --local builds sriov-network-device-plugin
+##     with a local Dockerfile.
+cmd_build_sriov_images() {
+	cmd_env
+	cmd_clone_sriov
+	cd $SRIOV_CNI_DIR
+	make || dir "Make sriov-cni"
+	local tag=$repo/sriov-cni:latest
+	docker build . -t $repo/sriov-cni:latest
+	$images lreg_upload --force --strip-host $tag
+	if test "$__local" = "yes"; then
+		cmd_build_local_dev_plugin
+		return
+	fi
+	cd $SRIOV_DP_DIR
+	tag=$repo/sriov-network-device-plugin:latest
+	make TAG=$tag image || die "make sriov-network-device-plugin"
+	$images lreg_upload --force --strip-host $tag
+}
+cmd_build_local_dev_plugin() {
+	cmd_env
+	if ! test -n "$SRIOV_DP_DIR"; then
+		cd $dir
+		. ./Envsettings.k8s
+	fi
+	cd $SRIOV_DP_DIR
+	make build || die "make-device-plugin build"
+	cd build
+	test -r ddptool.txt || tar xf ../images/ddptool-1.0.1.12.tar.gz
+	make || die "make ddptool"
+	cd $SRIOV_DP_DIR
+	local tag=$repo/sriov-network-device-plugin:latest
+	docker build -f $dir/config/Dockerfile.device-plugin -t $tag . || die "docker build"
+	$images lreg_upload --force --strip-host $tag
+}
+##   clone_sriov
+##     These will be cloned if needed;
+##     - github.com/k8snetworkplumbingwg/sriov-cni
+##     - github.com/k8snetworkplumbingwg/sriov-network-device-plugin
+cmd_clone_sriov() {
+	cd $dir
+	. ./Envsettings.k8s
+	test -d $SRIOV_CNI_DIR || git clone --depth 1 \
+		https://github.com/k8snetworkplumbingwg/sriov-cni.git $SRIOV_CNI_DIR
+	test -d $SRIOV_DP_DIR || git clone --depth 1 \
+		https://github.com/k8snetworkplumbingwg/sriov-network-device-plugin.git $SRIOV_DP_DIR
+}
+
 ##
+##   test --list
+##   test [--xterm] [--no-stop] [test...] > logfile
+##     Exec tests
 cmd_test() {
 	if test "$__list" = "yes"; then
         grep '^test_' $me | cut -d'(' -f1 | sed -e 's,test_,,'
