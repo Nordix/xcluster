@@ -20,8 +20,12 @@ cp -R $dir/default/* $tmp
 
 test -n "$IPERF_WORKSPACE" || IPERF_WORKSPACE=/tmp/$USER/iperf
 x=$IPERF_WORKSPACE/bin/iperf
-test -x $x || die "Not executable [$x]"
-cp $x $tmp/bin
+if test -x $x; then
+	cp $x $tmp/bin
+else
+	which iperf > /dev/null || die "Iperf not found"
+	$XCLUSTER install_prog --dest=$tmp iperf
+fi
 
 if test "$CNIBIN" = "yes"; then
 	mkdir -p $tmp/opt/cni/bin
