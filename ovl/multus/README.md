@@ -115,7 +115,7 @@ In the `alpine` pod to a `ifconfig -a` and check the interfaces;
 
 ```
 ovl_multus=$($XCLUSTER ovld multus)
-SETUP=None WHEREABOUTS_DIR=/ $ovl_multus/tar - | tar -C $tmp -x
+$ovl_multus/tar - | tar -C $tmp -x
 ```
 
 ## IPAM whereabouts

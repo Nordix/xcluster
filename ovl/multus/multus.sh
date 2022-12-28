@@ -37,7 +37,7 @@ dbg() {
 ##
 cmd_env() {
 	test -n "$__multus_ver" || __multus_ver=3.9.2
-    test -n "$__tag" || __tag="registry.nordix.org/cloud-native/multus-installer:$__multus_ver"
+    test -n "$__tag" || __tag="registry.nordix.org/cloud-native/multus-installer"
 
 	if test "$cmd" = "env"; then
 		set | grep -E '^(__.*)='
@@ -85,7 +85,9 @@ cmd_cparchives() {
 cmd_mkimage() {
     cmd_env
     local imagesd=$($XCLUSTER ovld images)
-    $imagesd/images.sh mkimage --force --upload --strip-host --tag=$__tag $dir/image
+    $imagesd/images.sh mkimage --force --upload --strip-host --tag=$__tag:$__multus_ver $dir/image
+	docker tag $__tag:$__multus_ver $__tag:latest
+	$imagesd/images.sh lreg_upload --strip-host $__tag:latest
 }
 
 ##
@@ -105,9 +107,9 @@ cmd_test() {
     rm -f $XCLUSTER_TMP/cdrom.iso
 
     if test -n "$1"; then
-        for t in $@; do
-            test_$t
-        done
+		local t=$1
+		shift
+        test_$t $@
     else
 		test_basic
     fi      
@@ -124,7 +126,8 @@ test_start_empty() {
 	cmd_archive > /dev/null
 	export TOPOLOGY=multilan-router
 	. $($XCLUSTER ovld network-topology)/$TOPOLOGY/Envsettings
-	xcluster_start multus
+	test -n "$SETUP" || export SETUP=test
+	xcluster_start multus $@
 
 	otc 1 check_namespaces
 	otc 1 check_nodes
@@ -133,39 +136,46 @@ test_start_empty() {
 ##   test start
 ##     Start with Multus
 test_start() {
-	test_start_empty
+	test_start_empty $@
 	otcw "ifup eth2"
 	otcw "ifup eth3"
 	otcw "ifup eth4"
 	otc 1 start_multus
 }
+##   test start_image
+##     Start with "multus-installer" image
+test_start_image() {
+	export SETUP=test+image
+	test_start_empty
+	tcase "Apply Multus installer"
+	kubectl apply -f $dir/multus-install.yaml || tdie "Multus installer"
+}
+
 ##   test start_server
 ##     Start with multus_proxy and multus_service_controller
 test_start_server() {
-	test_start
+	test_start $@
 	otc 1 crds
 	otc 2 multus_service_controller
 	otcw multus_proxy
 	otc 1 multus_server
 }
-
 ##   test basic (default)
 ##     Execute basic tests
 test_basic() {
 	tlog "=== Execute basic tests"
-	test_start
+	test_start $@
 	otc 1 crds
 	otc 1 alpine
 	otc 1 check_interfaces
 	otc 1 ping
 	xcluster_stop
 }
-
 ##   test annotation
 ##     Test with node-annotation IPAM
 test_annotation() {
 	tlog "=== Test with node-annotation IPAM"
-	test_start_empty
+	test_start_empty $@
 	tcase "Apply Multus installer"
 	kubectl apply -f $dir/multus-install.yaml \
 		|| tdie "Multus installer"

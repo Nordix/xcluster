@@ -15,19 +15,11 @@ log() {
 
 test -n "$1" || die "No out-file"
 
+# This ovl it intended to be used from other ovl's so only the
+# essentials are in "default/", the rest is in "test/".
 mkdir -p $tmp
-if test "$SETUP" = "None"; then
-	yamld=$dir/default/etc/kubernetes/multus
-	mkdir -p $tmp/etc/kubernetes/multus
-	cp $yamld/multus-crd.yaml $tmp/etc/kubernetes/multus
-	cp $yamld/multus-crd-bridge.yaml $tmp/etc/kubernetes/multus
-	mkdir -p $tmp/etc/init.d
-	cp $dir/default/etc/init.d/25multus.rc $tmp/etc/init.d
-	mkdir -p $tmp/opt/cni/bin
-	cp $dir/default/opt/cni/bin/node-local $tmp/opt/cni/bin
-else
-	cp -R $dir/default/* $tmp
-fi
+cp -R $dir/default/* $tmp
+cp $dir/multus-install.yaml $tmp/etc/kubernetes/multus
 
 ar=$($dir/multus.sh archive)
 eval $($dir/multus.sh env | grep __multus_ver=)
@@ -38,26 +30,40 @@ mkdir -p $tmp/opt/cni/bin
 x=$($XCLUSTER ovld cni-plugins)/cni-plugins.sh
 $x install --dest=$tmp/opt/cni/bin || die
 
-if test "$SETUP" != "None"; then
-	test -n "$WHEREABOUTS_DIR" || WHEREABOUTS_DIR=$GOPATH/src/github.com/k8snetworkplumbingwg/whereabouts
-	f=$WHEREABOUTS_DIR/bin/whereabouts
-	test -x $f || die "Not executable [$f]"
-	cp $f $tmp/opt/cni/bin
-	mkdir -p $tmp/etc/kubernetes
-	cp -r $WHEREABOUTS_DIR/doc/crds $tmp/etc/kubernetes/whereabouts
+test -n "$WHEREABOUTS_DIR" || \
+	WHEREABOUTS_DIR=$GOPATH/src/github.com/k8snetworkplumbingwg/whereabouts
+test -n "$NODEANNOTATION_DIR" || \
+	NODEANNOTATION_DIR=$GOPATH/src/github.com/Nordix/ipam-node-annotation
+test -n "$SRIOV_DIR" || \
+	SRIOV_DIR=$GOPATH/src/github.com/k8snetworkplumbingwg/sriov-cni
 
-	test -n "$NODEANNOTATION_DIR" || NODEANNOTATION_DIR=$GOPATH/src/github.com/Nordix/ipam-node-annotation
-	f=$NODEANNOTATION_DIR/node-annotation
-	test -x $f || die "Not executable [$f]"
-	cp $f $tmp/opt/cni/bin
-fi
-
-mkdir -p $tmp/bin
-for n in multus-proxy multus-service-controller; do
-	f=$GOPATH/bin/$n
-	test -x $f && cp $f $tmp/bin
+for f in $WHEREABOUTS_DIR/bin/whereabouts \
+	$NODEANNOTATION_DIR/node-annotation \
+	$SRIOV_DIR/build/sriov; do
+	test -x $f && cp $f $tmp/opt/cni/bin
 done
 
+if test -d $WHEREABOUTS_DIR/doc/crds; then
+	mkdir -p $tmp/etc/kubernetes
+	cp -r $WHEREABOUTS_DIR/doc/crds $tmp/etc/kubernetes/whereabouts
+fi
+
+# Include test files if specified
+if echo "$SETUP" | grep -qi test; then
+	if echo "$SETUP" | grep -qi image; then
+		# We will install with the "multus-installer" image so only
+		# include the test program
+		mkdir -p $tmp/bin
+		cp $dir/test/bin/multus_test $tmp/bin
+	else
+		cp -R $dir/test/* $tmp
+		mkdir -p $tmp/bin
+		for n in multus-proxy multus-service-controller; do
+			f=$GOPATH/bin/$n
+			test -x $f && cp $f $tmp/bin
+		done
+	fi
+fi
 
 cd $tmp
 tar cf "$1" *

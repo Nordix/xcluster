@@ -54,7 +54,7 @@ cmd_install_binaries() {
 	tar -C $__dest -xf $dir/$ar
 
 	local f
-	for f in whereabouts node-annotation; do
+	for f in whereabouts node-annotation sriov; do
 		test -x $dir/$f && cp $dir/$f $__dest
 	done
 }

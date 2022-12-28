@@ -52,6 +52,13 @@ if test -x $f; then
 	cp $f $tmp/root
 fi
 
+test -n "$SRIOV_DIR" || SRIOV_DIR=$GOPATH/src/github.com/k8snetworkplumbingwg/sriov-cni
+f=$SRIOV_DIR/build/sriov
+if test -x $f; then
+	log "Including sriov cni-plugin"
+	cp $f $tmp/root
+fi
+
 
 cd $tmp
 tar cf "$1" *
