@@ -1,0 +1,10 @@
+#! /bin/sh
+. /etc/profile
+
+test -n "$XLAN_TEMPLATE" || exit 0
+
+# If $XLAN_TEMPLATE we want automatically assign addresses to extra
+# interfaces, so we must load the modules before 11xnet.sh
+modprobe igb
+modprobe igbvf
+sleep 1

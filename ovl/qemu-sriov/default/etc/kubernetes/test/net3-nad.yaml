@@ -11,9 +11,11 @@ spec:
   "ipam": {
     "type": "whereabouts",
     "ipRanges": [{
-        "range": "192.168.10.0/24"
+        "range": "192.168.3.0/24",
+        "exclude": ["192.168.3.0/28"]
        }, {
-        "range": "fd00:1::/120"
+        "range": "fd00::c0a8:300/120",
+        "exclude": ["fd00::c0a8:300/124"]
     }]
   }
 }'

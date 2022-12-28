@@ -185,14 +185,16 @@ test_start() {
 	otcw "modprobe eth1"
 }
 ##   test start_multus
-##     Start a K8s cluster with Multus, whereabouts and igb devices
+##     Start a K8s cluster with Multus, whereabouts and igb devices.
+##     Extra network interfaces are up and have addresses.
 test_start_multus() {
 	. ./Envsettings.k8s
 	export TOPOLOGY="multilan-router"
+	export xcluster_XLAN_TEMPLATE=192.168.0.0/16/24
+	export PREFIX=fd00:
+	export xcluster_PREFIX=fd00:	
 	. $($XCLUSTER ovld network-topology)/$TOPOLOGY/Envsettings
 	xcluster_start lspci iptools network-topology multus qemu-sriov $@
-	otc 202 modprobe
-	otcw modprobe
 	otc 1 check_namespaces
 	otc 1 multus_crd
 	otc 1 deploy_whereabouts
@@ -218,15 +220,18 @@ test_packet_handling() {
 	otc 1 "wait_for_ping 192.168.1.2"
 	xcluster_stop
 }
-##   test sriov_interfaces
-##     Use the sriov cni-plugin to create normal interfaces in PODs
-test_sriov_interfaces() {
+##   test net3
+##     Use the sriov cni-plugin to create net3 interfaces in PODs.
+##     Ping the POD addresses from vm-202. Net3 is eth2 on nodes and eth3
+##     on vm-202.
+test_net3() {
 	test_start_multus $@
 	otcw "vf eth2 2"
 	otcw "vf eth3 1"
 	otc 1 sriovdp
 	otcw allocatable
 	otc 1 deploy_net3
+	otc 202 ping_net3
 	xcluster_stop
 }
 

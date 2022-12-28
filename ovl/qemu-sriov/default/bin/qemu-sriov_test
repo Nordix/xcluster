@@ -208,7 +208,20 @@ cmd_tcase_deploy_net3() {
 	kubectl create -f /etc/kubernetes/test/net3-deployment.yaml || tdie
 	test_deployment net3 120
 }
-
+##   tcase_ping_net3
+##     Ping PODs on net3
+cmd_tcase_ping_net3() {
+	tcase "Ping PODs on net3"
+	local pod out=/tmp/net3-addresses
+	for pod in $(kubectl get pods -l app=net3 -o name); do
+		kubectl exec $pod -- ip addr show dev net3 | grep -F ' global' >> $out
+	done
+	local adr
+	for adr in $(cat $out | tr -s ' ' , | cut -d, -f3 | cut -d/ -f1); do
+		echo "ping $adr"
+		ping -c1 -W1 $adr || tdie "ping $adr"
+	done
+}
 
 . /etc/profile
 . /usr/lib/xctest
