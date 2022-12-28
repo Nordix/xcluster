@@ -1,0 +1,19 @@
+apiVersion: "k8s.cni.cncf.io/v1"
+kind: NetworkAttachmentDefinition
+metadata:
+  name: net3
+  annotations:
+    k8s.v1.cni.cncf.io/resourceName: intel.com/net3
+spec:
+  config: '{
+  "type": "sriov",
+  "cniVersion": "0.4.0",
+  "ipam": {
+    "type": "whereabouts",
+    "ipRanges": [{
+        "range": "192.168.10.0/24"
+       }, {
+        "range": "fd00:1::/120"
+    }]
+  }
+}'

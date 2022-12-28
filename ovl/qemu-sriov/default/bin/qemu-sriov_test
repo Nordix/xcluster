@@ -45,12 +45,12 @@ cmd_tcase_check_nodes() {
 ##   tcase_modprobe
 ##     Load the igb modules
 cmd_tcase_modprobe() {
-	test -n "$1" || tdie "No dev"
-	local dev=$1
 	tcase "Load the igb modules"
-	ip link show dev $dev 2>&1 && tlog "$dev exist. Modules already loaded?" && return
 	modprobe igb || tdie "modprobe igb"
 	modprobe igbvf || tdie "modprobe igbvf"
+	test -n "$1" || return 0
+	local dev=$1
+	ip link show dev $dev 2>&1 && tlog "$dev exist. Modules already loaded?" && return
 	ip link show dev $dev || tdie "$dev was not created"
 	# Check the PF
 	check_82576 1 || tdie "Check PF"
@@ -133,8 +133,9 @@ cmd_tcase_deploy_whereabouts() {
 cmd_tcase_deploy_sriov_daemonsets() {
 	tcase "Deploy SRIOV daemonsets"
 	apply_k8s $yamld
-	kubectl="kubectl -n kube-system" test_daemonset kube-sriov-cni-ds-amd64 180
-	kubectl="kubectl -n kube-system" test_daemonset kube-sriov-device-plugin-amd64 180
+	kubectl="kubectl -n kube-system"
+	test_daemonset kube-sriov-cni-ds-amd64 180
+	test_daemonset kube-sriov-device-plugin-amd64 180
 }
 cmd_tcase_deploy_test_deployments() {
 	tcase "Deploy test deployments"
@@ -142,6 +143,72 @@ cmd_tcase_deploy_test_deployments() {
 	test_deployment test-deploy1 180
 	test_deployment test-deploy2 180
 }
+##   tcase_multus_crd
+##     Install Multus CRDs
+cmd_tcase_multus_crd() {
+	tcase "Install Multus CRDs"
+	kubectl create -f /etc/kubernetes/multus/multus-crd.yaml
+	kubectl -n kube-system create -f /etc/kubernetes/multus/multus-crd-bridge.yaml
+}
+##   tcase_sriovdp
+##     Deploy the sriov-network-device-plugin
+cmd_tcase_sriovdp() {
+	tcase "Deploy the sriov-network-device-plugin"
+	kubectl create -f $yamld/sriovdp-config2.yaml || tdie
+	kubectl create -f $yamld/sriovdp-daemonset.yaml || tdie
+	kubectl="kubectl -n kube-system"
+	test_daemonset kube-sriov-device-plugin-amd64 120
+}
+##   tcase_vf <pf-device> <num>
+##     Create VFs
+cmd_tcase_vf() {
+	tcase "Create $2 VFs from $1"
+	test -n "$1" || tdie "Param missing"
+	local master=$1
+	local num=$2
+	test $num -gt 0 || tdie "Num must be > 0"
+	local d=/sys/class/net/$master/device
+	test -r $d/sriov_numvfs || tdie "Not a PF or sriov not supported"
+	local n=$(cat $d/sriov_numvfs)
+	test $n -eq 0 || tdie "VFs already created [$n]"
+	echo $2 > $d/sriov_numvfs || tdie "Failed to create VFs"
+
+	# We have new "ethX" interfaces. Rename them to eth2vf0 and alike
+	local name
+	for n in $(seq 0 $((num - 1))); do
+		name=$(find $d/virtfn$n/net -mindepth 1 -maxdepth 1)
+		name=$(basename $name)
+		echo "Rename $name -> ${master}vf$n"
+		ip link set name ${master}vf$n dev $name
+	done
+}
+##   tcase_allocatable
+##     Check allocatable resources after adding VFs
+cmd_tcase_allocatable() {
+	tcase "Check allocatable resources after adding VFs"
+	out=/tmp/status.allocatable
+	tex check_allocatable
+	cat $out
+	local n
+	n=$(cat $out | jq -r '."intel.com/net3"')
+	test $n -eq 2 || die "intel.com/net3 $n"
+	n=$(cat $out | jq -r '."intel.com/net4"')
+	test $n -eq 1 || die "intel.com/net4 $n"
+}
+check_allocatable() {
+	kubectl get node $(hostname) -o json | jq '.status.allocatable' > $out
+	grep -qF '"intel.com/net3"' $out || return 1
+	grep -qF '"intel.com/net4"' $out
+}
+##   tcase_deploy_net3
+##     Deploy PODs using net3 (eth2 on nodes)
+cmd_tcase_deploy_net3() {
+	tcase "Deploy PODs using net3 (eth2 on nodes)"
+	kubectl create -f /etc/kubernetes/test/net3-nad.yaml || tdie
+	kubectl create -f /etc/kubernetes/test/net3-deployment.yaml || tdie
+	test_deployment net3 120
+}
+
 
 . /etc/profile
 . /usr/lib/xctest

@@ -1,0 +1,32 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: net3
+spec:
+  selector:
+    matchLabels:
+      app: net3
+  replicas: 4
+  template:
+    metadata:
+      labels:
+        app: net3
+      annotations:
+        k8s.v1.cni.cncf.io/networks: '[
+          { "name" : "net3",
+            "namespace": "default",
+            "interface": "net3" }
+        ]'
+    spec:
+      containers:
+      - name: alpine
+        image: docker.io/library/alpine:latest
+        imagePullPolicy: IfNotPresent
+        command: ["/usr/bin/tail", "-f", "/dev/null"]
+        resources:
+          requests:
+            intel.com/net3: '1'
+          limits:
+            intel.com/net3: '1'
+

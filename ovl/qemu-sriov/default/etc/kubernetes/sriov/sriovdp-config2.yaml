@@ -1,0 +1,23 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: sriovdp-config
+  namespace: kube-system
+data:
+  config.json: |
+    {
+        "resourceList": [{
+                "resourceName": "net3",
+                "resourcePrefix": "intel.com",
+                "selectors": {
+                    "rootDevices": ["0000:01:00.0"]
+                }
+            },{
+                "resourceName": "net4",
+                "resourcePrefix": "intel.com",
+                "selectors": {
+                    "rootDevices": ["0000:02:00.0"]
+                }
+            }
+        ]
+    }

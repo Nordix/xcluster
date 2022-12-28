@@ -102,24 +102,18 @@ cmd_clone_sriov() {
 }
 
 ##
-##   test --list
-##   test [--xterm] [--no-stop] [test...] > logfile
+##   test [--xterm] [--no-stop] [test [ovls...]] > logfile
 ##     Exec tests
 cmd_test() {
-	if test "$__list" = "yes"; then
-        grep '^test_' $me | cut -d'(' -f1 | sed -e 's,test_,,'
-        return 0
-    fi
-
 	cmd_env
     start=starts
     test "$__xterm" = "yes" && start=start
     rm -f $XCLUSTER_TMP/cdrom.iso
 
     if test -n "$1"; then
-        for t in $@; do
-            test_$t
-        done
+		local t=$1
+		shift
+        test_$t $@
     else
 		test_vfs
 		test_packet_handling
@@ -139,7 +133,7 @@ test_start_empty() {
 	test -n "$__nvm" || __nvm=2
 	test -n "$__nrouters" || __nrouters=0
 	echo "$XOVLS" | grep -q private-reg && unset XOVLS
-	xcluster_start lspci iptools iperf qemu-sriov
+	xcluster_start lspci iptools iperf qemu-sriov $@
 }
 
 ##   test start_k8s
@@ -184,14 +178,26 @@ test_start_k8s() {
 	otc 1 deploy_test_deployments
 	otc 2 "wait_for_ping 192.168.3.22"
 }
-
 ##   test start
 ##     Starts a cluster with igb modules loaded . Prerequisite; . ./Envsettings
 test_start() {
 	test_start_empty
 	otcw "modprobe eth1"
 }
-
+##   test start_multus
+##     Start a K8s cluster with Multus, whereabouts and igb devices
+test_start_multus() {
+	. ./Envsettings.k8s
+	export TOPOLOGY="multilan-router"
+	. $($XCLUSTER ovld network-topology)/$TOPOLOGY/Envsettings
+	xcluster_start lspci iptools network-topology multus qemu-sriov $@
+	otc 202 modprobe
+	otcw modprobe
+	otc 1 check_namespaces
+	otc 1 multus_crd
+	otc 1 deploy_whereabouts
+	otc 1 check_nodes
+}
 ##   test vfs
 ##     Create VFs
 test_vfs() {
@@ -200,7 +206,6 @@ test_vfs() {
 	otc 1 "create_vfs"
 	xcluster_stop
 }
-
 ##   test packet_handling
 ##     Bring eth1 (PF) up on vm-001 and vm-002 and test traffic
 test_packet_handling() {
@@ -211,6 +216,17 @@ test_packet_handling() {
 	otc 2 "ifup_addr eth1 192.168.1.2"
 	otc 2 "wait_for_link_up eth1"
 	otc 1 "wait_for_ping 192.168.1.2"
+	xcluster_stop
+}
+##   test sriov_interfaces
+##     Use the sriov cni-plugin to create normal interfaces in PODs
+test_sriov_interfaces() {
+	test_start_multus $@
+	otcw "vf eth2 2"
+	otcw "vf eth3 1"
+	otc 1 sriovdp
+	otcw allocatable
+	otc 1 deploy_net3
 	xcluster_stop
 }
 
