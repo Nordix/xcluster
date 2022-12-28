@@ -77,15 +77,15 @@ ifup() {
 
 vm_x() {
 	local n
-	for n in 2 3 4; do
-		ifup $n eth$n
+	for n in 3 4 5; do
+		ifup $n eth$((n - 1))
 	done
 }
 
 router_202() {
 	local n
-	for n in 2 3 4; do
-		ifup $n eth$((n + 1))
+	for n in 3 4 5; do
+		ifup $n eth$n
 	done
 }
 
