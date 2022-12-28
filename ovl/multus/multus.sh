@@ -147,10 +147,8 @@ test_start() {
 test_start_image() {
 	export SETUP=test+image
 	test_start_empty
-	tcase "Apply Multus installer"
-	kubectl apply -f $dir/multus-install.yaml || tdie "Multus installer"
+	otc 1 image
 }
-
 ##   test start_server
 ##     Start with multus_proxy and multus_service_controller
 test_start_server() {
@@ -181,6 +179,15 @@ test_annotation() {
 		|| tdie "Multus installer"
 	otcw annotate
 	otc 1 bridge
+	xcluster_stop
+}
+##   test upgrade
+##     Upgrade the multus-install image
+test_upgrade() {
+	export SETUP=test+image
+	test_start_empty
+	otc 1 "image --ver=3.9"
+	otc 1 "image --ver=latest"
 	xcluster_stop
 }
 

@@ -150,6 +150,18 @@ cmd_tcase_bridge() {
 		grep -E '4000::1000:[0-9a-f]+/120' $tmp/adr || tdie "IPv6 address"
 	done
 }
+##   tcase_image
+##     Install with the multus-install image
+cmd_tcase_image() {
+	local f=$yamld/multus-install.yaml
+	test -n "$__ver" && \
+		sed -i -E "s,multus-installer:.*,multus-installer:$__ver," $f
+	local ver=$(grep -E 'image:.*multus-installer' $f | cut -d: -f3)
+	tcase "Install/upgrade the multus-install image ($ver)"
+	kubectl apply -f $f || tdie
+	kubectl="kubectl -n kube-system"
+	test_daemonset multus-install 120
+}
 
 . /etc/profile
 . /usr/lib/xctest
