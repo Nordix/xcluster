@@ -125,10 +125,10 @@ cmd_test() {
 }
 
 ##   test start_empty
-##     Starts an empty cluster. Prerequisite; . ./Envsettings
+##     Starts an empty cluster without K8s
 test_start_empty() {
-	test -n "$__kvm" -a -n "$__net_setup" -a -n "$__kvm_opt" || \
-		tdie "Not sourced; . ./Envsettings"
+	cd $dir
+	. ./Envsettings
 	export __image=$XCLUSTER_HOME/hd.img
 	test -n "$__nvm" || __nvm=2
 	test -n "$__nrouters" || __nrouters=0
@@ -139,10 +139,8 @@ test_start_empty() {
 ##   test start_k8s
 ##     Starts an k8s environment with two pods using emulated VFs.
 test_start_k8s() {
+	cd $dir
 	. ./Envsettings.k8s
-	test -n "$__kvm" -a -n "$__net_setup" -a -n "$__kvm_opt" || \
-		tdie "Not sourced; . ./Envsettings.k8s"
-
 	# Test with k8s-xcluster;
 	__image=$XCLUSTER_HOME/hd-k8s-xcluster-$__k8sver.img
 	test -r $__image || __image=$XCLUSTER_HOME/hd-k8s-xcluster.img
@@ -179,7 +177,7 @@ test_start_k8s() {
 	otc 2 "wait_for_ping 192.168.3.22"
 }
 ##   test start
-##     Starts a cluster with igb modules loaded . Prerequisite; . ./Envsettings
+##     Starts a cluster with igb modules loaded
 test_start() {
 	test_start_empty
 	otcw "modprobe eth1"
@@ -199,6 +197,21 @@ test_start_multus() {
 	otc 1 multus_crd
 	otc 1 deploy_whereabouts
 	otc 1 check_nodes
+}
+##   test start_sriovdp
+##     Start with "start_multus" and add the sriov device-plugin.
+##     VFs are created on all extra networks as:
+##     net3 - 2 VFs on each node
+##     net4 - 1 VFs on each node
+##     net5 - 1 VFs on node vm-002 and vm-004
+test_start_sriovdp() {
+	test_start_multus $@
+	otcw "vf eth2 2"
+	otcw "vf eth3 1"
+	otc 2 "vf eth4 1"
+	otc 4 "vf eth4 1"
+	otc 1 sriovdp
+	otcw allocatable
 }
 ##   test vfs
 ##     Create VFs
@@ -225,11 +238,7 @@ test_packet_handling() {
 ##     Ping the POD addresses from vm-202. Net3 is eth2 on nodes and eth3
 ##     on vm-202.
 test_net3() {
-	test_start_multus $@
-	otcw "vf eth2 2"
-	otcw "vf eth3 1"
-	otc 1 sriovdp
-	otcw allocatable
+	test_start_sriovdp $@
 	otc 1 deploy_net3
 	otc 202 ping_net3
 	xcluster_stop

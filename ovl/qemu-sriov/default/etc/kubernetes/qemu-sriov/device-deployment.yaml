@@ -1,0 +1,69 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: grab-net3
+spec:
+  selector:
+    matchLabels:
+      app: grab-net3
+  replicas: 2
+  template:
+    metadata:
+      labels:
+        app: grab-net3
+    spec:
+      containers:
+      - name: alpine
+        image: docker.io/library/alpine:latest
+        imagePullPolicy: IfNotPresent
+        command: ["/usr/bin/tail", "-f", "/dev/null"]
+        resources:
+          limits:
+            intel.com/net3: '1'
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: grab-net4
+spec:
+  selector:
+    matchLabels:
+      app: grab-net4
+  replicas: 2
+  template:
+    metadata:
+      labels:
+        app: grab-net4
+    spec:
+      containers:
+      - name: alpine
+        image: docker.io/library/alpine:latest
+        imagePullPolicy: IfNotPresent
+        command: ["/usr/bin/tail", "-f", "/dev/null"]
+        resources:
+          limits:
+            intel.com/net4: '1'
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: grab-net5
+spec:
+  selector:
+    matchLabels:
+      app: grab-net5
+  replicas: 2
+  template:
+    metadata:
+      labels:
+        app: grab-net5
+    spec:
+      containers:
+      - name: alpine
+        image: docker.io/library/alpine:latest
+        imagePullPolicy: IfNotPresent
+        command: ["/usr/bin/tail", "-f", "/dev/null"]
+        resources:
+          limits:
+            intel.com/net5: '1'
