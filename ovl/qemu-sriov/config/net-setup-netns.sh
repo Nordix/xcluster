@@ -10,10 +10,10 @@ tap=${dev}_t$nodeid
 b1=$n
 
 dut=igb
-num_queues=4
+num_queues=1
 mq=""
 
-if test $n -gt 0; then
+if test $n -gt 1; then
 	if test $num_queues -gt 1; then
 		mq="multi_queue"
 	fi
@@ -30,7 +30,7 @@ ip link set up $tap
 
 
 b0=$(printf '%02x' $nodeid)
-if test $n -gt 0 ; then
+if test $n -gt 1; then
 	echo "$opt -device pcie-root-port,slot=$n,id=pcie_port.$n"
 	echo "$opt -netdev tap,id=net$n,script=no,downscript=/tmp/rmtap,ifname=$tap,queues=$num_queues"
 	echo "$opt -device $dut,bus=pcie_port.$n,netdev=net$n,mac=00:00:00:01:0$b1:$b0"

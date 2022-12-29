@@ -1,6 +1,9 @@
 test -n "$QEMUDIR" || QEMUDIR=$GOPATH/src/github.com/qemu/qemu
 export __kvm="$QEMUDIR/build/qemu-system-x86_64 -enable-kvm"
 
+SRIOV_CNI_DIR=$GOPATH/src/github.com/k8snetworkplumbingwg/sriov-cni
+SRIOV_DP_DIR=$GOPATH/src/github.com/k8snetworkplumbingwg/sriov-network-device-plugin
+
 export __net_setup=$PWD/config/net-setup-netns.sh
 
 export __kvm_opt='-M q35 -object rng-random,filename=/dev/urandom,id=rng0 -device virtio-rng-pci,rng=rng0,max-bytes=1024,period=80000 -cpu qemu64,+sse4.2,+sse4.1,+ssse3'
