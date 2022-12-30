@@ -16,6 +16,13 @@ Intel `igb` emulation by @knuto. Packet handling was [not implemented](
 https://github.com/knuto/qemu/issues/5) but is now added in a
 [clone on Nordix](https://github.com/Nordix/qemu/tree/igb-device).
 
+The [multilan-router](../network-topology#multilan-router) network
+topology is most often used.
+
+<img src="../network-topology/multilan-router.svg" width="60%" />
+
+
+
 ## Build
 
 
@@ -104,6 +111,72 @@ chmod 660 /dev/kvm
 ./qemu-sriov.sh test > $log           # Default tests without K8s
 images lreg_preload default           # Pre-load the local registry
 ./qemu-sriov.sh test start_k8s > $log # Test with K8s.
+```
+
+## CNI-plugin trace
+
+The calls to the `sriov` cni-plugin can be traced using the trace
+function in [ovl/cni-plugins](../cni-plugins).
+```
+xcluster_CNI_PLUGIN_TRACE=sriov ./qemu-sriov.sh test --no-stop net3 > $log
+# cat /var/log/cni-trace
+=============================================================
+--------- Environment
+CNI_PATH=/opt/cni/bin:/opt/cni/bin/
+CNI_ARGS=IgnoreUnknown=true;K8S_POD_NAMESPACE=default;K8S_POD_NAME=net3-74585d67cf-w2qtg;K8S_POD_INFRA_CONTAINER_ID=54b646284cd392a4288ea37b8850577a3b2ad0cdcec547fc5043d23c0d9717d9;K8S_POD_UID=0909da63-de72-41f9-a8c0-5174729c0ba8;IgnoreUnknown=1;K8S_POD_NAMESPACE=default;K8S_POD_NAME=net3-74585d67cf-w2qtg;K8S_POD_INFRA_CONTAINER_ID=54b646284cd392a4288ea37b8850577a3b2ad0cdcec547fc5043d23c0d9717d9;K8S_POD_UID=0909da63-de72-41f9-a8c0-5174729c0ba8
+CNI_CONTAINERID=54b646284cd392a4288ea37b8850577a3b2ad0cdcec547fc5043d23c0d9717d9
+CNI_NETNS=/var/run/netns/2d937f84-94ef-4020-9395-03f216122a77
+CNI_IFNAME=net3
+CNI_COMMAND=ADD
+--------- Stdin
+{
+  "cniVersion": "0.4.0",
+  "deviceID": "0000:01:10.2",
+  "ipam": {
+    "ipRanges": [
+      {
+        "exclude": [
+          "192.168.3.0/28"
+        ],
+        "range": "192.168.3.0/24"
+      },
+      {
+        "exclude": [
+          "fd00::c0a8:300/124"
+        ],
+        "range": "fd00::c0a8:300/120"
+      }
+    ],
+    "type": "whereabouts"
+  },
+  "name": "net3",
+  "pciBusID": "0000:01:10.2",
+  "type": "sriov"
+}
+--------- Stdout
+{
+  "cniVersion": "0.4.0",
+  "interfaces": [
+    {
+      "name": "net3",
+      "mac": "ca:54:50:98:28:ac",
+      "sandbox": "/var/run/netns/2d937f84-94ef-4020-9395-03f216122a77"
+    }
+  ],
+  "ips": [
+    {
+      "version": "4",
+      "interface": 0,
+      "address": "192.168.3.16/24"
+    },
+    {
+      "version": "6",
+      "interface": 0,
+      "address": "fd00::c0a8:310/120"
+    }
+  ],
+  "dns": {}
+}
 ```
 
 

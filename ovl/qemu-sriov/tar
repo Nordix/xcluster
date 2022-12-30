@@ -22,6 +22,9 @@ mkdir -p $tmp/usr/share/misc
 gzip -c /usr/share/misc/pci.ids > $tmp//usr/share/misc/pci.ids.gz
 $XCLUSTER install_prog --dest=$tmp lspci
 
+test -n "$xcluster_CNI_PLUGIN_TRACE" && \
+	cp -r $($XCLUSTER ovld cni-plugins)/trace/* $tmp
+
 cd $tmp
 tar cf "$1" *
 cd - > /dev/null
