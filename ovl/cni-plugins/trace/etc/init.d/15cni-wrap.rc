@@ -1,0 +1,7 @@
+#! /bin/sh
+. /etc/profile
+test -n "$CNI_PLUGIN_TRACE" || exit 0
+x=/opt/cni/bin/$CNI_PLUGIN_TRACE
+test -x $x || exit 0
+mv $x $x-orig
+mv /opt/cni/bin/wrapper $x

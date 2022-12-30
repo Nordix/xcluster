@@ -102,24 +102,24 @@ cmd_download() {
 ##
 cmd_test() {
 	cmd_env
-    start=starts
-    test "$__xterm" = "yes" && start=start
-    rm -f $XCLUSTER_TMP/cdrom.iso
+	start=starts
+	test "$__xterm" = "yes" && start=start
+	rm -f $XCLUSTER_TMP/cdrom.iso
 
-    if test -n "$1"; then
-        for t in $@; do
-            test_$t
-        done
-    else
-        test_start
-    fi      
+	if test -n "$1"; then
+		local t=$1
+		shift
+		test_$t $@
+	else
+		test_start
+	fi		
 
-    now=$(date +%s)
-    tlog "Xcluster test ended. Total time $((now-begin)) sec"
+	now=$(date +%s)
+	tlog "Xcluster test ended. Total time $((now-begin)) sec"
 }
 
 ##   test start_empty
-##     Start cluster
+##     Start cluster without K8s
 test_start_empty() {
 	export __image=$XCLUSTER_HOME/hd.img
 	echo "$XOVLS" | grep -q private-reg && unset XOVLS
@@ -129,11 +129,14 @@ test_start_empty() {
 	xcluster_start network-topology iptools cni-plugins $@
 	otc 1 version
 }
-
 ##   test start (default)
-##     Start cluster and setup
+##     Start a K8s cluster with trace on "bridge"
 test_start() {
-	test_start_empty
+	export CNI_PLUGIN_TEST=yes
+	export xcluster_CNI_PLUGIN_TRACE=bridge
+	xcluster_start cni-plugins $@
+	otc 1 check_namespaces
+	otc 1 check_nodes
 }
 
 . $($XCLUSTER ovld test)/default/usr/lib/xctest

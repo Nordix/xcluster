@@ -23,6 +23,7 @@ mkdir -p $tmp/opt/cni/bin
 $dir/cni-plugins.sh install --dest=$tmp/opt/cni/bin $@ || die
 
 test "$CNI_PLUGIN_TEST" = "yes" && cp -R $dir/test/* $tmp
+test -n "$xcluster_CNI_PLUGIN_TRACE" && cp -R $dir/trace/* $tmp
 
 cd $tmp
 tar cf "$out" *

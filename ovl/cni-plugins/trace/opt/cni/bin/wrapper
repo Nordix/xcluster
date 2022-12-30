@@ -1,0 +1,24 @@
+#! /bin/sh
+me=$0
+tmp=/tmp/cni-wrapper-$$
+mkdir -p $tmp
+
+echo "=============================================================" > $tmp/log
+echo "--------- Environment" >> $tmp/log
+env | grep CNI_ >> $tmp/log
+
+cat > $tmp/stdin
+echo "--------- Stdin" >> $tmp/log
+cat $tmp/stdin | jq . >> $tmp/log
+
+cat $tmp/stdin | $me-orig > $tmp/stdout
+rc=$?
+
+echo "--------- Stdout" >> $tmp/log
+cat $tmp/stdout | jq .  >> $tmp/log
+
+cat $tmp/log >> /var/log/cni-trace
+
+cat $tmp/stdout
+rm -rf $tmp
+exit $rc

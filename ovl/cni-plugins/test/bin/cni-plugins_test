@@ -39,6 +39,12 @@ dbg() {
 cmd_tcase_version() {
 	log_version
 }
+cmd_tcase_check_namespaces() {
+	test_namespaces
+}
+cmd_tcase_check_nodes() {
+	test_nodes
+}
 
 
 . /usr/lib/xctest
