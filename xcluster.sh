@@ -338,8 +338,8 @@ cmd_kernel_build() {
     if test -f "$__kpatch"; then
 		test -r "$__kpatch" || die "Kpatch not readable [$__kpatch]"
 		rm -rf $KERNELDIR/$__kver
-		$DISKIM kernel_unpack --kdir=$KERNELDIR/$__kver
-		patch -d $KERNELDIR/$__kver -p1 < $__kpatch
+		$DISKIM kernel_unpack --kver=$__kver --kdir=$KERNELDIR/$__kver
+		patch -d $KERNELDIR/$__kver -p1 < $__kpatch || die "Kpatch failed"
 	fi
 	mkdir -p $KERNELDIR $__kobj
 	cmd_cpio_list $dir/image/initfs > $__kobj/cpio_list
