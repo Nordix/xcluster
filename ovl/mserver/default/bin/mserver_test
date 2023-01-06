@@ -13,7 +13,8 @@ me=$dir/$prg
 tmp=/tmp/${prg}_$$
 test -n "$DOMAIN" || DOMAIN=xcluster
 yamld=/etc/kubernetes/mserver
-ipv6prefix=1000::1
+test -n "$PREFIX" || PREFIX=1000::1
+
 
 die() {
 	echo "ERROR: $*" >&2
@@ -55,30 +56,30 @@ cmd_tcase_start_daemonset() {
 cmd_tcase_start_services() {
 	tcase "Start mserver services"
 	kubectl apply -f $yamld/services.yaml || tdie "kubectl apply"
-	assign-lb-ip -svc mserver -ip 10.0.0.0,1000::1:10.0.0.0 || tdie tcp
-	assign-lb-ip -svc mserver-udp -ip 10.0.0.0,1000::1:10.0.0.0 || tdie udp
-	assign-lb-ip -svc mserver-sctp -ip 10.0.0.0,1000::1:10.0.0.0 || tdie sctp
+	assign-lb-ip -svc mserver -ip 10.0.0.0,$PREFIX:10.0.0.0 || tdie tcp
+	assign-lb-ip -svc mserver-udp -ip 10.0.0.0,$PREFIX:10.0.0.0 || tdie udp
+	assign-lb-ip -svc mserver-sctp -ip 10.0.0.0,$PREFIX:10.0.0.0 || tdie sctp
 }
 ##   tcase_mconnect
 cmd_tcase_mconnect() {
 	tcase "Mconnect"
 	local ip=10.0.0.0
 	tex "do_mconnect $ip" || tdie "mconnect $ip"
-	tex "do_mconnect [$ipv6prefix:$ip]" || tdie "mconnect $ipv6prefix:$ip"
+	tex "do_mconnect [$PREFIX:$ip]" || tdie "mconnect $PREFIX:$ip"
 	tex "do_mconnect $ip -udp" || tdie "mconnect -udp $ip"
-	tex "do_mconnect [$ipv6prefix:$ip] -udp" || tdie "mconnect $ipv6prefix:$ip -udp"
+	tex "do_mconnect [$PREFIX:$ip] -udp" || tdie "mconnect $PREFIX:$ip -udp"
 }
 
 cmd_tcase_http() {
 	tcase "http"
 	local ip=10.0.0.0
 	curl -D- -sS http://$ip/cgi-bin/info | ogrep '200 OK' || tdie
-	curl -D- -sS http://[$ipv6prefix:$ip]/cgi-bin/info | ogrep '200 OK' || tdie
+	curl -D- -sS http://[$PREFIX:$ip]/cgi-bin/info | ogrep '200 OK' || tdie
 	local cnt
 	cnt=$(curl -D- -sS http://$ip | wc -c)
 	test $cnt -eq 3688 || tdie "$ip: Got $cnt, expected 3688"
-	cnt=$(curl -D- -sS http://[$ipv6prefix:$ip] | wc -c)
-	test $cnt -eq 3688 || tdie "$ipv6prefix:$ip: Got $cnt, expected 3688"
+	cnt=$(curl -D- -sS http://[$PREFIX:$ip] | wc -c)
+	test $cnt -eq 3688 || tdie "$PREFIX:$ip: Got $cnt, expected 3688"
 }
 
 cmd_tcase_ctraffic() {
@@ -88,9 +89,9 @@ cmd_tcase_ctraffic() {
 	tcase "Ctraffic $ip"
 	ctraffic -address $ip:5003 -nconn 100 -rate 100 > $out || tdie $ip
 	check_ctraffic $out
-	tcase "Ctraffic $ipv6prefix:$ip"
-	ctraffic -address [$ipv6prefix:$ip]:5003 -nconn 100 -rate 100 > $out || \
-		tdie $ipv6prefix:$ip
+	tcase "Ctraffic $PREFIX:$ip"
+	ctraffic -address [$PREFIX:$ip]:5003 -nconn 100 -rate 100 > $out || \
+		tdie $PREFIX:$ip
 	check_ctraffic $out
 }
 check_ctraffic() {
@@ -112,20 +113,20 @@ cmd_tcase_kahttp() {
 
 	tcase "Kahttp check server"
 	tex "curl -m 2 -sS http://$ip:8080/" || tdie
-	tex "curl -m 2 -sS http://[$ipv6prefix:$ip]:8080/" || tdie
+	tex "curl -m 2 -sS http://[$PREFIX:$ip]:8080/" || tdie
 
 	tcase "Curl http access"
 	curl -D- -sS http://$ip:8080/ > $out
 	grep -F 'HTTP/1.1 200 OK' $out || tdie "curl $ip"
-	curl -D- -sS http://[$ipv6prefix:$ip]:8080/ > $out
-	grep -F 'HTTP/1.1 200 OK' $out || tdie "curl $ipv6prefix:$ip"
+	curl -D- -sS http://[$PREFIX:$ip]:8080/ > $out
+	grep -F 'HTTP/1.1 200 OK' $out || tdie "curl $PREFIX:$ip"
 
 	tcase "Kahttp http access $ip"
 	kahttp -nclients 10 -address http://$ip:8080/ \
 		-host_stats -disable_ka > $out || tdie
 	check_kahttp $out
-	tcase "Kahttp http access $ipv6prefix:$ip"
-	kahttp -nclients 10 -address http://[$ipv6prefix:$ip]:8080/ \
+	tcase "Kahttp http access $PREFIX:$ip"
+	kahttp -nclients 10 -address http://[$PREFIX:$ip]:8080/ \
 		-host_stats -disable_ka > $out || tdie
 	check_kahttp $out
 
@@ -133,8 +134,8 @@ cmd_tcase_kahttp() {
 	kahttp -nclients 10 -address https://$ip:8443/ \
 		-host_stats -disable_ka > $out || tdie
 	check_kahttp $out
-	tcase "Kahttp insecure https access $ipv6prefix:$ip"
-	kahttp -nclients 10 -address https://[$ipv6prefix:$ip]:8443/ \
+	tcase "Kahttp insecure https access $PREFIX:$ip"
+	kahttp -nclients 10 -address https://[$PREFIX:$ip]:8443/ \
 		-host_stats -disable_ka > $out || tdie
 	check_kahttp $out
 
@@ -179,10 +180,10 @@ cmd_tcase_sctpt() {
 		--laddr=192.168.1.201 > $out || tdie $ip
 	check_sctpt $out
 
-	tcase "sctpt $ipv6prefix:$ip"
+	tcase "sctpt $PREFIX:$ip"
 	sctpt stats init || tdie "sctpt stats"
-	sctpt ctraffic --clients=40 --rate=120 --addr=$ipv6prefix:$ip \
-		--laddr=$ipv6prefix:192.168.1.201 > $out || tdie $ipv6prefix:$ip
+	sctpt ctraffic --clients=40 --rate=120 --addr=$PREFIX:$ip \
+		--laddr=$PREFIX:192.168.1.201 > $out || tdie $PREFIX:$ip
 	check_sctpt $out
 }
 check_sctpt() {

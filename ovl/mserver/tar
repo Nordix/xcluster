@@ -19,7 +19,7 @@ findar() {
 	ar=$ARCHIVE/$1
 	test -r $ar && return 0
 	ar=$HOME/Downloads/$1
-	test -r $ar || return 1
+	test -r $ar
 }
 
 mkdir -p $tmp/bin

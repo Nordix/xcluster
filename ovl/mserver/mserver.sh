@@ -43,6 +43,7 @@ cmd_env() {
 		retrun 0
 	fi
 
+	test -n "$PREFIX" || PREFIX=1000::1
 	test -n "$XCLUSTER" || die 'Not set [$XCLUSTER]'
 	test -x "$XCLUSTER" || die "Not executable [$XCLUSTER]"
 	eval $($XCLUSTER env)
@@ -88,6 +89,7 @@ cmd_test() {
 ##     Start the cluster and the mserver DaemonSet and services
 test_start() {
 	test -n "$__nrouters" || __nrouters=1
+	export xcluster_PREFIX=$PREFIX
 	xcluster_prep
 	xcluster_start mserver
 	otc 1 check_namespaces
