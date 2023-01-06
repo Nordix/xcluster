@@ -112,11 +112,11 @@ cmd_mkcache_ar() {
 	cd - > /dev/null
 }
 
-##   ovlindex [--src=./ovl]
+##   ovlindex [--src=.]
 ##     Print a overlay-index on stdout.
 ##
 cmd_ovlindex() {
-	test -n "$__src" || __src=./ovl
+	test -n "$__src" || __src=.
 	test -d "$__src" || die "Not a directory [$__src]"
 	cat <<EOF
 # Overlay index
@@ -128,7 +128,7 @@ EOF
 	for f in $(sort < $tmp/ovls); do
 		n=$(echo $f | sed -s 's,/README.md,,')
 		n=$(basename $n)
-		echo " * [$n]($f) $(slogan $f)"
+		echo " * [$n]($f) - $(slogan $f)"
 	done
 }
 slogan() {

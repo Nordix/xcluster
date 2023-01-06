@@ -1,6 +1,6 @@
 # Xcluster ovl - Kubernetes
 
-- A [Kubernetes](https://kubernetes.io/) cluster with built-in CNI-plugin.
+A [Kubernetes](https://kubernetes.io/) cluster with bridge CNI-plugin.
 
 This overlay provides a platform with fast turn-around times and very
 flexible network setup. The main purpose is development and trouble
@@ -9,10 +9,10 @@ Kubernetes cluster that is suitable for any purpose, for instance
 application development. There are better alternatives for application
 development like;
 
+* [kind](https://kind.sigs.k8s.io/)
 * [microk8s](https://microk8s.io/)
 * [k3s](https://k3s.io/)
 * [minikube](https://github.com/kubernetes/minikube/)
-* [kind](https://kind.sigs.k8s.io/)
 
 
 ## Basic Usage
@@ -87,14 +87,13 @@ image for load-balancing test are provided;
 vm 1
 # On vm-001;
 images  # (alias to print loaded images)
-kubectl apply -f /etc/kubernetes/alpine.yaml
+kubectl create -f /etc/kubernetes/alpine.yaml
 kubectl get pods
 kubectl exec -it (an-alpine-pod) sh
-kubectl apply -f /etc/kubernetes/mconnect.yaml
+kubectl create -f /etc/kubernetes/mconnect.yaml
 kubectl get pods
 kubectl get svc
 mconnect -address mconnect.default.svc.xcluster:5001 -nconn 100
-kubectl top pods
 ```
 
 ## Single-stack
@@ -183,3 +182,7 @@ CONFIG_ARCH_WANT_HUGE_PMD_SHARE=y
 CONFIG_HUGETLBFS=y
 CONFIG_HUGETLB_PAGE=y
 ```
+
+#### Seccomp
+
+From K8s v1.19.x `seccomp` must be enabled in the kernel.

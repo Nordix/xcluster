@@ -1,6 +1,7 @@
 # Xcluster overlay - images
 
-Handles pre-pulled images in `xcluster`.
+Handles images in `xcluster`. Holds help script for docker
+images, local registry and pre-pulled images.
 
 To install pre-pulled images on the `xcluster` disk image or as an
 overlay saves time since nothing has to be dowloaded. In some
