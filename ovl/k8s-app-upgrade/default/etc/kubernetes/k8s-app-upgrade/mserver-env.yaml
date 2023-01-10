@@ -1,0 +1,75 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mserver
+spec:
+  replicas: 8
+  selector:
+    matchLabels:
+      app: mserver
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 4
+  template:
+    metadata:
+      labels:
+        app: mserver
+    spec:
+      #terminationGracePeriodSeconds: 4
+      containers:
+      - name: mserver
+        image: registry.nordix.org/cloud-native/mserver:latest
+        imagePullPolicy: IfNotPresent
+        securityContext:
+          privileged: true
+        env:
+          - name: MY_NODE_NAME
+            valueFrom:
+              fieldRef:
+                fieldPath: spec.nodeName
+        env:
+          - name: VERSION
+            value: "Unknown"
+        ports:
+        - name: mconnect
+          containerPort: 5001
+        - name: ctraffic
+          containerPort: 5003
+        - name: mconnect-udp
+          protocol: UDP
+          containerPort: 5001
+        - name: ctraffic-udp
+          protocol: UDP
+          containerPort: 5003
+        - name: "http"
+          containerPort: 80
+        - name: "kahttp"
+          containerPort: 8080
+        - name: "kahttps"
+          containerPort: 8443
+        - name: "sctpt"
+          protocol: SCTP
+          containerPort: 6000
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mserver
+spec:
+  ipFamilyPolicy: RequireDualStack
+  selector:
+    app: mserver
+  type: LoadBalancer
+  allocateLoadBalancerNodePorts: false
+  ports:
+  - port: 5001
+    name: mconnect
+  - port: 5003
+    name: ctraffic
+  - port: 80
+    name: http
+  - port: 8080
+    name: kahttp
+  - port: 8443
+    name: kahttps

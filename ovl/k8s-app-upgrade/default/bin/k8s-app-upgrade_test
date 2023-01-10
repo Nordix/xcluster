@@ -1,0 +1,165 @@
+#! /bin/sh
+##
+## k8s-app-upgrade_test --
+##
+##   Test script for k8s-app-upgrade executed in xcluster.
+##
+## Commands;
+##
+
+prg=$(basename $0)
+dir=$(dirname $0); dir=$(readlink -f $dir)
+me=$dir/$prg
+tmp=/tmp/${prg}_$$
+
+. /etc/profile
+test -n "$DOMAIN" || DOMAIN=xcluster
+test -n "$PREFIX" || PREFIX=1000::1
+yamld=/etc/kubernetes/k8s-app-upgrade
+
+die() {
+	echo "ERROR: $*" >&2
+	rm -rf $tmp
+	exit 1
+}
+help() {
+	grep '^##' $0 | cut -c3-
+	rm -rf $tmp
+	exit 0
+}
+test -n "$1" || help
+echo "$1" | grep -qi "^help\|-h" && help
+
+log() {
+	echo "$prg: $*" >&2
+}
+dbg() {
+	test -n "$__verbose" && echo "$prg: $*" >&2
+}
+
+cmd_tcase_check_namespaces() {
+	test_namespaces
+}
+cmd_tcase_check_nodes() {
+	test_nodes
+}
+cmd_tcase_vip_routes() {
+	tcase "Set VIP routes (ECMP)"
+	vip_route
+}
+cmd_tcase_start_mserver() {
+	tcase "Start mserver"
+	if test -n "$__replicas"; then
+		tlog "Replicas: $__replicas"
+		sed -i -e "s,replicas: 8,replicas: $__replicas," $yamld/mserver.yaml
+	fi
+	if test -n "$__maxUnavailable"; then
+		tlog "MaxUnavailable: $__maxUnavailable"
+		sed -i -e "s,maxUnavailable: 4,maxUnavailable: $__maxUnavailable," $yamld/mserver.yaml
+	fi
+	if test -n "$__maxSurge"; then
+		tlog "MaxSurge: $__maxSurge"
+		sed -i -e "s,maxSurge: 4,maxSurge: $__maxSurge," $yamld/mserver.yaml
+	fi
+	$kubectl apply -f $yamld/mserver.yaml || tdie apply
+	assign-lb-ip -svc mserver -ip 10.0.0.52,$PREFIX:10.0.0.52
+	test_deployment mserver 180
+}
+cmd_tcase_apply() {
+	tcase "Applying [$1]"
+	test -n "$1" || tdie "No manifest"
+	$kubectl apply -f $yamld/$1 || tdie
+	$kubectl rollout status deployment/mserver
+	test_deployment mserver 180
+}
+cmd_tcase_image() {
+	tcase "Upgrade image [$1]"
+	test -n "$1" || tdie "No version"
+	kubectl set image deployment/mserver \
+		mserver=registry.nordix.org/cloud-native/mserver:$1
+	$kubectl rollout status deployment/mserver
+	test_deployment mserver 180
+}
+##   tcase_vip_route <ipv4...>
+##     Setup VIP routes to targets
+cmd_tcase_vip_route() {
+	tcase "Set VIP route via [$@]"
+	test -n "$1" || tdie "No route"
+    local hops4 hops6 adr
+    for adr in $@; do
+        hops4="$hops4 nexthop via $adr"
+        hops6="$hops6 nexthop via $PREFIX:$adr"
+    done
+    ip ro replace 10.0.0.0/24 $hops4 || tdie "Ipv4 routes"
+    ip -6 ro replace $PREFIX:10.0.0.0/120 $hops6 || tdie "Ipv6 routes"
+}
+##   add_local_addresses
+##     Add source addresses to lo
+cmd_tcase_add_local_addresses() {
+	tcase "Add source addresses to lo"
+	sysctl -w net.ipv4.ip_nonlocal_bind=1
+	sysctl -w net.ipv6.ip_nonlocal_bind=1
+	ip addr add 172.20.0.0/16 dev lo
+	ip -6 addr add fd00:1000::/112 dev lo
+	ip -6 ro add local fd00:1000::/112 dev lo
+}
+##   add_routes
+##     Add routes to local source addresses
+cmd_tcase_add_routes() {
+	tcase "Add routes to local source addresses"
+	ip ro add 172.20.0.0/16 via 192.168.1.201 || tdie ipv4
+	ip -6 ro add fd00:1000::/112 via $PREFIX:192.168.1.201 || tdie ipv6
+}
+##   tcase_start_ctraffic <address>
+##     Start ctraffic
+cmd_tcase_start_ctraffic() {
+	tcase "Start ctraffic to $1"
+	test -n "$1" || tdie "No address"
+	local adr="$1:5003"
+	#local srccidr=172.20.0.0/16
+	if echo $1 | grep -q :; then
+		adr="[$1]:5003"
+		srccidr="fd00:1000::/112"
+	fi
+	ctraffic -address $adr -nconn 80 -rate 400 -stats all -timeout 5m \
+		> /tmp/out &
+	#	-srccidr $srccidr > /tmp/out &
+	return 0
+}
+##   tcase_stop_ctraffic <address>
+##     Stop ctraffic
+cmd_tcase_stop_ctraffic() {
+	tcase "Stop ctraffic"
+	killall ctraffic || tdie "Kailed to kill ctraffic"
+	sleep 1  # Allow stats to /tmp/out
+}
+
+. /usr/lib/xctest
+indent='  '
+
+
+# Get the command
+cmd=$1
+shift
+grep -q "^cmd_$cmd()" $0 || die "Invalid command [$cmd]"
+
+while echo "$1" | grep -q '^--'; do
+	if echo $1 | grep -q =; then
+		o=$(echo "$1" | cut -d= -f1 | sed -e 's,-,_,g')
+		v=$(echo "$1" | cut -d= -f2-)
+		eval "$o=\"$v\""
+	else
+		o=$(echo "$1" | sed -e 's,-,_,g')
+		eval "$o=yes"
+	fi
+	shift
+done
+unset o v
+long_opts=`set | grep '^__' | cut -d= -f1`
+
+# Execute command
+trap "die Interrupted" INT TERM
+cmd_$cmd "$@"
+status=$?
+rm -rf $tmp
+exit $status
