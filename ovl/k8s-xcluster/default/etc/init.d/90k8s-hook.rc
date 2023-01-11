@@ -39,8 +39,9 @@ dbg() {
 ##   stop
 ##
 cmd_start() {
-	hostname | grep -q vm-0 || return 0
-	hostname | grep -q vm-001 && return 0
+	hostname | grep -Eq 'vm-[0-9]+$' || die "Invalid hostname [$(hostname)]"
+	local i=$(hostname | cut -d- -f2 | sed -re 's,^0+,,')
+	test $i -gt 200 && return 0
 	# Restart myself in background
 	test -n "$__log" || __log=/var/log/$prg
 	($me waitfor_k8s > $__log < /dev/null 2>&1) &
@@ -60,8 +61,8 @@ cmd_waitfor_k8s() {
 		sleep 1
 	done
 
-	# Do things on the "master" only;
-	if ps www | grep -q kube-apiserver; then
+	# Load manifests on "master" only;
+	if hostname | grep -q vm-001; then
 		# Auto-load manifests;
 		test -d /etc/kubernetes/load && kubectl apply -f /etc/kubernetes/load
 	fi

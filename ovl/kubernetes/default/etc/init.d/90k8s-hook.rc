@@ -39,7 +39,9 @@ dbg() {
 ##   stop
 ##
 cmd_start() {
-	hostname | grep -q vm-0 || return 0
+	hostname | grep -Eq 'vm-[0-9]+$' || die "Invalid hostname [$(hostname)]"
+	local i=$(hostname | cut -d- -f2 | sed -re 's,^0+,,')
+	test $i -gt 201 && return 0
 	# Restart myself in background
 	test -n "$__log" || __log=/var/log/$prg
 	($me waitfor_k8s > $__log < /dev/null 2>&1) &
@@ -60,18 +62,10 @@ cmd_waitfor_k8s() {
 	done
 
 	# Do things on the "master" only;
-	if ps www | grep -q kube-apiserver; then
+	if hostname | grep -q vm-001; then
 		# Auto-load manifests;
-		if test "$METRICS_SERVER" = "yes"; then
-			mkdir -p /etc/kubernetes/load
-			mv /etc/kubernetes/metrics-server.yaml /etc/kubernetes/load
-		fi
 		test -d /etc/kubernetes/load && kubectl apply -f /etc/kubernetes/load
 	fi
-
-	# ToDo; Fix this, at least move it;
-	iptables -t nat -I POSTROUTING 1 -s 11.0.0.0/16 ! -d 11.0.0.0/16 -j MASQUERADE
-	ip6tables -t nat -I POSTROUTING 1 -s 1100::/16 ! -d 1100::/16 -j MASQUERADE
 
 	# Execute hooks;
 	for f in $(find /etc/kubernetes/init.d -maxdepth 1 -type f | sort); do
