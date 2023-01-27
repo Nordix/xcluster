@@ -1,4 +1,6 @@
 #! /bin/sh
+echo "Check for mounted init script at /pod-init/pod-init"
 test -r /pod-init/pod-init || exit 0
+echo "Executing /pod-init/pod-init"
 sh -f /pod-init/pod-init
 
