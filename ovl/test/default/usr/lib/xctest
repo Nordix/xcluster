@@ -17,7 +17,6 @@ sshopt="-o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no"
 
 ##  tlog message...
 ##    Logs to stdout and stderr with time stamp.
-##
 tlog() {
 	echo "$indent$(date +%T) $*" >&2
 	echo "$indent$(date +%T) $*"
@@ -25,7 +24,6 @@ tlog() {
 
 ##  tcase slogan...
 ##    Initiates a new test-case. The slogan is logged to stderr.
-##
 tcase() {
 	tcstart=$(date +%s)
 	local msg
@@ -40,7 +38,6 @@ tcase() {
 
 ##  tdie [message...]
 ##    Terminates the test with an error code.
-##
 tdie() {
 	now=$(date +%s)
 	echo "$indent$(date +%T) ($((now-begin))): FAILED: $*" >&2
@@ -88,7 +85,6 @@ tex() {
 	done
 	return 1
 }
-
 ##  push variable value
 ##    Example; "push __timeout 20"
 push() {
@@ -102,9 +98,8 @@ pop() {
 	eval $1=$(echo $s | cut -d, -f1)
 	eval stack$1=$(echo $s | cut -d, -f2-)
 }
-
-##  pushv __timeout __retries __interval
-##    Combo push. Example; "pushv 60 15 4"
+##  pushv __timeout [__retries __interval]
+##    Combo push. Example; "pushv 60 15 4" or "pushv 60"
 pushv() {
 	if test -z "$2"; then
 		# Only timeout
@@ -120,7 +115,6 @@ pushv() {
 }
 ##  popv
 ##    Pop values pushed with "pushv"
-##
 popv() {
 	pop __timeout
 	pop __retries
@@ -129,7 +123,6 @@ popv() {
 
 ##  ogrep
 ##    Grep and send raw output to stdout (for logging).
-##
 ogrep() {
 	mkdir -p $tmp
 	cat > $tmp/out
@@ -139,7 +132,6 @@ ogrep() {
 
 ##  mynode
 ##    Output the node number.
-##
 mynode() {
 	hostname | cut -d- -f2 | sed -re 's,^0+,,'
 }
@@ -148,7 +140,6 @@ mynode() {
 ##    Returns true if the expected number of pods are "Running",
 ##    and there are no "Terminating" pods.
 ##    Example; tex "npods mconnect-deployment- 4" || tdie
-##
 npods() {
 	local n t
 	$kubectl get pods 2>&1 | ogrep 'No resources' && return 1
@@ -166,7 +157,6 @@ npods() {
 
 ##  nreplicas <deployment>
 ##    Print the number of replicas in a Deployment.
-##
 nreplicas() {
 	$kubectl get deployment $1 > /dev/null || tdie
 	$kubectl get deployment $1 -o json | jq -r .spec.replicas
@@ -174,7 +164,6 @@ nreplicas() {
 
 ##  lsimages
 ##    Output the images loaded in the system
-##
 lsimages() {
 	crictl images
 }
@@ -183,7 +172,6 @@ lsimages() {
 ##    Test (and waits for) the basic namespaces to appear. This should
 ##    normally be the first test executes on all K8s clusters. Prints versions
 ##    of central components if succesful.
-##
 test_namespaces() {
 	local to=60
 	test -n "$1" && to=$1
@@ -193,20 +181,6 @@ test_namespaces() {
 	tex "$kubectl get namespace kube-system 2>&1 | ogrep -E '^kube-system *Active'" || tdie	
 	popv
 	log_version
-}
-
-##  test_coredns
-##    Wait for the coredns pod to become "Running".
-##
-test_coredns() {
-	if test "$__coredns_pod" != "yes"; then
-		tcase "SKIPPED; Wait for the coredns pod"
-		return 0
-	fi
-	tcase "Wait for the coredns pod"
-	pushv 180 60 3
-	tex "$kubectl get pods 2>&1 | ogrep -E '^coredns.*Running'" || tdie
-	popv
 }
 
 ##  test_deployment <deployment> [timeout]
@@ -220,8 +194,8 @@ test_deployment() {
 		jq -r '.spec.selector.matchLabels|to_entries[0]|.key + "=" + .value')
 	echo "POD selector [$selector]"
 	test -n "$2" && pushv $2
-	tex deployment_nready $1 $replicas
-	tex "check_pods_ready $selector" || tdie
+	tex deployment_nready $1 $replicas || tdie "deployment ready"
+	tex "check_pods_ready $selector" || tdie "pods ready"
 	test -n "$2" && popv
 	return 0
 }
@@ -231,8 +205,6 @@ deployment_nready() {
 	test "$nready" = "null" && return 1
 	test "$nready" -eq "$2"
 }
-
-
 ##  test_daemonset <daemonset> [timeout]
 ##    Verify that all PODs in a deployment are ready
 test_daemonset() {
@@ -253,10 +225,10 @@ test_daemonset() {
 	test $nodes -eq $desired || tlog "Nodes=$nodes but desired=$desired"
 	local selector=$(get_selector < $tmp/out)
 	test -n "$2" && pushv $2
-	tex "daemonset_ready $1" || tdie
+	tex "daemonset_ready $1" || tdie "Daemonset ready"
 	desired=$(cat $tmp/out | jq -r .status.desiredNumberScheduled)
-	tex "npods $selector $desired" || tdie
-	tex "check_pods_ready $selector" || tdie
+	tex "npods $selector $desired" || tdie "npods"
+	tex "check_pods_ready $selector" || tdie "Pods ready"
 	test -n "$2" && popv
 	return 0	
 }
@@ -270,10 +242,8 @@ daemonset_ready() {
 get_selector() {
 	jq -r '.spec.selector.matchLabels|to_entries[0]|.key + "=" + .value'
 }
-
 ##  test_statefulset <statefulset> [timeout]
 ##    Verify that all PODs in a statefulset are ready
-##
 test_statefulset() {
 	tcase "Check statefulset [$1]"
 	local replicas=$($kubectl get statefulset $1 -o json | jq .spec.replicas)
@@ -290,7 +260,6 @@ statefulset_ready() {
 
 ##  test_nodes
 ##    Wait for the k8s nodes to become available through the API
-##
 test_nodes() {
 	# Special case; in k8s-xcluster we can start with only the master
 	# and zero workers (nodes==0).
@@ -316,7 +285,6 @@ all_nodes_ready() {
 ##  get_pod <name> [host]
 ##    Print the pod-id (used for instance for "kubectl exec"). Print "null"
 ##    if the pod can't be found.
-##
 get_pod() {
 	local l=$1
 	echo $1 | grep -q = || l="app=$1"
@@ -345,7 +313,6 @@ check_pods_ready() {
 
 ##  kubectl_exec <pod> <kubectl-exec options...>
 ##    Execute a command in a pod (container).
-##
 kubectl_exec() {
 	local podid=$(get_pod $1)
 	test "$podid" = "null" && tdie "Pod not found [$1]"
@@ -354,38 +321,28 @@ kubectl_exec() {
 	$kubectl exec $podid $@
 }
 
-##  start_mconnect <manifest>
-##    Starts "mconnect" and wait to 4 replicas become "Running".
-start_mconnect() {
-	tcase "Start mconnect"
-	tex "$kubectl apply -f $1" || return 1
-	test_deployment mconnect-deployment 60
-}
-
-##  check_mconnect_result <file.json>
-##    Check the result of an "mconnect". The number of connections must be 100
-##    and the number of targets 4.
+##  check_mconnect_result <file.json> [expected-conns] [margin%]
+##    Check the result of an "mconnect".
 check_mconnect_result() {
 	cat $1 | jq .
-	local v i=0
-	local max=36
-	local min=14
-	if test "$PROXY_MODE" != "ipvs"; then
-		# Handle lousy iptables distribution
-		max=50
-		min=8
-	fi
+	local v
+	local expected=$2
+	test -n "$expected" || expected=25
+	local margin=$3
+	test -n "$margin" || margin=50
+	test "$PROXY_MODE" = "iptables" && margin=80
+	local diff=$(( expected * margin / 100))
+	local max=$((expected + diff))
+	local min=$((expected - diff))
+	echo "Connect expected $expected, margin $margin%, interval [$min-$max]"
 	for v in $(cat $1 | jq -r '.hosts|flatten[]'); do
-		i=$((i + 1))
 		test $v -le $max || return 1
 		test $v -ge $min || return 1
 	done
-	test $i -eq 4
+	return 0
 }
-
-##  do_mconnect <address>
+##  do_mconnect <address> [opts...]
 ##    Execute an mconnect.
-##
 do_mconnect() {
 	mkdir -p $tmp
 	local out=$tmp/out
@@ -402,11 +359,8 @@ do_mconnect() {
 	fi
 	check_mconnect_result $out
 }
-
-
 ##  log_version
 ##    Log versions of various things
-##
 log_version() {
 	. /etc/os-release
 	test "$VERSION" != "1.0" && tlog "Xcluster: $VERSION"
@@ -483,17 +437,13 @@ cni_plugin_info() {
 
 	echo "Unknown CNI-plugin"
 }
-
 ##  ipv6base
 ##    Returns true if the "main" cluster family is ipv6
-##
 ipv6base() {
 	kubectl get svc -o json kubernetes | jq -r .spec.clusterIP | grep -q :
 }
-
 ##  apply_k8s <manifest-dir>
 ##    Applies k8s manifests in the passed dir and in dir/dual.
-##
 apply_k8s() {
 	tlog "Applying manifests from [$1]"
 	test -n "$1" || tdie "No dir"
@@ -507,9 +457,8 @@ apply_k8s() {
 }
 
 ##  vip_route
-##    Setup ECMP routes to 10.0.0.0/24 1000::1:10.0.0.0/120
+##    Setup ECMP routes to 10.0.0.0/24 $PREFIX:1:10.0.0.0/120
 ##    (and 1000::/120 for backward compatibility)
-##
 vip_route() {
 	local net=1
 	test -n "$1" && net=$1
@@ -525,7 +474,7 @@ vip_route() {
 	ip -6 ro replace 1000::/120 $hops6 || tdie "Ipv6 routes"
 }
 
-
+##
 ## On-host Functions
 ## -----------------
 ## NOTE: Called from host (not within the cluster).
