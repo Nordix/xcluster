@@ -321,43 +321,70 @@ kubectl_exec() {
 	$kubectl exec $podid $@
 }
 
-##  check_mconnect_result <file.json> [expected-conns] [margin%]
+##  check_mconnect_result <file.json> [nconn targets] [margin%]
 ##    Check the result of an "mconnect".
 check_mconnect_result() {
 	cat $1 | jq .
 	local v
-	local expected=$2
+	local nconn=$2; test -n "$nconn" || nconn=100
+	local targets=$3; test -n "$targets" || targets=4
+	local margin=$4;
+	if test -z "$margin"; then
+		margin=50
+		test "$PROXY_MODE" = "iptables" && margin=80
+	fi
+	local expected=$((nconn / targets))
 	test -n "$expected" || expected=25
-	local margin=$3
-	test -n "$margin" || margin=50
-	test "$PROXY_MODE" = "iptables" && margin=80
-	local diff=$(( expected * margin / 100))
-	local max=$((expected + diff))
-	local min=$((expected - diff))
-	echo "Connect expected $expected, margin $margin%, interval [$min-$max]"
+	local diff max min
+	if test $margin -ge 100; then
+		min=1
+		max=$((expected * 4))
+	else
+		diff=$(( expected * margin / 100))
+		max=$((expected + diff))
+		min=$((expected - diff))
+	fi
+	local i=0
+	echo "Nconn $nconn, targets $targets, margin $margin%, interval [$min-$max]"
 	for v in $(cat $1 | jq -r '.hosts|flatten[]'); do
-		test $v -le $max || return 1
-		test $v -ge $min || return 1
+		i=$((i + 1))
+		if test $v -gt $max; then
+			echo "Too large [$v]"
+			return 1
+		fi
+		if test $v -lt $min; then
+			echo "Too small [$v]"
+			return 1
+		fi
 	done
+	if test $i -ne $targets; then
+		echo "Expected $targets targets, but got $i"
+		return 1
+	fi
 	return 0
 }
-##  do_mconnect <address> [opts...]
+##  do_mconnect <address> [nconns] [targets] [margin]
 ##    Execute an mconnect.
 do_mconnect() {
 	mkdir -p $tmp
 	local out=$tmp/out
 	local adr=$1
 	shift
+	local nconn=100
+	if test -n "$1"; then
+		nconn=$1
+		shift
+	fi
 	if echo $adr | grep -qF ']' ; then
 		echo $adr | grep -qF ']:' || adr=$adr:5001
 	else
 		echo $adr | grep -qF ':' || adr=$adr:5001
 	fi
-	if ! mconnect -address $adr -nconn 100 -output json $@ > $out; then
+	if ! mconnect -address $adr -nconn $nconn -output json > $out; then
 		cat $out | jq .
 		return 1
 	fi
-	check_mconnect_result $out
+	check_mconnect_result $out $nconn $@
 }
 ##  log_version
 ##    Log versions of various things
