@@ -364,7 +364,7 @@ check_mconnect_result() {
 	return 0
 }
 ##  do_mconnect <address> [nconns] [targets] [margin]
-##    Execute an mconnect.
+##    Execute an mconnect. Uses global var: $mcopts
 do_mconnect() {
 	mkdir -p $tmp
 	local out=$tmp/out
@@ -380,7 +380,7 @@ do_mconnect() {
 	else
 		echo $adr | grep -qF ':' || adr=$adr:5001
 	fi
-	if ! mconnect -address $adr -nconn $nconn -output json > $out; then
+	if ! mconnect -address $adr -nconn $nconn -output json $mcopts > $out; then
 		cat $out | jq .
 		return 1
 	fi
