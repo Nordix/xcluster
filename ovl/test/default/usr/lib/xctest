@@ -331,7 +331,9 @@ check_mconnect_result() {
 	local margin=$4;
 	if test -z "$margin"; then
 		margin=50
+		# Handle proxiers with not-so-good distribution
 		test "$PROXY_MODE" = "iptables" && margin=80
+		test -r /etc/kubernetes/load/quick-install.yaml && margin=80 #(cilium)
 	fi
 	local expected=$((nconn / targets))
 	test -n "$expected" || expected=25
@@ -340,7 +342,7 @@ check_mconnect_result() {
 		min=1
 		max=$((expected * 4))
 	else
-		diff=$(( expected * margin / 100))
+		diff=$((expected * margin / 100))
 		max=$((expected + diff))
 		min=$((expected - diff))
 	fi
