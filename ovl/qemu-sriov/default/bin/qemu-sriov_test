@@ -117,30 +117,12 @@ cmd_tcase_ping() {
 	test -n "$1" || tdie "No address"
 	ping -c1 -W1 $1 || tdie "Ping [$1]"
 }
-cmd_tcase_deploy_multus() {
-	tcase "Deploy Multus installer"
-	$kubectl apply -f /etc/kubernetes/multus/multus-install.yaml
-	kubectl="kubectl -n kube-system" test_daemonset multus-install 180
-}
 cmd_tcase_deploy_whereabouts() {
 	tcase "Deploy whereabouts"
 	local d=/etc/kubernetes/whereabouts
 	$kubectl apply -f $d/whereabouts.cni.cncf.io_ippools.yaml || tdie
 	$kubectl apply -f $d/whereabouts.cni.cncf.io_overlappingrangeipreservations.yaml || tdie
 
-}
-cmd_tcase_deploy_sriov_daemonsets() {
-	tcase "Deploy SRIOV daemonsets"
-	apply_k8s $sriov_yamld
-	kubectl="kubectl -n kube-system"
-	test_daemonset kube-sriov-cni-ds-amd64 180
-	test_daemonset kube-sriov-device-plugin-amd64 180
-}
-cmd_tcase_deploy_test_deployments() {
-	tcase "Deploy test deployments"
-	apply_k8s /etc/kubernetes/test
-	test_deployment test-deploy1 180
-	test_deployment test-deploy2 180
 }
 ##   tcase_multus_crd
 ##     Install Multus CRDs
@@ -157,6 +139,14 @@ cmd_tcase_sriovdp() {
 	kubectl create -f $sriov_yamld/sriovdp-daemonset.yaml || tdie
 	kubectl="kubectl -n kube-system"
 	test_daemonset kube-sriov-device-plugin-amd64 120
+}
+##   tcase_sriovcni
+##     Deploy the sriov-cni
+cmd_tcase_sriovcni() {
+	tcase "Deploy sriov-cni"
+	kubectl create -f $sriov_yamld/sriov-cni-daemonset.yaml || tdie
+	kubectl="kubectl -n kube-system"
+	test_daemonset kube-sriov-cni-ds-amd64 120
 }
 ##   tcase_vf <pf-device> <num>
 ##     Create VFs

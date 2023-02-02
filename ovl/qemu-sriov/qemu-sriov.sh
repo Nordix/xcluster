@@ -155,6 +155,7 @@ test_start_multus() {
 	otc 1 check_namespaces
 	otc 1 multus_crd
 	otc 1 deploy_whereabouts
+	otc 1 sriovcni
 	otc 1 check_nodes
 }
 ##   test start_sriovdp
@@ -171,47 +172,6 @@ test_start_sriovdp() {
 	otc 4 "vf eth4 1"
 	otc 1 sriovdp
 	otcw allocatable
-}
-##   test k8s
-##     Test in k8s environment with two pods using emulated VFs.
-test_k8s() {
-	cd $dir
-	. ./Envsettings
-	# Test with k8s-xcluster;
-	__image=$XCLUSTER_HOME/hd-k8s-xcluster-$__k8sver.img
-	test -r $__image || __image=$XCLUSTER_HOME/hd-k8s-xcluster.img
-	export __image
-	test -r $__image || die "Not readable [$__image]"
-	export XCTEST_HOOK=$($XCLUSTER ovld k8s-xcluster)/xctest-hook
-	export xcluster_FIRST_WORKER=2
-
-	export TOPOLOGY="multilan"
-	. $($XCLUSTER ovld network-topology)/$TOPOLOGY/Envsettings
-	export __nets_vm=0,1,3
-	export __nvm=3
-	export __nrouters=0
-	xcluster_start multus k8s-cni-calico lspci iptools network-topology iperf qemu-sriov
-
-	otc 1 check_namespaces
-	otc 1 check_nodes
-
-	otcw "modprobe eth2"
-	otc 2 "ifup_addr eth2 192.168.3.21"
-	otc 2 "wait_for_link_up eth2"
-	otc 3 "ifup_addr eth2 192.168.3.22"
-	otc 3 "wait_for_link_up eth2"
-	otc 2 "wait_for_ping 192.168.3.22"
-
-	otc 2 "create_vfs"
-	otc 3 "create_vfs"
-
-	otc 1 deploy_whereabouts
-	otc 1 deploy_multus
-	otc 1 deploy_sriov_daemonsets
-
-	otc 1 deploy_test_deployments
-	otc 2 "wait_for_ping 192.168.3.22"
-	xcluster_stop
 }
 ##   test net3
 ##     Use the sriov cni-plugin to create net3 interfaces in PODs.
