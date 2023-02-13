@@ -12,7 +12,7 @@ net_user() {
 	if test $nodeid -eq 1; then
 		local pk=18080
 		test -n "$XCLUSTER_K8S_PORT" && pk=$XCLUSTER_K8S_PORT
-		k8s=",hostfwd=tcp:127.0.0.1:$pk-192.168.0.1:8080,hostfwd=tcp:127.0.0.1:6443-192.168.0.1:6443"
+		k8s=",hostfwd=tcp:127.0.0.1:$pk-192.168.0.1:8080,hostfwd=tcp:127.0.0.1:7443-192.168.0.1:6443"
 	fi
 	local b1=$(printf '%02x' $net)
 	echo "-device virtio-net-pci,netdev=net$net,mac=00:00:00:01:$b1:$b0"
