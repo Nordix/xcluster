@@ -1,0 +1,76 @@
+# Demo - SR-IOV in Qemu
+
+SR-IOV - Single Root I/O Virtualization
+
+
+## The igb NIC in qemu
+
+```
+# Local built qemu
+cdo qemu-sriov
+. ./Envsettings
+echo $__kvm
+./qemu-sriov.sh test start_empty > $log
+
+# Igb modules. eth2-eth4 are configured as igb devices in qemu
+vm 1
+ip -d link show eth2
+modprobe igb
+modprobe igbvf
+ip -d link show eth2
+lsmod
+
+# Check device files in /sys
+lspci
+ls /sys/bus/pci/devices/0000:01:00.0/
+cat /sys/bus/pci/devices/0000:01:00.0/sriov_numvfs
+cat /sys/bus/pci/devices/0000:01:00.0/sriov_totalvfs
+
+# Create a VF
+ip -d link show eth5
+echo 1 > /sys/bus/pci/devices/0000:01:00.0/sriov_numvfs
+ip -d link show eth5
+
+# lspci
+lspci
+```
+
+
+## SR-IOV in Kubernetes
+
+```
+# Start a cluster with multus and the sriov CNI-plugin
+cdo qemu-sriov
+./qemu-sriov.sh test start_multus > $log
+vm 2
+kubectl get pods -n kube-system
+ls /opt/cni/bin/sriov
+
+# Show allocatable resources
+kubectl get node $(hostname) -o json | jq '.status.allocatable'
+
+# Create VF devices
+ls /sys/class/net/eth2/device/
+echo 2 > /sys/class/net/eth2/device/sriov_numvfs
+ifconfig eth5
+ip link set name eth2vf0 dev eth5
+ip link set name eth2vf1 dev eth6
+ifconfig eth2vf0
+
+# Deploy the sriov device plugin and check allocatable resources
+les default/etc/kubernetes/qemu-sriov/sriovdp-config2.yaml
+kubectl create -f /etc/kubernetes/qemu-sriov/sriovdp-config2.yaml
+kubectl create -f /etc/kubernetes/sriov/sriovdp-daemonset.yaml
+kubectl get node $(hostname) -o json | jq '.status.allocatable'
+
+# Create a Network Attachment Definition (NAD)
+les default/etc/kubernetes/qemu-sriov/net3-nad.yaml
+kubectl create -f default/etc/kubernetes/qemu-sriov/net3-nad.yaml
+
+# Create a deployment and check the PODs
+les default/etc/kubernetes/qemu-sriov/net3-deployment.yaml
+kubectl create -f default/etc/kubernetes/qemu-sriov/net3-deployment.yaml
+kubectl get pods -o wide
+kubectl exec <pod-here> -- ifconfig
+
+```
