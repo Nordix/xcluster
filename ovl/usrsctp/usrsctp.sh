@@ -87,26 +87,25 @@ test_client() {
 
 	xcluster_start iptools network-topology usrsctp
 
-	# otc 201 "check_discard_init"
-	otc 221 "start_server_router 192.168.3.221 7003"
-	otc 222 "start_server_router 192.168.3.222 7003"
-
-	otc 201 vip_ecmp_route
-	otc 202 "vip_ecmp_route 2"
+	otc 221 "start_server_tester 192.168.5.221 7003"
+	otc 222 "start_server_tester 192.168.5.222 7003"
 
 	otc 1 "start_tcpdump eth1"
 	otc 2 "start_tcpdump eth1"
+	otc 201 "start_tcpdump eth1"
+	otc 201 "start_tcpdump eth2"
 	otc 221 "start_tcpdump eth1"
 	otc 222 "start_tcpdump eth1"
 
-	otc 1 "start_client_vm 192.168.3.221 7003 192.168.1.1 7003"
-	otc 2 "start_client_vm 192.168.3.222 7003 192.168.1.2 7003"
+	otc 1 "start_client_vm 192.168.5.221 7003 192.168.1.1 7003"
+	otc 2 "start_client_vm 192.168.5.222 7003 192.168.1.2 7003"
 
 	otc 201 "test_conntrack 2"
 	otc 201 "test_conntrack 0"
 
 	otc 1 stop_all_tcpdump
 	otc 2 stop_all_tcpdump
+	otc 201 stop_all_tcpdump
 	otc 221 stop_all_tcpdump
 	otc 222 stop_all_tcpdump
 
@@ -114,6 +113,8 @@ test_client() {
 
 	rcp 1 /var/log/*.pcap captures/
 	rcp 2 /var/log/*.pcap captures/
+	rcp 201 /var/log/*.pcap captures/
+	rcp 203 /var/log/*.pcap captures/
 	rcp 221 /var/log/*.pcap captures/
 	rcp 222 /var/log/*.pcap captures/
 }
@@ -126,34 +127,29 @@ test_client_mh() {
 
 	xcluster_start iptools network-topology usrsctp
 
-	otc 201 "check_discard_init"
-	otc 202 "check_discard_init"
-	otc 221 "start_server_router 192.168.3.221,192.168.4.221 7003"
-	otc 222 "start_server_router 192.168.3.222,192.168.4.222 7003"
+	otc 221 "start_server_tester 192.168.5.221,192.168.6.221 7003"
+	otc 222 "start_server_tester 192.168.5.222,192.168.6.222 7003"
 
-	otc 201 vip_ecmp_route
-	otc 202 "vip_ecmp_route 2"
+	otc 201 "start_tcpdump eth1"
+	otc 201 "start_tcpdump eth2"
+	otc 202 "start_tcpdump eth1"
+	otc 202 "start_tcpdump eth2"
 
-	otc 2 "start_tcpdump eth1"
-	otc 2 "start_tcpdump eth2"
-	otc 221 "start_tcpdump eth1"
-	otc 221 "start_tcpdump eth2"
-
-	otc 1 "start_client_vm 192.168.3.221,192.168.4.221 7003 192.168.1.1 7003"
-	otc 2 "start_client_vm 192.168.3.222,192.168.4.222 7003 192.168.1.2 7003"
+	otc 1 "start_client_vm 192.168.5.221,192.168.6.221 7003 192.168.1.1 7003"
+	otc 2 "start_client_vm 192.168.5.222,192.168.6.222 7003 192.168.1.2 7003"
 
 	otc 201 "test_conntrack 2"
 	otc 202 "test_conntrack 2"
 	otc 201 "test_conntrack 0"
 	otc 202 "test_conntrack 0"
 
-	otc 2 stop_all_tcpdump
-	otc 221 stop_all_tcpdump
+	otc 201 stop_all_tcpdump
+	otc 202 stop_all_tcpdump
 
 	sleep 5
 
-	rcp 2 /var/log/*.pcap captures/
-	rcp 221 /var/log/*.pcap captures/
+	rcp 201 /var/log/*.pcap captures/
+	rcp 202 /var/log/*.pcap captures/
 }
 
 test_server() {
@@ -164,8 +160,6 @@ test_server() {
 
 	xcluster_start iptools network-topology usrsctp
 
-	otc 201 "check_discard_init"
-	otc 202 "check_discard_init"
 	otc 1 "start_server_vm 192.168.1.1 7003"
 	otc 2 "start_server_vm 192.168.1.2 7003"
 
@@ -177,8 +171,8 @@ test_server() {
 	otc 221 "start_tcpdump eth1"
 	otc 222 "start_tcpdump eth1"
 
-	otc 221 "start_client_router 192.168.3.201 7003 192.168.3.221 6001"
-	otc 222 "start_client_router 192.168.3.201 7003 192.168.3.222 6002"
+	otc 221 "start_client_tester 10.0.0.10 7003 192.168.5.221 6001"
+	otc 222 "start_client_tester 10.0.0.20 7003 192.168.5.222 6002"
 
 	otc 201 "test_conntrack 2"
 	otc 201 "test_conntrack 0"
@@ -208,8 +202,7 @@ test_k8s_client() {
 
 	otc 1 check_namespaces
 	otc 1 check_nodes
-	otc 221 start_server_router
-	# otc 2 "check_discard_init"
+	otc 221 start_server_tester
 
 	otc 201 vip_ecmp_route
 	otc 202 "vip_ecmp_route 2"
@@ -250,8 +243,7 @@ test_k8s_client_calico() {
 
 	otc 1 check_namespaces
 	otc 1 check_nodes
-	otc 221 start_server_router
-	# otc 2 "check_discard_init"
+	otc 221 start_server_tester
 
 	otc 201 vip_ecmp_route
 	otc 202 "vip_ecmp_route 2"
@@ -297,8 +289,8 @@ test_k8s_server() {
 	otc 1 "start_tcpdump eth1"
 	otc 2 "start_tcpdump eth1"
 
-	otc 221 "start_client_router 10.0.0.72 7002 192.168.3.221 6001"
-	otc 222 "start_client_router 10.0.0.72 7002 192.168.3.222 6002"
+	otc 221 "start_client_tester 10.0.0.72 7002 192.168.3.221 6001"
+	otc 222 "start_client_tester 10.0.0.72 7002 192.168.3.222 6002"
 
 	otc 2 "test_conntrack 2"
 	otc 2 "test_conntrack 0"
@@ -338,8 +330,8 @@ test_k8s_server_calico() {
 
 	otc 2 "start_tcpdump_proc_ns usrsctpt"
 
-	otc 221 "start_client_router 10.0.0.72 7002 192.168.3.221 6001"
-	otc 222 "start_client_router 10.0.0.72 7002 192.168.3.222 6002"
+	otc 221 "start_client_tester 10.0.0.72 7002 192.168.3.221 6001"
+	otc 222 "start_client_tester 10.0.0.72 7002 192.168.3.222 6002"
 
 	otc 2 "test_conntrack 2"
 	otc 2 "test_conntrack 0"

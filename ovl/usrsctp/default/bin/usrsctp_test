@@ -67,21 +67,23 @@ nf_ct_sctp_check() {
 }
 
 cmd_tcase_test_conntrack() {
-	__timeout=120
+	__timeout=30
 	__proto=sctp
 	__conns=4
+	__state="ESTABLISHED"
 	test -n "$1" && __conns="$1"
 	tcase "$__proto conntrack info"
 	pushv $__timeout
-	tex "test_assured_connections $__proto $__conns"
+	tex "test_connections $__state $__proto $__conns" || true
 }
 
-test_assured_connections() {
-	proto="$1"
+test_connections() {
+	state="$1"
+	proto="$2"
 	num_of_conns=1
-	test -n "$2" && num_of_conns="$2"
-	conntrack -p $1 -L
-	test $(conntrack -p $1 -L 2> /dev/null | grep ESTABLISHED | wc -l) -eq $2
+	test -n "$3" && num_of_conns="$3"
+	conntrack -p $proto -L
+	test $(conntrack -p $proto -L 2> /dev/null | grep $state | wc -l) -eq $num_of_conns
 }
 
 cmd_tcase_deploy_client_pods() {
@@ -111,8 +113,8 @@ cmd_tcase_start_server_vm() {
 	tex "pgrep usrsctpt" || tdie
 }
 
-cmd_tcase_start_server_router() {
-	__laddr=192.168.3.221
+cmd_tcase_start_server_tester() {
+	__laddr=192.168.5.221
 	__lport=7003
 	test -n "$1" && __laddr="$1"
 	test -n "$2" && __lport="$2"
@@ -126,7 +128,7 @@ cmd_tcase_start_server_router() {
 }
 
 cmd_tcase_start_client_vm() {
-	__raddr=192.168.3.221
+	__raddr=192.168.5.221
 	__rport=7003
 	__laddr=192.168.1.2
 	__lport=7003
@@ -143,10 +145,10 @@ cmd_tcase_start_client_vm() {
 	tex "pgrep usrsctpt" || tdie
 }
 
-cmd_tcase_start_client_router() {
+cmd_tcase_start_client_tester() {
 	__raddr=10.0.0.72
 	__rport=7002
-	__laddr=192.168.3.221
+	__laddr=192.168.5.221
 	__lport=7002
 	test -n "$1" && __raddr="$1"
 	test -n "$2" && __rport="$2"
