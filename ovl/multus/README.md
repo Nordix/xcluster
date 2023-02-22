@@ -76,13 +76,17 @@ Get versions;
 $($XCLUSTER ovld cni-plugins)/cni-plugins.sh version
 ```
 
-Whereabouts must be cloned and built locally;
+Whereabouts and sriov-cni must be cloned and built locally;
 ```
 export WHEREABOUTS_DIR=/path/to/your/whereabouts
-cd $(dirname $WHEREABOUTS_DIR)
-git clone --depth 1 https://github.com/k8snetworkplumbingwg/whereabouts.git
+git clone --depth 1 https://github.com/k8snetworkplumbingwg/whereabouts.git $WHEREABOUTS_DIR
 cd $WHEREABOUTS_DIR
 ./hack/build-go.sh
+export SRIOV_DIR=/path/to/your/sriov-cni
+git clone https://github.com/k8snetworkplumbingwg/sriov-cni.git $SRIOV_DIR
+cd $SRIOV_DIR
+make
+./tar - | tar t     # Check that whereabouts and sriov are included
 ```
 
 Build the image;

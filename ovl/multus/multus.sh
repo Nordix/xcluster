@@ -127,7 +127,7 @@ test_start_empty() {
 	export TOPOLOGY=multilan-router
 	. $($XCLUSTER ovld network-topology)/$TOPOLOGY/Envsettings
 	test -n "$SETUP" || export SETUP=test
-	xcluster_start multus $@
+	xcluster_start multus network-topology $@
 
 	otc 1 check_namespaces
 	otc 1 check_nodes
