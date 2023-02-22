@@ -152,7 +152,7 @@ cmd_tcase_sriovcni() {
 ##     Create VFs
 cmd_tcase_vf() {
 	tcase "Create $2 VFs from $1"
-	test -n "$1" || tdie "Param missing"
+	test -n "$2" || tdie "Param missing"
 	local master=$1
 	local num=$2
 	test $num -gt 0 || tdie "Num must be > 0"
