@@ -29,7 +29,9 @@ $PREFIX:192.168.0.250 ip6-host
 
 EOF
 
-for n in $(seq 1 $__nvm); do
+nvm=$__nvm
+test -n "$scaleout_nvm" && nvm=$scaleout_nvm
+for n in $(seq 1 $nvm); do
 	printf '192.168.1.%d vm-%03d\n' $n $n >> /etc/hosts
 	printf "$PREFIX:192.168.1.%d vm-%03d\n" $n $n >> /etc/hosts
 done
