@@ -104,6 +104,12 @@ The cluster has a "backend" network for internal communication. All
 communication with the outside world goes through a "frontend"
 network.
 
+## Bridge
+
+<img src="bridge.svg" alt="Bridge network" width="80%" />
+
+This is a simple bridged network with the same IP network across all
+nodes. Traffic is bridged by the router between the VMs and testers.
 
 ## Multilan
 

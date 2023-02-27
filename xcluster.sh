@@ -147,8 +147,8 @@ cmd_nsadd() {
 	local netns=${USER}_xcluster$1
 	ip netns | grep -qe "^$netns " && die "Netns already exist [$netns]"
 	sudo ip netns add $netns
-    ip link add dev xcluster$1 type veth peer name host$1
-    ip link set xcluster$1 up
+	ip link add dev xcluster$1 type veth peer name host$1
+	ip link set xcluster$1 up
 
 	set_netns_ipv4_addresses $1
 	ip addr add $ipv4_host/32 dev xcluster$1
@@ -157,8 +157,8 @@ cmd_nsadd() {
 	ip -6 addr add $__ipv6_prefix$ipv4_host/128 dev xcluster$1
 	ip -6 ro add $__ipv6_prefix$ipv4_ns/128 dev xcluster$1
 
-    ip link set host$1 netns $netns
-    sudo ip netns exec $netns \
+	ip link set host$1 netns $netns
+	sudo ip netns exec $netns \
 		$me nssetup --ipv4-base=$__ipv4_base --ipv6-prefix=$__ipv6_prefix $1
 	sudo $me masq --ipv4-base=$__ipv4_base
 
@@ -171,14 +171,14 @@ cmd_nsadd_docker() {
 	local netns=${USER}_xcluster$1
 	ip netns | grep -qe "^$netns " && die "Netns already exist [$netns]"
 	sudo ip netns add $netns
-    ip link add dev xcluster$1 type veth peer name host$1
-    ip link set xcluster$1 up
+	ip link add dev xcluster$1 type veth peer name host$1
+	ip link set xcluster$1 up
 	ip link set dev xcluster$1 master docker0
 
 	cmd_docker_net $1
 
-    ip link set host$1 netns $netns
-    sudo ip netns exec $netns \
+	ip link set host$1 netns $netns
+	sudo ip netns exec $netns \
 		$me nssetup --docker --adr4=$adr4 --gw4=$gw4 $1
 	mkrmtap
 }
@@ -309,6 +309,7 @@ cmd_br_setup() {
 	test -n "$1" || die 'No index'
 	local i=$1
 	local dev=xcbr$i
+	local br_opts=${2:-""}
 
 	if ip link show dev $dev > /dev/null 2>&1; then
 		log "Bridge already exists [$dev]"
@@ -316,7 +317,7 @@ cmd_br_setup() {
 	fi
 
 	test -n "$__mtu" || __mtu=1500
-	ip link add name $dev mtu $__mtu type bridge || \
+	ip link add name $dev mtu $__mtu type bridge $br_opts || \
 		die "Failed to create bridge [$dev]"
 
 	ip link set $dev up
@@ -335,7 +336,7 @@ cmd_kernel_build() {
 	cmd_env
 	test "$__kbin" = "$XCLUSTER_HOME/bzImage" && __kbin="$__kbin-$__kver"
 	$DISKIM kernel_download --kver=$__kver
-    if test -f "$__kpatch"; then
+	if test -f "$__kpatch"; then
 		test -r "$__kpatch" || die "Kpatch not readable [$__kpatch]"
 		rm -rf $KERNELDIR/$__kver
 		$DISKIM kernel_unpack --kver=$__kver --kdir=$KERNELDIR/$__kver
@@ -858,7 +859,7 @@ cmd_svm() {
 	local nodeid=$1
 	test $nodeid -gt 0 || die "Invalid nodeid [$nodeid]"
 	echo help | telnet 127.0.0.1 $((XCLUSTER_MONITOR_BASE+nodeid)) 2>&1 | \
-        grep -q 'Connection refused' || die "Node already active [$nodeid]"
+	grep -q 'Connection refused' || die "Node already active [$nodeid]"
 
 	local sfile=$XCLUSTER_TMP/screen/session
 	test -r $sfile || die "Not readable [$sfile]"
@@ -872,7 +873,7 @@ cmd_xvm() {
 	local nodeid=$1
 	test $nodeid -gt 0 || die "Invalid nodeid [$nodeid]"
 	echo help | telnet 127.0.0.1 $((XCLUSTER_MONITOR_BASE+nodeid)) 2>&1 | \
-        grep -q 'Connection refused' || die "Node already active [$nodeid]"
+	grep -q 'Connection refused' || die "Node already active [$nodeid]"
 
 	local x y base=$nodeid
 	test $nodeid -gt 200 && base=$((base+4))

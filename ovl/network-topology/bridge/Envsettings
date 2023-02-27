@@ -1,0 +1,15 @@
+#! /bin/sh
+
+export __nrouters=1
+export __mem201=128
+export __mem202=128
+
+br_opts='group_fwd_mask 0x4000'
+
+if ip netns id | grep -q _xcluster; then
+	# recreate bridges 1 and 2 with bridge forward options
+	for i in 1 2; do
+		ip link del xcbr$i > /dev/null 2>&1
+		$XCLUSTER br_setup $i "${br_opts}" || echo "ERROR: could not create xcbr$i"
+	done
+fi
