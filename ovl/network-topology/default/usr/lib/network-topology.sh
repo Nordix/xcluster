@@ -32,3 +32,21 @@ fwsetup() {
 	echo 1 > /proc/sys/net/ipv4/conf/all/forwarding
 	echo 1 > /proc/sys/net/ipv6/conf/all/forwarding
 }
+
+brsetup() {
+	brdev=$1
+	dev1=$2
+	dev2=$3
+	net=$4
+
+	b0=$(printf '%02x' $i)
+	b1=$(printf "%02x" $net)
+
+	ip link add name $brdev address 00:00:01:01:$b1:$b0 type bridge
+	ip link set up dev $dev1
+	ip link set up dev $dev2
+	ip link set dev $dev1 master $brdev
+	ip link set dev $dev2 master $brdev
+
+	ifsetup $brdev $net
+}
