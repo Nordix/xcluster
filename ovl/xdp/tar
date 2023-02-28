@@ -20,28 +20,45 @@ cp -R $dir/default/* $tmp
 
 eval $($XCLUSTER env | grep -E '^KERNELDIR|__kver')
 kdir=$KERNELDIR/$__kver
+
+# install bpftool
 f=$kdir/tools/bpf/bpftool/bpftool
 test -x $f || die "Not executable [$f]"
-cp $f $tmp/bin
+$XCLUSTER install_prog --dest=$tmp $f
+
+# install libbpf
+f=$kdir/tools/lib/bpf/root/*
+cp -R $f $tmp/
+
+# install perf
 f=$kdir/tools/perf/perf
 test -x $f || die "Not executable [$f]"
 $XCLUSTER install_prog --dest=$tmp $f
 
-d=$GOPATH/src/github.com/xdp-project/xdp-tutorial
+# install xdptest (kernel+userspace) programs
+mkdir -p $tmp/root/xdptest
+make -C src O=$tmp/root/xdptest > /dev/null || die "Build"
 
-for x in basic01-xdp-pass basic02-prog-by-name basic03-map-counter \
-	basic04-pinning-maps packet01-parsing advanced03-AF_XDP; do
+# install xdp-tools examples
+d=$XCLUSTER_WORKSPACE/sys/usr/local/sbin
+$XCLUSTER install_prog --dest=$tmp $d/xdp-loader
+$XCLUSTER install_prog --dest=$tmp $d/xdp-filter
+$XCLUSTER install_prog --dest=$tmp $d/xdpdump
+
+d=$XCLUSTER_WORKSPACE/sys/usr/local/lib/bpf
+mkdir -p $tmp/usr/local/lib/bpf
+cp -R $d $tmp/usr/local/lib
+
+# install AF_XDP bpf-examples
+d=$GOPATH/src/github.com/xdp-project/bpf-examples
+
+for x in AF_XDP-example AF_XDP-forwarding; do
 	mkdir -p $tmp/root/$x
-	for n in xdp_pass_user xdp_pass_kern.o af_xdp_user af_xdp_kern.o \
-		xdp_loader xdp_prog_kern.o xdp_load_and_stats xdp_stats; do
+	for n in xdpsock xdpsock_kern.o xsk_fwd; do
 		f=$d/$x/$n
 		test -r $f && cp $f $tmp/root/$x
 	done
 done
-
-mkdir -p $tmp/root/xdptest
-make -C src O=$tmp/root/xdptest > /dev/null || die "Build"
-
 
 cd $tmp
 tar cf "$1" *

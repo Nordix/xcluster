@@ -11,7 +11,8 @@
 #include <string.h>
 #include <poll.h>
 #include <unistd.h>
-#include <bpf/xsk.h>
+#include <xdp/xsk.h>
+#include <xdp/libxdp.h>
 #include <net/if.h>
 #include <linux/if_ether.h>
 #include <arpa/inet.h>
@@ -90,9 +91,9 @@ static int cmdReceive(int argc, char **argv)
 	// (just checking?)
 	uint32_t prog_id = 0;
 	int rc;
-	rc = bpf_get_link_xdp_id(ifindex, &prog_id, 0);
+	rc = bpf_xdp_query_id(ifindex, 0, &prog_id);
 	if (rc != 0)
-		die("Failed bpf_get_link_xdp_id ingress; %s\n", strerror(-rc));
+		die("Failed bpf_xdp_query_id ingress; %s\n", strerror(-rc));
 
 	struct xsk_umem_info* uinfo = create_umem(nfq);
 	struct xsk_socket_config xsk_cfg;
@@ -102,8 +103,7 @@ static int cmdReceive(int argc, char **argv)
 	struct xsk_ring_prod tx;
 	xsk_cfg.rx_size = XSK_RING_CONS__DEFAULT_NUM_DESCS;
 	xsk_cfg.tx_size = XSK_RING_PROD__DEFAULT_NUM_DESCS;
-	xsk_cfg.libbpf_flags = 0;
-	xsk_cfg.xdp_flags = 0;
+	xsk_cfg.xdp_flags = XSK_LIBBPF_FLAGS__INHIBIT_PROG_LOAD;
 	xsk_cfg.bind_flags = XDP_COPY;
 	rc = xsk_socket__create(&ixsk, dev, q, uinfo->umem, &rx, &tx, &xsk_cfg);
 	if (rc != 0)
