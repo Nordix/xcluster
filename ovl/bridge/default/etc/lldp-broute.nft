@@ -1,0 +1,6 @@
+table bridge brouting {
+        chain prerouting {
+                type filter hook prerouting priority dstnat; policy accept;
+                ether type 0x88cc counter meta broute set 1
+        }
+}

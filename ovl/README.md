@@ -2,6 +2,7 @@
 
  * [apparmor](./apparmor/README.md) -  Experiments and examples with [Apparmor](https://apparmor.net/) and [seccomp](https://en.wikipedia.org/wiki/Seccomp). 
  * [attic](./attic/README.md) -  These OVLs are obsolete and unmaintained 
+ * [bridge](./bridge/README.md) - Use bridge topology in xcluster, and test ethernet bridging.
  * [cert-manager](./cert-manager/README.md) -  The [cert-manager](https://github.com/jetstack/cert-manager) on xcluster. 
  * [cni-plugins](./cni-plugins/README.md) -  Installs [cni-plugins](https://github.com/containernetworking/plugins) in `/opt/cni/bin`. The intention is to have a uniform way of installing cni-plugins rather than letting every ovl using it's own way. 
  * [containerd](./containerd/README.md) -  [Containerd](https://containerd.io/) in `xcluster`. 
