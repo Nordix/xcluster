@@ -30,6 +30,7 @@
  * [k8s-sctp](./k8s-sctp/README.md) -  Use SCTP in Kubernetes. 
  * [k8s-xcluster](./k8s-xcluster/README.md) -  - Kubernetes in `xcluster` with downloaded CNI-plugin. 
  * [kselftest](./kselftest/README.md) -  Linux kernel self-test. 
+ * [lldp](./lldp/README.md) - Run LLDP in xcluster.
  * [kubeadm](./kubeadm/README.md) -  Install Kubernetes with `kubeadm` in xcluster. [kubeadm](https://github.com/kubernetes/kubeadm) is the standard installation tool for Kubernetes. 
  * [kubernetes](./kubernetes/README.md) -  A [Kubernetes](https://kubernetes.io/) cluster with bridge CNI-plugin. 
  * [load-balancer](./load-balancer/README.md) -  This ovl tests different load-balancers (without K8s). The default xcluster network-topology is used; 

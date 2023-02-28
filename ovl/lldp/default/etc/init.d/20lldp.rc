@@ -1,0 +1,6 @@
+#! /bin/sh
+. /etc/profile
+
+cmd="lldpd -d"
+log=/var/log/lldpd.log
+nohup $cmd > $log 2>&1 &
