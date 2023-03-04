@@ -60,25 +60,11 @@ spec:
       serviceAccountName: xcluster-cni
       serviceAccount: xcluster-cni
       hostNetwork: true
-      containers:
-      - name: xcluster-cni
+      initContainers:
+      - name: install
         image: registry.nordix.org/cloud-native/xcluster-cni:latest
         imagePullPolicy: IfNotPresent
-        lifecycle:
-          preStop:
-           exec:
-             command: ["/xcluster-cni.sh", "stop"]
-        env:
-          - name: K8S_NODE
-            valueFrom:
-              fieldRef:
-                fieldPath: spec.nodeName
-          # TUNNEL_MODE=None|sit
-          - name: TUNNEL_MODE
-            value: "None"
-          # Include all :'s, example; "1000:2::" -> 1000:2::192.169.1.2
-          - name: IPV6_PREFIX
-            value: "1000::1:"
+        command: ["/xcluster-cni.sh", "install"]
         securityContext:
           privileged: true
         volumeMounts:
@@ -88,6 +74,19 @@ spec:
          - mountPath: /cni/net.d
            name: cni-net-dir
            readOnly: false
+      containers:
+      - name: xcluster-cni
+        image: registry.nordix.org/cloud-native/xcluster-cni:latest
+        imagePullPolicy: IfNotPresent
+        env:
+          - name: NODE_NAME
+            valueFrom:
+              fieldRef:
+                fieldPath: spec.nodeName
+          - name: LOG_LEVEL
+            value: "debug"
+        securityContext:
+          privileged: true
       volumes:
         - name: cni-bin-dir
           hostPath:
@@ -95,3 +94,4 @@ spec:
         - name: cni-net-dir
           hostPath:
             path: /etc/cni/net.d
+
