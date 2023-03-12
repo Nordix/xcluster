@@ -48,5 +48,5 @@ sleep 0.2
 
 cat > /etc/cri-plugin.rc <<EOF
 # CRI options to "kubelet";
-CRI_OPTS="--container-runtime=remote --container-runtime-endpoint=unix:///run/containerd/containerd.sock --image-service-endpoint=unix:///run/containerd/containerd.sock $CRI_OPTS"
+CRI_OPTS="--container-runtime-endpoint=unix:///run/containerd/containerd.sock --image-service-endpoint=unix:///run/containerd/containerd.sock $CRI_OPTS"
 EOF
