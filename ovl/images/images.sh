@@ -153,7 +153,7 @@ cmd_lreg_cache() {
 	local regip=$(cmd_get_regip) || return 1
 	skopeo copy --dest-tls-verify=false docker://$1 docker://$regip:5000/$img
 }
-##   lreg_upload [--strip-host] <docker_image>
+##   lreg_upload [--include-host] <docker_image>
 ##     Upload an image from you local docker daemon to the privare registry.
 ##     Note that "docker.io" and "library/" is suppressed in "docker images";
 ##       lreg_upload library/alpine:3.8
@@ -162,7 +162,7 @@ cmd_lreg_upload() {
 	test -n "$1" || die "No image"
 	local regip=$(cmd_get_regip) || return 1
 	local dst="$1"
-	test "$__strip_host" = "yes" && dst=$(echo "$1" | cut -d/ -f2-)
+	test "$__include_host" != "yes" && dst=$(echo "$1" | cut -d/ -f2-)
 	skopeo copy --dest-tls-verify=false docker-daemon:$1 docker://$regip:5000/$dst
 	return 0
 }
