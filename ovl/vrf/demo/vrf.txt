@@ -1,0 +1,124 @@
+# VRF Demo
+
+
+```
+# Start cluster and show routes and addresses
+cdo vrf
+./vrf.sh test start_demo > $log
+
+vm 1
+ip route show
+ip addr show dev lo
+vm 202
+ip route show
+ip addr show dev lo
+
+vm 201
+tcpdump -ni eth1 icmp or arp
+vm 202
+tcpdump -ni eth3 icmp or arp
+vm 1
+
+ping -c1 -W1 30.0.0.0                # Working
+ping -c1 -W1 -I 10.0.0.1 30.0.0.0    # Working
+ping -c1 -W1 20.0.0.0                # NOT working
+ping -c1 -W1 -I 10.0.0.1 20.0.0.0    # NOT working
+
+# direct route
+ip route add 20.0.0.0/24 via 192.168.3.202
+
+ping -c1 -W1 30.0.0.0                # Working
+ping -c1 -W1 -I 10.0.0.1 30.0.0.0    # Working
+ping -c1 -W1 20.0.0.0                # Working
+ping -c1 -W1 -I 10.0.0.1 20.0.0.0    # Working
+
+
+
+# source based policy route
+./vrf.sh test start_demo > $log   # Restart!
+vm 1
+ping -c1 -W1 30.0.0.0                # Working
+ping -c1 -W1 -I 10.0.0.1 30.0.0.0    # Working
+ping -c1 -W1 20.0.0.0                # NOT working
+ping -c1 -W1 -I 10.0.0.1 20.0.0.0    # NOT working
+
+ip route add default via 192.168.3.202 table 10
+ip rule add from 10.0.0.0/24 table 10
+
+ping -c1 -W1 30.0.0.0                # Working
+ping -c1 -W1 -I 10.0.0.1 30.0.0.0    # NOT working
+ping -c1 -W1 20.0.0.0                # NOT working
+ping -c1 -W1 -I 10.0.0.1 20.0.0.0    # Working
+
+
+# Add a VRF and bind a shell to it
+./vrf.sh test start_demo > $log   # Restart!
+vm 202
+tcpdump -ni eth3 icmp
+vm 201
+tcpdump -ni eth1 icmp
+
+vm 1
+#sysctl -w net.ipv4.raw_l3mdev_accept=1
+ip link add vrf-blue type vrf table 10
+ip link set dev vrf-blue up
+ip link set dev eth2 master vrf-blue
+ip ro add default via 192.168.3.202 src 10.0.0.1 table 10
+
+ping -c1 -W1 30.0.0.0                # Working
+ping -c1 -W1 -I 10.0.0.1 30.0.0.0    # Working
+ping -c1 -W1 20.0.0.0                # NOT working
+ping -c1 -W1 -I 10.0.0.1 20.0.0.0    # NOT working
+ping -c1 -W1 -I vrf-blue 20.0.0.0    # Working
+
+# Start a program bound to a VRF
+ip vrf exec vrf-blue sh
+ping -c1 -W1 30.0.0.0                # NOT working
+ping -c1 -W1 -I 10.0.0.1 30.0.0.0    # NOT working
+ping -c1 -W1 20.0.0.0                # Working
+ping -c1 -W1 -I 10.0.0.1 20.0.0.0    # Working
+
+# Show isolation ("too good")
+ping -c1 -W1 192.168.1.201           # NOT working
+ping -c1 -W1 127.0.0.1               # NOT working
+ip route add  192.168.1.0/24 dev eth1 src 192.168.1.1 vrf vrf-blue
+# Request is ok, but reply is lost
+# https://unix.stackexchange.com/questions/739196/how-can-loopback-addresses-be-assiged-in-a-linux-vrf
+```
+
+## Other policy routing options
+
+```
+# Policy route on uid
+./vrf.sh test start_demo > $log   # Restart!
+vm 1
+mkdir /home
+adduser guest -u 200 -D
+chmod a+s /bin/ping
+ip rule add uidrange 200-299 table 10
+ip route add default via 192.168.3.202 src 10.0.0.1 table 10
+ping -c1 -W1 20.0.0.0
+su - guest
+ping -c1 -W1 20.0.0.0
+
+# Policy route on oif
+./vrf.sh test start_demo > $log   # Restart!
+vm 202
+tcpdump -ni eth3
+
+vm 1
+ip addr del 10.0.0.0/24 dev lo
+ip addr add 10.0.0.1/24 dev eth2
+
+ping -c1 -W1 20.0.0.0
+ping -c1 -W1 -I 10.0.0.1 20.0.0.0
+ip route add default via 192.168.3.202 table 10
+ip rule add oif eth2 table 10
+
+ping -c1 -W1 20.0.0.0
+ping -c1 -W1 -I 10.0.0.1 20.0.0.0
+ping -c1 -W1 -I eth2 20.0.0.0
+
+ping -c1 -W1 30.0.0.0
+ping -c1 -W1 -I 10.0.0.1 30.0.0.0
+```

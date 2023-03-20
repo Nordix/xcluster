@@ -1,0 +1,138 @@
+#! /bin/sh
+##
+## vrf_test --
+##
+##   Test script for vrf executed in xcluster.
+##
+## Commands;
+##
+
+prg=$(basename $0)
+dir=$(dirname $0); dir=$(readlink -f $dir)
+me=$dir/$prg
+tmp=/tmp/${prg}_$$
+test -n "$DOMAIN" || DOMAIN=xcluster
+
+die() {
+	echo "ERROR: $*" >&2
+	rm -rf $tmp
+	exit 1
+}
+help() {
+	grep '^##' $0 | cut -c3-
+	rm -rf $tmp
+	exit 0
+}
+test -n "$1" || help
+echo "$1" | grep -qi "^help\|-h" && help
+
+log() {
+	echo "$prg: $*" >&2
+}
+dbg() {
+	test -n "$__verbose" && echo "$prg: $*" >&2
+}
+
+##   version - Log versions
+cmd_tcase_version() {
+	log_version
+}
+##   local_addresses
+##     Add local CIDR to the "lo" device. /24 for ipv4 and /120 for ipv6
+cmd_tcase_local_addresses() {
+	local cidr
+	tcase "Add local addresses [$PREFIX:$1/120]"
+	test -n "$1" || tdie "No CIDR"
+	sysctl -w net.ipv4.ip_nonlocal_bind=1
+	sysctl -w net.ipv6.ip_nonlocal_bind=1
+	sysctl -w net.ipv4.conf.all.arp_ignore=1
+	ip addr add $1/24 dev lo || tdie $1/24
+	ip -6 addr add $PREFIX:$1/120 dev lo || tdie $PREFIX:$1/120
+	ip -6 ro add local $PREFIX:$1/120 dev lo
+}
+##   tcase_route adr <via...>
+##     Set a route
+cmd_tcase_route() {
+	tcase "Route $@"
+	test -n "$1" || tdie "Parameter missing"
+	local a hops4 hops6 adr4 adr6
+	if test "$1" = "default"; then
+		adr4=default
+		adr6=default
+		if test -z "$2"; then
+			ip ro del default
+			ip -6 ro del default > /dev/null 2>&1
+			return 0
+		fi
+	else
+		adr4=$1
+		adr6=$PREFIX:$1
+	fi
+	test -n "$2" || tdie "Parameter missing"
+	shift
+	for a in $@; do
+        hops4="$hops4 nexthop via $a"
+        hops6="$hops6 nexthop via $PREFIX:$a"
+	done
+	ip ro replace $adr4 $hops4 || tdie "Ipv4 default route"
+    ip -6 ro replace $adr6 $hops6 || tdie "Ipv6 default route"
+}
+##   tcase_mconnect_server
+##     Start an mconnect server
+cmd_tcase_mconnect_server() {
+	local adr=":5001"
+	test -n "$1" && adr=$1
+	tcase "Start an mconnect server on $adr"
+	mconnect -address $adr -server > /var/log/mconnect.log 2>&1 &
+}
+##   tcase_mconnect [--mcopts=] <address> [nconns] [targets] [margin]
+##     Do an mconnect
+cmd_tcase_mconnect() {
+	tcase "Mconnect $@"
+	mcopts=$__mcopts
+	test -n "$1" || tdie "No address"
+	do_mconnect $@
+}
+##   tcase_ifdown <iface...>
+##     Bring down an interface
+cmd_tcase_ifdown() {
+	tcase "Down interface [$@]"
+	test -n "$1" || tdie "No interface"
+	local iface
+	for iface in $@; do
+		ip link set down dev $iface || tdie "Down $iface"
+	done
+}
+
+
+
+. /etc/profile
+. /usr/lib/xctest
+indent='  '
+
+
+# Get the command
+cmd=$1
+shift
+grep -q "^cmd_$cmd()" $0 || die "Invalid command [$cmd]"
+
+while echo "$1" | grep -q '^--'; do
+	if echo $1 | grep -q =; then
+		o=$(echo "$1" | cut -d= -f1 | sed -e 's,-,_,g')
+		v=$(echo "$1" | cut -d= -f2-)
+		eval "$o=\"$v\""
+	else
+		o=$(echo "$1" | sed -e 's,-,_,g')
+		eval "$o=yes"
+	fi
+	shift
+done
+unset o v
+long_opts=`set | grep '^__' | cut -d= -f1`
+
+# Execute command
+trap "die Interrupted" INT TERM
+cmd_$cmd "$@"
+status=$?
+rm -rf $tmp
+exit $status
