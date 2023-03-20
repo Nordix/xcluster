@@ -9,4 +9,7 @@ Virtual Routing and Forwarding (VRF) and Link Layer Discovery Protocol (LLDP)
 
 
 This ovl was primarily created for a demo at Mar 2023. So, please
-check the demo/ dir.
+check the `demo/` dir. Demo network setup;
+
+<img src="test-net.svg" width="60%" />
+
