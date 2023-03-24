@@ -11,10 +11,8 @@ expensive HW.
 Support for SR-IOV was added to `qemu` in commit `7c0fa8dff`. It is
 included in qemu `v7.0.0` (git tag --contains 7c0fa8dff).
 
-A NIC that supports SR-IOV in `qemu` is on it's way. It is built on the
-Intel `igb` emulation by @knuto. Packet handling was [not implemented](
-https://github.com/knuto/qemu/issues/5) but is now added in a
-[clone on Nordix](https://github.com/Nordix/qemu/tree/igb-device).
+A NIC that supports SR-IOV in `qemu` is now available. It is built on the
+Intel `igb` emulation by @knuto.
 
 The [multilan-router](../network-topology#multilan-router) network
 topology is most often used.
@@ -30,17 +28,7 @@ Build a local qemu;
 ```
 # Clone;
 QEMUDIR=$GOPATH/src/github.com/qemu/qemu  # (set by; . ./Envsettings)
-mkdir -p $(dirname $QEMUDIR)
-cd $(dirname $QEMUDIR)
-git clone -b igb-device git@github.com:Nordix/qemu.git
-cd $QEMUDIR
-git remote add upstream https://github.com/qemu/qemu.git
-git remote set-url --push upstream no_push
-git remote -v
-# Rebase;
-cd $QEMUDIR
-git fetch upstream
-git rebase upstream/master
+git clone --depth 1 https://github.com/qemu/qemu.git $QEMUDIR
 
 # Build;
 cd $QEMUDIR
@@ -108,7 +96,7 @@ chmod 660 /dev/kvm
 
 ```
 ./qemu-sriov.sh                       # Help printout
-./qemu-sriov.sh test > $log           # Default tests without K8s
+./qemu-sriov.sh test > $log           # Default tests
 images lreg_preload default           # Pre-load the local registry
 ./qemu-sriov.sh test start_k8s > $log # Test with K8s.
 ```
