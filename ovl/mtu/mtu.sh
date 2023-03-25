@@ -77,16 +77,16 @@ cmd_test() {
     tlog "Xcluster test ended. Total time $((now-begin)) sec"
 
 }
-
+##   test start
+##     Start cluster with K8s
 test_start() {
-	xcluster_prep dual-stack
-	xcluster_start mtu
-
+	cd $dir
+	xcluster_start .
 	otc 1 check_namespaces
 	otc 1 check_nodes
 }
-
-
+##   test jumbo
+##     Test jumbo-frames (mtu=9000) with K8s
 test_jumbo() {
 	export __mtu=9000
 	tlog "=== mtu: Jumbo-frame test, eth mtu=$__mtu"
@@ -98,17 +98,17 @@ test_jumbo() {
 
 	xcluster_stop
 }
-
-
+##   test startc
+##     Start cluster without K8s
 test_startc() {
-	tlog "Start MTU chain without K8s"
+	cd $dir
 	cmd_env
 	export TOPOLOGY=multihop
 	. $($XCLUSTER ovld network-topology)/$TOPOLOGY/Envsettings
 	export __image=$XCLUSTER_HOME/hd.img
 	export __ntesters=1
 	echo "$XOVLS" | grep -q private-reg && unset XOVLS
-	xcluster_start network-topology iptools mtu
+	xcluster_start network-topology iptools .
 	mtu_narrow
 }
 
