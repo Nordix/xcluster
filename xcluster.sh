@@ -308,8 +308,8 @@ set_netns_ipv4_addresses() {
 cmd_br_setup() {
 	test -n "$1" || die 'No index'
 	local i=$1
+	shift
 	local dev=xcbr$i
-	local br_opts=${2:-""}
 
 	if ip link show dev $dev > /dev/null 2>&1; then
 		log "Bridge already exists [$dev]"
@@ -317,7 +317,8 @@ cmd_br_setup() {
 	fi
 
 	test -n "$__mtu" || __mtu=1500
-	ip link add name $dev mtu $__mtu type bridge $br_opts || \
+	# https://interestingtraffic.nl/2017/11/21/an-oddly-specific-post-about-group_fwd_mask/
+	ip link add name $dev mtu $__mtu type bridge group_fwd_mask 0x4000 $@ || \
 		die "Failed to create bridge [$dev]"
 
 	ip link set $dev up
