@@ -1,0 +1,34 @@
+#! /bin/sh
+# NOTE: A common pattern is to specify "-" (stdout) as out-file,
+#  so there must be NO log printouts to stdout!
+
+dir=$(dirname $0); dir=$(readlink -f $dir)
+tmp=/tmp/$USER/xcluster_$$
+die() {
+	echo "ERROR: $*" >&2
+	rm -rf $tmp
+	exit 1
+}
+log() {
+	echo "INFO: $*" >&2
+}
+findf() {
+	f=$ARCHIVE/$1
+	test -r $f || f=$HOME/Downloads/$1
+	test -r $f
+}
+
+test -n "$1" || die "No out-file"
+
+mkdir -p $tmp
+cp -R $dir/default/* $tmp
+
+if findf ctraffic.gz; then
+	gzip -dc $f > $tmp/bin/ctraffic
+	chmod a+x $tmp/bin/ctraffic
+fi
+
+cd $tmp
+tar cf "$1" *
+cd - > /dev/null
+rm -rf $tmp

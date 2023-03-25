@@ -32,9 +32,8 @@ dbg() {
 	test -n "$__verbose" && echo "$prg: $*" >&2
 }
 
-##  env
-##    Print environment.
-##
+##   env
+##     Print environment.
 cmd_env() {
 	test -n "$__corednsver" || __corednsver=1.8.1
 	test -n "$__k8sver" || __k8sver=v1.18.3
@@ -42,7 +41,8 @@ cmd_env() {
 	test -n "$ARCHIVE" || ARCHIVE=$HOME/Downloads
 	test "$cmd" = "env" && set | grep -E '^(__.*|ARCHIVE)='
 }
-
+##   env_check
+##     Perform basic checks.
 cmd_find_ar() {
 	test -n "$1" || die "No file"
 	local d
@@ -89,6 +89,7 @@ cmd_bin_add() {
 	fi
 }
 
+##
 ##   prepulled_images
 ##     Print pre-pulled images (needed for "mkimages_ar")
 ##   mkcache_ar
@@ -269,7 +270,6 @@ cmd_build_iptools() {
 	$iptools build
 }
 
-
 ##   cache_refresh
 ##     From "$ARCHIVE/xcluster-cache.tar" if it exists otherwise
 ##     build. Build requires "sudo"!
@@ -291,7 +291,6 @@ cmd_cache_refresh() {
 		$XCLUSTER cache $o || die "Failed"
 	done
 }
-
 ##   k8s_build_images [--k8sver=...]
 ##     Build images hd-k8s-<k8sver>.img and hd-k8s-xcluster-<k8sver>.img
 ##     Soft-links; hd-k8s.img hd-k8s-xcluster.img are updated.
@@ -404,7 +403,6 @@ cmd_k8s_test() {
 
 ##   release --version=ver [--dest=/tmp]
 ##     Create a release tar archive.
-##
 cmd_release() {
 	test -n "$__version" || die 'No version'
 	export __version
@@ -428,7 +426,6 @@ cmd_release() {
 	cd
 	log "Created [$ar]"
 }
-
 cmd_mkworkspace() {
 	test -n "$XCLUSTER" || die 'Not set [$XCLUSTER]'
 	cmd_env
@@ -488,7 +485,6 @@ EOF
 ##   workspace_ar <file>
 ##     Builds a xcluster "workspace" archive for a binary release.
 ##     Use; "./xcadmin.sh workspace_ar - | tar t" to test
-##
 cmd_workspace_ar() {
 	test -n "$1" || die "No ar"
 	test "$__force" = "yes" && rm -f $1
@@ -498,10 +494,6 @@ cmd_workspace_ar() {
 	cmd_mkworkspace $tmp/workspace
 	tar -C $tmp --group=0 --owner=0 -cf "$1" workspace
 }
-
-##   env_check
-##     Perform basic checks.
-##
 cmd_env_check() {
 	mkdir -p $tmp
 	local x
@@ -518,6 +510,32 @@ cmd_env_check() {
 	id | grep -Fq '(kvm)' || die "Not member of group [kvm]"
 }
 
+##
+##   mkovl [--template=<ovl>] [--ovldir=<dir>] <name>
+##     Create and initiate an ovl directory. By default "template-k8s" is
+##     used and ovldir $HOME/tmp/ovl/
+cmd_mkovl() {
+	test -n "$1" || die "No ovl name"
+	local ovl=$1
+	test -n "$__template" || __template=template-k8s
+	test -n "$__ovldir" || __ovldir=$HOME/tmp/ovl
+	local d=$__ovldir/$ovl
+	test -e $d && die "Already exists [$d]"
+	mkdir -p $__ovldir || die "mkdir [$__ovldir]"
+	local xc=$dir/xcluster.sh
+	$xc ovld $__template > /dev/null || return 1
+	local templated=$($xc ovld $__template)
+	cp -R $templated $d
+
+	local f n
+	for f in $(find $d -name "*$__template*"); do
+		n=$(echo $f | sed -e "s,$__template,$ovl,")
+		mv $f $n
+		test -f $n && sed -i -e "s,$__template,$ovl,g" $n
+	done
+}
+
+##
 # Get the command
 cmd=$1
 shift
