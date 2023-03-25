@@ -69,32 +69,38 @@ cmd_test() {
 	rm -f $XCLUSTER_TMP/cdrom.iso
 
 	if test -n "$1"; then
-			local t=$1
-			shift
+		local t=$1
+		shift
 		test_$t $@
 	else
-			test_start
+		test_neighbors
 	fi
 
 	now=$(date +%s)
 	tlog "Xcluster test ended. Total time $((now-begin)) sec"
 }
 ##   test start_empty
-##     Start a cluster with xnet
+##     Start a cluster. TOPOLOGY=xnet|bridge. Xnet is default
 test_start_empty() {
+	test -n "$TOPOLOGY" || export TOPOLOGY=xnet
+	tlog "Using TOPOLOGY=$TOPOLOGY"
+	. $($XCLUSTER ovld network-topology)/$TOPOLOGY/Envsettings
 	export __image=$XCLUSTER_HOME/hd.img
 	echo "$XOVLS" | grep -q private-reg && unset XOVLS
 	test -n "$__ntesters" || export __ntesters=2
 	xcluster_start iptools network-topology . $@
 	otc 1 version
 }
-##   test start
-##      Start a cluster with xnet
-test_start() {
+##   test neighbors (default)
+##      Start a cluster and make some neighbor tests
+test_neighbors() {
+	export __nrouters=1
+	export __ntesters=2
 	test_start_empty
-	otc 1 "test_neighbors 5"
-	otc 201 "test_neighbors 5"
+	otc 1 "test_neighbors $__nvm"
+	otc 201 "test_neighbors $__nvm"
 	otc 221 "test_neighbors 1"
+	xcluster_stop
 }
 
 ##

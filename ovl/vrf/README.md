@@ -1,6 +1,6 @@
 # Xcluster/ovl - vrf
 
-Virtual Routing and Forwarding (VRF) and Link Layer Discovery Protocol (LLDP)
+Virtual Routing and Forwarding (VRF)
 
 * [linux/Documentation/networking/vrf.rst](
    https://docs.kernel.org/networking/vrf.html)
