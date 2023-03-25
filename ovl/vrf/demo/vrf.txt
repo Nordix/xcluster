@@ -99,26 +99,33 @@ ip rule add uidrange 200-299 table 10
 ip route add default via 192.168.3.202 src 10.0.0.1 table 10
 ping -c1 -W1 20.0.0.0
 su - guest
-ping -c1 -W1 20.0.0.0
+whoami
+ping -c1 -W1 30.0.0.0                # NOT working
+ping -c1 -W1 -I 10.0.0.1 30.0.0.0    # NOT working
+ping -c1 -W1 20.0.0.0                # Working
+ping -c1 -W1 -I 10.0.0.1 20.0.0.0    # Working
+ping -c1 -W1 192.168.1.201           # NOT working
+ping -c1 -W1 127.0.0.1               # Working
+
 
 # Policy route on oif
 ./vrf.sh test start_demo > $log   # Restart!
 vm 202
-tcpdump -ni eth3
+tcpdump -ni eth3 icmp or arp
 
 vm 1
 ip addr del 10.0.0.0/24 dev lo
 ip addr add 10.0.0.1/24 dev eth2
 
-ping -c1 -W1 20.0.0.0
-ping -c1 -W1 -I 10.0.0.1 20.0.0.0
 ip route add default via 192.168.3.202 table 10
 ip rule add oif eth2 table 10
 
-ping -c1 -W1 20.0.0.0
-ping -c1 -W1 -I 10.0.0.1 20.0.0.0
-ping -c1 -W1 -I eth2 20.0.0.0
+ping -c1 -W1 30.0.0.0                # Working
+ping -c1 -W1 -I 10.0.0.1 30.0.0.0    # Working
+ping -c1 -W1 20.0.0.0                # NOT working
+ping -c1 -W1 -I 10.0.0.1 20.0.0.0    # NOT working (why?)
+ping -c1 -W1 -I eth2 20.0.0.0        # Working (src=192.168.3.1)
 
-ping -c1 -W1 30.0.0.0
-ping -c1 -W1 -I 10.0.0.1 30.0.0.0
+ip route replace default via 192.168.3.202 src 10.0.0.1 table 10
+ping -c1 -W1 -I eth2 20.0.0.0        # Working (src=10.0.0.1)
 ```
