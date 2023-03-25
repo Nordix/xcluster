@@ -32,7 +32,10 @@ log() {
 dbg() {
 	test -n "$__verbose" && echo "$prg: $*" >&2
 }
-
+##   version - Log versions
+cmd_tcase_version() {
+        log_version
+}
 cmd_tcase_test_neighbors() {
 	ne=1
 	test -n "$1" && ne=$1

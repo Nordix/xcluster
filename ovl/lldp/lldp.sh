@@ -82,8 +82,11 @@ cmd_test() {
 ##   test start_empty
 ##     Start a cluster with xnet
 test_start_empty() {
+	export __image=$XCLUSTER_HOME/hd.img
+	echo "$XOVLS" | grep -q private-reg && unset XOVLS
 	test -n "$__ntesters" || export __ntesters=2
-	xcluster_start iptools network-topology lldp $@
+	xcluster_start iptools network-topology . $@
+	otc 1 version
 }
 ##   test start
 ##      Start a cluster with xnet

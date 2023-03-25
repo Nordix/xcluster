@@ -20,9 +20,7 @@ cp -R $dir/default/* $tmp
 
 d=$GOPATH/src/github.com/lldpd/lldpd/build/sys/
 cp -R $d/* $tmp || die "Please build lldpd first (./lldp.sh build_lldpd)"
-$XCLUSTER cplib --dest=$tmp $tmp/sbin/lldpd
-$XCLUSTER cplib --dest=$tmp $tmp/sbin/lldpctl
-$XCLUSTER cplib --dest=$tmp $tmp/sbin/lldpcli
+$XCLUSTER cplib --dest=$tmp $tmp/sbin/lldp*
 
 cd $tmp
 tar cf "$1" *
