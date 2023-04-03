@@ -1,7 +1,7 @@
 # Overlay index
 
  * [apparmor](./apparmor/README.md) -  Experiments and examples with [Apparmor](https://apparmor.net/) and [seccomp](https://en.wikipedia.org/wiki/Seccomp). 
- * [attic](./attic/README.md) -   * [coredns](./coredns/README.md) -  CoreDNS POD in `xcluster` (obsolete)   * [k8s-cni-kube-router](./k8s-cni-kube-router/README.md) -  Use the `kube-router` turn-key solution   * [nfproxy](./nfproxy/README.md) -  Experiments with https://github.com/sbezverk/nfproxy   * [systemd](./systemd/README.md) -  Make xcluster start with [systemd](https://www.freedesktop.org/wiki/Software/systemd/).  
+ * [attic](./attic/README.md) -  Old obsolete ovls 
  * [bridge](./bridge/README.md) -  Experiments with nftables bridge family. 
  * [cert-manager](./cert-manager/README.md) -  The [cert-manager](https://github.com/jetstack/cert-manager) on xcluster. 
  * [cni-plugins](./cni-plugins/README.md) -  Installs [cni-plugins](https://github.com/containernetworking/plugins) in `/opt/cni/bin`. The intention is to have a uniform way of installing cni-plugins rather than letting every ovl using it's own way. 
