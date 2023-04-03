@@ -1,8 +1,8 @@
 # Overlay index
 
  * [apparmor](./apparmor/README.md) -  Experiments and examples with [Apparmor](https://apparmor.net/) and [seccomp](https://en.wikipedia.org/wiki/Seccomp). 
- * [attic](./attic/README.md) -  These OVLs are obsolete and unmaintained 
- * [bridge](./bridge/README.md) - Use bridge topology in xcluster, and test ethernet bridging.
+ * [attic](./attic/README.md) -   * [coredns](./coredns/README.md) -  CoreDNS POD in `xcluster` (obsolete)   * [k8s-cni-kube-router](./k8s-cni-kube-router/README.md) -  Use the `kube-router` turn-key solution   * [nfproxy](./nfproxy/README.md) -  Experiments with https://github.com/sbezverk/nfproxy   * [systemd](./systemd/README.md) -  Make xcluster start with [systemd](https://www.freedesktop.org/wiki/Software/systemd/).  
+ * [bridge](./bridge/README.md) -  Experiments with nftables bridge family. 
  * [cert-manager](./cert-manager/README.md) -  The [cert-manager](https://github.com/jetstack/cert-manager) on xcluster. 
  * [cni-plugins](./cni-plugins/README.md) -  Installs [cni-plugins](https://github.com/containernetworking/plugins) in `/opt/cni/bin`. The intention is to have a uniform way of installing cni-plugins rather than letting every ovl using it's own way. 
  * [containerd](./containerd/README.md) -  [Containerd](https://containerd.io/) in `xcluster`. 
@@ -19,6 +19,7 @@
  * [ipsec](./ipsec/README.md) -  Test and experiments with IKE/IPSEC behind NAT using strongswan. 
  * [iptools](./iptools/README.md) -  Overlay that installs some ip tools. Intended for experiments with the latest iptools. The `ntf` program for configuring the [nftables](https://netfilter.org/projects/nftables/index.html) is included. 
  * [istio](./istio/README.md) -  The [Istio](https://istio.io/) service mesh in `xcluster`. 
+ * [k8s-app-upgrade](./k8s-app-upgrade/README.md) -  Test of application upgrade in Kubernetes. A Deplyment is upgraded using [rolling upgrade]( https://kubernetes.io/docs/concepts/workloads/controllers/deployment/#updating-a-deployment), [ctraffic]( https://github.com/Nordix/ctraffic) is used to show traffic impact 
  * [k8s-base](./k8s-base/README.md) -  Creates the `xcluster` base image. It is basically the same as the `hd.image` with `ovl/iptools` installed. The image is intended as base for other images, used in a "Dockerfile" like; 
  * [k8s-cni-antrea](./k8s-cni-antrea/README.md) -  K8s cni-plugin [Antrea](https://github.com/antrea-io/antrea) 
  * [k8s-cni-bridge](./k8s-cni-bridge/README.md) -  The `k8s-cni-bridge` is a xcluster-only cni plugin. It *always* assign dual-stack addresses to PODs. 
@@ -31,9 +32,9 @@
  * [k8s-sctp](./k8s-sctp/README.md) -  Use SCTP in Kubernetes. 
  * [k8s-xcluster](./k8s-xcluster/README.md) -  - Kubernetes in `xcluster` with downloaded CNI-plugin. 
  * [kselftest](./kselftest/README.md) -  Linux kernel self-test. 
- * [lldp](./lldp/README.md) - Run LLDP in xcluster.
  * [kubeadm](./kubeadm/README.md) -  Install Kubernetes with `kubeadm` in xcluster. [kubeadm](https://github.com/kubernetes/kubeadm) is the standard installation tool for Kubernetes. 
  * [kubernetes](./kubernetes/README.md) -  A [Kubernetes](https://kubernetes.io/) cluster with bridge CNI-plugin. 
+ * [lldp](./lldp/README.md) -  Experiments with Link Layer Discovery Protocol (LLDP) 
  * [load-balancer](./load-balancer/README.md) -  This ovl tests different load-balancers (without K8s). The default xcluster network-topology is used; 
  * [lspci](./lspci/README.md) -  Adds `lspci` and the hw database. 
  * [mconnect](./mconnect/README.md) -  - Manifests for [mconnect](https://github.com/Nordix/mconnect) 
@@ -54,12 +55,15 @@
  * [srv6](./srv6/README.md) -  Test and experiments with [Segment Routing](https://en.wikipedia.org/wiki/Segment_routing) with IPv6 as data plane, `SRv6`. 
  * [static-kernel](./static-kernel/README.md) -  Build and use a static Linux kernel. 
  * [tap-scrambler](./tap-scrambler/README.md) -  A network test-tool built on a Linux `tap` device. 
+ * [template-k8s](./template-k8s/README.md) -  An empty ovl template with K8s 
+ * [template](./template/README.md) -  Template ovl without Kubernetes 
  * [test](./test/README.md) -  Contains a test library and a basic test program for `xcluster` itself. 
  * [test-template](./test-template/README.md) -  Template for test program using `ovl/test` script-based testing. 
  * [timezone](./timezone/README.md) -  The timezone in `xcluster` is specified in `/etc/TZ` file on the VMs. The entire timezone data-base is not installed so the user friendly way, for instance `Pacific/Auckland` can **not** be used. Instead the more basic format must be used. Please read; 
  * [udp-test](./udp-test/README.md) -  A simple program to send and receive UDP packets. 
  * [usrsctp](./usrsctp/README.md) -  Test and experiments with userspace SCTP stack and linux SCTP conntrack module 
  * [virtualbox](./virtualbox/README.md) -  Describes howto create a [VirtualBox](https://www.virtualbox.org/) image. 
+ * [vrf](./vrf/README.md) -  Virtual Routing and Forwarding (VRF) 
  * [wireguard](./wireguard/README.md) -  Use [WireGuard](https://www.wireguard.com/) in `xcluster`. 
  * [xdp](./xdp/README.md) -  Experiments and tests with [XDP](https://en.wikipedia.org/wiki/Express_Data_Path) and [eBPF](https://ebpf.io/). 
  * [xnet](./xnet/README.md) -  Setup default networking according to the xcluster [networking description](../../doc/networking.md). 
