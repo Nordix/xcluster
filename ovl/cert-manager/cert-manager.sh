@@ -85,12 +85,10 @@ cmd_test() {
 }
 
 test_start() {
-	xcluster_prep
 	export __nrouters=0
 	xcluster_start . $@
 	otc 1 check_namespaces
 	otc 1 check_nodes
-	tcase "Sleep 4s..."; sleep 4
 	otc 1 check_cert_manager
 }
 

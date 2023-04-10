@@ -188,12 +188,13 @@ test_namespaces() {
 test_deployment() {
 	tcase "Checking Deployment [$1]"
 	test -n "$1" || tdie "No deployment"
+	test -n "$2" && pushv $2
+	tex "$kubectl get deployment $1" 2>&1 || tdie "get deployment"
 	local replicas=$(nreplicas $1)
 	echo "Expected replicas [$replicas]"
 	local selector=$($kubectl get deployment $1 -o json | \
 		jq -r '.spec.selector.matchLabels|to_entries[0]|.key + "=" + .value')
 	echo "POD selector [$selector]"
-	test -n "$2" && pushv $2
 	tex deployment_nready $1 $replicas || tdie "deployment ready"
 	tex "check_pods_ready $selector" || tdie "pods ready"
 	test -n "$2" && popv
