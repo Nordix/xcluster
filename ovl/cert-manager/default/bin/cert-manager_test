@@ -36,15 +36,13 @@ dbg() {
 
 cmd_tcase_check_namespaces() {
 	test_namespaces
-	tlog "$(kubectl version --short=true | grep Server)"
 }
 cmd_tcase_check_nodes() {
 	test_nodes
 }
 
-cmd_tcase_start_cert_manager() {
-	tcase "Start cert-manager"
-	apply_k8s $yamld
+cmd_tcase_check_cert_manager() {
+	tcase "Check cert-manager"
 	kubectl="kubectl -n cert-manager"
 	test_deployment cert-manager 180
 	test_deployment cert-manager-cainjector

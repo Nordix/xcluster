@@ -32,20 +32,30 @@ dbg() {
 	test -n "$__verbose" && echo "$prg: $*" >&2
 }
 
-##  env
-##    Print environment.
+##   env
+##     Print environment.
 ##
 cmd_env() {
 	if test "$cmd" = "env"; then
 		set | grep -E '^(__.*)='
 		return 0
 	fi
+	ver=v1.11.1
 
 	test -n "$xcluster_DOMAIN" || xcluster_DOMAIN=xcluster
 	test -n "$XCLUSTER" || die 'Not set [$XCLUSTER]'
 	test -x "$XCLUSTER" || die "Not executable [$XCLUSTER]"
 	eval $($XCLUSTER env)
 }
+##   download_manifest
+##     Download installation manifest
+cmd_download_manifest() {
+	cmd_env
+	local base=https://github.com/cert-manager/cert-manager/releases/download
+	local url=$base/$ver/cert-manager.yaml
+	curl -L $url > $dir/default/etc/kubernetes/load/cert-manager.yaml
+}
+
 
 ##   test --list
 ##   test [--xterm] [test...] > logfile
@@ -63,9 +73,9 @@ cmd_test() {
     rm -f $XCLUSTER_TMP/cdrom.iso
 
     if test -n "$1"; then
-        for t in $@; do
-            test_$t
-        done
+		t=$1
+		shift
+        test_$t $@
     else
 		test_default
     fi      
@@ -75,14 +85,13 @@ cmd_test() {
 }
 
 test_start() {
-	test -n "$__mode" || __mode=dual-stack
-	export xcluster___mode=$__mode
-	xcluster_prep $__mode
+	xcluster_prep
 	export __nrouters=0
-	xcluster_start cert-manager
+	xcluster_start . $@
 	otc 1 check_namespaces
 	otc 1 check_nodes
-	otc 1 start_cert_manager
+	tcase "Sleep 4s..."; sleep 4
+	otc 1 check_cert_manager
 }
 
 test_default() {
@@ -91,12 +100,6 @@ test_default() {
 	xcluster_stop
 }
 
-##   refresh
-##     Update to the latest manifest
-cmd_refresh() {
-	local dst=$dir/default/etc/kubernetes/cert-manager
-	curl -s -L https://github.com/jetstack/cert-manager/releases/latest/download/cert-manager.yaml > $dst/cert-manager.yaml
-}
 
 ##
 . $($XCLUSTER ovld test)/default/usr/lib/xctest
