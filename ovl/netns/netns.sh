@@ -63,9 +63,9 @@ cmd_test() {
     rm -f $XCLUSTER_TMP/cdrom.iso
 
     if test -n "$1"; then
-        for t in $@; do
-            test_$t
-        done
+		t=test_$1
+		shift
+        $t $@
     else
         test_start
     fi      
@@ -90,17 +90,17 @@ test_start_empty() {
 test_start() {
 	test -n "$TOPOLOGY" && \
 		. $($XCLUSTER ovld network-topology)/$TOPOLOGY/Envsettings
-	test_start_empty
+	test_start_empty $@
 }
 
 ##   test cni_bridge
 ##     Create PODs and assign net with CNI-bridge and test with ping
 test_cni_bridge() {
 	tlog "=== Test CNI-bridge"
-	test_start
-	otcw cni_bridge_configure
-	otcw cni_bridge_start
-	otcw cni_bridge_ping
+	test_start $@
+	otcwp cni_bridge_configure
+	otcwp cni_bridge_start
+	otcwp cni_bridge_ping
 	xcluster_stop
 }
 
@@ -108,10 +108,10 @@ test_cni_bridge() {
 ##     Create PODs connected to a Linux bridge and test with ping
 test_bridge() {
 	tlog "=== Test Linux bridge"
-	test_start
-	otcw create_with_addresses
-	otcw linux_bridge
-	otcw bridge_ping
+	test_start $@
+	otcwp create_with_addresses
+	otcwp linux_bridge
+	otcwp bridge_ping
 	xcluster_stop
 }
 
@@ -122,9 +122,9 @@ test_L2() {
 	tlog "=== Test L2 network"
 	export xcluster_RNDADR=yes
 	test_start
-	otcw create_with_addresses
-	otcw linux_bridge
-	otcw attach_eth_to_bridge
+	otcwp create_with_addresses
+	otcwp linux_bridge
+	otcwp attach_eth_to_bridge
 	otc 1 ping_all_random
 	xcluster_stop
 }
@@ -133,12 +133,12 @@ test_L2() {
 ##     Create an L3 network with all PODS.
 test_L3() {
 	tlog "=== Test L3 network"
-	test_start
-	otcw forward
-	otcw create_with_addresses
-	otcw linux_bridge
-	otcw default_route
-	otcw setup_routes
+	test_start $@
+	otcwp forward
+	otcwp create_with_addresses
+	otcwp linux_bridge
+	otcwp default_route
+	otcwp setup_routes
 	otc 1 ping_all_pods
 	xcluster_stop
 }
@@ -147,12 +147,12 @@ test_L3() {
 ##     Create an L3 network with network overlay
 test_L3_overlay() {
 	tlog "=== Test L3 overlay network"
-	test_start
-	otcw forward
-	otcw create_with_addresses
-	otcw linux_bridge
-	otcw default_route
-	otcw setup_overlay
+	test_start $@
+	otcwp forward
+	otcwp create_with_addresses
+	otcwp linux_bridge
+	otcwp default_route
+	otcwp setup_overlay
 	otc 1 ping_all_pods
 	xcluster_stop
 }
@@ -161,9 +161,9 @@ test_L3_overlay() {
 ##     Create an ipvlan network with all PODS.
 test_ipvlan() {
 	tlog "=== Test ipvlan network"
-	test_start
-	otcw create
-	otcw ipvlan
+	test_start $@
+	otcwp create
+	otcwp ipvlan
 	otc 1 ping_all_random
 	xcluster_stop
 }
@@ -175,7 +175,7 @@ test_dual_bridges() {
 	export TOPOLOGY=multilan-router
 	export __nrouters=2
 	export __nvm=1
-	test_start
+	test_start $@
 	otc 202 "xnetns eth3 eth4"
 	otc 1 "xbridge br2 eth2"
 	otc 1 "xbridge br3 eth3"
@@ -188,7 +188,7 @@ test_dual_bridges_vlan() {
 	export TOPOLOGY=multilan-router
 	export __nrouters=2
 	export __nvm=1
-	test_start
+	test_start $@
 	otc 202 "create_vlans eth3.100 eth3.200"
 	otc 202 "xnetns eth3.100 eth3.200"
 	otc 1 "create_vlans eth2.100 eth2.200"
