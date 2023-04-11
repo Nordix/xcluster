@@ -560,6 +560,8 @@ check_vm() {
 ##    Prerequisite; "otcprog" set to the command on the cluster.
 ##  otcw <tcase...>
 ##    Execute a test on all worker vms.
+##  otcwp <tcase...>
+##    Execute a test on all worker vms in parallel
 ##  otcr <tcase...>
 ##    Execute a test on all routers.
 ##  otcr <tcase...>
@@ -579,6 +581,16 @@ otcw() {
 	test -n "$xcluster_FIRST_WORKER" || xcluster_FIRST_WORKER=1
 	for x in $(seq $xcluster_FIRST_WORKER $__nvm); do
 		otc $x "$@"
+	done
+}
+otcwp() {
+	local x
+	test -n "$xcluster_FIRST_WORKER" || xcluster_FIRST_WORKER=1
+	for x in $(seq $xcluster_FIRST_WORKER $__nvm); do
+		(otc $x "$@") &
+	done
+	for x in $(seq $xcluster_FIRST_WORKER $__nvm); do
+		wait || die wait
 	done
 }
 otcr() {
