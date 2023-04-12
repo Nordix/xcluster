@@ -243,7 +243,7 @@ cmd_k8s_archives() {
 	echo $ARCHIVE/mconnect.xz
 	echo $ARCHIVE/xcluster-cache.tar
 	echo $ARCHIVE/assign-lb-ip.xz
-	echo $ARCHIVE/crio-v1.22.0.tar.gz
+	echo $ARCHIVE/cri-o.amd64.v1.25.1.tar.gz
 }
 
 cmd_k8s_workspace() {
