@@ -202,12 +202,6 @@ cmd_build_base() {
 		ar=$ARCHIVE/diskim-$__diskimver.tar.xz
 		tar -C $XCLUSTER_WORKSPACE -xf $ar
 	fi
-	# Work-arounds for diskim;
-	if ! which pxz > /dev/null; then
-		test -d $HOME/bin || die "Not executable [pxz]. Make a link to xz"
-		ln -s $(which xz) $HOME/bin/pxz
-		which pxz > /dev/null || die "Not executable [pxz]"
-	fi
 	sed -i -e 's,-j4,-j$(nproc),' $DISKIM
 	cmd_mark "Diskim installed"
 
