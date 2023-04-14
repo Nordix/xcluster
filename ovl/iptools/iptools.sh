@@ -24,6 +24,13 @@ help() {
 test -n "$1" || help
 echo "$1" | grep -qi "^help\|-h" && help
 
+findf() {
+	f=$ARCHIVE/$1
+	test -r $f && return 0
+	f=$HOME/Downloads/$1
+	test -r $f
+}
+
 netfilter_url=https://netfilter.org/projects
 
 cmd_env() {
@@ -55,7 +62,7 @@ la_fix() {
 
 build() {
 	cmd_env
-	local v ar d n
+	local v d n
 	n=$1
 	local v=$(ver $n)
 	test "$n" = "ipset7" && n=ipset
@@ -74,9 +81,8 @@ build() {
 		build_iproute2 $n-$v
 		return
 	fi
-	ar=$n-$v.tar.bz2
-	test -r $ARCHIVE/$ar || ar=$n-$v.tar.gz
-	tar -C $XCLUSTER_WORKSPACE -xf $ARCHIVE/$ar
+	findf $n-$v.tar.bz2 || findf $n-$v.tar.gz || die "Not found $n-$v.tar"
+	tar -C $XCLUSTER_WORKSPACE -xf $f
 	cd $d
 	if test "$n" = "iptables" -o "$n" = "ipset"; then
 		./configure --prefix=/usr \
@@ -112,8 +118,8 @@ build_iproute2() {
 	d=$XCLUSTER_WORKSPACE/$1
 	test -d $__kobj/sys/include || cmd_build_kernel_headers
 	rm -fr $d
-	ar=$1.tar.xz
-	tar -C $XCLUSTER_WORKSPACE -xf $ARCHIVE/$ar || die tar
+	findf $1.tar.xz || findf $1.tar.gz || die "Not found [$1.tar]"
+	tar -C $XCLUSTER_WORKSPACE -xf $f || die tar
 	cd $d
 	./configure --libbpf_dir=$XCLUSTER_WORKSPACE/sys
 	make KERNEL_INCLUDE=$__kobj/sys/include || die make
@@ -173,7 +179,7 @@ conntrack_tools_ver=1.4.6
 ipvsadm_ver=1.31
 ipset7_ver=7.15
 ipset_ver=6.38
-iproute2_ver=6.0.0
+iproute2_ver=6.2.0
 ulogd_ver=2.0.7
 ver() {
 	eval "echo \$${1}_ver"
