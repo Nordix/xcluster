@@ -166,7 +166,7 @@ cmd_base_archives() {
 	echo $ARCHIVE/$__kver.tar.xz
 	echo $ARCHIVE/$__bbver.tar.bz2
 	echo $ARCHIVE/dropbear-$__dropbearver.tar.bz2
-	echo $ARCHIVE/iproute2-$__ipver.tar.xz
+	echo $ARCHIVE/iproute2-$__ipver.tar.gz
 	echo $ARCHIVE/coredns_${__corednsver}_linux_amd64.tgz
 }
 cmd_build_base() {
