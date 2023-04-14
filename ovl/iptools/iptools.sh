@@ -121,6 +121,7 @@ build_iproute2() {
 	findf $1.tar.xz || findf $1.tar.gz || die "Not found [$1.tar]"
 	tar -C $XCLUSTER_WORKSPACE -xf $f || die tar
 	cd $d
+	patch -p1 < $dir/patch/ip.diff
 	./configure --libbpf_dir=$XCLUSTER_WORKSPACE/sys
 	make KERNEL_INCLUDE=$__kobj/sys/include || die make
 	make DESTDIR=$d/sys install || die "make install"
