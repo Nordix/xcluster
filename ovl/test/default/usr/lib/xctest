@@ -470,6 +470,7 @@ cni_plugin_info() {
 ##  ipv6base
 ##    Returns true if the "main" cluster family is ipv6
 ipv6base() {
+	tex kubectl get svc kubernetes > /dev/null 2>&1
 	kubectl get svc -o json kubernetes | jq -r .spec.clusterIP | grep -q :
 }
 ##  apply_k8s <manifest-dir>
