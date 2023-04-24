@@ -72,20 +72,6 @@ cmd_kubeconfig_sec() {
 	kubectl config set-credentials root --embed-certs=true \
 		--client-certificate=$certd/server.crt --client-key=$certd/server.key
 }
-
-##   runc_download
-##
-cmd_runc_download() {
-	local runc=$ARCHIVE/runc.amd64
-	test -x $runc && return 0
-	local ver=v1.0.0-rc5
-	local url=https://github.com/opencontainers/runc/releases/download
-	curl -L $url/$ver/runc.amd64 > $runc
-	chmod a+x $runc
-	strip $runc
-	ls -lh $runc >&2
-}
-
 ##   build
 ##     Build the k8s binaries
 ##
