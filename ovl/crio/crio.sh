@@ -38,6 +38,7 @@ cmd_env() {
 
 	test -n "$__criover" || __criover=cri-o.amd64.v1.25.1
 	test -n "$__crioar" || __crioar=$ARCHIVE/$__criover.tar.gz
+	test -n "$__pausever" || __pausever=3.9
 
 	if test "$cmd" = "env"; then
 		set | grep -E '^(__.*)='
@@ -47,6 +48,13 @@ cmd_env() {
 	test -n "$XCLUSTER" || die 'Not set [$XCLUSTER]'
 	test -x "$XCLUSTER" || die "Not executable [$XCLUSTER]"
 	eval $($XCLUSTER env)
+}
+##   pause_image
+##     Print the pause image url. Version should be taken from:
+##     kubeadm config images list
+cmd_pause_image() {
+	cmd_env
+	echo registry.k8s.io/pause:$__pausever
 }
 ##   download
 cmd_download() {
@@ -115,7 +123,7 @@ test_start_empty() {
 	export CRIO_TEST=yes
 	test -n "$TOPOLOGY" && \
 		. $($XCLUSTER ovld network-topology)/$TOPOLOGY/Envsettings
-	xcluster_start network-topology iptools crio $@
+	xcluster_start network-topology iptools . $@
 	otc 1 version
 }
 ##   test start_no_private_reg

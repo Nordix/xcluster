@@ -13,6 +13,7 @@ i=$(hostname | cut -d- -f2 | sed -re 's,^0+,,')
 test $i -le 200 || exit 0
 test -n "$FIRST_WORKER" -a $i -lt "$FIRST_WORKER" && exit 0
 
+mkdir -p /var/lib/crio
 # Cri-o *requires* a default route to start(?!)
 ip route add default via 192.168.0.250
 crio > /var/log/crio.log 2>&1 &

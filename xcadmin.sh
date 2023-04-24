@@ -98,7 +98,7 @@ cmd_bin_add() {
 cmd_prepulled_images() {
 	echo docker.io/library/alpine:latest
 	echo registry.nordix.org/cloud-native/mconnect:latest
-	echo k8s.gcr.io/pause:3.6
+	$($XCLUSTER ovld crio)/crio.sh pause_image
 }
 cmd_mkcache_ar() {
 	test -n "$XCLUSTER" || die 'Not set [$XCLUSTER]'

@@ -26,6 +26,8 @@ mkdir -p $tmp/usr/share/containers/oci/hooks.d
 
 cp -r $dir/default/* $tmp
 test "$CRIO_TEST" = "yes" && cp -r $dir/test/* $tmp
+pause_image=$($dir/crio.sh pause_image)
+sed -i -e "s,k8s.gcr.io/pause:3.6,$pause_image," $tmp/etc/crio/crio.conf
 
 cd $tmp
 tar cf "$1" *
