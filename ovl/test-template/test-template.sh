@@ -63,9 +63,9 @@ cmd_test() {
 	rm -f $XCLUSTER_TMP/cdrom.iso
 
 	if test -n "$1"; then
-		for t in $@; do
-			test_$t
-		done
+		t=$1
+		shift
+		test_$t $@
 	else
 		test_basic
 	fi		
@@ -78,7 +78,8 @@ cmd_test() {
 ##   test start_empty
 ##     Start a K8s cluster and setup routes
 test_start_empty() {
-	xcluster_start test-template
+	cd $dir
+	xcluster_start . $@
 	otc 1 check_namespaces
 	otc 1 check_nodes
 	otcr set_vip_routes
@@ -86,7 +87,7 @@ test_start_empty() {
 ##   test start
 ##     Start a K8s cluster with test servers
 test_start() {
-	test_start_empty
+	test_start_empty $@
 	otc 1 start_servers
 	otc 1 check_servers
 }
@@ -94,7 +95,7 @@ test_start() {
 ##     Basic K8s tests
 test_basic() {
 	tlog "=== test-template: Basic K8s test"
-	test_start
+	test_start $@
 
 	otc 1 check_pod_addresses
 	otc 3 "nslookup www.google.se"
