@@ -85,7 +85,7 @@ upgrade to newer versions.
 
 ```
 cdo k8s-cni-calico
-curl -o calico-new.yaml https://docs.projectcalico.org/manifests/calico.yaml
+curl -L -o calico-new.yaml https://raw.githubusercontent.com/projectcalico/calico/release-v3.25/manifests/calico.yaml
 # Check the xcluster specific config. (3-way diff)
 meld calico-orig.yaml default/etc/kubernetes/calico/calico.yaml calico-new.yaml &
 # apply the modifications and save.
