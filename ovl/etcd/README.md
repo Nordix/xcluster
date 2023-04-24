@@ -6,14 +6,14 @@ The [etcd](https://github.com/coreos/etcd) distributed key-value store.
 Kubernetes. it is a distributed reliable key-value store and uses
 [raft](https://raft.github.io/) for consensus.
 
-Usage
------
+## Usage
 
+Intended to be included when starting or building a Kubernetes image.
+
+Manual test:
 ```
-xc mkcdrom systemd etcd other-overlays...
-# Or;
-xc mkcdrom xnet etcd [other-overlays...]
-# On a vm;
+./etcd.sh test start > $log
+# On vm-001;
 etcdctl member list
 etcdctl put Hello World
 etcdctl get Hello
@@ -22,8 +22,8 @@ etcdctl get "" --prefix=true
 etcdctl get --prefix=true '' -w fields | grep '"Key"'
 ```
 
-API versions
-------------
+## API versions
+
 
 The various etcd API versions are very confusing. Kubernetes seem to
 require;

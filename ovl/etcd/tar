@@ -12,20 +12,19 @@ test -n "$1" || die "No out-file"
 
 rm -rf $tmp
 mkdir -p $tmp/bin
-
-for s in $(echo "$SETUP" | tr ',' ' '); do
-	test -d $dir/$s || continue
-	cp -R $dir/$s/* $tmp
-	user_setup=yes
-done
-
-test "$user_setup" = "yes" || cp -R $dir/default/* $tmp
+if test "$TEST" = "yes"; then
+	cp -R $dir/test/* $tmp
+	if test "$__ipv6" = "yes"; then
+		cp -R $dir/ipv6/* $tmp
+	else
+		cp -R $dir/default/* $tmp
+	fi
+else
+	cp -R $dir/default/* $tmp
+fi
 
 $dir/etcd.sh download
 $dir/etcd.sh etcd $tmp/bin
-
-# Install libraries
-#LD_LIBRARY_PATH=$tmp/usr/lib $eimage install_libs --xroot=$tmp $tmp/bin/*
 
 cd $tmp
 tar cf "$1" *

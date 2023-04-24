@@ -237,8 +237,8 @@ cmd_build_base() {
 cmd_k8s_archives() {
 	cmd_env
 	$($XCLUSTER ovld cni-plugins)/cni-plugins.sh archive || die cni-plugins
+	$($XCLUSTER ovld etcd)/etcd.sh archive || die etcd
 	# TODO; Handle versions better!
-	echo $ARCHIVE/etcd-v3.3.10-linux-amd64.tar.gz
 	echo $ARCHIVE/kubernetes-server-$__k8sver-linux-amd64.tar.gz
 	echo $ARCHIVE/mconnect.xz
 	echo $ARCHIVE/xcluster-cache.tar
