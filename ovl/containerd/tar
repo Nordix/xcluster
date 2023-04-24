@@ -29,6 +29,11 @@ $x install --dest=$tmp/opt/cni/bin || die
 
 test "$CONTAINERD_TEST" = "yes" && cp -R $dir/test/* $tmp
 
+criosh=$($XCLUSTER ovld crio)/crio.sh
+pause_image=$($criosh pause_image)
+sed -i -e "s,registry.k8s.io/pause:3.8,$pause_image," $tmp/etc/init.d/32cri-plugin.rc
+													  
+
 cd $tmp
 tar cf "$1" *
 cd - > /dev/null

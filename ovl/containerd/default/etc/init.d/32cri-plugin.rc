@@ -15,7 +15,11 @@ test -n "$FIRST_WORKER" -a $i -lt "$FIRST_WORKER" && exit 0
 
 config_private_reg() {
 	local r
-	echo "version = 2" >> $cfg
+	cat >> $cfg <<EOF
+version = 2
+[plugins."io.containerd.grpc.v1.cri"]
+  sandbox_image = "registry.k8s.io/pause:3.8"
+EOF
 	cat >> $cfg <<EOF
 [plugins."io.containerd.grpc.v1.cri".registry]
   [plugins."io.containerd.grpc.v1.cri".registry.mirrors]

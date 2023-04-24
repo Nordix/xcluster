@@ -5,13 +5,13 @@
 ## Usage
 
 Add this ovs when running K8s to replace `cri-o` which is the default
-CRI-plugin. Example;
+CRI-plugin.
 
 ```
 XXOVLS=containerd xcadmin k8s_test test-template > $log
 # Or;
 cdo test-template
-XOVLS="private-reg containerd" ./test-template.sh test > $log
+./test-template.sh test basic containerd > $log
 ```
 
 `Ovl/containerd` has only been tested with "private-reg". Some images
