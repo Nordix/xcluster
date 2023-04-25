@@ -2,15 +2,16 @@
 
 K8s cni-plugin [Antrea](https://github.com/antrea-io/antrea)
 
-Prepare;
+Upgrade;
 ```
-for n in $(images lreg_missingimages .); do
-  images lreg_cache $n
-done
+tag=v1.11.1
+curl -L https://github.com/antrea-io/antrea/releases/download/$tag/antrea.yml\
+ > antrea.yaml
 ```
 
 Test;
 ```
+images lreg_preload k8s-cni-antrea
 xcadmin k8s_test --cni=antrea test-template > $log
 ```
 
@@ -19,9 +20,10 @@ xcadmin k8s_test --cni=antrea test-template > $log
 
 ```
 # Clone
-mkdir -p $GOPATH/src/github.com/antrea-io
+rm -rf $GOPATH/src/github.com/antrea-io/antrea
 cd $GOPATH/src/github.com/antrea-io
-git clone --depth 1 https://github.com/antrea-io/antrea.git
+git clone --depth 1 https://github.com/antrea-io/antrea.git \
+  $GOPATH/src/github.com/antrea-io/antrea
 # Build
 cd  $GOPATH/src/github.com/antrea-io/antrea
 ...
