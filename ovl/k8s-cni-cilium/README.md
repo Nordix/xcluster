@@ -10,11 +10,10 @@ SCTP is not supported, issue [#5719](https://github.com/cilium/cilium/issues/571
 A manifest (yaml) is generated with `helm` and will be used by default;
 
 ```
-ver=v1.11.6
-mkdir -p $GOPATH/src/github.com/cilium
-cd $GOPATH/src/github.com/cilium
-rm -rf cilium
-git clone --depth 1 -b $ver https://github.com/cilium/cilium.git
+ver=v1.11.16
+rm -rf $GOPATH/src/github.com/cilium/cilium
+git clone --depth 1 -b $ver https://github.com/cilium/cilium.git \
+  $GOPATH/src/github.com/cilium/cilium
 cd $GOPATH/src/github.com/cilium/cilium/install/kubernetes
 #less cilium/values.yaml
 helm template cilium \
@@ -55,6 +54,7 @@ Only IPv4 is supported at the moment (v1.10.4)
 ## Test
 
 ```
+images lreg_preload k8s-cni-cilium
 xcadmin k8s_test --cni=cilium test-template basic > $log
 ```
 
