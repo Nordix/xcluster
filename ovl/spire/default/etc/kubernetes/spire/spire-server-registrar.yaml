@@ -205,6 +205,8 @@ spec:
       labels:
         app: spire-server
     spec:
+      nodeSelector:
+        kubernetes.io/hostname: vm-001
       serviceAccountName: spire-server
       shareProcessNamespace: true
       containers:
