@@ -516,16 +516,27 @@ cmd_mkovl() {
 	local d=$__ovldir/$ovl
 	test -e $d && die "Already exists [$d]"
 	mkdir -p $__ovldir || die "mkdir [$__ovldir]"
-	local xc=$dir/xcluster.sh
-	$xc ovld $__template > /dev/null || return 1
-	local templated=$($xc ovld $__template)
+	local templated
+	if test -d "$__template"; then
+		templated=$(readlink -f $__template)
+		__template=$(basename $templated)
+	else
+		local xc=$dir/xcluster.sh
+		$xc ovld $__template > /dev/null || return 1
+		templated=$($xc ovld $__template)
+	fi
 	cp -R $templated $d
 
 	local f n
-	for f in $(find $d -name "*$__template*"); do
+	sed -i -e "s,$__template,$ovl,g" $d/README.md
+	for f in $(find $d -type d -name "*$__template*"); do
 		n=$(echo $f | sed -e "s,$__template,$ovl,")
 		mv $f $n
-		test -f $n && sed -i -e "s,$__template,$ovl,g" $n
+	done
+	for f in $(find $d -type f -name "*$__template*"); do
+		n=$(echo $f | sed -e "s,$__template,$ovl,")
+		mv $f $n
+		sed -i -e "s,$__template,$ovl,g" $n
 	done
 }
 
