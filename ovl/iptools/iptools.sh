@@ -121,7 +121,6 @@ build_iproute2() {
 	findf $1.tar.xz || findf $1.tar.gz || die "Not found [$1.tar]"
 	tar -C $XCLUSTER_WORKSPACE -xf $f || die tar
 	cd $d
-	patch -p1 < $dir/patch/ip.diff
 	./configure --libbpf_dir=$XCLUSTER_WORKSPACE/sys
 	make KERNEL_INCLUDE=$__kobj/sys/include || die make
 	make DESTDIR=$d/sys install || die "make install"
@@ -180,7 +179,7 @@ conntrack_tools_ver=1.4.6
 ipvsadm_ver=1.31
 ipset7_ver=7.15
 ipset_ver=6.38
-iproute2_ver=6.2.0
+iproute2_ver=6.3.0
 ulogd_ver=2.0.7
 ver() {
 	eval "echo \$${1}_ver"
