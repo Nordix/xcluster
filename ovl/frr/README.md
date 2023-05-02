@@ -24,10 +24,23 @@ show bgp neighbor
 
 Prep;
 ```
-apt install dh-autoreconf libjson-c-dev libpython-dev
+apt install dh-autoreconf libjson-c-dev libprotobuf-dev libprotoc-dev protobuf-compiler
 ```
 
-Libyang
+### Protobuf-c
+mkdir -p $GOPATH/src/github.com/protobuf-c
+cd $GOPATH/src/github.com/protobuf-c
+git clone git@github.com:protobuf-c/protobuf-c.git
+cd $GOPATH/src/github.com/protobuf-c/protobuf-c
+./autogen.sh
+./configure
+make -j$(nproc)
+protobufd=$GOPATH/src/github.com/protobuf-c/protobuf-c/sys
+make DESTDIR=$protobufd install
+sed -ie "s,/usr/local,$protobufd/usr/local," $protobufd/usr/local/lib/pkgconfig/libprotobuf-c.pc
+PKG_CONFIG_PATH=$protobufd/usr/local/lib/pkgconfig pkg-config --libs libprotobuf-c
+
+### Libyang
 ```
 mkdir -p $GOPATH/src/github.com/CESNET
 cd $GOPATH/src/github.com/CESNET
@@ -42,7 +55,7 @@ sed -ie "s,/usr/local,$libyangd/usr/local," $libyangd/usr/local/lib/pkgconfig/li
 PKG_CONFIG_PATH=$libyangd/usr/local/lib/pkgconfig pkg-config --libs libyang
 ```
 
-Frr;
+### Frr;
 ```
 mkdir -p $GOPATH/src/github.com/FRRouting
 cd $GOPATH/src/github.com/FRRouting
@@ -51,8 +64,9 @@ cd $GOPATH/src/github.com/FRRouting/frr
 git clean -f -d -x
 git status -u --ignored
 ./bootstrap.sh
+protobufd=$GOPATH/src/github.com/protobuf-c/protobuf-c/sys
 libyangd=$GOPATH/src/github.com/CESNET/libyang/build/sys
-PKG_CONFIG_PATH=$libyangd/usr/local/lib/pkgconfig \
+PKG_CONFIG_PATH=$libyangd/usr/local/lib/pkgconfig:$protobufd/usr/local/lib/pkgconfig \
  ./configure --disable-doc
 LD_RUN_PATH=$libyangd/usr/local/lib make -j$(nproc)
 frrd=$GOPATH/src/github.com/FRRouting/frr/sys
