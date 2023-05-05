@@ -157,7 +157,7 @@ cmd_isc_man() {
 ##     Print the "dhcpd" directory or die trying
 cmd_isc_dir() {
 	cmd_env
-	local d=$XCLUSTER_WORKSPACE/dhcp-$__iscver/sys/usr/sbin
+	local d=$XCLUSTER_WORKSPACE/dhcp-$__iscver/sys/usr/local/sbin
 	local x=$dir/sys/usr/sbin/dhcpd
 	test -x $d/dhcpd || die "Not executable [$d/dhcpd]"
 	echo $d
@@ -200,7 +200,7 @@ test_start_empty() {
 test_start() {
 	test_start_empty $@
 	otc 202 "ifup eth3 eth4 eth5"
-	otcw "ifup eth2 eth3 eth4"
+	otcwp "ifup eth2 eth3 eth4"
 }
 ##   test udhcp
 ##     Setup a udhcpd on vm-202 and acquire IPv4 address
