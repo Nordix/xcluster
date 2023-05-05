@@ -36,12 +36,12 @@ dbg() {
 ##     Print environment.
 ##
 cmd_env() {
-	test -n "$__iperf_ver" || __iperf_ver=iperf-2.1.6
+	test -n "$__iperf_ver" || __iperf_ver=iperf-2.1.9
 	test -n "$__tag" || __tag="registry.nordix.org/cloud-native/iperf:local"
 	test -n "$IPERF_WORKSPACE" || IPERF_WORKSPACE=/tmp/$USER/iperf
 
 	if test "$cmd" = "env"; then
-		set | grep -E '^(__.*)='
+		set | grep -E '^(__.*|IPERF_WORKSPACE)='
 		return 0
 	fi
 
