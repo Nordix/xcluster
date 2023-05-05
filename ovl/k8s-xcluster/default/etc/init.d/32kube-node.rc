@@ -32,7 +32,7 @@ test -n "$FEATURE_GATES" && fg_param="--feature-gates $FEATURE_GATES"
 
 # --network-plugin=cni \ removed in v1.24!!
 run_kubelet() {
-	kubelet --address=:: \
+	kubelet --address=:: $KUBELET_ARGS \
 		--node-ip=$NODE_IP $CRI_OPTS $fg_param \
 		--register-node=true --kubeconfig $KUBECONFIG \
 		--cluster-dns=$DNS_ADR --cluster-domain=$DOMAIN \
