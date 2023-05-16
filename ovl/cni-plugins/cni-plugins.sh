@@ -36,7 +36,7 @@ dbg() {
 ##     Print environment.
 cmd_env() {
 
-	test -n "$__cniver" || __cniver=v1.1.1
+	test -n "$__cniver" || __cniver=v1.3.0
 	test -n "$__cni_plugin_ar" || __cni_plugin_ar=cni-plugins-linux-amd64-$__cniver.tgz
 
 	if test "$cmd" = "env"; then

@@ -4,6 +4,8 @@ Installs [cni-plugins](https://github.com/containernetworking/plugins)
 in `/opt/cni/bin`. The intention is to have a uniform way of installing
 cni-plugins rather than letting every ovl using it's own way.
 
+* https://github.com/containernetworking/cni/blob/main/CONVENTIONS.md
+
 ## Usage
 
 Include `ovl/cni-plugins` when building the cdrom or include this ovl
