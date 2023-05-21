@@ -15,7 +15,8 @@ test -n "$FIRST_WORKER" -a $i -lt "$FIRST_WORKER" && exit 0
 
 mkdir -p /var/lib/crio
 # Cri-o *requires* a default route to start(?!)
-ip route add default via 192.168.0.250
+#ip route add default via 192.168.0.250
+export CONTAINER_LOG_LEVEL
 crio > /var/log/crio.log 2>&1 &
 sleep 0.2
 
