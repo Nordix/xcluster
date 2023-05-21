@@ -1,0 +1,34 @@
+#! /bin/sh
+# NOTE: A common pattern is to specify "-" (stdout) as out-file,
+#  so there must be NO log printouts to stdout!
+
+dir=$(dirname $0); dir=$(readlink -f $dir)
+tmp=/tmp/$USER/xcluster_$$
+die() {
+	echo "ERROR: $*" >&2
+	rm -rf $tmp
+	exit 1
+}
+log() {
+	echo "INFO: $*" >&2
+}
+
+test -n "$1" || die "No out-file"
+d=$dir/_output
+test -d $d || die "Stap not built"
+
+mkdir -p $tmp/bin
+$XCLUSTER install_prog --dest=$tmp $d/bin/staprun
+cp -R $d/libexec $tmp
+
+if test "$SYSTEMTAP_TEST" = "yes"; then
+	cp -R $dir/default/* $tmp
+	mods=$(find $dir -maxdepth 1 -mindepth 1 -name '*.ko')
+	mkdir -p $tmp/root
+	test -n "$mods" && cp $mods $tmp/root
+fi
+
+cd $tmp
+tar cf "$1" *
+cd - > /dev/null
+rm -rf $tmp
