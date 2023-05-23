@@ -1,0 +1,19 @@
+#! /bin/sh
+. /etc/profile
+
+die() {
+	echo "$@"
+	exit 1
+}
+
+
+hostname | grep -Eq 'vm-[0-9]+$' || die "Invalid hostname [$(hostname)]"
+i=$(hostname | cut -d- -f2 | sed -re 's,^0+,,')
+
+rm -f /sbin/tc
+
+sysctl -q net.ipv4.ip_forward=1
+sysctl -q net.ipv6.conf.all.forwarding=1
+sysctl -q net.mptcp.enabled=1
+sysctl -q net.ipv4.conf.all.rp_filter=0
+sysctl -q net.ipv4.conf.default.rp_filter=0

@@ -1,0 +1,64 @@
+#! /bin/sh
+# NOTE: A common pattern is to specify "-" (stdout) as out-file,
+#  so there must be NO log printouts to stdout!
+
+dir=$(dirname $0); dir=$(readlink -f $dir)
+tmp=/tmp/$USER/xcluster_$$
+die() {
+	echo "ERROR: $*" >&2
+	rm -rf $tmp
+	exit 1
+}
+log() {
+	echo "INFO: $*" >&2
+}
+findf() {
+	f=$ARCHIVE/$1
+	test -r $f || f=$HOME/Downloads/$1
+	test -r $f
+}
+
+test -n "$1" || die "No out-file"
+
+mkdir -p $tmp
+cp -R $dir/default/* $tmp
+
+mkdir -p $tmp/bin
+gcc -Wall -o $tmp/bin/mptcp $dir/src/mptcp.c || die "Failed to build [mptcp]"
+
+eval $($XCLUSTER env)
+d=$KERNELDIR/$__kver/tools/testing/selftests/net/mptcp
+idir=$__kobj/sys/include
+if test -d $idir -a -d $d; then
+	gcc -o $tmp/bin/mptcp_connect $d/mptcp_connect.c || die "gcc mptcp_connect.c"
+	gcc -o $tmp/bin/pm_nl_ctl -I$idir $d/pm_nl_ctl.c || die "gcc pm_nl_ctl.c"
+	for f in mptcp_connect.sh pm_netlink.sh mptcp_join.sh; do
+		test -r $d/$f || die "Not readable [$d/$f]"
+		cp $d/$f $tmp/bin
+	done
+	$XCLUSTER install_prog --dest=$tmp date bash
+fi
+
+if which mptcpize > /dev/null; then
+	cp $(which mptcpize) $tmp/bin
+	d=/usr/lib/x86_64-linux-gnu/mptcpize
+	if test -d $d; then
+		mkdir -p $(dirname $tmp/$d)
+		cp -R $d $tmp/usr/lib/x86_64-linux-gnu
+	fi
+fi
+$XCLUSTER install_prog --dest=$tmp ncat stap
+
+if findf ctraffic.gz; then
+	gzip -dc $f > $tmp/bin/ctraffic
+	chmod a+x $tmp/bin/ctraffic
+fi
+
+mods=$(find $dir -maxdepth 1 -mindepth 1 -name '*.ko')
+mkdir -p $tmp/root
+test -n "$mods" && cp $mods $tmp/root
+
+cd $tmp
+tar cf "$1" *
+cd - > /dev/null
+rm -rf $tmp
