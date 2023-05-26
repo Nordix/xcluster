@@ -1,0 +1,26 @@
+#!/usr/bin/env stap
+
+%{
+#include <linux/net.h>
+#include <linux/in.h>
+%}
+
+/* RSI contains 'type' and RDX contains 'protocol'.
+ */
+
+function mptcpify () %{
+    if (CONTEXT->kregs->si & SOCK_STREAM &&
+        (CONTEXT->kregs->dx == IPPROTO_TCP ||
+         CONTEXT->kregs->dx == 0)) {
+                CONTEXT->kregs->dx = IPPROTO_MPTCP;
+                STAP_RETVALUE = 1;
+    } else {
+           STAP_RETVALUE = 0;
+    }
+%}
+
+probe kernel.function("__sys_socket") {
+        if (mptcpify() == 1) {
+                printf("command %16s mptcpified\n", execname());
+        }
+}
