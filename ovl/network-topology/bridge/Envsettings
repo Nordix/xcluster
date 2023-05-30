@@ -1,4 +1,4 @@
 #! /bin/sh
 
 export __nrouters=1
-export __mem201=128
+test -n "$__mem201" || export __mem201=128

@@ -8,6 +8,9 @@ export __nets203=0,4,2
 export __mem201=128
 export __mem202=128
 export __mem203=128
+test -n "$__mem201" || export __mem201=128
+test -n "$__mem202" || export __mem202=128
+test -n "$__mem203" || export __mem203=128
 
 if ip netns id | grep -q _xcluster; then
 	# Ensure bridges for net 3-4
