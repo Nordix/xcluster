@@ -7,12 +7,13 @@ export __nets203=0,3,5,9,11
 export __nets204=0,4,6,9,12
 export __nets205=0,5,7,10,12
 export __nets206=0,6,8,10,11
-export __mem201=128
-export __mem202=128
-export __mem203=128
-export __mem204=128
-export __mem205=128
-export __mem206=128
+test -n "$__mem201" || export __mem201=128
+test -n "$__mem202" || export __mem202=128
+test -n "$__mem203" || export __mem203=128
+test -n "$__mem204" || export __mem204=128
+test -n "$__mem205" || export __mem205=128
+test -n "$__mem206" || export __mem206=128
+
 test -z "$__ntesters" && export __ntesters=1
 test $__ntesters -eq 0 && export __ntesters=1
 

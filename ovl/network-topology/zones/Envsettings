@@ -3,9 +3,9 @@
 export __nets_vm=0,1
 export __nets_router=0,1,2,3,4
 export __smp201=3
-export __mem201=192
+test -n "$__mem201" || export __mem201=192
 export __smp202=3
-export __mem202=192
+test -n "$__mem202" || export __mem202=192
 export __nets10=0,3
 export __nets11=0,3
 export __nets12=0,3

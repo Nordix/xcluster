@@ -2,8 +2,8 @@
 
 export __nrouters=2
 export __nets_vm=0,1,3,4,5
-export __mem201=128
-export __mem202=128
+test -n "$__mem201" || export __mem201=128
+test -n "$__mem202" || export __mem202=128
 export __smp1=3
 export __smp2=3
 export __smp3=3
