@@ -616,8 +616,9 @@ xcluster_start() {
 	# (mode set for backward compatibility)
 	__mode=dual-stack
 	export xcluster___mode=$__mode
+	test -n "$xcluster_PREFIX" || xcluster_PREFIX=$PREFIX
 	test -n "$xcluster_DOMAIN" || xcluster_DOMAIN=xcluster
-	export xcluster_DOMAIN
+	export xcluster_DOMAIN xcluster_PREFIX
 	test -n "$xcluster_KUBECONFIG" || xcluster_KUBECONFIG=/etc/kubernetes/kubeconfig.token
 	export xcluster_KUBECONFIG
 	test "$__no_start" = "yes" && return 0
