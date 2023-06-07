@@ -158,7 +158,7 @@ cmd_nsadd() {
 	ip -6 ro add $__ipv6_prefix$ipv4_ns/128 dev xcluster$1
 
 	ip link set host$1 netns $netns
-	sudo ip netns exec $netns \
+	sudo ip netns exec $netns env xcluster_PREFIX=$xcluster_PREFIX \
 		$me nssetup --ipv4-base=$__ipv4_base --ipv6-prefix=$__ipv6_prefix $1
 	sudo $me masq --ipv4-base=$__ipv4_base
 
@@ -178,7 +178,7 @@ cmd_nsadd_docker() {
 	cmd_docker_net $1
 
 	ip link set host$1 netns $netns
-	sudo ip netns exec $netns \
+	sudo ip netns exec $netns env xcluster_PREFIX=$xcluster_PREFIX \
 		$me nssetup --docker --adr4=$adr4 --gw4=$gw4 $1
 	mkrmtap
 }
