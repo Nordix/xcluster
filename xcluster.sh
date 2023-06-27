@@ -671,12 +671,12 @@ cmd_collect_tar() {
 			cmd_cat_tar $d > "$__dest/$(printf "%02d$b.tar" $i)"
 		elif test -x $d/tar; then
 			b=$(basename $d)
-			$d/tar "$__dest/$(printf "%02d$b.tar" $i)"
+			$d/tar "$__dest/$(printf "%02d$b.tar" $i)" || die "$d/tar failed"
 		else
 			b=$d
 			d=$(cmd_ovld $d) || return
 			test -x $d/tar || die "Not executable [$d/tar]"
-			$d/tar "$__dest/$(printf "%02d$b.tar" $i)"
+			$d/tar "$__dest/$(printf "%02d$b.tar" $i)" || die "$d/tar failed"
 		fi
 		i=$((i+1))
 	done
