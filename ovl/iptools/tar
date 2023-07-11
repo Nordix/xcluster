@@ -59,6 +59,9 @@ if which nmap > /dev/null; then
 	$XCLUSTER install_prog --dest=$tmp nmap ncat nping
 fi
 
+which hping3 > /dev/null && $XCLUSTER install_prog --dest=$tmp hping3
+
+
 d=$XCLUSTER_WORKSPACE/iproute2-$iproute2/sys
 test -d $d || die "Not a directory [$d]"
 log "Including iproute2-$iproute2..."
