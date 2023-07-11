@@ -81,7 +81,7 @@ build() {
 		build_iproute2 $n-$v
 		return
 	fi
-	findf $n-$v.tar.bz2 || findf $n-$v.tar.gz || die "Not found $n-$v.tar"
+	findf $n-$v.tar.bz2 || findf $n-$v.tar.gz || findf $n-$v.tar.xz || die "Not found $n-$v.tar"
 	tar -C $XCLUSTER_WORKSPACE -xf $f
 	cd $d
 	if test "$n" = "iptables" -o "$n" = "ipset"; then
@@ -97,6 +97,9 @@ build() {
 	make -j$(nproc) || die "Make failed"
 	if test "$n" != "ipset7"; then
 		make DESTDIR=$sysd install || die "Install failed"
+		if test -r doc/Makefile; then
+			make -C doc DESTDIR=$sysd install  # Don't care about the outcome
+		fi
 	fi
 	echo "Built at [$d]"
 }
@@ -148,6 +151,9 @@ download() {
 		iproute2)
 			ar=iproute2-$v.tar.gz
 			u=https://git.kernel.org/pub/scm/network/iproute2/iproute2.git/snapshot/$ar;;
+		nftables|libnft*)
+			ar=$n-$v.tar.xz
+			u=$netfilter_url/$n/files/$ar;;
 		*)
 			ar=$n-$v.tar.bz2
 			u=$netfilter_url/$n/files/$ar;;
@@ -165,9 +171,9 @@ download() {
 }
 
 libmnl_ver=1.0.4
-libnftnl_ver=1.2.1
+libnftnl_ver=1.2.5
 iptables_ver=1.8.8
-nftables_ver=1.0.2
+nftables_ver=1.0.7
 libnfnetlink_ver=1.0.1
 libnetfilter_acct_ver=1.0.3
 libnetfilter_cttimeout_ver=1.0.0
@@ -187,11 +193,9 @@ ver() {
 
 # ----------------------------------------------------------------------
 #
+##   man [page]
 cmd_man() {
-	if test -z "$MANPATH"; then
-		xterm -bg '#ddd' -fg '#222' -geometry 80x43 -T $1 -e man $1 &
-		return 0
-	fi
+	test -n "$MANPATH" || MANPATH=$XCLUSTER_WORKSPACE/sys/usr/share/man
 
 	if test -z "$1"; then
 		local f
