@@ -130,7 +130,7 @@ cmd_env() {
 	fi
 }
 cmd_completion() {
-	grep -oE "^cmd_[a-zA-Z_]+" $me | grep "cmd_$1" | sed -e 's,cmd_,,'
+	grep -oE "^cmd_[a-zA-Z_0-9]+" $me | grep "cmd_$1" | sed -e 's,cmd_,,'
 }
 
 
