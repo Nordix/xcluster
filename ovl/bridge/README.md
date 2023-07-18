@@ -8,9 +8,9 @@ The [bridge](../network-topology#bridge) network topology is used.
 
 ## Pre-requisites
 The following versions are a MUST to run the broute test successfully.
-linux-6.3 (with CONFIG_NFT_BRIDGE_META=y/m)
-libnfntl-1.2.5
-nftables-v1.0.7
+linux-6.4 (with CONFIG_NFT_BRIDGE_META=y/m)
+libnfntl-1.2.6
+nftables-1.0.8
 
 ## Manual basic test
 

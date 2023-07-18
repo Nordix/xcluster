@@ -171,9 +171,9 @@ download() {
 }
 
 libmnl_ver=1.0.4
-libnftnl_ver=1.2.5
+libnftnl_ver=1.2.6
 iptables_ver=1.8.8
-nftables_ver=1.0.7
+nftables_ver=1.0.8
 libnfnetlink_ver=1.0.1
 libnetfilter_acct_ver=1.0.3
 libnetfilter_cttimeout_ver=1.0.0
