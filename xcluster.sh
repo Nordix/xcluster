@@ -885,8 +885,8 @@ cmd_xvm() {
 
 	test -n "$__bg" || __bg='#040'
 	nohup xterm -T "vm-$nodeid" -fg wheat -bg "$__bg" $xtermopt $geometry \
-		-e $me boot_vm --nets=$__nets --mem=$__mem --smp=$__smp $nodeid \
-		> /dev/null < /dev/null 2>&1 &
+		-e "$me boot_vm --nets=$__nets --mem=$__mem --smp=$__smp $nodeid 2>&1 \
+		| tee $XCLUSTER_TMP/vm-$nodeid.log" > /dev/null < /dev/null 2>&1 &
 }
 cmd_geometry() {
     eval ${XCLUSTER_LAYOUT:-"dx=550;dy=220;sz=80x12"}
