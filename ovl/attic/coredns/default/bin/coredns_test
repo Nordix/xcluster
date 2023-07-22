@@ -63,7 +63,7 @@ cni_plugin_info() {
 
 cmd_tcase_check_namespaces() {
 	test_namespaces
-	tlog "$(kubectl version --short=true | grep Server)"
+	tlog "$(kubectl version | grep Server)"
 	tlog "$(uname -s -r -v)"
 	tlog "CNI-plugin; $(cni_plugin_info)"
 	tlog "Proxy-$(grep mode /etc/kubernetes/kube-proxy.config)"
