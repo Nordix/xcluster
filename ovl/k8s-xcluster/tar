@@ -49,7 +49,7 @@ for n in kube-controller-manager kube-scheduler kube-apiserver \
 done
 
 mkdir -p $tmp/etc/kubernetes
-$KUBERNETESD/kubectl version --client --short > $tmp/etc/kubernetes/version
+$KUBERNETESD/kubectl version --client > $tmp/etc/kubernetes/version
 
 # Certificates are required for image pull
 mkdir -p $tmp/etc/ssl/certs
