@@ -129,7 +129,6 @@ scale_lb() {
 # ecmp ----------------------------------------------------------------
 test_start_ecmp() {
 	export SETUP=ecmp
-	export __kver=linux-5.4.35
 	test_start
 }
 
