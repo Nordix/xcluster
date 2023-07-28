@@ -103,7 +103,7 @@ cmd_env() {
 		test -r $__kbin || __kbin=$XCLUSTER_HOME/bzImage
 	fi
 	test -n "$__kcfg" || __kcfg=$dir/config/$__kver
-	test -n "$__bbver" || __bbver=busybox-1.30.1
+	test -n "$__bbver" || __bbver=busybox-1.36.1
 	test -n "$__kvm" || __kvm=kvm
 	test -n "$__image" || __image=$XCLUSTER_HOME/hd.img
 	test -n "$__cdrom" || __cdrom=$XCLUSTER_TMP/cdrom.iso
