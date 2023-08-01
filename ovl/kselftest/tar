@@ -16,19 +16,14 @@ log() {
 mkdir -p $tmp
 test -n "$1" || die "No out-file"
 cp -R $dir/default/* $tmp
-: "${KERNELDIR:=$HOME/tmp/linux}"
-ksrc=$KERNELDIR/$__kver
-if test -d $ksrc; then
-	log "Including kernel source"
-	mkdir -p $tmp/kernel
-	cp -r $ksrc/* $tmp/kernel/
-	make -s -C $tmp/kernel/tools/ selftests_install
-	$XCLUSTER install_prog --dest=$tmp make
-	$XCLUSTER install_prog --dest=$tmp lscpu
-	$XCLUSTER install_prog --dest=$tmp taskset
-else
-	log "Kernel source not included"
-fi
+
+$XCLUSTER install_prog --dest=$tmp make lscpu realpath || die "kselftest dependencies not installed"
+
+eval $($XCLUSTER env | grep -E '^KERNELDIR|__kver')
+kdir=$KERNELDIR/$__kver
+log "Installing kselftest..."
+mkdir -p $tmp/kernel
+KSFT_INSTALL_PATH=$tmp/kernel make -C $kdir/tools/testing/selftests install > /dev/null 2>&1 || die "kselftest not installed"
 
 cd $tmp
 tar cf "$1" *
