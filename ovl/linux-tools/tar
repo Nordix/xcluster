@@ -1,0 +1,37 @@
+#! /bin/sh
+# NOTE: A common pattern is to specify "-" (stdout) as out-file,
+#  so there must be NO log printouts to stdout!
+
+dir=$(dirname $0); dir=$(readlink -f $dir)
+tmp=/tmp/$USER/xcluster_$$
+die() {
+	echo "ERROR: $*" >&2
+	rm -rf $tmp
+	exit 1
+}
+log() {
+	echo "INFO: $*" >&2
+}
+findf() {
+	f=$ARCHIVE/$1
+	test -r $f || f=$HOME/Downloads/$1
+	test -r $f
+}
+
+test -n "$1" || die "No out-file"
+
+mkdir -p $tmp
+eval $($XCLUSTER env | grep -E '^KERNELDIR|__kver')
+kdir=$KERNELDIR/$__kver
+
+# install perf
+d=$kdir/tools/perf
+make -C $d > /dev/null 2>&1 || die "perf not built"
+test -x $d/perf || die "Not executable [$d/perf]"
+log "Including $d/perf"
+$XCLUSTER install_prog --dest=$tmp $d/perf
+
+cd $tmp
+tar cf "$1" *
+cd - > /dev/null
+rm -rf $tmp
