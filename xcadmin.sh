@@ -291,10 +291,16 @@ cmd_cache_refresh() {
 cmd_k8s_build_images() {
 	cmd_env
 	eval $($XCLUSTER env)
-	test -n "$KUBERNETESD" || \
+	if test -z "$KUBERNETESD"; then
 		export KUBERNETESD=$XCLUSTER_WORKSPACE/kubernetes-$__k8sver/server/bin
+		if test "$__k8sver" = "master"; then
+			export KUBERNETESD=$GOPATH/src/k8s.io/kubernetes/_output/bin
+			test -x $KUBERNETESD/kubelet || die "K8s not built locally"
+		fi
+	fi
 	if ! test -d $KUBERNETESD; then
 		local ar=$(cmd_find_ar kubernetes-server-$__k8sver-linux-amd64.tar.gz)
+		test -n "$ar" || die "No archive for version [$__k8sver]"
 		test -r $ar || die "Not readable [$ar]"
 		rm -rf $XCLUSTER_WORKSPACE/kubernetes
 		tar -C $XCLUSTER_WORKSPACE -xf $ar
@@ -317,22 +323,22 @@ cmd_k8s_build_images() {
 	rm -rf $image
 	cp $__image $image
 	chmod +w $image
-	$XCLUSTER ximage --image=$image xnet etcd iptools crio k8s-xcluster mconnect images || die "ximage failed"
+	$XCLUSTER ximage --image=$image xnet etcd iptools crio kubernetes mconnect images || die "ximage failed"
 	chmod -w $image
 	test -e $XCLUSTER_HOME/hd-k8s-xcluster.img || \
 		ln -s $(basename $image)  $XCLUSTER_HOME/hd-k8s-xcluster.img
 	echo "Created [$image]"
 	
 	# Build the legacy k8s image;
-	image=$XCLUSTER_HOME/hd-k8s-$__k8sver.img
-	rm -rf $image
-	cp $__image $image
-	chmod +w $image
-	$XCLUSTER ximage --image=$image xnet etcd iptools crio kubernetes mconnect images k8s-cni-bridge || die "ximage failed"
-	chmod -w $image
+	local limage=$XCLUSTER_HOME/hd-k8s-$__k8sver.img
+	rm -rf $limage
+	cp $image $limage
+	chmod +w $limage
+	$XCLUSTER ximage --image=$limage k8s-cni-bridge || die "ximage failed"
+	chmod -w $limage
 	test -e $XCLUSTER_HOME/hd-k8s.img || \
-		ln -s $(basename $image)  $XCLUSTER_HOME/hd-k8s.img
-	echo "Created [$image]"
+		ln -s $(basename $limage)  $XCLUSTER_HOME/hd-k8s.img
+	echo "Created [$limage]"
 
 }
 
@@ -349,32 +355,26 @@ cmd_k8s_test() {
 		# Test with k8s-xcluster;
 		__image=$XCLUSTER_HOME/hd-k8s-xcluster-$__k8sver.img
 		test -r $__image || __image=$XCLUSTER_HOME/hd-k8s-xcluster.img
-		export __image
-		test -r $__image || die "Not readable [$__image]"
-		export XCTEST_HOOK=$($XCLUSTER ovld k8s-xcluster)/xctest-hook
-		test -n "$__nvm" || __nvm=5
-		export __nvm
-		export __mem=1536
-		export __cni
 		test "$__cni" != "None" && export XOVLS="k8s-cni-$__cni private-reg $XXOVLS"
-		export xcluster_FIRST_WORKER=2
+		export __cni
 	else
 		# Test on "normal" xcluster
 		__image=$XCLUSTER_HOME/hd-k8s-$__k8sver.img
 		test -r $__image || __image=$XCLUSTER_HOME/hd-k8s.img
-		export __image
-		test -r $__image || die "Not readable [$__image]"
-		unset XCTEST_HOOK
-		export __nvm=4
-		export __mem1=2048
-		export __mem=1536
 		export XOVLS="private-reg $XXOVLS"
 	fi
+	test -r $__image || die "Not readable [$__image]"
+	export __image
+	test -n "$__nvm" || __nvm=4
+	export __nvm
+	export xcluster_FIRST_WORKER=1
+	export __mem=1536
+	export __mem1=$((__mem + 512))
 
 	if test "$__cni" = "cilium"; then
 		# Cilium is a horrible memory-hog and emulates kube-proxy
-		export __mem1=1024
 		export __mem=2560
+		export __mem1=$((__mem + 512))
 		export xcluster_PROXY_MODE=disabled
 	fi
 	if test "$__cni" = "antrea"; then
