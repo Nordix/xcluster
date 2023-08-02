@@ -1,0 +1,7 @@
+debugfs=/sys/kernel/debug
+
+mount_tracefs() {
+	mount -t debugfs none $debugfs || true
+}
+
+mount_tracefs

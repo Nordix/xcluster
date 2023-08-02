@@ -21,7 +21,7 @@ $XCLUSTER install_prog --dest=$tmp $progs || die "kselftest dependencies not ins
 
 eval $($XCLUSTER env | grep -E '^KERNELDIR|__kver')
 kdir=$KERNELDIR/$__kver
-log "Installing kselftest..."
+log "Including kselftest"
 mkdir -p $tmp/kernel
 KSFT_INSTALL_PATH=$tmp/kernel make -C $kdir/tools/testing/selftests install > /dev/null 2>&1 || die "kselftest not installed"
 

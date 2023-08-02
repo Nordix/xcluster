@@ -21,11 +21,14 @@ findf() {
 test -n "$1" || die "No out-file"
 
 mkdir -p $tmp
+cp -R $dir/default/* $tmp
+
 eval $($XCLUSTER env | grep -E '^KERNELDIR|__kver')
 kdir=$KERNELDIR/$__kver
 
 # install perf
 d=$kdir/tools/perf
+log "Building perf"
 make -C $d > /dev/null 2>&1 || die "perf not built"
 test -x $d/perf || die "Not executable [$d/perf]"
 log "Including $d/perf"
