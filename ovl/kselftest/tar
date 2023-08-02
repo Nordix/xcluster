@@ -15,9 +15,9 @@ log() {
 
 mkdir -p $tmp
 test -n "$1" || die "No out-file"
-cp -R $dir/default/* $tmp
 
-$XCLUSTER install_prog --dest=$tmp make lscpu realpath || die "kselftest dependencies not installed"
+progs="make lscpu realpath jq"
+$XCLUSTER install_prog --dest=$tmp $progs || die "kselftest dependencies not installed"
 
 eval $($XCLUSTER env | grep -E '^KERNELDIR|__kver')
 kdir=$KERNELDIR/$__kver
