@@ -14,16 +14,19 @@ log() {
 }
 
 mkdir -p $tmp
+cp -R $dir/default/* $tmp
 test -n "$1" || die "No out-file"
 
-progs="make lscpu realpath jq"
+# dependencies
+progs="realpath lscpu mz"
 $XCLUSTER install_prog --dest=$tmp $progs || die "kselftest dependencies not installed"
 
+# kernel selftest
 eval $($XCLUSTER env | grep -E '^KERNELDIR|__kver')
 kdir=$KERNELDIR/$__kver
 log "Including kselftest"
-mkdir -p $tmp/kernel
-KSFT_INSTALL_PATH=$tmp/kernel make -C $kdir/tools/testing/selftests install > /dev/null 2>&1 || die "kselftest not installed"
+mkdir -p $tmp/kselftest
+KSFT_INSTALL_PATH=$tmp/kselftest make -C $kdir/tools/testing/selftests install > /dev/null 2>&1 || die "kselftest not installed"
 
 cd $tmp
 tar cf "$1" *

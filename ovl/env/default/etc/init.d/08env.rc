@@ -2,3 +2,9 @@
 
 f=/etc/xcluster_env
 test -r $f && cat $f >> /etc/profile
+
+d=/etc/xcluster_env.d/
+test -d $d || exit 0
+for f in $d/*.env; do
+        test -r $f && cat $f >> /etc/profile
+done
