@@ -13,7 +13,6 @@ me=$dir/$prg
 tmp=/tmp/${prg}_$$
 test -n "$DOMAIN" || DOMAIN=xcluster
 test -n "$PREFIX" || PREFIX=1000::1
-test -n "$FIRST_WORKER" || FIRST_WORKER=1
 yamld=/etc/kubernetes/sctp
 
 die() {

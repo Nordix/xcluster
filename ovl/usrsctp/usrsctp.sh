@@ -32,9 +32,8 @@ dbg() {
 	test -n "$__verbose" && echo "$prg: $*" >&2
 }
 
-##  env
-##    Print environment.
-##
+##   env
+##     Print environment.
 cmd_env() {
 
 	test -n "$__tag" || __tag="registry.nordix.org/cloud-native/usrsctp-test:latest"
@@ -49,11 +48,61 @@ cmd_env() {
 	test -x "$XCLUSTER" || die "Not executable [$XCLUSTER]"
 	eval $($XCLUSTER env)
 }
+##   mkimage [--tag=registry.nordix.org/cloud-native/sctp-test:latest]
+##     Create the docker image and upload it to the local registry.
+cmd_mkimage() {
+	cmd_env
+	mkdir -p $dir/image/default/bin
+	make -C $dir/src clean
+	make -j$(nproc) CFLAGS=-DSCTP_DEBUG -C $dir/src X=$dir/image/default/bin/usrsctpt static
+	local imagesd=$($XCLUSTER ovld images)
+	$imagesd/images.sh mkimage --force --upload --strip-host --tag=$__tag $dir/image
+}
+##   nfqlb_download
+##     Download a nfqlb release to $ARCHIVE
+cmd_nfqlb_download() {
+	NFQLB_VER="1.0.0"
+	local ar=nfqlb-$NFQLB_VER.tar.xz
+	local f=$ARCHIVE/$ar
+	if test -r $f; then
+		log "Already downloaded [$f]"
+	else
+		local url=https://github.com/Nordix/nfqueue-loadbalancer
+		curl -L $url/releases/download/$NFQLB_VER/$ar > $f
+	fi
+}
+##   usrsctp_build
+##     Build usrsctp master in $HOME/tmp/usrsctp/
+cmd_usrsctp_build() {
+	# download
+	USRSCTP_VER=master
+	local zip=$USRSCTP_VER.zip
+	local f=$ARCHIVE/usrsctp-$zip
+	if test -r $f; then
+		log "Already downloaded [$f]"
+	else
+		local url=https://github.com/sctplab/usrsctp
+		curl -L $url/archive/refs/heads/$zip > $f
+	fi
 
-##   test --list
-##   test [--xterm] [test...] > logfile
-##     Exec tests
+	# extract
+	tmpdir=/tmp/$USER/usrsctp
+	rm -r $tmpdir/*
+	unzip -o -d $tmpdir $f
+	mv $tmpdir/*/* $tmpdir
+
+	# build
+	cd $tmpdir
+	./bootstrap
+	./configure --prefix=/
+	cd -
+	DESTDIR=$HOME/tmp/usrsctp make -C $tmpdir install
+}
+
 ##
+##   test [--xterm] test > logfile
+##   test [--xterm] test test-suite [ovl...] > logfile
+##     Exec tests
 cmd_test() {
 	if test "$__list" = "yes"; then
         grep '^test_' $me | cut -d'(' -f1 | sed -e 's,test_,,'
@@ -68,9 +117,9 @@ cmd_test() {
 	export xcluster_PROXY_MODE=iptables
 
     if test -n "$1"; then
-        for t in $@; do
-            test_$t
-        done
+		t=$1
+		shift
+        test_$t $@
     else
 		test_k8s_server
     fi      
@@ -79,6 +128,7 @@ cmd_test() {
     tlog "Xcluster test ended. Total time $((now-begin)) sec"
 }
 
+##   test client
 test_client() {
 	. ./network-topology/nat/Envsettings
 
@@ -119,6 +169,7 @@ test_client() {
 	rcp 222 /var/log/*.pcap captures/
 }
 
+##   test client_mh
 test_client_mh() {
 	. ./network-topology/nat/Envsettings
 
@@ -152,6 +203,7 @@ test_client_mh() {
 	rcp 202 /var/log/*.pcap captures/
 }
 
+##   test server
 test_server() {
 	. ./network-topology/nat/Envsettings
 
@@ -189,7 +241,7 @@ test_server() {
 	rcp 221 /var/log/*.pcap captures/
 	rcp 222 /var/log/*.pcap captures/
 }
-
+##   test k8s_client
 test_k8s_client() {
 	. ./network-topology/k8s/Envsettings
 
@@ -226,46 +278,7 @@ test_k8s_client() {
 	rcp 2 /var/log/*.pcap captures/
 	rcp 221 /var/log/*.pcap captures/
 }
-
-test_k8s_client_calico() {
-	. ./network-topology/k8s/Envsettings
-
-	# Test with k8s-xcluster;
-	__image=$XCLUSTER_HOME/hd-k8s-xcluster-$__k8sver.img
-	test -r $__image || __image=$XCLUSTER_HOME/hd-k8s-xcluster.img
-	export __image
-	test -r $__image || die "Not readable [$__image]"
-	export XCTEST_HOOK=$($XCLUSTER ovld k8s-xcluster)/xctest-hook
-	export xcluster_FIRST_WORKER=2
-
-	$($XCLUSTER ovld images)/images.sh lreg_preload k8s-cni-calico
-	xcluster_start k8s-cni-calico iptools network-topology usrsctp
-
-	otc 1 check_namespaces
-	otc 1 check_nodes
-	otc 221 start_server_tester
-
-	otc 201 vip_ecmp_route
-	otc 202 "vip_ecmp_route 2"
-
-	otc 221 "start_tcpdump eth1"
-	otc 221 "start_tcpdump eth2"
-
-	otc 2 deploy_client_pods
-	otc 2 "start_tcpdump_proc_ns usrsctpt"
-
-	otc 2 "test_conntrack 2"
-	otc 2 "test_conntrack 0"
-
-	otc 2 stop_all_tcpdump
-	otc 221 stop_all_tcpdump
-
-	sleep 5
-
-	rcp 2 /var/log/*.pcap captures/
-	rcp 221 /var/log/*.pcap captures/
-}
-
+##   test k8s_server
 test_k8s_server() {
 	. ./network-topology/k8s/Envsettings
 
@@ -302,104 +315,13 @@ test_k8s_server() {
 
 	rcp 2 /var/log/*.pcap captures/
 	rcp 1 /var/log/*.pcap captures/
-
 }
 
-test_k8s_server_calico() {
-	. ./network-topology/k8s/Envsettings
-
-	# Test with k8s-xcluster;
-	__image=$XCLUSTER_HOME/hd-k8s-xcluster-$__k8sver.img
-	test -r $__image || __image=$XCLUSTER_HOME/hd-k8s-xcluster.img
-	export __image
-	test -r $__image || die "Not readable [$__image]"
-	export XCTEST_HOOK=$($XCLUSTER ovld k8s-xcluster)/xctest-hook
-	export xcluster_FIRST_WORKER=2
-
-	$($XCLUSTER ovld images)/images.sh lreg_preload k8s-cni-calico
-	xcluster_start k8s-cni-calico iptools network-topology usrsctp
-
-	otc 1 check_namespaces
-	otc 1 check_nodes
-	# otc 1 deploy_kpng_pods
-	otc 1 deploy_server_pods
-	# otc 2 "check_discard_init"
-
-	otc 201 vip_ecmp_route
-	otc 202 "vip_ecmp_route 2"
-
-	otc 2 "start_tcpdump_proc_ns usrsctpt"
-
-	otc 221 "start_client_tester 10.0.0.72 7002 192.168.3.221 6001"
-	otc 222 "start_client_tester 10.0.0.72 7002 192.168.3.222 6002"
-
-	otc 2 "test_conntrack 2"
-	otc 2 "test_conntrack 0"
-
-	otc 2 stop_all_tcpdump
-
-	sleep 5
-
-	rcp 2 /var/log/*.pcap captures/
-}
-
-##   nfqlb_download
-##     Download a nfqlb release to $ARCHIVE
-cmd_nfqlb_download() {
-	NFQLB_VER="1.0.0"
-	local ar=nfqlb-$NFQLB_VER.tar.xz
-	local f=$ARCHIVE/$ar
-	if test -r $f; then
-		log "Already downloaded [$f]"
-	else
-		local url=https://github.com/Nordix/nfqueue-loadbalancer
-		curl -L $url/releases/download/$NFQLB_VER/$ar > $f
-	fi
-}
-
-##   usrsctp_build
-##     Build usrsctp master in $HOME/tmp/usrsctp/
-cmd_usrsctp_build() {
-	# download
-	USRSCTP_VER=master
-	local zip=$USRSCTP_VER.zip
-	local f=$ARCHIVE/usrsctp-$zip
-	if test -r $f; then
-		log "Already downloaded [$f]"
-	else
-		local url=https://github.com/sctplab/usrsctp
-		curl -L $url/archive/refs/heads/$zip > $f
-	fi
-
-	# extract
-	tmpdir=/tmp/$USER/usrsctp
-	rm -r $tmpdir/*
-	unzip -o -d $tmpdir $f
-	mv $tmpdir/*/* $tmpdir
-
-	# build
-	cd $tmpdir
-	./bootstrap
-	./configure --prefix=/
-	cd -
-	DESTDIR=$HOME/tmp/usrsctp make -C $tmpdir install
-}
-
-##   mkimage [--tag=registry.nordix.org/cloud-native/sctp-test:latest]
-##     Create the docker image and upload it to the local registry.
-##
-cmd_mkimage() {
-	cmd_env
-	mkdir -p $dir/image/default/bin
-	make -C $dir/src clean
-	make -j$(nproc) CFLAGS=-DSCTP_DEBUG -C $dir/src X=$dir/image/default/bin/usrsctpt static
-	local imagesd=$($XCLUSTER ovld images)
-	$imagesd/images.sh mkimage --force --upload --strip-host --tag=$__tag $dir/image
-}
 
 . $($XCLUSTER ovld test)/default/usr/lib/xctest
 indent=''
 
+##
 # Get the command
 cmd=$1
 shift

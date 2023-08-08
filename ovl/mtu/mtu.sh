@@ -42,7 +42,6 @@ cmd_env() {
 		retrun 0
 	fi
 
-	test -n "$xcluster_FIRST_WORKER" || export xcluster_FIRST_WORKER=1
 	test -n "$XCLUSTER" || die 'Not set [$XCLUSTER]'
 	test -x "$XCLUSTER" || die "Not executable [$XCLUSTER]"
 	eval $($XCLUSTER env)
@@ -192,15 +191,9 @@ test_http_pmtud() {
 cmd_collect_pmtu_logs() {
 	local f=/tmp/pmtu.log
 	rm -f $f
-	if test "$xcluster_FIRST_WORKER" = "2"; then
-		for i in $(seq 2 5); do
-			rsh $i cat /var/log/pmtud.log >> $f
-		done
-	else
-		for i in $(seq 1 4); do
-			rsh $i cat /var/log/pmtud.log >> $f
-		done
-	fi
+	for i in $(k8s_workers); do
+		rsh $i cat /var/log/pmtud.log >> $f
+	done
 	cat $f
 	local n
 	n=$(grep '^192.168.' $f | wc -l)
@@ -340,8 +333,7 @@ test_multihop_capture() {
 
 	sleep 2
 	cmd_collect_tcpdump_pod_logs
-	local lastw=$((xcluster_FIRST_WORKER + 3))
-	for i in $(seq $xcluster_FIRST_WORKER $lastw) 201; do
+	for i in $(k8s_workers) 201; do
 		cmd_collect_tcpdump_log $i
 	done
 
@@ -373,8 +365,7 @@ test_multihop_capture_vm() {
 	otcw stop_tcpdump
 
 	sleep 2
-	local lastw=$((xcluster_FIRST_WORKER + 3))
-	for i in $(seq $xcluster_FIRST_WORKER $lastw) 201; do
+	for i in $(k8s_workers) 201; do
 		cmd_collect_tcpdump_log $i
 	done
 
