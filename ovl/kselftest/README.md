@@ -7,5 +7,8 @@ https://www.kernel.org/doc/html/v5.0/dev-tools/kselftest.html
 Include the ovl kselftest when starting xcluster.
 PLEASE NOTE: bash ovl is pre-requisite for running some selftests
 ```
-xcluster_start bash kselftest ...
+./kselftest.sh test start ...
+## vm-001
+cd /kselftest/
+./run_kselftest.sh -t net/forwarding:router_multipath_vip.sh
 ```

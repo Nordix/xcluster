@@ -12,11 +12,6 @@ die() {
 log() {
 	echo "INFO: $*" >&2
 }
-findf() {
-	f=$ARCHIVE/$1
-	test -r $f || f=$HOME/Downloads/$1
-	test -r $f
-}
 
 test -n "$1" || die "No out-file"
 
@@ -26,6 +21,8 @@ cp -R $dir/default/* $tmp
 d=$($dir/bash.sh bash)
 test -f $d/bash || die "$d/bash not built, run ./bash.sh build"
 make -C $d DESTDIR=$tmp prefix=/ install > /dev/null 2>&1 || die "bash not installed"
+
+$XCLUSTER install_prog --dest=$tmp resize
 
 cd $tmp
 tar cf "$1" *

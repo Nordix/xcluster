@@ -12,14 +12,41 @@ die() {
 log() {
 	echo "INFO: $*" >&2
 }
+includef() {
+	f=$ARCHIVE/$1
+	test -r $f || f=$HOME/Downloads/$1
+	test -r $f || die "Not found [$f]"
+
+	x=$(echo $(basename $f) | awk -F '.' '{print $1}')
+	mkdir -p $tmp/bin
+	xz -dc $f > $tmp/bin/$x
+	chmod a+x $tmp/bin/$x
+	log "Use $x $($tmp/bin/$x -version)"
+}
+update_kselftest_list() {
+	test -n "$1" || return 0
+	local n f
+	for n in $(find "$1" -mindepth 1 | grep sh); do
+		f=$(echo $n | sed -e "s,$1,,")
+		if test -f $n; then
+			d=$(dirname $f)
+			echo "${d#/}:$(basename $f)"
+		fi
+	done
+}
 
 mkdir -p $tmp
 cp -R $dir/default/* $tmp
 test -n "$1" || die "No out-file"
 
 # dependencies
-progs="realpath lscpu mz"
-$XCLUSTER install_prog --dest=$tmp $progs || die "kselftest dependencies not installed"
+mkdir -p $tmp/usr
+
+f=$($dir/kselftest.sh mz)
+$XCLUSTER install_prog --dest=$tmp/usr $f || die "$f not built, run ./kselftest.sh netsniff_build"
+
+progs="timeout realpath lscpu"
+$XCLUSTER install_prog --dest=$tmp/usr $progs || die "kselftest dependencies not installed"
 
 # kernel selftest
 eval $($XCLUSTER env | grep -E '^KERNELDIR|__kver')
@@ -27,6 +54,12 @@ kdir=$KERNELDIR/$__kver
 log "Including kselftest"
 mkdir -p $tmp/kselftest
 KSFT_INSTALL_PATH=$tmp/kselftest make -C $kdir/tools/testing/selftests install > /dev/null 2>&1 || die "kselftest not installed"
+
+# add local tests to kselftest-list.txt
+echo $(update_kselftest_list default/kselftest) >> $tmp/kselftest/kselftest-list.txt
+
+# install mconnect
+includef mconnect.xz
 
 cd $tmp
 tar cf "$1" *
