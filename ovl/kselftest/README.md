@@ -12,3 +12,6 @@ PLEASE NOTE: bash ovl is pre-requisite for running some selftests
 cd /kselftest/
 ./run_kselftest.sh -t net/forwarding:router_multipath_vip.sh
 ```
+
+## Adding local tests
+Add the shell script (*.sh) to default/kselftest directory, the test will be added to the /kselftest in the targets and the kselftest-list.txt will be updated to enable running the test via run_kselftest utility.
