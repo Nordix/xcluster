@@ -367,14 +367,16 @@ cmd_k8s_test() {
 	export __image
 	test -n "$__nvm" || __nvm=4
 	export __nvm
-	export xcluster_FIRST_WORKER=1
-	export __mem=1536
-	export __mem1=$((__mem + 512))
+
+	test -n "$__mem" || __mem=1536
+	test -n "$__mem1" || __mem1=$((__mem + 512))
+	export __mem __mem1
 
 	if test "$__cni" = "cilium"; then
 		# Cilium is a horrible memory-hog and emulates kube-proxy
-		export __mem=2560
-		export __mem1=$((__mem + 512))
+		__mem=$((__mem + 1024))
+		__mem1=$((__mem + 512))
+		export __mem __mem1
 		export xcluster_PROXY_MODE=disabled
 	fi
 	if test "$__cni" = "antrea"; then

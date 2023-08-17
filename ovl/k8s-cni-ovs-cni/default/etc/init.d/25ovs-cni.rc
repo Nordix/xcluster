@@ -14,7 +14,6 @@ test $i -le 200 || exit 0
 if ! grep -q CNI_INFO /etc/profile; then
 	echo CNI_INFO=ovs-cni >> /etc/profile
 fi
-test $i -ge $FIRST_WORKER || exit 0
 
 test -n "$PREFIX" || PREFIX=1000::1
 

@@ -36,7 +36,7 @@ dbg() {
 ##   env
 ##     Print environment.
 cmd_env() {
-	test -n "$__nvm" || export __nvm=5
+	test -n "$__nvm" || export __nvm=4
 	test -n "$__nrouters" || export __nrouters=1
 
 	if test "$cmd" = "env"; then
@@ -76,7 +76,6 @@ cmd_test() {
 ##     Start empty cluster. K8s nodes will be "NotReady".
 test_start_empty() {
 	export __image=$XCLUSTER_HOME/hd-k8s-xcluster.img
-	export xcluster_FIRST_WORKER=2
 	test -n "$xcluster_CALICO_BACKEND" || export xcluster_CALICO_BACKEND=none
 	tlog "CALICO_BACKEND=$xcluster_CALICO_BACKEND"
 	test -n "$TOPOLOGY" && \

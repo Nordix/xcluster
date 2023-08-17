@@ -14,6 +14,7 @@ begin=$(date +%s)
 indent="  "
 kubectl=kubectl
 sshopt="-o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no"
+test -n "$__nvm" || __nvm=4
 
 ##  tlog message...
 ##    Logs to stdout and stderr with time stamp.
@@ -262,16 +263,14 @@ statefulset_ready() {
 ##  test_nodes
 ##    Wait for the k8s nodes to become available through the API
 test_nodes() {
-	# Special case; in k8s-xcluster we can start with only the master
-	# and zero workers (nodes==0).
-	test -n "$FIRST_WORKER" || FIRST_WORKER=1
-	test -n "$__nvm" || __nvm=4
-	if test $FIRST_WORKER -gt $__nvm; then
-		tcase "No k8s nodes, only master"
+	local num_nodes=$(k8s_nodes | wc -l)
+	if test "$num_nodes" -eq 0; then
+		tcase "No k8s nodes"
 		return 0
 	fi
-	local vm=$(printf "vm-%03d" $FIRST_WORKER)
-	tcase "Wait for k8s nodes (first node $vm)"
+	local first_node=$(k8s_nodes | head -1)
+	local vm=$(printf "vm-%03d" $first_node)
+	tcase "Wait for k8s nodes, first node $vm of $num_nodes"
 	pushv 180 60 3
 	tex "$kubectl get nodes 2>&1 | ogrep $vm" || tdie
 	tex all_nodes_ready || tdie
@@ -281,6 +280,30 @@ all_nodes_ready() {
 	! kubectl get nodes -o json | \
 		jq -r '.items[]|.status.conditions[]|select(.type == "Ready")|.status' \
 		| grep -v True
+}
+##  k8s_nodes
+##    Emit K8s node VMs. This functions should be overridden for
+##    special setups, like a HA-topology. Make sure these patterns work:
+##      first_node=$(k8s_nodes | head -1)
+##      num_nodes=$(k8s_nodes | wc -1)
+k8s_nodes() {
+	seq 1 $__nvm
+}
+##  k8s_workers
+##    Emit K8s worker VMs. This functions should be overridden for
+##    special setups, like a HA-topology. Make sure these patterns work:
+##      first_worker=$(k8s_workers | head -1)
+##      num_workers=$(k8s_workers | wc -1)
+k8s_workers() {
+	seq 1 $__nvm
+}
+##  k8s_masters
+##    Emit K8s master VMs. This functions should be overridden for
+##    special setups, like a HA-topology. Make sure these patterns work:
+##      first_master=$(k8s_masters | head -1)
+##      num_masters=$(k8s_masters | wc -1)
+k8s_masters() {
+	echo 1
 }
 
 ##  get_pod <name> [host]
@@ -494,9 +517,8 @@ vip_route() {
 	local net=1
 	test -n "$1" && net=$1
 	test -n "$PREFIX" || PREFIX=1000::1
-	test -n "$FIRST_WORKER" || FIRST_WORKER=1
 	local hops4 hops6 i
-	for i in $(seq $FIRST_WORKER $__nvm); do
+	for i in $(k8s_workers); do
 		hops4="$hops4 nexthop via 192.168.$net.$i"
 		hops6="$hops6 nexthop via $PREFIX:192.168.$net.$i"
 	done
@@ -543,7 +565,6 @@ rcp() {
 ##    Check connectivity with the vm's.
 ##
 check_vm() {
-	test -n "$__nvm" || __nvm=4
 	test -n "$__nrouters" || __nrouters=2
 	local last_router=$((200 + __nrouters))
 	test -n "$__ntesters" || __ntesters=0
@@ -579,18 +600,16 @@ otc() {
 }
 otcw() {
 	local x
-	test -n "$xcluster_FIRST_WORKER" || xcluster_FIRST_WORKER=1
-	for x in $(seq $xcluster_FIRST_WORKER $__nvm); do
+	for x in $(k8s_workers); do
 		otc $x "$@"
 	done
 }
 otcwp() {
 	local x
-	test -n "$xcluster_FIRST_WORKER" || xcluster_FIRST_WORKER=1
-	for x in $(seq $xcluster_FIRST_WORKER $__nvm); do
+	for x in $(k8s_workers); do
 		(otc $x "$@") &
 	done
-	for x in $(seq $xcluster_FIRST_WORKER $__nvm); do
+	for x in $(k8s_workers); do
 		wait || die wait
 	done
 }
@@ -622,7 +641,6 @@ xcluster_start() {
 	test -n "$xcluster_KUBECONFIG" || xcluster_KUBECONFIG=/etc/kubernetes/kubeconfig.token
 	export xcluster_KUBECONFIG
 	test "$__no_start" = "yes" && return 0
-	test -n "$__nvm" || __nvm=4
 	test -n "$__nrouters" || __nrouters=2
 	test -n "$__ntesters" || __ntesters=0
 	export __nvm __nrouters __ntesters	

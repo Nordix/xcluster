@@ -88,15 +88,13 @@ cmd_tcase_mconnect_svc() {
 }
 cmd_tcase_backend_vip_route() {
 	tcase "Setup VIP routes on frontend network"
-	local X=1
-	test "$FIRST_WORKER" = "2" && X=5
 	ip ro replace 10.0.0.0/24 \
-		nexthop via 192.168.3.$X \
+		nexthop via 192.168.3.1 \
 		nexthop via 192.168.3.2 \
 		nexthop via 192.168.3.3 \
 		nexthop via 192.168.3.4
 	ip -6 ro replace $PREFIX:10.0.0.0/120 \
-		nexthop via $PREFIX:192.168.3.$X \
+		nexthop via $PREFIX:192.168.3.1 \
 		nexthop via $PREFIX:192.168.3.2 \
 		nexthop via $PREFIX:192.168.3.3 \
 		nexthop via $PREFIX:192.168.3.4
@@ -184,15 +182,13 @@ cmd_tcase_assign_cidr() {
 
 cmd_tcase_ecmp_route() {
 	tcase "Setup ECMP routes to the VIP address via all workers"
-	local X=1
-	test "$FIRST_WORKER" = "2" && X=5
 	ip route add 10.0.0.0/24 \
-		nexthop via 192.168.1.$X \
+		nexthop via 192.168.1.1 \
 		nexthop via 192.168.1.2 \
 		nexthop via 192.168.1.3 \
 		nexthop via 192.168.1.4
 	ip -6 route add 1000::1:10.0.0.0/120 \
-		nexthop via 1000::1:192.168.1.$X \
+		nexthop via 1000::1:192.168.1.1 \
 		nexthop via 1000::1:192.168.1.2 \
 		nexthop via 1000::1:192.168.1.3 \
 		nexthop via 1000::1:192.168.1.4

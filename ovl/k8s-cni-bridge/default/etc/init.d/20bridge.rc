@@ -58,8 +58,7 @@ EOF
 fi
 
 test -n "$__nvm" || __nvm=4
-test -n "$FIRST_WORKER" || FIRST_WORKER=1
-for n in $(seq $FIRST_WORKER $__nvm); do
+for n in $(seq 1 $__nvm); do
 	test $n -eq $i && continue
 	ip ro add 11.0.$n.0/24 via 192.168.1.$n
 	ip -6 ro add 1100::${n}00/120 via $PREFIX:192.168.1.$n
