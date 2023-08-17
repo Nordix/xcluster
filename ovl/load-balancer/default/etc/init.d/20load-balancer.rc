@@ -2,6 +2,7 @@
 
 export PATH="/bin:/sbin:/usr/bin:/usr/sbin"
 . /etc/profile
+test -n "$PREFIX" || PREFIX=1000::1
 
 die() {
     echo "$@"
@@ -41,10 +42,10 @@ router() {
 	ip ro delete default
 	if test "$TOPOLOGY" = "evil_tester"; then
 		ip ro add 50.0.0.0/16 via 192.168.3.222
-		ip -6 ro add 2000::/112 via 1000::1:192.168.3.222
+		ip -6 ro add 2000::/112 via $PREFIX:192.168.3.222
 	else
 		ip ro add 50.0.0.0/16 via 192.168.2.221
-		ip -6 ro add 2000::/112 via 1000::1:192.168.2.221
+		ip -6 ro add 2000::/112 via $PREFIX:192.168.2.221
 	fi
 }
 
@@ -55,7 +56,7 @@ evil_tester() {
 	sysctl -w net.ipv4.conf.all.forwarding=1
 	echo 1 > /proc/sys/net/ipv4/conf/all/accept_local
 	ip ro add 50.0.0.0/16 via 192.168.2.221
-	ip -6 ro add 2000::/112 via 1000::1:192.168.2.221
+	ip -6 ro add 2000::/112 via $PREFIX:192.168.2.221
 }
 
 tester() {
