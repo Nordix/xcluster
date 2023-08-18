@@ -1025,19 +1025,30 @@ cmd_starts() {
 
 cmd_stop() {
 	cmd_env
-	local nvm=12 nrouters=8 ntesters=2
+	local nodeid port vms
+	vms="$(livevms | sort -n | uniq)"
+	#log "Stopping [$(echo $vms | tr '\n' ' ')]"
+	for nodeid in $vms; do
+		port=$((XCLUSTER_MONITOR_BASE+nodeid))
+		echo quit | nc localhost $port > /dev/null 2>&1
+	done
+	kill $(grep -ls XXTERM=XCLUSTER /proc/*/environ | cut -d/ -f3) > /dev/null 2>&1
+	# Don't do this! It breaks backward compatibility!
+	#rm -f $XCLUSTER_TMP/hd-*.img $XCLUSTER_TMP/cdrom.iso
+	return 0
+}
+livevms() {
+	find $XCLUSTER_TMP -maxdepth 1 -type f -name 'hd-*.img' | sed -E 's,.*hd-([0-9]+)\.img,\1,'
+	# Keep for backward compatibility (probably not necessary)
+	local nvm=0 nrouters=0 ntesters=0
 	test -n "$__nvm" && test "$__nvm" -gt $nvm && nvm=$__nvm
 	test -n "$__nrouters" && test $__nrouters -gt $nrouters && nrouters=$__nrouters
 	test -n "$__ntesters" && test $__ntesters -gt $ntesters && ntesters=$__ntesters
 	local lastr=$((200+nrouters))
 	local lastt=$((220+ntesters))
-	local nodeid port
-	for nodeid in $(seq $nvm) $(seq 201 $lastr) $(seq 221 $lastt); do
-		port=$((XCLUSTER_MONITOR_BASE+nodeid))
-		echo quit | nc localhost $port > /dev/null 2>&1
-	done
-	kill $(grep -ls XXTERM=XCLUSTER /proc/*/environ | cut -d/ -f3) > /dev/null 2>&1
-	return 0
+	seq $nvm
+	seq 201 $lastr
+	seq 221 $lastt
 }
 cmd_scaleout() {
 	cmd_env
