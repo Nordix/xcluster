@@ -14,7 +14,7 @@ log() {
 }
 
 modmaster() {
-	local f=$($XCLUSTER ovld k8s-xcluster)/$1/etc/init.d/31kube-master.rc
+	local f=$($XCLUSTER ovld kubernetes)/$1/etc/init.d/31kube-master.rc
 	test -r $f || die "Not readable [$f]"
 	mkdir -p $tmp/etc/init.d
 	dst=$tmp/etc/init.d/31kube-master.rc

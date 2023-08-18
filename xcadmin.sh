@@ -314,8 +314,6 @@ cmd_k8s_build_images() {
 	$ovl/tar - > /dev/null || die "etcd/tar failed"
 	ovl="$($XCLUSTER ovld kubernetes)"
 	$ovl/tar - > /dev/null || die "kubernetes/tar failed"
-	ovl="$($XCLUSTER ovld k8s-xcluster)"
-	$ovl/tar - > /dev/null || die "k8s-xcluster/tar failed"
 
 	# Build the k8s-xcluster image;
 	local image
