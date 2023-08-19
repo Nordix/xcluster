@@ -43,10 +43,10 @@ tester() {
 
 
 case $(hostname) in
-	vm-0*)
-		vm;;
 	vm-20*)
 		router;;
 	vm-22*)
 		tester;;
+	vm-*)
+		vm;;
 esac

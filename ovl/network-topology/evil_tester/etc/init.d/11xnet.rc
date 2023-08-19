@@ -55,12 +55,12 @@ tester222() {
 
 
 case $(hostname) in
-	vm-0*)
-		vm;;
 	vm-20*)
 		router;;
 	vm-221)
 		tester221;;
 	vm-222)
 		tester222;;
+	vm-*)
+		vm;;
 esac
