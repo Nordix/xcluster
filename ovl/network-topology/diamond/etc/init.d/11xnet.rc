@@ -61,8 +61,6 @@ tester() {
 
 
 case $(hostname) in
-	vm-0*)
-		vm;;
 	vm-201)
 		router201;;
 	vm-202)
@@ -73,4 +71,6 @@ case $(hostname) in
 		router204;;
 	vm-22*)
 		tester;;
+	vm-*)
+		vm;;
 esac

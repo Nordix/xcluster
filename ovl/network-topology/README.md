@@ -10,7 +10,7 @@ The maintenance network 0 (eth0) is alway setup but is not shown here.
 An addressing pattern is used. All VMs gets addresses as;
 
 ```
-PREFIX=1000::1
+PREFIX=fd00:
 ip addr add ethX 192.168.$net.$i
 ip -6 addr add ethX $PREFIX:192.168.$net.$i
 ```
@@ -40,6 +40,13 @@ Usually the number of VMs and testers can be scaled by setting `__nvm`
 and `__ntesters` but most setups must have a defined number of
 routers, so setting `__nrouters` should be avoided.
 
+Note that the settings in `$TOPOLOGY/Envsettings` must be included if
+you scaleout:
+
+```
+# For TOPOLOGY=multilan-router
+__nets_vm=0,1,3,4,5 xc scaleout 193
+```
 
 ## Test
 
@@ -83,8 +90,7 @@ For [PMTU](../mtu) and traceroute tests.
 
 The VMs are distributed to different networks. Since the VMs are not
 in a consecutive sequence the VMs in the "zones" must be
-scaled-out. Further the `xc stop` must be invoked with an option to
-ensure all VMs are stopped.
+scaled-out.
 
 ```
 export TOPOLOGY=zones
@@ -93,7 +99,7 @@ xc mkcdrom iptools network-topology ...
 xc starts
 xc scaleout 10 11 20 21
 # (do some testing...)
-xc stop --nvm=30
+xc stop
 ```
 
 ## Backend
