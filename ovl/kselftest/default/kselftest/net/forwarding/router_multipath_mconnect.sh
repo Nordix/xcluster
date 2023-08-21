@@ -37,219 +37,180 @@ ALL_TESTS="ping_ipv4 ping_ipv6 multipath_test"
 NUM_NETIFS=6
 source lib.sh
 
+ns_create()
+{
+	ns=$1
+
+	ip netns add $ns
+	in_ns $ns ip link set dev lo up
+	in_ns $ns sysctl -q -w net.ipv4.ip_forward=1
+	in_ns $ns sysctl -q -w net.ipv6.conf.all.forwarding=1
+}
+
+ns_destroy()
+{
+	ip netns del $1
+}
+
 h1_create()
 {
-	vrf_create "vrf-h1"
-	ip link set dev $h1 master vrf-h1
+	local ns="ns-h1"
 
-	ip link set dev vrf-h1 up
-	ip link set dev $h1 up
+	ns_create $ns
+	ip link set dev $h1 netns $ns
 
-	ip address add 192.0.2.2/24 dev $h1
-	ip address add 2001:db8:1::2/64 dev $h1
+	in_ns $ns ip link set dev $h1 up
 
-	ip route add default vrf vrf-h1 via 192.0.2.1
-	ip route add default vrf vrf-h1 via 2001:db8:1::1
+	in_ns $ns ip address add 192.0.2.2/24 dev $h1
+	in_ns $ns ip address add 2001:db8:1::2/64 dev $h1
+
+	in_ns $ns ip route add default via 192.0.2.1
+	in_ns $ns ip route add default via 2001:db8:1::1
 }
 
 h1_destroy()
 {
-	ip route del default vrf vrf-h1 via 2001:db8:1::1
-	ip route del default vrf vrf-h1 via 192.0.2.1
+	local ns="ns-h1"
 
-	ip address del 2001:db8:1::2/64 dev $h1
-	ip address del 192.0.2.2/24 dev $h1
+	in_ns $ns ip route del default via 2001:db8:1::1
+	in_ns $ns ip route del default via 192.0.2.1
 
-	ip link set dev $h1 down
-	vrf_destroy "vrf-h1"
+	in_ns $ns ip address del 2001:db8:1::2/64 dev $h1
+	in_ns $ns ip address del 192.0.2.2/24 dev $h1
+
+	in_ns $ns ip link set dev $h1 down
+	in_ns $ns ip link set dev $h1 netns 1
+	ns_destroy $ns
 }
 
 h2_create()
 {
-	vrf_create "vrf-h2"
-	ip link set dev $h2 master vrf-h2
+	local ns="ns-h2"
 
-	ip link set dev vrf-h2 up
-	ip link set dev $h2 up
+	ns_create $ns
+	ip link set dev $h2 netns $ns
 
-	ip address add 198.51.100.2/24 dev $h2
-	ip address add 2001:db8:2::2/64 dev $h2
+	in_ns $ns ip link set dev $h2 up
 
-	ip address add 198.18.0.0/24 dev vrf-h2
-	ip address add 2001:db8:18::/64 dev vrf-h2
+	in_ns $ns ip address add 198.51.100.2/24 dev $h2
+	in_ns $ns ip address add 2001:db8:2::2/64 dev $h2
 
-	ip route add 192.0.2.0/24 vrf vrf-h2 via 198.51.100.1
-	ip route add 2001:db8:1::/64 vrf vrf-h2 nexthop via 2001:db8:2::1
+	in_ns $ns ip address add 198.18.0.0/24 dev lo
+	in_ns $ns ip address add 2001:db8:18::/64 dev lo
+
+	in_ns $ns ip route add 192.0.2.0/24 via 198.51.100.1
+	in_ns $ns ip route add 2001:db8:1::/64 nexthop via 2001:db8:2::1
 }
 
 h2_destroy()
 {
-	ip route del 2001:db8:1::/64 vrf vrf-h2 nexthop via 2001:db8:2::1
-	ip route del 192.0.2.0/24 vrf vrf-h2 via 198.51.100.1
+	local ns="ns-h2"
 
-	ip address del 2001:db8:18::/64 dev vrf-h2
-	ip address del 198.18.0.0/24 dev vrf-h2
+	in_ns $ns ip route del 2001:db8:1::/64 nexthop via 2001:db8:2::1
+	in_ns $ns ip route del 192.0.2.0/24 via 198.51.100.1
 
-	ip address del 2001:db8:2::2/64 dev $h2
-	ip address del 198.51.100.2/24 dev $h2
+	in_ns $ns ip address del 2001:db8:18::/64 dev lo
+	in_ns $ns ip address del 198.18.0.0/24 dev lo
 
-	ip link set dev $h2 down
-	vrf_destroy "vrf-h2"
+	in_ns $ns ip address del 2001:db8:2::2/64 dev $h2
+	in_ns $ns ip address del 198.51.100.2/24 dev $h2
+
+	in_ns $ns ip link set dev $h2 down
+	in_ns $ns ip link set dev $h2 netns 1
+	ns_destroy $ns
 }
 
 h3_create()
 {
-	vrf_create "vrf-h3"
-	ip link set dev $h3 master vrf-h3
+	local ns="ns-h3"
 
-	ip link set dev vrf-h3 up
-	ip link set dev $h3 up
+	ns_create $ns
+	ip link set dev $h3 netns $ns
 
-	ip address add 203.0.113.2/24 dev $h3
-	ip address add 2001:db8:3::2/64 dev $h3
+	in_ns $ns ip link set dev $h3 up
 
-	ip address add 198.18.0.0/24 dev vrf-h3
-	ip address add 2001:db8:18::/64 dev vrf-h3
+	in_ns $ns ip address add 203.0.113.2/24 dev $h3
+	in_ns $ns ip address add 2001:db8:3::2/64 dev $h3
 
-	ip route add 192.0.2.0/24 vrf vrf-h3 via 203.0.113.1
-	ip route add 2001:db8:1::/64 vrf vrf-h3 nexthop via 2001:db8:3::1
+	in_ns $ns ip address add 198.18.0.0/24 dev lo
+	in_ns $ns ip address add 2001:db8:18::/64 dev lo
+
+	in_ns $ns ip route add 192.0.2.0/24 via 203.0.113.1
+	in_ns $ns ip route add 2001:db8:1::/64 nexthop via 2001:db8:3::1
 }
 
 h3_destroy()
 {
-	ip route del 2001:db8:1::/64 vrf vrf-h3 nexthop via 2001:db8:3::1
-	ip route del 192.0.2.0/24 vrf vrf-h3 via 203.0.113.1
+	local ns="ns-h3"
 
-	ip address del 198.18.0.0/24 dev vrf-h3
-	ip address del 2001:db8:18::/64 dev vrf-h3
+	in_ns $ns ip route del 2001:db8:1::/64 nexthop via 2001:db8:3::1
+	in_ns $ns ip route del 192.0.2.0/24 via 203.0.113.1
 
-	ip address del 2001:db8:3::2/64 dev $h3
-	ip address del 203.0.113.2/24 dev $h3
+	in_ns $ns ip address del 198.18.0.0/24 dev lo
+	in_ns $ns ip address del 2001:db8:18::/64 dev lo
 
-	ip link set dev $h3 down
-	vrf_destroy "vrf-h3"
+	in_ns $ns ip address del 2001:db8:3::2/64 dev $h3
+	in_ns $ns ip address del 203.0.113.2/24 dev $h3
+
+	in_ns $ns ip link set dev $h3 down
+	in_ns $ns ip link set dev $h3 netns 1
+	ns_destroy $ns
 }
 
 router1_create()
 {
-	vrf_create "vrf-r1"
-	ip link set dev $rp1 master vrf-r1
-	ip link set dev $rp2 master vrf-r1
-	ip link set dev $rp3 master vrf-r1
+	local ns="ns-r1"
 
-	ip link set dev vrf-r1 up
-	ip link set dev $rp1 up
-	ip link set dev $rp2 up
-	ip link set dev $rp3 up
+	ns_create $ns
+	ip link set dev $rp1 netns $ns
+	ip link set dev $rp2 netns $ns
+	ip link set dev $rp3 netns $ns
 
-	ip address add 192.0.2.1/24 dev $rp1
-	ip address add 2001:db8:1::1/64 dev $rp1
+	in_ns $ns ip link set dev $rp1 up
+	in_ns $ns ip link set dev $rp2 up
+	in_ns $ns ip link set dev $rp3 up
 
-	ip address add 198.51.100.1/24 dev $rp2
-	ip address add 2001:db8:2::1/64 dev $rp2
+	in_ns $ns ip address add 192.0.2.1/24 dev $rp1
+	in_ns $ns ip address add 2001:db8:1::1/64 dev $rp1
 
-	ip address add 203.0.113.1/24 dev $rp3
-	ip address add 2001:db8:3::1/64 dev $rp3
+	in_ns $ns ip address add 198.51.100.1/24 dev $rp2
+	in_ns $ns ip address add 2001:db8:2::1/64 dev $rp2
 
-	ip route add 198.18.0.0/24 vrf vrf-r1 \
+	in_ns $ns ip address add 203.0.113.1/24 dev $rp3
+	in_ns $ns ip address add 2001:db8:3::1/64 dev $rp3
+
+	in_ns $ns ip route add 198.18.0.0/24 \
 		nexthop via 198.51.100.2 \
 		nexthop via 203.0.113.2
-	ip route add 2001:db8:18::/64 vrf vrf-r1 \
+	in_ns $ns ip route add 2001:db8:18::/64 \
 		nexthop via 2001:db8:2::2 \
 		nexthop via 2001:db8:3::2
 }
 
 router1_destroy()
 {
-	ip route del 2001:db8:18::/64 vrf vrf-r1
-	ip route del 198.18.0.0/24 vrf vrf-r1
+	local ns="ns-r1"
 
-	ip address del 2001:db8:3::1/64 dev $rp3
-	ip address del 203.0.113.1/24 dev $rp3
+	in_ns $ns ip route del 2001:db8:18::/64
+	in_ns $ns ip route del 198.18.0.0/24
 
-	ip address del 2001:db8:2::1/64 dev $rp2
-	ip address del 198.51.100.1/24 dev $rp2
+	in_ns $ns ip address del 2001:db8:3::1/64 dev $rp3
+	in_ns $ns ip address del 203.0.113.1/24 dev $rp3
 
-	ip address del 2001:db8:1::1/64 dev $rp1
-	ip address del 192.0.2.1/24 dev $rp1
+	in_ns $ns ip address del 2001:db8:2::1/64 dev $rp2
+	in_ns $ns ip address del 198.51.100.1/24 dev $rp2
 
-	ip link set dev $rp3 down
-	ip link set dev $rp2 down
-	ip link set dev $rp1 down
+	in_ns $ns ip address del 2001:db8:1::1/64 dev $rp1
+	in_ns $ns ip address del 192.0.2.1/24 dev $rp1
 
-	vrf_destroy "vrf-r1"
-}
+	in_ns $ns ip link set dev $rp3 down
+	in_ns $ns ip link set dev $rp2 down
+	in_ns $ns ip link set dev $rp1 down
 
-multipath4_test()
-{
-	local desc="$1"
-	local weight_rp2=$2
-	local weight_rp3=$3
-	local t0_rp2 t0_rp3 t1_rp2 t1_rp3
-	local packets_rp2 packets_rp3
-
-	# Transmit multiple flows from h1 to h2 and make sure they are
-	# distributed between both multipath links (rp2 and rp3)
-	# according to the configured weights.
-	sysctl_set net.ipv4.fib_multipath_hash_policy 1
-	ip route replace 198.18.0.0/24 vrf vrf-r1 \
-		nexthop via 198.51.100.2 weight $weight_rp2 \
-		nexthop via 203.0.113.2 weight $weight_rp3
-
-	t0_rp2=$(link_stats_tx_packets_get $rp2)
-	t0_rp3=$(link_stats_tx_packets_get $rp3)
-
-	ip vrf exec vrf-h1 $MZ $h1 -q -p 64 -A 192.0.2.2 -B 198.18.0.0 \
-		-d 1msec -t tcp "sp=1024,dp=0-127,flags=syn"
-
-	t1_rp2=$(link_stats_tx_packets_get $rp2)
-	t1_rp3=$(link_stats_tx_packets_get $rp3)
-
-	let "packets_rp2 = $t1_rp2 - $t0_rp2"
-	let "packets_rp3 = $t1_rp3 - $t0_rp3"
-	multipath_eval "$desc" $weight_rp2 $weight_rp3 $packets_rp2 $packets_rp3
-
-	ip route replace 198.18.0.0/24 vrf vrf-r1 \
-		nexthop via 198.51.100.2 \
-		nexthop via 203.0.113.2
-
-	sysctl_restore net.ipv4.fib_multipath_hash_policy
-}
-
-multipath6_l4_test()
-{
-	local desc="$1"
-	local weight_rp2=$2
-	local weight_rp3=$3
-	local t0_rp2 t0_rp3 t1_rp2 t1_rp3
-	local packets_rp2 packets_rp3
-
-	# Transmit multiple flows from h1 to h2 and make sure they are
-	# distributed between both multipath links (rp2 and rp3)
-	# according to the configured weights.
-	sysctl_set net.ipv6.fib_multipath_hash_policy 1
-	ip route replace 2001:db8:18::/64 vrf vrf-r1 \
-		nexthop via 2001:db8:2::2 weight $weight_rp2 \
-		nexthop via 2001:db8:3::2 weight $weight_rp3
-
-	t0_rp2=$(link_stats_tx_packets_get $rp2)
-	t0_rp3=$(link_stats_tx_packets_get $rp3)
-
-	ip vrf exec vrf-h1 $MZ $h1 -6 -q -p 64 -A 2001:db8:1::2 -B 2001:db8:18::0 \
-		-d 1msec -t tcp "sp=1024,dp=0-127,flags=syn"
-
-	t1_rp2=$(link_stats_tx_packets_get $rp2)
-	t1_rp3=$(link_stats_tx_packets_get $rp3)
-
-	let "packets_rp2 = $t1_rp2 - $t0_rp2"
-	let "packets_rp3 = $t1_rp3 - $t0_rp3"
-	multipath_eval "$desc" $weight_rp2 $weight_rp3 $packets_rp2 $packets_rp3
-
-	ip route replace 2001:db8:18::/64 vrf vrf-r1 \
-		nexthop via 2001:db8:2::2 \
-		nexthop via 2001:db8:3::2
-
-	sysctl_restore net.ipv6.fib_multipath_hash_policy
+	in_ns $ns ip link set dev $rp3 netns 1
+	in_ns $ns ip link set dev $rp2 netns 1
+	in_ns $ns ip link set dev $rp1 netns 1
+	ns_destroy $ns
 }
 
 mconnect4_test()
@@ -262,28 +223,28 @@ mconnect4_test()
 	# Transmit multiple flows from h1 to h2 and make sure they are
 	# distributed between both multipath links (rp2 and rp3)
 	# according to the configured weights.
-	sysctl_set net.ipv4.fib_multipath_hash_policy 1
-	ip route replace 198.18.0.0/24 vrf vrf-r1 \
+	in_ns ns-r1 sysctl_set net.ipv4.fib_multipath_hash_policy 1
+	in_ns ns-r1 ip route replace 198.18.0.0/24 \
 		nexthop via 198.51.100.2 weight $weight_rp2 \
 		nexthop via 203.0.113.2 weight $weight_rp3
 
-	ip vrf exec vrf-h2 mconnect -server -address 198.18.0.0:5001 &
+	in_ns ns-h2 mconnect -server -address 198.18.0.0:5001 &
 	h2_mconnect_pid=$!
-	ip vrf exec vrf-h3 mconnect -server -address 198.18.0.0:5001 &
+	in_ns ns-h3 mconnect -server -address 198.18.0.0:5001 &
 	h3_mconnect_pid=$!
 
-	ip vrf exec vrf-h1 mconnect -address 198.18.0.0:5001 -nconn 1000
+	in_ns ns-h1 mconnect -address 198.18.0.0:5001 -nconn 1000
 	check_err $? "mconnect tests failed"
 	log_test "$desc"
 
-	kill $h2_mconnect_pid && wait $h2_mconnect_pid
-	kill $h3_mconnect_pid && wait $h3_mconnect_pid
+	t1_rp2=$(in_ns ns-r1 link_stats_tx_packets_get $rp2)
+	t1_rp3=$(in_ns ns-r1 link_stats_tx_packets_get $rp3)
 
-	ip route replace 198.18.0.0/24 vrf vrf-r1 \
+	in_ns ns-r1 ip route replace 198.18.0.0/24 \
 		nexthop via 198.51.100.2 \
 		nexthop via 203.0.113.2
 
-	sysctl_restore net.ipv4.fib_multipath_hash_policy
+	in_ns ns-r1 sysctl_restore net.ipv4.fib_multipath_hash_policy
 }
 
 mconnect6_test()
@@ -296,48 +257,35 @@ mconnect6_test()
 	# Transmit multiple flows from h1 to h2 and make sure they are
 	# distributed between both multipath links (rp2 and rp3)
 	# according to the configured weights.
-	sysctl_set net.ipv6.fib_multipath_hash_policy 1
-	ip route replace 2001:db8:18::/64 vrf vrf-r1 \
+	in_ns ns-r1 sysctl_set net.ipv6.fib_multipath_hash_policy 1
+	in_ns ns-r1 ip route replace 2001:db8:18::/64 \
 		nexthop via 2001:db8:2::2 weight $weight_rp2 \
 		nexthop via 2001:db8:3::2 weight $weight_rp3
 
-	ip vrf exec vrf-h2 mconnect -server -address [2001:db8:18::]:5001 &
+	in_ns ns-h2 mconnect -server -address [2001:db8:18::]:5001 &
 	h2_mconnect_pid=$!
-	ip vrf exec vrf-h3 mconnect -server -address [2001:db8:18::]:5001 &
+	in_ns ns-h3 mconnect -server -address [2001:db8:18::]:5001 &
 	h3_mconnect_pid=$!
 
-	ip vrf exec vrf-h1 mconnect -address [2001:db8:18::]:5001 -nconn 1000
+	in_ns ns-h1 mconnect -address [2001:db8:18::]:5001 -nconn 1000
 	check_err $? "mconnect tests failed"
 	log_test "$desc"
 
-	kill $h2_mconnect_pid && wait $h2_mconnect_pid
-	kill $h3_mconnect_pid && wait $h3_mconnect_pid
-
-	ip route replace 2001:db8:18::/64 vrf vrf-r1 \
+	in_ns ns-r1 ip route replace 2001:db8:18::/64 \
 		nexthop via 2001:db8:2::2 \
 		nexthop via 2001:db8:3::2
 
-	sysctl_restore net.ipv6.fib_multipath_hash_policy
+	in_ns ns-r1 sysctl_restore net.ipv6.fib_multipath_hash_policy
 }
 
 multipath_test()
 {
 	log_info "Running IPv4 multipath tests"
-	multipath4_test "ECMP" 1 1
-	multipath4_test "Weighted MP 2:1" 2 1
-	multipath4_test "Weighted MP 11:45" 11 45
-
-	log_info "Running IPv4 multipath connect tests"
 	mconnect4_test "ECMP" 1 1
 	mconnect4_test "Weighted MP 2:1" 2 1
 	mconnect4_test "Weighted MP 11:45" 11 45
 
 	log_info "Running IPv6 L4 hash multipath tests"
-	multipath6_l4_test "ECMP" 1 1
-	multipath6_l4_test "Weighted MP 2:1" 2 1
-	multipath6_l4_test "Weighted MP 11:45" 11 45
-
-	log_info "Running IPv6 L4 hash multipath connect tests"
 	mconnect6_test "ECMP" 1 1
 	mconnect6_test "Weighted MP 2:1" 2 1
 	mconnect6_test "Weighted MP 11:45" 11 45
@@ -354,15 +302,33 @@ setup_prepare()
 	rp3=${NETIFS[p5]}
 	h3=${NETIFS[p6]}
 
-	vrf_prepare
-
 	h1_create
 	h2_create
 	h3_create
 
 	router1_create
+}
 
-	forwarding_enable
+setup_wait()
+{
+	h1=${NETIFS[p1]}
+	rp1=${NETIFS[p2]}
+
+	rp2=${NETIFS[p3]}
+	h2=${NETIFS[p4]}
+
+	rp3=${NETIFS[p5]}
+	h3=${NETIFS[p6]}
+
+	in_ns ns-h1 setup_wait_dev $h1
+	in_ns ns-h2 setup_wait_dev $h2
+	in_ns ns-h3 setup_wait_dev $h3
+	in_ns ns-r1 setup_wait_dev $rp1
+	in_ns ns-r1 setup_wait_dev $rp2
+	in_ns ns-r1 setup_wait_dev $rp3
+
+	# Make sure links are ready.
+	sleep $WAIT_TIME
 }
 
 cleanup()
@@ -376,23 +342,49 @@ cleanup()
 	h3_destroy
 	h2_destroy
 	h1_destroy
+}
 
-	vrf_cleanup
+ping_test()
+{
+	RET=0
+
+	local ns=$1
+	local dip=$2
+	local args=$3
+
+	in_ns $ns $PING $args $dip -c $PING_COUNT -i 0.1 \
+		-w $PING_TIMEOUT &> /dev/null
+	check_err $?
+	log_test "ping$args"
+}
+
+ping6_test()
+{
+	RET=0
+
+	local ns=$1
+	local dip=$2
+	local args=$3
+
+	in_ns $ns $PING6 $args $dip -c $PING_COUNT -i 0.1 \
+		-w $PING_TIMEOUT &> /dev/null
+	check_err $?
+	log_test "ping6$args"
 }
 
 ping_ipv4()
 {
-	ping_test $h1 198.51.100.2
-	ping_test $h1 203.0.113.2
+	ping_test ns-h1 198.51.100.2
+	ping_test ns-h1 203.0.113.2
 }
 
 ping_ipv6()
 {
-	ping6_test $h1 2001:db8:2::2
-	ping6_test $h1 2001:db8:3::2
+	ping6_test ns-h1 2001:db8:2::2
+	ping6_test ns-h1 2001:db8:3::2
 }
 
-# trap cleanup EXIT
+trap cleanup EXIT
 
 setup_prepare
 setup_wait

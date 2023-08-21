@@ -88,9 +88,6 @@ cmd_env() {
 	eval $($XCLUSTER env)
 	sysd=$XCLUSTER_WORKSPACE/sys
 	export PKG_CONFIG_PATH=$sysd/usr/lib/pkgconfig
-
-	test -n "$__nrouters" || export __nrouters=0
-	test -n "$__nvm" || export __nvm=1
 }
 
 ##   test --list
@@ -121,14 +118,17 @@ cmd_test() {
 }
 
 test_start() {
-	export __image=$XCLUSTER_HOME/hd.img
+	test -n "$__image" || export __image=$XCLUSTER_HOME/hd.img
 	export __mem=512
+	export __nrouters=0
+	export __nvm=1
+
 	if test -n "$TOPOLOGY"; then
 		export xcluster_TOPOLOGY=$TOPOLOGY
 		. $($XCLUSTER ovld network-topology)/$TOPOLOGY/Envsettings
 	fi
 	echo "$XOVLS" | grep -q private-reg && unset XOVLS
-	xcluster_start network-topology iptools bash $@ kselftest
+	xcluster_start network-topology iptools linux-tools bash $@ kselftest
 }
 
 . $($XCLUSTER ovld test)/default/usr/lib/xctest
