@@ -45,7 +45,7 @@ mkdir -p $tmp/usr
 f=$($dir/kselftest.sh mz)
 $XCLUSTER install_prog --dest=$tmp/usr $f || die "$f not built, run ./kselftest.sh netsniff_build"
 
-progs="timeout realpath lscpu"
+progs="timeout realpath lscpu iperf3"
 $XCLUSTER install_prog --dest=$tmp/usr $progs || die "kselftest dependencies not installed"
 
 # kernel selftest

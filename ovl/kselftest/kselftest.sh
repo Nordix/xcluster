@@ -118,6 +118,7 @@ cmd_test() {
 }
 
 test_start() {
+	tlog "=== kselftest, kernel $__kbin"
 	test -n "$__image" || export __image=$XCLUSTER_HOME/hd.img
 	export __mem=512
 	export __nrouters=0
