@@ -12,7 +12,7 @@ die() {
 hostname | grep -Eq 'vm-[0-9]+$' || die "Invalid hostname [$(hostname)]"
 i=$(hostname | cut -d- -f2 | sed -re 's,^0+,,')
 
-test "$MASTERS" || MASTERS=vm-001
+test -n "$MASTERS" || MASTERS=vm-001
 echo ",$MASTERS," | grep -q ",$(hostname)," || exit 0
 
 CLUSTER_CIDR=11.0.0.0/16,1100::/48
@@ -49,14 +49,14 @@ controller() {
 		--allocate-node-cidrs=true --cluster-cidr=$CLUSTER_CIDR \
 		--controllers="*,serviceaccount,serviceaccount-token" $fg_param \
 		--service-account-private-key-file=/srv/kubernetes/server.key \
-		--root-ca-file=/srv/kubernetes/server.crt --leader-elect=false \
+		--root-ca-file=/srv/kubernetes/server.crt --leader-elect=true \
 		>> $log 2>&1
 }
 
 scheduler() {
 	local log=/var/log/kube-scheduler.log
 	logger -s -t K8s "STARTED: kube-scheduler at $(date)" >> log 2>&1
-	kube-scheduler --kubeconfig $KUBECONFIG --leader-elect=false \
+	kube-scheduler --kubeconfig $KUBECONFIG --leader-elect=true \
 		$SCHEDULER_FLAGS $fg_param \
 		>> $log 2>&1
 }
@@ -72,6 +72,5 @@ monitor() {
 }
 
 (monitor apiserver) > /dev/null 2>&1 &
-test $i -eq 1 || exit 0
 (monitor controller) > /dev/null 2>&1 &
 (monitor scheduler) > /dev/null 2>&1 &
