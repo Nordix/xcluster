@@ -53,6 +53,7 @@ eval $($XCLUSTER env | grep -E '^KERNELDIR|__kver')
 kdir=$KERNELDIR/$__kver
 log "Including kselftest"
 mkdir -p $tmp/kselftest
+make -C $kdir headers > /dev/null 2>&1 || die "make headers failed ($kdir)"
 KSFT_INSTALL_PATH=$tmp/kselftest make -C $kdir/tools/testing/selftests install > /dev/null 2>&1 || die "kselftest not installed"
 
 # add local tests to kselftest-list.txt
