@@ -22,13 +22,16 @@ mdev -s
 mount /dev/mqueue
 mount -t cgroup2 cgroup2 /sys/fs/cgroup
 
-# Get data from cdrom
-mkdir -p /mnt
-if mount -t iso9660 /dev/vdb /mnt > /dev/null 2>&1; then
-	for n in $(find /mnt -name '*.tar' | sort); do
-		EXTRACT_UNSAFE_SYMLINKS=1 tar -C / -o -xf $n
-	done
-	umount /mnt
+if ! test -r /run/initialboot; then
+	date > /run/initialboot
+	# Get data from cdrom
+	mkdir -p /mnt
+	if mount -t iso9660 /dev/vdb /mnt > /dev/null 2>&1; then
+		for n in $(find /mnt -name '*.tar' | sort); do
+			EXTRACT_UNSAFE_SYMLINKS=1 tar -C / -o -xf $n
+		done
+		umount /mnt
+	fi
 fi
 
 sysctl -p > /dev/null
