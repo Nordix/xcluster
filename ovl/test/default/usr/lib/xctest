@@ -643,13 +643,16 @@ xcluster_start() {
 	test "$__no_start" = "yes" && return 0
 	test -n "$__nrouters" || __nrouters=2
 	test -n "$__ntesters" || __ntesters=0
-	export __nvm __nrouters __ntesters	
+	export __nvm __nrouters __ntesters
+	# deletes any existing cdrom and rootfs image
+	$XCLUSTER mkcdrom; $XCLUSTER mkrootfs
+	test -n "$MKROOTFS" && __mkrootfs=mkrootfs || __mkrootfs=mkcdrom
 	if test -n "$SETUP"; then
-		tcase "Build cluster SETUP=$SETUP [env $BASEOVLS $@ $XOVLS test]"
-		SETUP=$SETUP $XCLUSTER mkcdrom env $BASEOVLS $@ $XOVLS test || tdie
+		tcase "Build cluster SETUP=$SETUP $__mkrootfs [env $BASEOVLS $@ $XOVLS test]"
+		SETUP=$SETUP $XCLUSTER $__mkrootfs env $BASEOVLS $@ $XOVLS test || tdie
 	else
-		tcase "Build cluster [env $BASEOVLS $@ $XOVLS test]"
-		$XCLUSTER mkcdrom env $BASEOVLS $@ $XOVLS test || tdie
+		tcase "Build cluster $__mkrootfs [env $BASEOVLS $@ $XOVLS test]"
+		$XCLUSTER $__mkrootfs env $BASEOVLS $@ $XOVLS test || tdie
 	fi
 	tcase "Cluster start ($(basename $__image))"
 	if test "$__xterm" = "yes"; then

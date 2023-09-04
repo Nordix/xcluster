@@ -108,6 +108,7 @@ cmd_env() {
 	test -n "$__image" || __image=$XCLUSTER_HOME/hd.img
 	test -n "$__cdrom" || __cdrom=$XCLUSTER_TMP/cdrom.iso
 	test -n "$__machine" || __machine="pc"
+	test -n "$__disk" || __disk=$XCLUSTER_TMP/disk
 	test -n "$__mem" || __mem=128
 	test -n "$__smp" || __smp=2
 	test -n "$__ipv4_base" || __ipv4_base=172.30.0.0/24
@@ -473,6 +474,7 @@ cmd_dropbear_build() {
 ##   cache [--clear] [--list] [ovl|tar...]
 ##   ximage [--image=file] [--script=file] [ovl|tar...]
 ##   mkcdrom [--label=label] [--script=file] [--cidata=dir] [ovl|tar...]
+##   mkrootfs [--image=file] [--script=file] [ovl|tar...]
 ##   install_prog [--base-libs=file] --dest=dir [prog...]
 ##   cplib [--base-libs=file] --dest=dir
 ##   libs [--base-libs=file]
@@ -638,6 +640,22 @@ cmd_mkcdrom() {
 	genisoimage -quiet -volid $__label -o $__cdrom -r -J $__dest
 	rm -rf $__dest
 	unset __dest
+}
+
+cmd_mkrootfs() {
+	cmd_env
+
+	__dest=$__disk
+	rm -rf $__dest && mkdir -p $__dest
+
+	if test -z "$1"; then
+		return 0
+	fi
+
+	cp -L $__image $__dest
+	cmd_collect_tar $@
+
+	$DISKIM ximage --image=$__dest/$(basename $__image) --script=$__script  $(find $__dest -name '*.tar' | sort)
 }
 
 cmd_cat_tar() {
@@ -811,6 +829,10 @@ cmd_boot_vm() {
 	local mport=$((XCLUSTER_MONITOR_BASE+nodeid))
 	local opt="-monitor telnet::$mport,server,nowait"
 	test "$__graphic" = "yes" || opt="$opt -nographic"
+
+	# Use image with extended rootfs if present
+	local rootfs_image=$__disk/$(basename $__image)
+	test -r $rootfs_image && __image=$rootfs_image
 
 	# Create an overlay-disk
 	local hd=$XCLUSTER_TMP/hd-$nodeid.img
