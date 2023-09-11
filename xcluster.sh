@@ -708,6 +708,10 @@ cmd_inject() {
 ##   rcp <vm> <remote-file> <local-file>
 ##   tcpdump --start|get <vm> <interface> [opts...]
 ##   tcpdump --get <vm> <interface...>
+##   stop_vm <vm>
+##     Stop VM emulation
+##   reset_vm <vm>
+##     Reset VM and continue emulation
 ##
 cmd_ovld() {
 	test -n "$1" || die "No ovl"
@@ -768,6 +772,24 @@ cmd_tcpdump() {
 	else
 		die "Either --start or --get must be specified"
 	fi
+}
+cmd_stop_vm() {
+	test -n "$1" || die "No VM"
+	cmd_env
+	local vm=$1
+	cmd_rsh $vm sync
+	local port=$((XCLUSTER_MONITOR_BASE + vm))
+	echo stop | nc -N localhost $port > /dev/null 2>&1
+}
+cmd_reset_vm() {
+	test -n "$1" || die "No VM"
+	cmd_env
+	local vm=$1
+	local port=$((XCLUSTER_MONITOR_BASE + vm))
+	# Sync (ext3) fs if the VM is running
+	echo "info status" | nc -N localhost $port | grep -q "status: running" \
+		&& cmd_rsh $vm sync
+	echo "system_reset\rcont" | nc -N localhost $port > /dev/null 2>&1
 }
 
 
