@@ -6,4 +6,4 @@ SRIOV_DP_DIR=$GOPATH/src/github.com/k8snetworkplumbingwg/sriov-network-device-pl
 
 export __net_setup=$PWD/config/net-setup-netns.sh
 
-export __kvm_opt='-M q35 -object rng-random,filename=/dev/urandom,id=rng0 -device virtio-rng-pci,rng=rng0,max-bytes=1024,period=80000 -cpu qemu64,+sse4.2,+sse4.1,+ssse3'
+export __machine='q35'

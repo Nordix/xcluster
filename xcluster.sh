@@ -107,6 +107,7 @@ cmd_env() {
 	test -n "$__kvm" || __kvm=kvm
 	test -n "$__image" || __image=$XCLUSTER_HOME/hd.img
 	test -n "$__cdrom" || __cdrom=$XCLUSTER_TMP/cdrom.iso
+	test -n "$__machine" || __machine="pc"
 	test -n "$__mem" || __mem=128
 	test -n "$__smp" || __smp=2
 	test -n "$__ipv4_base" || __ipv4_base=172.30.0.0/24
@@ -823,8 +824,8 @@ cmd_boot_vm() {
 	echo "Memory: $__mem, smp: $__smp"
 	rm -rf $tmp
 
-	local kvmboot="-drive file=$hd,if=virtio -smp $__smp -k sv"
-    test -r $__cdrom && kvmboot="$kvmboot -drive file=$__cdrom,if=virtio,media=cdrom"
+	local kvmboot="-drive file=$hd,if=virtio -smp $__smp -k sv -M $__machine"
+	test -r $__cdrom && kvmboot="$kvmboot -drive file=$__cdrom,if=virtio,media=cdrom"
 
 	test -n "$__mtu" || __mtu=1500
 	local n dev tap append tnets
