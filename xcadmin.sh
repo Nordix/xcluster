@@ -286,7 +286,9 @@ cmd_cache_refresh() {
 	done
 }
 ##   k8s_build_images [--k8sver=...]
-##     Build images hd-k8s-<k8sver>.img and hd-k8s-xcluster-<k8sver>.img
+
+##     Build the hd-k8s-<k8sver>.img image. For backward compatibility
+##     a hard-link to hd-k8s-xcluster-<k8sver>.img is created.
 ##     Soft-links; hd-k8s.img hd-k8s-xcluster.img are updated.
 cmd_k8s_build_images() {
 	cmd_env
@@ -315,29 +317,23 @@ cmd_k8s_build_images() {
 	ovl="$($XCLUSTER ovld kubernetes)"
 	$ovl/tar - > /dev/null || die "kubernetes/tar failed"
 
-	# Build the k8s-xcluster image;
+	# Build the k8s image;
 	local image
-	image=$XCLUSTER_HOME/hd-k8s-xcluster-$__k8sver.img
+	image=$XCLUSTER_HOME/hd-k8s-$__k8sver.img
 	rm -rf $image
 	cp $__image $image
 	chmod +w $image
-	$XCLUSTER ximage --image=$image xnet etcd iptools crio kubernetes mconnect images || die "ximage failed"
-	chmod -w $image
-	test -e $XCLUSTER_HOME/hd-k8s-xcluster.img || \
-		ln -s $(basename $image)  $XCLUSTER_HOME/hd-k8s-xcluster.img
+	$XCLUSTER ximage --image=$image xnet etcd iptools crio kubernetes k8s-cni-bridge mconnect images || die "ximage failed"
+	rm -f $XCLUSTER_HOME/hd-k8s-xcluster-$__k8sver.img
+	ln $image $XCLUSTER_HOME/hd-k8s-xcluster-$__k8sver.img
+	chmod -w $image $XCLUSTER_HOME/hd-k8s-xcluster-$__k8sver.img
 	echo "Created [$image]"
-	
-	# Build the legacy k8s image;
-	local limage=$XCLUSTER_HOME/hd-k8s-$__k8sver.img
-	rm -rf $limage
-	cp $image $limage
-	chmod +w $limage
-	$XCLUSTER ximage --image=$limage k8s-cni-bridge || die "ximage failed"
-	chmod -w $limage
-	test -e $XCLUSTER_HOME/hd-k8s.img || \
-		ln -s $(basename $limage)  $XCLUSTER_HOME/hd-k8s.img
-	echo "Created [$limage]"
+	echo "Hard link to [$XCLUSTER_HOME/hd-k8s-xcluster-$__k8sver.img]"
 
+	test -e $XCLUSTER_HOME/hd-k8s-xcluster.img || \
+		ln -s $(basename $image) $XCLUSTER_HOME/hd-k8s-xcluster.img
+	test -e $XCLUSTER_HOME/hd-k8s.img || \
+		ln -s $(basename $image)  $XCLUSTER_HOME/hd-k8s.img
 }
 
 ##   k8s_test [--cni=[xcluster|calico|cilium|flannel|antrea]] --k8sver=v1.23.1 \
