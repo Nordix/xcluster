@@ -57,7 +57,6 @@ __k8sver=v1.18.3 ./xcadmin.sh k8s_test --cni=xcluster mtu > $log
 Manual;
 ```
 export __mtu=9000
-export __image=$XCLUSTER_WORKSPACE/xcluster/hd-k8s-xcluster.img
 export __nvm=5
 export __mem=1536
 export XOVLS="k8s-cni-xcluster private-reg"

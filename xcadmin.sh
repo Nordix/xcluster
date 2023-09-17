@@ -347,7 +347,6 @@ cmd_k8s_test() {
 	eval $($XCLUSTER env | grep XCLUSTER_HOME)
 	if test -n "$__cni"; then
 		# Test with k8s-xcluster;
-		__image=$XCLUSTER_HOME/hd-k8s-xcluster-$__k8sver.img
 		test -r $__image || __image=$XCLUSTER_HOME/hd-k8s-xcluster.img
 		test "$__cni" != "None" && export XOVLS="k8s-cni-$__cni private-reg $XXOVLS"
 		export __cni

@@ -75,7 +75,6 @@ cmd_test() {
 ##   test start_empty
 ##     Start empty cluster. K8s nodes will be "NotReady".
 test_start_empty() {
-	export __image=$XCLUSTER_HOME/hd-k8s-xcluster.img
 	test -n "$xcluster_CALICO_BACKEND" || export xcluster_CALICO_BACKEND=none
 	tlog "CALICO_BACKEND=$xcluster_CALICO_BACKEND"
 	test -n "$TOPOLOGY" && \
