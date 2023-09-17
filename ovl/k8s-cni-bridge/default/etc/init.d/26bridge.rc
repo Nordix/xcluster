@@ -13,8 +13,18 @@ i=$(hostname | cut -d- -f2 | sed -re 's,^0+,,')
 test $i -le 200 || exit 0
 test -n "$PREFIX" || PREFIX=1000::1
 
-
-if ! grep -q CNI_INFO /etc/profile; then
+# The prefered way to suspress the default bridge CNI-plugin is to set
+# $CNI_INFO, either with xcluster_CNI_INFO, or in a script loaded
+# before before this script. As a fallback for backward compatibility
+# we check the precense of known start files for other CNI-plugins
+if test -n "$CNI_INFO"; then
+	echo "$CNI_INFO" | grep -qi bridge || exit 0
+else
+	test -r /etc/kubernetes/load/antrea.yaml \
+		-o -r /etc/init.d/20calico-prep.rc \
+		-o -r /etc/init.d//etc/init.d/25cilium-prep.rc \
+		-o -r /etc/init.d/25ovs-cni.rc \
+		-o -r /etc/init.d/20xcluster-cni-prep.rc && exit 1
 	echo CNI_INFO=bridge >> /etc/profile
 fi
 
