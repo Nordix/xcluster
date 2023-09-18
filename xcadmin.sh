@@ -43,74 +43,26 @@ cmd_env() {
 }
 ##   env_check
 ##     Perform basic checks.
-cmd_find_ar() {
-	test -n "$1" || die "No file"
-	local d
-	for d in $ARCHIVE $HOME/Downloads; do
-		if test -r $d/$1; then
-			echo $d/$1
-			return 0
-		fi
+cmd_env_check() {
+	mkdir -p $tmp
+	local x
+	for x in netstat kvm xterm screen telnet; do
+		which $x > /dev/null || die "Not executable [$x]"
 	done
-	die "Not found [$1]"
+	if which kvm-ok > /dev/null; then
+		kvm-ok > $tmp/out || die "Failed [kvm-ok]"
+		if ! grep -q "acceleration can be used" $tmp/out; then
+			cat $tmp/out
+			die "No acceleration?"
+		fi
+	fi
+	id | grep -Fq '(kvm)' || die "Not member of group [kvm]"
 }
-cmd_bin_add() {
-	test -n "$1" || die "No bin-dir"
-	cmd_env
-	local ar f
-	local bindir=$1
-
-	mkdir -p $bindir
-	f=$bindir/coredns
-	if ! test -x $f; then
-		ar=$(cmd_find_ar coredns_${__corednsver}_linux_amd64.tgz) || return 1
-		tar -C $bindir -xf $ar
-	fi
-
-	f=$bindir/kubectl
-	if ! test -x $f; then
-		ar=$(cmd_find_ar kubernetes-server-$__k8sver-linux-amd64.tar.gz) || return 1
-		tar -C $bindir -O -xf $ar kubernetes/server/bin/kubectl > $f
-		chmod a+x $f
-	fi
-
-	f=$bindir/mconnect
-	if ! test -x $f; then
-		ar=$(cmd_find_ar mconnect.xz) || return 1
-		xz -d -c $ar > $f
-		chmod a+x $f
-	fi
-
-	f=$bindir/assign-lb-ip
-	if ! test -x $f; then
-		ar=$(cmd_find_ar assign-lb-ip.xz) || return 1
-		xz -d -c $ar > $f
-		chmod a+x $f
-	fi
-}
-
-##
-##   prepulled_images
-##     Print pre-pulled images (needed for "mkimages_ar")
-##   mkcache_ar
-##     Create a "$ARCHIVE/xcluster-cache.tar" file. This requires "sudo"!!
-##
-cmd_prepulled_images() {
-	echo docker.io/library/alpine:latest
-	echo registry.nordix.org/cloud-native/mconnect:latest
-	$($XCLUSTER ovld crio)/crio.sh pause_image
-}
-cmd_mkcache_ar() {
-	test -n "$XCLUSTER" || die 'Not set [$XCLUSTER]'
-	local ar=$ARCHIVE/xcluster-cache.tar
-	rm -f $ar
-	local images="$($XCLUSTER ovld images)/images.sh"
-	$images make $(cmd_prepulled_images) || die
-	cmd_cache_refresh
-	eval $($XCLUSTER env | grep __cached)
-	cd $__cached
-	tar cf $ar *
-	cd - > /dev/null
+find_ar() {
+	test -n "$1" || die "No file"
+	ar=$ARCHIVE/$1
+	test -r $ar || ar=$HOME/Downloads/$1
+	test -r $ar || die "Not found [$1]"
 }
 
 ##   ovlindex [--src=.]
@@ -154,7 +106,7 @@ cmd_mark() {
 
 ##   base_archives
 ##     Print the base archives.
-##   build_base <workspace>
+##   build_base [workspace]
 ##     Builds the base xcluster workspace from scratch (more or less).
 ##     This is both a test and a release procedure.
 ##
@@ -162,35 +114,32 @@ cmd_base_archives() {
 	cmd_env
 	test -n "$XCLUSTER" || die 'Not set [$XCLUSTER]'
 	eval $($XCLUSTER env)
-	echo $ARCHIVE/diskim-$__diskimver.tar.xz
-	echo $ARCHIVE/$__kver.tar.xz
-	echo $ARCHIVE/$__bbver.tar.bz2
-	echo $ARCHIVE/dropbear-$__dropbearver.tar.bz2
-	echo $ARCHIVE/iproute2-$__ipver.tar.gz
-	echo $ARCHIVE/coredns_${__corednsver}_linux_amd64.tgz
+	echo diskim-$__diskimver.tar.xz
+	echo $__kver.tar.xz
+	echo $__bbver.tar.bz2
+	echo dropbear-$__dropbearver.tar.bz2
+	echo iproute2-$__ipver.tar.gz
+	echo coredns_${__corednsver}_linux_amd64.tgz
 }
 cmd_build_base() {
-	cmd_mark clean
-	cmd_mark "Build xcluster"
-
 	cmd_env
 	test -n "$XCLUSTER" || die 'Not set [$XCLUSTER]'
 	eval $($XCLUSTER env)
+	cmd_mark clean
+	cmd_mark "Build xcluster"
 
 	# Pre-check
-	local ar
-	for ar in $(cmd_base_archives); do
-		test -r $ar || die "Not readable [$ar]"
+	local f
+	for f in $(cmd_base_archives); do
+		find_ar $f
 	done
 
-	test -n "$1" || die "No workspace"
-	test -e "$1" && die "Already exist [$1]"
-
-	local workdir=$(readlink -f $1)
-	mkdir -p "$workdir" ||  die "Could not create [$workdir]"
+	test -n "$1" && export XCLUSTER_WORKSPACE=$(readlink -f $1)
+	test -e "$XCLUSTER_WORKSPACE" && die "Already exist [$XCLUSTER_WORKSPACE]"
+	mkdir -p "$XCLUSTER_WORKSPACE" || die "Could not create [$XCLUSTER_WORKSPACE]"
 
 	# Setup env
-	export XCLUSTER_WORKSPACE=$workdir
+	export XCLUSTER_HOME=$XCLUSTER_WORKSPACE/xcluster
 	export __image=$XCLUSTER_HOME/hd.img
 	mkdir -p $XCLUSTER_WORKSPACE/bin
 
@@ -199,10 +148,9 @@ cmd_build_base() {
 	cmd_mark "Coredns  installed"
 
 	if ! test -x $DISKIM; then
-		ar=$ARCHIVE/diskim-$__diskimver.tar.xz
+		find_ar diskim-$__diskimver.tar.xz
 		tar -C $XCLUSTER_WORKSPACE -xf $ar
 	fi
-	sed -i -e 's,-j4,-j$(nproc),' $DISKIM
 	cmd_mark "Diskim installed"
 
 	$XCLUSTER kernel_build || die "Failed to build kernel"
@@ -232,61 +180,27 @@ cmd_build_base() {
 	cat $__mark_file
 }
 
-##   k8s_workspace
-##     Extend a base $XCLUSTER_WORKSPACE for use with with K8s.
-cmd_k8s_archives() {
-	cmd_env
-	$($XCLUSTER ovld cni-plugins)/cni-plugins.sh archive || die cni-plugins
-	$($XCLUSTER ovld etcd)/etcd.sh archive || die etcd
-	# TODO; Handle versions better!
-	echo $ARCHIVE/kubernetes-server-$__k8sver-linux-amd64.tar.gz
-	echo $ARCHIVE/mconnect.xz
-	echo $ARCHIVE/xcluster-cache.tar
-	echo $ARCHIVE/assign-lb-ip.xz
-	echo $ARCHIVE/cri-o.amd64.v1.27.1.tar.gz
-}
-
+##   k8s_workspace [--k8sver=] [--workspace=]
+##     Adds "kubectl" to the workspace
 cmd_k8s_workspace() {
 	cmd_env
+	test -n "$__workspace" || __workspace=$XCLUSTER_WORKSPACE
+	local f bindir=$__workspace/bin
+	mkdir -p $bindir
 
-	for ar in $(cmd_k8s_archives); do
-		test -r $ar || die "Not readable [$ar]"
-	done
-
-	cmd_bin_add $GOPATH/bin
-	cmd_build_iptools || die "FAILED: build_iptools"
-	cmd_cache_refresh
-}
-cmd_build_iptools() {
-	local iptools="$($XCLUSTER ovld iptools)/iptools.sh"
-	test -x $iptools || die "Not executable [$iptools]"
-	$iptools download
-	$iptools build
-}
-
-##   cache_refresh
-##     From "$ARCHIVE/xcluster-cache.tar" if it exists otherwise
-##     build. Build requires "sudo"!
-cmd_cache_refresh() {
-	local ar=$ARCHIVE/xcluster-cache.tar
-	if test -r $ar; then
-		log "cache_refresh from $ar"
-		eval $($XCLUSTER env | grep __cached)
-		rm -rf $__cached
-		mkdir -p  $__cached
-		tar -C $__cached -xvf $ar || die
-		return 0
+	f=$bindir/kubectl
+	if test -n "$__k8sver" -a "$__k8sver" != "master"; then
+		find_ar kubernetes-server-$__k8sver-linux-amd64.tar.gz
+		tar -C $bindir -O -xf $ar kubernetes/server/bin/kubectl > $f
+		chmod a+x $f
+	else
+		local x=$GOPATH/src/k8s.io/kubernetes/_output/bin/kubectl
+		test -x $x || die "Not executable [$x]"
+		cp $x $f
 	fi
-	log "cache_refresh rebuild"
-	$XCLUSTER cache --clear
-	local o
-	for o in iptools images crio containerd; do
-		log "Caching ovl [$o]"
-		$XCLUSTER cache $o || die "Failed"
-	done
 }
-##   k8s_build_images [--k8sver=...]
 
+##   k8s_build_images [--k8sver=...]
 ##     Build the hd-k8s-<k8sver>.img image. For backward compatibility
 ##     a hard-link to hd-k8s-xcluster-<k8sver>.img is created.
 ##     Soft-links; hd-k8s.img hd-k8s-xcluster.img are updated.
@@ -301,9 +215,7 @@ cmd_k8s_build_images() {
 		fi
 	fi
 	if ! test -d $KUBERNETESD; then
-		local ar=$(cmd_find_ar kubernetes-server-$__k8sver-linux-amd64.tar.gz)
-		test -n "$ar" || die "No archive for version [$__k8sver]"
-		test -r $ar || die "Not readable [$ar]"
+		find_ar kubernetes-server-$__k8sver-linux-amd64.tar.gz
 		rm -rf $XCLUSTER_WORKSPACE/kubernetes
 		tar -C $XCLUSTER_WORKSPACE -xf $ar
 		mv $XCLUSTER_WORKSPACE/kubernetes $XCLUSTER_WORKSPACE/kubernetes-$__k8sver
@@ -318,17 +230,19 @@ cmd_k8s_build_images() {
 	$ovl/tar - > /dev/null || die "kubernetes/tar failed"
 
 	# Build the k8s image;
-	local image
+	local image base_image
+	base_image=$XCLUSTER_HOME/hd.img
+	test -r $base_image || die "Not readable [$base_image]"
 	image=$XCLUSTER_HOME/hd-k8s-$__k8sver.img
 	rm -rf $image
-	cp $__image $image
+	cp -L $base_image $image
 	chmod +w $image
-	$XCLUSTER ximage --image=$image xnet etcd iptools crio kubernetes k8s-cni-bridge mconnect images || die "ximage failed"
+	$XCLUSTER ximage --image=$image xnet etcd iptools crio kubernetes k8s-cni-bridge mconnect || die "ximage failed"
 	rm -f $XCLUSTER_HOME/hd-k8s-xcluster-$__k8sver.img
-	ln $image $XCLUSTER_HOME/hd-k8s-xcluster-$__k8sver.img
+	ln -s $image $XCLUSTER_HOME/hd-k8s-xcluster-$__k8sver.img
 	chmod -w $image $XCLUSTER_HOME/hd-k8s-xcluster-$__k8sver.img
 	echo "Created [$image]"
-	echo "Hard link to [$XCLUSTER_HOME/hd-k8s-xcluster-$__k8sver.img]"
+	echo "Soft link to [$XCLUSTER_HOME/hd-k8s-xcluster-$__k8sver.img]"
 
 	test -e $XCLUSTER_HOME/hd-k8s-xcluster.img || \
 		ln -s $(basename $image) $XCLUSTER_HOME/hd-k8s-xcluster.img
@@ -345,26 +259,18 @@ cmd_k8s_test() {
 	test -n "$XCLUSTER" || die 'Not set [$XCLUSTER]'
 	cmd_env
 	eval $($XCLUSTER env | grep XCLUSTER_HOME)
-	if test -n "$__cni"; then
-		# Test with k8s-xcluster;
-		test -r $__image || __image=$XCLUSTER_HOME/hd-k8s-xcluster.img
-		test "$__cni" != "None" && export XOVLS="k8s-cni-$__cni private-reg $XXOVLS"
-		export __cni
-	else
-		# Test on "normal" xcluster
-		__image=$XCLUSTER_HOME/hd-k8s-$__k8sver.img
-		test -r $__image || __image=$XCLUSTER_HOME/hd-k8s.img
-		export XOVLS="private-reg $XXOVLS"
-	fi
+	export __image=$XCLUSTER_HOME/hd-k8s-$__k8sver.img
 	test -r $__image || die "Not readable [$__image]"
-	export __image
 	test -n "$__nvm" || __nvm=4
 	export __nvm
-
 	test -n "$__mem" || __mem=1536
 	test -n "$__mem1" || __mem1=$((__mem + 512))
 	export __mem __mem1
 
+	if test -n "$__cni"; then
+		export __cni
+		export XOVLS="$XOVLS k8s-cni-$__cni"
+	fi
 	if test "$__cni" = "cilium"; then
 		# Cilium is a horrible memory-hog and emulates kube-proxy
 		__mem=$((__mem + 1024))
@@ -388,115 +294,44 @@ cmd_k8s_test() {
 	$script test $@
 }
 
-
-
-##   release --version=ver [--dest=/tmp]
-##     Create a release tar archive.
+##   release [--version=ver]
+##     Create a release tar archive in pwd
 cmd_release() {
-	test -n "$__version" || die 'No version'
+	test -n "$__version" || __version=$(date +%Y.%m.%d | sed -e 's,\.0,\.,g')
 	export __version
-	test -n "$__dest" || __dest=/tmp
+	log "Building xcluster-$__version"
 	test -n "$XCLUSTER" || die 'Not set [$XCLUSTER]'
 	eval $($XCLUSTER env)
-	local d T ar
+
+	# Check that ovl/iptools is cached
+	test -r $__cached/default/iptools.tar.xz || die "Ovl/iptools is not cached"
+
+	# Copy the xcluster repo
+	local d X
 	d=$(dirname $XCLUSTER)
 	d=$(readlink -f $d)
-
-	T=$tmp/xcluster
-	mkdir -p $T
-	cp -R $d/* $T
-	rm -rf $T/.git $T/workspace
-
-	cmd_mkworkspace $T/workspace
-
-	cd $tmp
-	ar=$__dest/xcluster-$__version.tar
-	tar --group=0 --owner=0 -cf $ar xcluster
-	cd
-	log "Created [$ar]"
-}
-cmd_mkworkspace() {
-	test -n "$XCLUSTER" || die 'Not set [$XCLUSTER]'
-	cmd_env
-	eval $($XCLUSTER env)
-	local d W H S f
-	d=$(dirname $XCLUSTER)
-	d=$(readlink -f $d)
-
-	test -n "$1" || die "No target"
-	test -e "$1" && die "Already exists [$1]"
-	mkdir -p "$1" || die "Mkdir failed [$1]"
-	local W=$(readlink -f "$1")
-
-	log "Creating workspace at [$W]"
-
-	H=$W/xcluster
-	mkdir -p $H
-	for n in $__kver $__xkernels; do
-		cp $XCLUSTER_HOME/bzImage-$n $H
-	done
-	for n in cache hd.img base-libs.txt; do
-		cp -Lr $XCLUSTER_HOME/$n $H
-	done
-	chmod 444 $H/hd.img
-	cat > $H/dns-spoof.txt <<EOF
-docker.io
-registry-1.docker.io
-k8s.gcr.io
-gcr.io
-registry.nordix.org
-EOF
-
-	H=$W/$__bbver
-	f=$XCLUSTER_WORKSPACE/$__bbver/busybox
-	mkdir -p $H
-	cp $f $H
-
-	f=$XCLUSTER_WORKSPACE/iproute2-$__ipver/ip/ip
-	H=$W/iproute2-$__ipver/ip
-	mkdir -p $H
-	cp $f $H
-
-	H=$W/diskim-$__diskimver
-	mkdir -p $H/tmp
-	cp $DISKIM $H
-	S=$(dirname $DISKIM)/tmp
-	cp $S/bzImage $S/initrd.cpio $H/tmp
-
-	mkdir -p $W/bin
-	local bindir=$GOPATH/bin
-	for f in mconnect coredns kubectl; do
-		test -x $bindir/$f || die "Not executable [$bindir/$f]"
-		cp $bindir/$f $W/bin
-	done
-}
-
-##   workspace_ar <file>
-##     Builds a xcluster "workspace" archive for a binary release.
-##     Use; "./xcadmin.sh workspace_ar - | tar t" to test
-cmd_workspace_ar() {
-	test -n "$1" || die "No ar"
-	test "$__force" = "yes" && rm -f $1
-	test -e "$1" && die "Already exists [$1]"
-	touch "$1" || die "Can't create [$1]"
+	X=$tmp/xcluster
 	mkdir -p $tmp
-	cmd_mkworkspace $tmp/workspace
-	tar -C $tmp --group=0 --owner=0 -cf "$1" workspace
-}
-cmd_env_check() {
-	mkdir -p $tmp
-	local x
-	for x in netstat kvm xterm screen telnet; do
-		which $x > /dev/null || die "Not executable [$x]"
-	done
-	if which kvm-ok > /dev/null; then
-		kvm-ok > $tmp/out || die "Failed [kvm-ok]"
-		if ! grep -q "acceleration can be used" $tmp/out; then
-			cat $tmp/out
-			die "No acceleration?"
-		fi
-	fi
-	id | grep -Fq '(kvm)' || die "Not member of group [kvm]"
+	cp -R $d $X
+	rm -rf $X/.git* $X/ovl/attic $X/*.tar $X/*.tar.xz $X/workspace
+
+	# Create a new workspace
+	mkdir -p $X/workspace
+	cp -R $XCLUSTER_WORKSPACE/bin $X/workspace
+	cp -R $(dirname $DISKIM) $X/workspace/diskim-$__diskimver
+
+	# Create a new xcluster home
+	mkdir -p $X/workspace/xcluster
+	cp -L $XCLUSTER_HOME/base-libs.txt $XCLUSTER_HOME/bzImage-$__kver \
+		$XCLUSTER_HOME/hd.img $X/workspace/xcluster
+	mkdir -p $X/workspace/xcluster/cache/default
+	cp $__cached/default/iptools.tar.xz $X/workspace/xcluster/cache/default
+
+	local xctar=xcluster-$__version.tar
+	rm -f $xctar $xctar.xz
+	tar -C $tmp --group=0 --owner=0 -cf $xctar xcluster || die tar
+	xz -T0 $xctar
+	log "Created [$xctar.xz]"
 }
 
 ##
