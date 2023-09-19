@@ -2,6 +2,7 @@
 
 export PATH="/bin:/sbin:/usr/bin:/usr/sbin"
 . /etc/profile
+test -n "$PREFIX" || PREFIX=1000::1
 
 die() {
     echo "$@"
@@ -21,7 +22,7 @@ vm() {
 	sysctl -w net.ipv6.ip_nonlocal_bind=1
 	sysctl -w net.ipv4.conf.all.proxy_arp=0
 	if test "$IPVS_SETUP" = "masq"; then
-		ip -6 ro replace default via 1000::1:192.168.1.201
+		ip -6 ro replace default via $PREFIX:192.168.1.201
 		ip ro replace default via 192.168.1.201
 	fi
 	if echo "$IPVS_SETUP" | grep -q "dsr"; then
@@ -40,9 +41,9 @@ ipvs_masq() {
 	local x
 	for x in $(seq 1 $__nvm); do
 		ipvsadm -a -t 10.0.0.0:5001 -r 192.168.1.$x:5001 -m
-		ipvsadm -a -t [1000::]:5001 -r [1000::1:192.168.1.$x]:5001 -m
+		ipvsadm -a -t [1000::]:5001 -r [$PREFIX:192.168.1.$x]:5001 -m
 		ipvsadm -a -t 10.0.0.0:5003 -r 192.168.1.$x:5003 -m
-		ipvsadm -a -t [1000::]:5003 -r [1000::1:192.168.1.$x]:5003 -m
+		ipvsadm -a -t [1000::]:5003 -r [$PREFIX:192.168.1.$x]:5003 -m
 	done
 }
 
@@ -55,9 +56,9 @@ ipvs_dsr() {
 	local x
 	for x in $(seq 1 $__nvm); do
 		ipvsadm -a -t 10.0.0.0:5001 -r 192.168.1.$x:5001
-		ipvsadm -a -t [1000::]:5001 -r [1000::1:192.168.1.$x]:5001
+		ipvsadm -a -t [1000::]:5001 -r [$PREFIX:192.168.1.$x]:5001
 		ipvsadm -a -t 10.0.0.0:5003 -r 192.168.1.$x:5003
-		ipvsadm -a -t [1000::]:5003 -r [1000::1:192.168.1.$x]:5003
+		ipvsadm -a -t [1000::]:5003 -r [$PREFIX:192.168.1.$x]:5003
 	done
 }
 
@@ -68,7 +69,7 @@ ipvs_fwmark() {
 	local x
 	for x in $(seq 1 $__nvm); do
 		ipvsadm -a -f 1 -r 192.168.1.$x:0 -m
-		ipvsadm -a -f 1 -6 -r [1000::1:192.168.1.$x]:0 -m
+		ipvsadm -a -f 1 -6 -r [$PREFIX:192.168.1.$x]:0 -m
 	done
 
 	iptables -t mangle -A PREROUTING -i eth2 -d 10.0.0.0/24 -j MARK --set-mark 1
@@ -89,7 +90,7 @@ router() {
 tester() {
 	if test "$IPVS_SETUP" = "masq"; then
 		ip ro replace default via 192.168.2.201
-		ip -6 ro replace default via 1000::1:192.168.2.201
+		ip -6 ro replace default via $PREFIX:192.168.2.201
 	fi
 	return 0
 }
