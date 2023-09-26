@@ -15,22 +15,11 @@ log() {
 
 test -n "$1" || die "No out-file"
 
-# Get the address to the local registry
-regip=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' registry) \
-	|| die "Can't get address of the local registry"
-test -n "$regip" || die 'Address empty'
-#log "Address [$regip]"
-
 mkdir -p $tmp
-for s in $(echo "$SETUP" | tr ',' ' '); do
-	test -d $dir/$s || continue
-	cp -R $dir/$s/* $tmp
-	setup_copied=yes
-done
-test "$setup_copied" != "yes" && test -d $dir/default && cp -R $dir/default/* $tmp
+cp -R $dir/default/* $tmp
 
-sed -i -e "s,%localreg%,$regip," $tmp/etc/init.d/28private-reg.rc
 dip=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.Gateway}}{{end}}' registry)
+sed -i -e "s,%localreg%,$dip," $tmp/etc/init.d/28private-reg.rc
 echo "$dip example.com" >> $tmp/etc/spoofed-hosts
 if test -n "$__dns_spoof"; then
 	test -r "$__dns_spoof" || die "Not readable [$__dns_spoof]"

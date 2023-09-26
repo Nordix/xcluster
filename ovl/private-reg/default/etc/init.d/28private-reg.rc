@@ -5,9 +5,18 @@ for a in $(grep -v '^#' /etc/spoofed-hosts | cut -d' ' -f1 | sort | uniq); do
 	ip ro replace $a via 192.168.0.250
 done
 
-grep -qE '^insecure_registries' /etc/crio/crio.conf && exit 0
-sed -i '/\[crio.image\]/a\
-insecure_registries = [\
- "%localreg%/16",\
- "192.168.0.0/24"\
-]' /etc/crio/crio.conf
+mkdir -p "/etc/containers"
+conf="/etc/containers/registries.conf"
+
+echo > $conf
+echo "unqualified-search-registries = ['%localreg%']" >> $conf
+echo "" >> $conf
+echo "[[registry]]" >> $conf
+echo "insecure = true" >> $conf
+echo "location = '%localreg%'" >> $conf
+echo "" >> $conf
+for reg in $(grep -v '^#' /etc/spoofed-hosts | cut -d' ' -f2 | sort | uniq); do
+	echo "[[registry]]" >> $conf
+	echo "insecure = true" >> $conf
+	echo "location = '$reg'" >> $conf
+done

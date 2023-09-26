@@ -28,9 +28,6 @@ curl -L \$armurl/xcluster/images/hd-k8s.img.xz | xz -d > \$__image
 
 EOF
 
-alias images="$(readlink -f .)/ovl/images/images.sh"
-test -n "$__dns_spoof" || export __dns_spoof=$(readlink -f .)/config/dns-spoof.txt
-
 mynetns=$(ip netns id)
 if test -z "$KUBECONFIG"; then
 	if test -n "$mynetns"; then
