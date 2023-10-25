@@ -25,7 +25,7 @@ test -n "$1" || help
 echo "$1" | grep -qi "^help\|-h" && help
 
 log() {
-	echo "$prg: $*" >&2
+	echo "$*" >&2
 }
 dbg() {
 	test -n "$__verbose" && echo "$prg: $*" >&2
@@ -109,13 +109,13 @@ install() {
 			s=$XCLUSTER_WORKSPACE/$pkg-4.6.2
 			d=$XCLUSTER_WORKSPACE/sys
 			if test -d $s; then
-				echo "Already unpacked [$s]"
+				log "Already unpacked [$s]"
 			else
 				tar -C $XCLUSTER_WORKSPACE -xf $pkg-$ver.tar.gz
 			fi
 			file=$d/usr/bin/$pkg
 			if test -f $f; then
-				echo "Already built [$file]"
+				log "Already built [$file]"
 			else
 				make -C $s BUILDTAGS="selinux seccomp" PREFIX=/usr > /dev/null 2>&1 || die "podman make failed"
 				make -C $s install DESTDIR=$d PREFIX=/usr > /dev/null 2>&1 || die "podman make install failed"
@@ -124,7 +124,7 @@ install() {
 
 	cp $file $dest/$pkg || die "$pkg install failed"
 	chmod +x $dest/$pkg
-	echo "Installed $pkg version [$ver]"
+	log "Installed $pkg version [$ver]"
 }
 
 conmon_ver=v2.1.8

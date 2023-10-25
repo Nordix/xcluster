@@ -24,7 +24,7 @@ mkdir -p $tmp
 cp -R $dir/default/* $tmp
 
 mkdir -p $tmp/bin
-$dir/podman.sh install $tmp/bin || die "Dependency installation failed"
+$dir/podman.sh install --quiet $tmp/bin || die "Dependency installation failed"
 $XCLUSTER cplib --dest=$tmp $tmp/bin/conmon
 $XCLUSTER cplib --dest=$tmp $tmp/bin/crun
 $XCLUSTER cplib --dest=$tmp $tmp/bin/aardvark-dns
@@ -39,13 +39,13 @@ test -n "$SRIOV_DIR" || \
 	SRIOV_DIR=$GOPATH/src/github.com/k8snetworkplumbingwg/sriov-cni
 f=$SRIOV_DIR/build/sriov
 test -x $f && cp $f $tmp/opt/cni/bin
-echo "Installed sriov CNI"
+log "Installed sriov CNI"
 
 test -n "$CDI_DIR" || \
 	CDI_DIR=$GOPATH/src/github.com/cncf-tags/container-device-interface
 make -C $CDI_DIR > /dev/null 2>&1 || die "Cannot make CDI tools"
 cp -R $CDI_DIR/bin/* $tmp/bin
-echo "Installed CDI tools"
+log "Installed CDI tools"
 
 cd $tmp
 tar cf "$1" *
