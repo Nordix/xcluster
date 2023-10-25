@@ -36,7 +36,7 @@ dbg() {
 ##     Print environment.
 cmd_env() {
 
-	test -n "$__criover" || __criover=cri-o.amd64.v1.27.1
+	test -n "$__criover" || __criover=cri-o.amd64.v1.28.1
 	test -n "$__crioar" || __crioar=$ARCHIVE/$__criover.tar.gz
 	test -n "$__pausever" || __pausever=3.9
 
