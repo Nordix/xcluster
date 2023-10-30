@@ -23,7 +23,7 @@ $XCLUSTER cplib --dest=$tmp $tmp/usr/local/sbin/*
 rm -f $tmp/usr/local/sbin/*.sh $tmp/usr/local/sbin/*.py $tmp/usr/local/sbin/frr*
 mkdir -p $tmp/lib64
 libyangd=$GOPATH/src/github.com/CESNET/libyang/build/sys
-for f in $frrd/usr/local/lib/libfrr.so.0 $libyangd/usr/local/lib/libyang.so.2.33.3 /usr/lib/x86_64-linux-gnu/libprotobuf-c.so.1; do
+for f in $frrd/usr/local/lib/libfrr.so $libyangd/usr/local/lib/libyang.so /usr/lib/x86_64-linux-gnu/libprotobuf-c.so; do
 	cp -L $f $tmp/lib64
 done
 
