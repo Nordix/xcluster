@@ -115,7 +115,8 @@ _xc_completion() {
 complete -F _xc_completion xc
 
 lso() {
-	local d arg
+	local XCLUSTER_OVLPATH d arg
+	eval $($XCLUSTER env | grep XCLUSTER_OVLPATH=)
 	for d in $(echo $XCLUSTER_OVLPATH | tr : '\n' | sort -u); do
 		arg="$arg $d/*"
 	done
