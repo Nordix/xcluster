@@ -76,11 +76,11 @@ download() {
 		return 0
 	fi
 	if test -r $file; then
-		test "$__quiet" = "yes" || echo "Already downloaded [$file]"
+		test "$__quiet" = "yes" || log "Already downloaded [$file]"
 	else
 		test -n "$url" || url=https://github.com/containers/$pkg/releases/download/$ver/$rfile
 		curl -L $url > $file || die "Failed to download [$url]"
-		echo "Downloaded [$file]"
+		log "Downloaded [$file]"
 	fi
 }
 
@@ -114,7 +114,7 @@ install() {
 				tar -C $XCLUSTER_WORKSPACE -xf $pkg-$ver.tar.gz
 			fi
 			file=$d/usr/bin/$pkg
-			if test -f $f; then
+			if test -f $file; then
 				log "Already built [$file]"
 			else
 				make -C $s BUILDTAGS="selinux seccomp" PREFIX=/usr > /dev/null 2>&1 || die "podman make failed"
