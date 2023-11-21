@@ -229,6 +229,7 @@ cmd_getimages() {
 		d=$($XCLUSTER ovld $1)
 		test -n "$d" || return 1
 	fi
+	find $d -name '*.yaml' | grep -q yaml || return 0
 	grep -hs ' image:' $(find $d -name '*.yaml') | sort | uniq | sed -E 's,.*image: *,,' | tr -d "\"'"
 }
 ##   lreg_preload [--force] [--keep-going] <dir/ovl>
