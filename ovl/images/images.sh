@@ -129,7 +129,7 @@ cmd_docker_save() {
 ##   lreg_ls
 ##     List the contents of the local registry.
 cmd_lreg_ls() {
-	local regip=$(cmd_lreg_ip) || return 1
+	local regip=$(lreg_ip) || return 1
 	local i
 	for i in $(curl -s -X GET http://$regip/v2/_catalog | jq -r .repositories[]); do
 		echo "$i:"
@@ -150,7 +150,7 @@ cmd_lreg_cache() {
 	local host=$(echo $1 | cut -d/ -f1)
 	nslookup $host > /dev/null 2>&1 || die "Unknown host [$host]"
 	local img=$(echo $1 | cut -d/ -f2-)
-	local regip=$(cmd_lreg_ip) || return 1
+	local regip=$(lreg_ip) || return 1
 	skopeo copy --dest-tls-verify=false docker://$1 docker://$regip/$img
 }
 ##   lreg_upload [--include-host] <docker_image>
@@ -160,7 +160,7 @@ cmd_lreg_cache() {
 ##       lreg_upload --strip-host docker.io/library/alpine:3.8
 cmd_lreg_upload() {
 	test -n "$1" || die "No image"
-	local regip=$(cmd_lreg_ip) || return 1
+	local regip=$(lreg_ip) || return 1
 	local dst="$1"
 	test "$__include_host" != "yes" && dst=$(echo "$1" | cut -d/ -f2-)
 	skopeo copy --dest-tls-verify=false docker-daemon:$1 docker://$regip/$dst
@@ -170,7 +170,7 @@ cmd_lreg_upload() {
 ##     Inspect an image in the private registry.
 cmd_lreg_inspect() {
 	test -n "$1" || die "No image"
-	local regip=$(cmd_lreg_ip) || return 1
+	local regip=$(lreg_ip) || return 1
 	skopeo inspect --tls-verify=false docker://$regip/$1
 	return 0
 }
@@ -178,7 +178,7 @@ cmd_lreg_inspect() {
 ##     Copy the image to the private registry.
 cmd_lreg_rm() {
 	test -n "$1" || die "No image"
-	local regip=$(cmd_lreg_ip) || return 1
+	local regip=$(lreg_ip) || return 1
 	skopeo delete --tls-verify=false docker://$regip/$1
 	return 0
 }
@@ -186,7 +186,7 @@ cmd_lreg_rm() {
 ##     Returns ok if an image is loaded.
 cmd_lreg_isloaded() {
 	test -n "$1" || die "No image"
-	local regip=$(cmd_lreg_ip) || return 1
+	local regip=$(lreg_ip) || return 1
 	local image=$(echo $1 | tr -d '"' | cut -d: -f1)
 	local tag=$(echo $1: | tr -d '"' | cut -d: -f2)
 	test -z "$tag" && tag=latest
@@ -283,6 +283,12 @@ cmd_lreg_ip() {
 	local regip=$(docker inspect  registry | jq  -r .[0].NetworkSettings.IPAddress)
 	test -n "$regip" || die "Can't get address of the local registry"
 	echo $regip
+}
+# internal function that adds brackets around IPv6 addresses
+lreg_ip() {
+	local ip=$(cmd_lreg_ip)
+	echo $ip | grep -q : && ip="[$ip]"
+	echo $ip
 }
 
 #   get_manifest <rootfs>
