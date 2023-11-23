@@ -129,12 +129,12 @@ cmd_docker_save() {
 ##   lreg_ls
 ##     List the contents of the local registry.
 cmd_lreg_ls() {
-	local regip=$(cmd_get_regip) || return 1
+	local regip=$(cmd_lreg_ip) || return 1
 	local i
-	for i in $(curl -s -X GET http://$regip:5000/v2/_catalog | jq -r .repositories[]); do
+	for i in $(curl -s -X GET http://$regip/v2/_catalog | jq -r .repositories[]); do
 		echo "$i:"
 		echo -n "  "
-		curl -s -X GET http://$regip:5000/v2/$i/tags/list | jq -c .tags
+		curl -s -X GET http://$regip/v2/$i/tags/list | jq -c .tags
 	done
 
 }
@@ -146,12 +146,12 @@ cmd_docker_lsreg() {
 ##     and then "images lreg_upload ...". Example;
 ##       images lreg_cache docker.io/library/alpine:3.8
 cmd_lreg_cache() {
-	test -n "$1" || die "No image"
+	test -n "$1" || return 0
 	local host=$(echo $1 | cut -d/ -f1)
 	nslookup $host > /dev/null 2>&1 || die "Unknown host [$host]"
 	local img=$(echo $1 | cut -d/ -f2-)
-	local regip=$(cmd_get_regip) || return 1
-	skopeo copy --dest-tls-verify=false docker://$1 docker://$regip:5000/$img
+	local regip=$(cmd_lreg_ip) || return 1
+	skopeo copy --dest-tls-verify=false docker://$1 docker://$regip/$img
 }
 ##   lreg_upload [--include-host] <docker_image>
 ##     Upload an image from you local docker daemon to the privare registry.
@@ -160,40 +160,40 @@ cmd_lreg_cache() {
 ##       lreg_upload --strip-host docker.io/library/alpine:3.8
 cmd_lreg_upload() {
 	test -n "$1" || die "No image"
-	local regip=$(cmd_get_regip) || return 1
+	local regip=$(cmd_lreg_ip) || return 1
 	local dst="$1"
 	test "$__include_host" != "yes" && dst=$(echo "$1" | cut -d/ -f2-)
-	skopeo copy --dest-tls-verify=false docker-daemon:$1 docker://$regip:5000/$dst
+	skopeo copy --dest-tls-verify=false docker-daemon:$1 docker://$regip/$dst
 	return 0
 }
 ##   lreg_inspect <image:tag>
 ##     Inspect an image in the private registry.
 cmd_lreg_inspect() {
 	test -n "$1" || die "No image"
-	local regip=$(cmd_get_regip) || return 1
-	skopeo inspect --tls-verify=false docker://$regip:5000/$1
+	local regip=$(cmd_lreg_ip) || return 1
+	skopeo inspect --tls-verify=false docker://$regip/$1
 	return 0
 }
 ##   lreg_rm <image:tag>
 ##     Copy the image to the private registry.
 cmd_lreg_rm() {
 	test -n "$1" || die "No image"
-	local regip=$(cmd_get_regip) || return 1
-	skopeo delete --tls-verify=false docker://$regip:5000/$1
+	local regip=$(cmd_lreg_ip) || return 1
+	skopeo delete --tls-verify=false docker://$regip/$1
 	return 0
 }
 ##   lreg_isloaded <image:tag>
 ##     Returns ok if an image is loaded.
 cmd_lreg_isloaded() {
 	test -n "$1" || die "No image"
-	local regip=$(cmd_get_regip) || return 1
+	local regip=$(cmd_lreg_ip) || return 1
 	local image=$(echo $1 | tr -d '"' | cut -d: -f1)
 	local tag=$(echo $1: | tr -d '"' | cut -d: -f2)
 	test -z "$tag" && tag=latest
 	# Strip host
 	image="$(echo $image |sed -E 's,^[^/]*\.[^/]*/,,')"
 	mkdir -p $tmp
-	curl -s -X GET http://$regip:5000/v2/$image/tags/list > $tmp/out 2>&1 \
+	curl -s -X GET http://$regip/v2/$image/tags/list > $tmp/out 2>&1 \
 		|| return 1
 	grep -Eq 'null|errors' $tmp/out && return 1
 	if ! jq -r .tags[] < $tmp/out | grep -qE "^$tag$"; then
@@ -203,25 +203,33 @@ cmd_lreg_isloaded() {
 	dbg "Cached [$image:$tag]"
 	return 0
 }
-##   lreg_missingimages <dir/ovl>
+##   lreg_missingimages [dir/ovl...]
 ##     List non-cached images.
 cmd_lreg_missingimages() {
-	test -n "$1" || die 'No dir/ovl'
-	local i ok=yes fqi
-	for i in $(cmd_getimages $1); do
-		if ! cmd_lreg_isloaded $i; then
-			fqi=$i
-			echo $fqi | grep -q : || fqi="$fqi:latest"
-			echo $fqi | cut -d: -f1 | grep -Fq . || fqi="docker.io/$fqi"
-			echo $fqi
-			ok=NO
-		fi
+	local criosh=$($XCLUSTER ovld crio)/crio.sh
+	local pause=$($criosh pause_image)
+	local o i ok=yes fqi
+	if ! cmd_lreg_isloaded $pause; then
+		echo $pause
+		ok=NO
+	fi
+	for o in $@; do
+		for i in $(cmd_getimages $o); do
+			if ! cmd_lreg_isloaded $i; then
+				fqi=$i
+				echo $fqi | grep -q : || fqi="$fqi:latest"
+				echo $fqi | cut -d: -f1 | grep -Fq . || fqi="docker.io/$fqi"
+				echo $fqi
+				ok=NO
+			fi
+		done
 	done
 	test "$ok" = "yes"
 }
-##   getimages <dir/ovl>
+##   getimages [dir/ovl]
 ##     List images.
 cmd_getimages() {
+	test -n "$1" || return 0
 	local d
 	if test -d "$1"; then
 		d=$(readlink -f $1)
@@ -232,33 +240,47 @@ cmd_getimages() {
 	find $d -name '*.yaml' | grep -q yaml || return 0
 	grep -hs ' image:' $(find $d -name '*.yaml') | sort | uniq | sed -E 's,.*image: *,,' | tr -d "\"'"
 }
-##   lreg_preload [--force] [--keep-going] <dir/ovl>
+##   lreg_preload [--force] [--keep-going] [dir/ovl...]
 ##     Pre-load images for an ovl. --force loads already-loaded images.
 cmd_lreg_preload() {
-	test -n "$1" || die 'No dir/ovl'
-	local img
-	local images
-	if test "$__force" = "yes"; then
-		images="$(cmd_getimages $1)"
-	else
-		images="$(cmd_lreg_missingimages $1)"
-	fi
-
-	for img in $images; do
-		echo $img | grep -q ':local' && continue
-		echo "=== $img"
-		if test "$__keep_going" = "yes"; then
-			cmd_lreg_cache $img || true
-		else
-			cmd_lreg_cache $img || die "Load FAILED: $img"
+	local img images ovl
+	if test -z "$1"; then
+		img="$(cmd_lreg_missingimages)"
+		if test -n "$img"; then
+		   # This is the "pause" image
+		   echo "=== $img"
+		   cmd_lreg_cache $img
+		   return
 		fi
+	fi
+	for ovl in $@; do
+		if test "$__force" = "yes"; then
+			images="$(cmd_getimages $ovl)"
+		else
+			images="$(cmd_lreg_missingimages $ovl)"
+		fi
+
+		for img in $images; do
+			echo $img | grep -q ':local' && continue
+			echo "=== $img"
+			if test "$__keep_going" = "yes"; then
+				cmd_lreg_cache $img || true
+			else
+				cmd_lreg_cache $img || die "Load FAILED: $img"
+			fi
+		done
 	done
 }
 
 
-##
-cmd_get_regip() {
-	local regip=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{println .IPAddress}}{{end}}' registry | head -1)
+##   lreg_ip
+##     Get the IP of the local registry ($LOCAL_REGISTRY overrides)
+cmd_lreg_ip() {
+	if test -n "$LOCAL_REGISTRY"; then
+		echo $LOCAL_REGISTRY
+		return 0
+	fi
+	local regip=$(docker inspect  registry | jq  -r .[0].NetworkSettings.IPAddress)
 	test -n "$regip" || die "Can't get address of the local registry"
 	echo $regip
 }
@@ -295,6 +317,7 @@ cmd_get_rootfs() {
 	echo $d/$rootfs
 }
 
+##
 ##   mkimage [--manifest=manifest] [--force] [--upload] [--strip-host] [--tag=] <dir>
 ##     Create an image in local docker from the <dir>. An executable
 ##     "tar" script must exist in the directory. '--upload' uploads

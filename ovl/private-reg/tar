@@ -18,7 +18,9 @@ test -n "$1" || die "No out-file"
 mkdir -p $tmp
 cp -R $dir/default/* $tmp
 
-dip=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.Gateway}}{{end}}' registry)
+images=$($XCLUSTER ovld images)/images.sh
+dip=$($images lreg_ip)
+
 sed -i -e "s,%localreg%,$dip," $tmp/etc/init.d/28private-reg.rc
 echo "$dip example.com" >> $tmp/etc/spoofed-hosts
 if test -n "$__dns_spoof"; then
