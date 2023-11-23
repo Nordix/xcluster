@@ -1,19 +1,30 @@
 #! /bin/sh
+. /etc/profile
+test -n "$PREFIX" || PREFIX=fd00:
 cat /etc/spoofed-hosts >> /etc/hosts
 
 for a in $(grep -v '^#' /etc/spoofed-hosts | cut -d' ' -f1 | sort | uniq); do
-	ip ro replace $a via 192.168.0.250
+	if echo $a | grep -q :; then
+		ip -6 ro replace $a via $PREFIX:192.168.0.250
+	else
+		ip ro replace $a via 192.168.0.250
+	fi
 done
 
 mkdir -p "/etc/containers"
 conf="/etc/containers/registries.conf"
 
-echo > $conf
-echo "unqualified-search-registries = ['%localreg%']" >> $conf
-echo "" >> $conf
-echo "[[registry]]" >> $conf
-echo "insecure = true" >> $conf
-echo "location = '%localreg%'" >> $conf
+if echo "%localreg%" | grep -q :; then
+	# Can't handle IPv6 addresses, but 'example.com' is always defined
+	echo "unqualified-search-registries = ['example.com']" >> $conf
+else
+	echo > $conf
+	echo "unqualified-search-registries = ['%localreg%']" >> $conf
+	echo "" >> $conf
+	echo "[[registry]]" >> $conf
+	echo "insecure = true" >> $conf
+	echo "location = '%localreg%'" >> $conf
+fi
 echo "" >> $conf
 for reg in $(grep -v '^#' /etc/spoofed-hosts | cut -d' ' -f2 | sort | uniq); do
 	echo "[[registry]]" >> $conf

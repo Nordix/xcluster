@@ -1,6 +1,6 @@
 # Load images from a private docker registry
 
-You can use a local, private, unsecure docker registry for downloading
+You can use a local, private, insecure docker registry for downloading
 images to `xcluster`. This is almost as fast as pre-pulled images and
 *way* faster than downloading from internet (especially on mobile
 network).
@@ -13,40 +13,91 @@ Useful for;
 
  * Load your own private images
 
-You can read more about deploying registries in the
-[docker documentation](https://docs.docker.com/registry/deploying/).
+You can read more about deploying a private registry in the
+[docker documentation](https://distribution.github.io/distribution/).
 
+
+Include `ovl/private-reg` to use a private docker registry. Do:
+```
+export XOVLS=private-reg
+```
+to use it in all test-scripts.
+
+
+## Host spoofing
+
+You can "trick" the image pulling to use your local registry by
+translating registry hostnames, such as "docker.io", to the address of
+your private registry. In `xcluster` that is done by altering
+`/etc/hosts`:
+
+```
+# (on a VM)
+# cat /etc/hosts
+...
+172.17.0.2 docker.io
+172.17.0.2 registry-1.docker.io
+172.17.0.2 k8s.gcr.io
+...
+```
+
+For this to work you must start the registry on the standard port,
+which is `80` for an insecure registry.
+
+The spoofed hosts are listed in a file pointed out by the
+`$__dns_spoof` variable (default set in Envsettings.k8s):
+```
+# cat $__dns_spoof
+docker.io
+registry-1.docker.io
+k8s.gcr.io
+...
+```
 
 ## Start a local docker registry
 
 ```
-sudo docker run -d -p 80:5000 --restart=always --name registry \
-  -e REGISTRY_STORAGE_DELETE_ENABLED=true registry:2
-# Get the address to the registry;
-docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' registry
-# Stop (if you want);
-docker container stop registry
-docker container rm -v registry
-```
-
-Secure registry (not used);
-```
-certd=$XCLUSTER_WORKSPACE/cert
-openssl genrsa -out $certd/docker.key 2048
-openssl req -new -x509 -sha256 -key $certd/docker.key -out $certd/dockercrt -days 3650
-
-sudo docker run -d -p 80:5000 --restart=always --name registry \
-  -v $certd:/certs \
-  -e REGISTRY_HTTP_TLS_CERTIFICATE=/certs/docker.crt \
-  -e REGISTRY_HTTP_TLS_KEY=/certs/docker.key \
+docker run -d --restart=always --name registry \
   -e REGISTRY_STORAGE_DELETE_ENABLED=true \
-  registry:2
+  -e REGISTRY_HTTP_ADDR=:80 registry:2
+# Get the address to the registry;
+docker inspect registry | jq  -r .[0].NetworkSettings.IPAddress
+# Stop (if you want);
+docker container stop registry; docker container rm -v registry
 ```
+
+## Manage images
+
+The easiest way to manage images in the private registry is to use the
+`image` alias (see [ovl/images](../images)):
+```
+# images | grep '^   lreg_'
+   lreg_ls
+   lreg_cache <external-image>
+   lreg_upload [--include-host] <docker_image>
+   lreg_inspect <image:tag>
+   lreg_rm <image:tag>
+   lreg_isloaded <image:tag>
+   lreg_missingimages <dir/ovl>
+   lreg_preload [--force] [--keep-going] <dir/ovl>
+```
+
+It uses the [skopeo](../skopeo) utility, which must be [installed](
+https://github.com/containers/skopeo/blob/main/install.md) or built
+locally.
+
+To run the basic tests with a local registry:
+```
+images lreg_preload kubernetes mconnect
+cdo test-template
+export XOVLS=private-reg
+./test-template.sh test basic > /dev/null
+```
+
 
 ### Ipv6
 
-Read the Docker
-[documentation](https://docs.docker.com/v17.09/engine/userguide/networking/default_network/ipv6/).
+Read the [Docker documentation](https://docs.docker.com/config/daemon/ipv6/).
 
 Enable ipv6 for Docker;
 
@@ -59,148 +110,37 @@ Enable ipv6 for Docker;
 # systemctl reload docker
 ```
 
-Inspect the assigned ipv6 address;
+Override the local registry IP with the IPv6 one:
 ```
-docker inspect -f '{{range .NetworkSettings.Networks}}{{.GlobalIPv6Address}}{{end}}' registry
-```
-
-## Usage
-
-```
-xc mkcdrom [other overlays...] private-reg; xc start
+export LOCAL_REGISTRY=$(docker inspect registry | jq -r .[0].NetworkSettings.GlobalIPv6Address)
 ```
 
-**Note**; A standard docker installation is assumed. Please
-investigate the `tar` script in this ovl directory if you get problems.
-
-## Support in the images script
-
-There is support for building local images and for maintenance of your
-private registry in the `images` script;
-
+Start a xcluster and verify that "example.com" is reachable, and is an
+IPv6 address:
 ```
-# In your ovl with an ./image;
-images mkimage --force --upload ./image
-# List files in an image;
-images docker_ls nordixorg/ctraffic:v0.2
-```
+# ping -W1 -c1 -q example.com
+PING example.com(example.com (fd00:8000::242:ac11:2)) 56 data bytes
 
-From the `images` help printout;
-```
-   lreg_ls
-     List the contents of the local registry.
-   lreg_cache <external-image>
-     Copy the image to the private registry. If this fails try "docker pull"
-     and then "images lreg_upload ...". Example;
-       images lreg_cache docker.io/library/alpine:3.8
-   lreg_upload <docker_image>
-     Upload an image from you local docker daemon to the privare registry.
-     Note that "docker.io" and "library/" is suppressed in "docker images";
-       lreg_upload library/alpine:3.8
-       lreg_upload --strip-host docker.io/library/alpine:3.8
-   lreg_inspect <image:tag>
-     Inspect an image in the private registry.
-   lreg_rm <image:tag>
-     Copy the image to the private registry.
+--- example.com ping statistics ---
+1 packets transmitted, 1 received, 0% packet loss, time 0ms
+rtt min/avg/max/mdev = 0.601/0.601/0.601/0.000 ms
 ```
 
 
-## Manage your private registry manually
+##  Secure registry
 
-There are ways by using `docker` but IMO `skopeo` is simpler and more
-intuitive.
-
-The simplest way is to go through the local docker-daemon;
-
+This is not used, or tested recently, but kept for documentation.
 ```
-skopeo copy --dest-tls-verify=false docker-daemon:library/alpine:3.8 docker://172.17.0.2:5000/library/alpine:3.8
-skopeo inspect --tls-verify=false docker://172.17.0.2:5000/library/alpine:3.8
-```
+certd=$XCLUSTER_WORKSPACE/cert
+openssl genrsa -out $certd/docker.key 2048
+openssl req -new -x509 -sha256 -key $certd/docker.key -out $certd/dockercrt -days 3650
 
-You can also load directly from a public docker registry, please see
-`man skopeo`.
-
-
-### List contents
-
-```
-regip=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' registry)
-curl -X GET http://$regip:5000/v2/_catalog
-# Tags for an image;
-curl -X GET http://$regip:5000/v2/library/alpine/tags/list
-curl -s -X GET http://$regip:5000/v2/library/alpine/tags/list | jq .
+sudo docker run -d --restart=always --name registry \
+  -v $certd:/certs \
+  -e REGISTRY_HTTP_ADDR=:443 registry:2
+  -e REGISTRY_HTTP_TLS_CERTIFICATE=/certs/docker.crt \
+  -e REGISTRY_HTTP_TLS_KEY=/certs/docker.key \
+  -e REGISTRY_STORAGE_DELETE_ENABLED=true \
+  registry:2
 ```
 
-
-
-## DNS spoofing
-
-If you have manifests with fully qualified image references, that is
-it includes the registry host, you can "trick" the image pulling to
-use your local registry anyway.
-
-Firsts you must start a docker registry on the standard port. Assuming
-you don't have a local http server running, do;
-
-```
-# Stop the old registry (if necessary);
-docker container stop registry
-docker container rm -v registry
-# Start with port forwarding on port 80;
-docker run -d --restart=always -p 80:5000 --name registry registry:2
-```
-
-Then specify the domain names to spoof in a file and set `__dns_spoof`
-to point to the file, and start `xcluster`;
-
-```
-export __dns_spoof=/tmp/my-spoofs
-cat > $__dns_spoof <<EOF
-docker.io
-registry-1.docker.io
-k8s.gcr.io
-EOF
-xc mkcdrom (other ovls...) private-reg; xc start
-```
-
-The names will be appended to `/etc/hosts`. You can check the file
-without starting the cluster with;
-
-```
-cdo private-reg
-./tar - | tar -O -x etc/hosts
-```
-
-Load your private registry with `skopeo` as described above and test
-on cluster. While testing make sure that no DNS lookups are made from
-withing the cluster by checking the local `coredns` log on your host;
-
-```
-tail -f /tmp/$USER/coredns.log
-export __dns_spoof=/tmp/my-spoofs
-xc mkcdrom private-reg; xc start
-# On cluster;
-crictl --runtime-endpoint=unix:///var/run/crio/crio.sock pull docker.io/library/alpine:3.8
-```
-
-
-
-## Cri-o configuration
-
-Here is a snipplet from `/etc/crio/crio.conf` to configure a local
-private registry. Since the local registry comes before the default
-`docker.io` it will function as a cache.
-
-```
-# insecure_registries is used to skip TLS verification when pulling images.
-insecure_registries = [
- "172.17.0.2/16"
-]
-
-# registries is used to specify a comma separated list of registries to be used
-# when pulling an unqualified image (e.g. fedora:rawhide).
-registries = [
- "172.17.0.2:5000",
- "docker.io"
-]
-```
