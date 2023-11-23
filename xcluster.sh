@@ -180,7 +180,7 @@ cmd_nsadd_docker() {
 
 	ip link set host$1 netns $netns
 	sudo ip netns exec $netns env xcluster_PREFIX=$xcluster_PREFIX \
-		$me nssetup --docker --adr4=$adr4 --gw4=$gw4 $1
+		$me nssetup --docker --adr4=$adr4 --gw4=$gw4 --adr6=$adr6 --gw6=$gw6 $1
 	mkrmtap
 }
 cmd_docker_net() {
@@ -213,7 +213,8 @@ cmd_docker_net() {
 	local b0=$(echo $cidr4 | cut -d/ -f1 | cut -d. -f4)
 	b0=$((b0 + 50 + i))
 	adr4="$(echo $cidr4 | cut -d/ -f1 | cut -d. -f-3).$b0/$n"
-	log "Xcluster netns; $adr4"
+	test -n "$cidr6" && adr6=$(echo $cidr6 | sed "s,:/,:$b0/,")
+	log "Xcluster netns; $adr4 $adr6"
 }
 mkrmtap() {
 	# Create /tmp/rmtap that will be called by qemu on VM-termination
@@ -246,6 +247,10 @@ cmd_nssetup() {
 	if test "$__docker" = "yes"; then
 		ip addr add $__adr4 dev host$1
 		ip ro add default via $__gw4
+		if test -n "$__adr6"; then
+			ip -6 addr add $__adr6 dev host$1
+			ip -6 ro add default via $__gw6
+		fi
 	else
 		set_netns_ipv4_addresses $1
 		ip addr add $ipv4_ns/32 dev host$1
