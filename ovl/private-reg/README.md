@@ -126,6 +126,10 @@ PING example.com(example.com (fd00:8000::242:ac11:2)) 56 data bytes
 rtt min/avg/max/mdev = 0.601/0.601/0.601/0.000 ms
 ```
 
+Unfortunately [skopeo doesn't support ipv6 addresses](
+https://github.com/containers/image/issues/1004), so for `images lreg_preload`
+IPv4 must be used (or you can mess with `/etc/hosts`).
+
 
 ##  Secure registry
 
