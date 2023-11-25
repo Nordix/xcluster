@@ -83,7 +83,7 @@ test_start_empty() {
 	otc 1 check_namespaces
 	if echo "$xcluster_PROXY_MODE" | grep -qi disable; then
 		kubectl create -n kube-system -f $dir/default/etc/kubernetes/calico/apiserver-configmap.yaml
-		otcw restart_kubelet
+		otcwp restart_kubelet
 	fi
 	otc 1 check_nodes
 }
@@ -100,8 +100,7 @@ test_start_vpp() {
 	#export xcluster_PROXY_MODE=disabled
 	export xcluster_CALICO_BACKEND=operator+install-vpp
 	export __mem=2G
-	export __mem1=1G
-	export __nvm=3
+	export __mem1=3G
 	test_start_empty $@
 	otcr vip_routes
 }

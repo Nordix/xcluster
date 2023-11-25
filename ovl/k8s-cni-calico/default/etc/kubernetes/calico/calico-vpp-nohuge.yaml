@@ -72,6 +72,7 @@ rules:
   - globalfelixconfigs
   - felixconfigurations
   - bgppeers
+  - bgpfilters
   - globalbgpconfigs
   - bgpconfigurations
   - ippools
@@ -135,8 +136,7 @@ subjects:
 ---
 apiVersion: v1
 data:
-  service_prefix: 12.0.0.0/16
-  vpp_config_template: |-
+  CALICOVPP_CONFIG_TEMPLATE: |-
     unix {
       nodaemon
       full-coredump
@@ -161,8 +161,30 @@ data:
     buffers {
       buffers-per-numa 131072
     }
-  vpp_dataplane_interface: eth1
-  vpp_uplink_driver: "af_packet"
+  CALICOVPP_INITIAL_CONFIG: |-
+    {
+      "vppStartupSleepSeconds": 1,
+      "corePattern": "/var/lib/vpp/vppcore.%e.%p"
+    }
+  CALICOVPP_INTERFACES: |-
+    {
+      "maxPodIfSpec": {
+        "rx": 10, "tx": 10, "rxqsz": 1024, "txqsz": 1024
+      },
+      "defaultPodIfSpec": {
+        "rx": 1, "tx":1, "isl3": true
+      },
+      "vppHostTapSpec": {
+        "rx": 1, "tx":1, "rxqsz": 1024, "txqsz": 1024, "isl3": false
+      },
+      "uplinkInterfaces": [
+        {
+          "interfaceName": "eth1",
+          "vppDriver": "af_packet"
+        }
+      ]
+    }
+  SERVICE_PREFIX: 10.96.0.0/12
 kind: ConfigMap
 metadata:
   name: calico-vpp-config
@@ -194,14 +216,19 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: spec.nodeName
-        - name: SERVICE_PREFIX
+        - name: NAMESPACE
           valueFrom:
-            configMapKeyRef:
-              key: service_prefix
-              name: calico-vpp-config
-        image: docker.io/calicovpp/agent:v3.24.0
+            fieldRef:
+              fieldPath: metadata.namespace
+        envFrom:
+        - configMapRef:
+            name: calico-vpp-config
+        image: docker.io/calicovpp/agent:v3.26.0
         imagePullPolicy: IfNotPresent
         name: agent
+        resources:
+          requests:
+            cpu: 250m
         securityContext:
           privileged: true
         volumeMounts:
@@ -217,28 +244,6 @@ spec:
           mountPropagation: Bidirectional
           name: netns
       - env:
-        - name: CALICOVPP_NATIVE_DRIVER
-          valueFrom:
-            configMapKeyRef:
-              key: vpp_uplink_driver
-              name: calico-vpp-config
-        - name: CALICOVPP_IP_CONFIG
-          value: linux
-        - name: CALICOVPP_INTERFACE
-          valueFrom:
-            configMapKeyRef:
-              key: vpp_dataplane_interface
-              name: calico-vpp-config
-        - name: CALICOVPP_CONFIG_TEMPLATE
-          valueFrom:
-            configMapKeyRef:
-              key: vpp_config_template
-              name: calico-vpp-config
-        - name: SERVICE_PREFIX
-          valueFrom:
-            configMapKeyRef:
-              key: service_prefix
-              name: calico-vpp-config
         - name: DATASTORE_TYPE
           value: kubernetes
         - name: WAIT_FOR_DATASTORE
@@ -247,11 +252,16 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: spec.nodeName
-        - name: CALICOVPP_CORE_PATTERN
-          value: /var/lib/vpp/vppcore.%e.%p
-        image: docker.io/calicovpp/vpp:v3.24.0
+        envFrom:
+        - configMapRef:
+            name: calico-vpp-config
+        image: docker.io/calicovpp/vpp:v3.26.0
         imagePullPolicy: IfNotPresent
         name: vpp
+        resources:
+          requests:
+            cpu: 500m
+            memory: 512Mi
         securityContext:
           privileged: true
         volumeMounts:
