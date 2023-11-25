@@ -25,16 +25,8 @@ modmaster() {
 test -n "$1" || die "No out-file"
 
 mkdir -p $tmp
-for s in $(echo "$SETUP" | tr ',' ' '); do
-	test -d $dir/$s || continue
-	cp -R $dir/$s/* $tmp
-	setup_copied=yes
-	modmaster $s
-done
-if test "$setup_copied" != "yes" && test -d $dir/default; then
-	cp -R $dir/default/* $tmp
-	modmaster default
-fi
+cp -R $dir/default/* $tmp
+modmaster default
 
 f=$GOPATH/bin/calicoctl
 mkdir -p $tmp/bin
