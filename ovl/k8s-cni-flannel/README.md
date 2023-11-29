@@ -9,16 +9,16 @@ Dual-stack support was added in v0.15.0. Ipv6-only doesn't work.
 
 Pre-load the private registry;
 ```
-for n in $(images lreg_missingimages k8s-cni-flannel); do
-  images lreg_cache $n
-done
+images lreg_preload k8s-cni-flannel
 ```
 
 Update the manifest;
 ```
-curl -L https://raw.githubusercontent.com/flannel-io/flannel/master/Documentation/kube-flannel.yml > kube-flannel.yml
-git difftool kube-flannel.yml
-meld kube-flannel.yml default/etc/kubernetes/load/kube-flannel.yaml
+ver=v0.23.0
+curl -L https://github.com/flannel-io/flannel/releases/download/$ver/kube-flannel.yml > kube-flannel-new.yml
+# check the old updates and apply them 
+meld kube-flannel.yml default/etc/kubernetes/load/kube-flannel.yaml kube-flannel-new.yml
+# the diff may be too large, so update "net-conf.json:" "FLANNELD_IFACE" manually
 ```
 
 ## Test
