@@ -50,7 +50,8 @@ controller() {
 		--controllers="*,serviceaccount,serviceaccount-token" $fg_param \
 		--service-account-private-key-file=/srv/kubernetes/server.key \
 		--root-ca-file=/srv/kubernetes/server.crt --leader-elect=true \
-		>> $log 2>&1
+		--cluster-signing-key-file=/srv/kubernetes/ca.key \
+		--cluster-signing-cert-file=/srv/kubernetes/ca.crt >> $log 2>&1
 }
 
 scheduler() {
