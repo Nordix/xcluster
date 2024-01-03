@@ -66,17 +66,11 @@ cmd_test() {
     rm -f $XCLUSTER_TMP/cdrom.iso
 
     if test -n "$1"; then
-        for t in $@; do
-            test_$t
-        done
+		t=$1
+		shift
+        test_$t $@
     else
-		__mode=dual-stack
 		test_start
-		push __no_stop yes
-		__no_start=yes
-		test_default
-		pop __no_stop
-		xcluster_stop
     fi      
 
     now=$(date +%s)
@@ -85,19 +79,10 @@ cmd_test() {
 }
 
 test_start() {
-	test -n "$__mode" || __mode=dual-stack
-	export xcluster___mode=$__mode
-	xcluster_prep $__mode
-	xcluster_start k8s-test k8s-cni-antrea
-
-	otcprog=k8s-test_test
+	xcluster_start . $@
 	otc 1 check_namespaces
 	otc 1 check_nodes
 	otcr vip_routes
-	otc 1 start_servers
-	unset otcprog
-
-	otc 1 start_k8s_cni_antrea
 }
 
 test_default() {
