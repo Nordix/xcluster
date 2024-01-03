@@ -1,14 +1,14 @@
 # Xcluster - ovl/k8s-cni-calico
 
-Use [project calico](https://www.projectcalico.org/) in
+Use [project calico](https://www.projectcalico.org/)
+([github](https://github.com/projectcalico/calico)) in
 `xcluster`. Different date-planes can be tested.
 
 Calico has currently 3 data-planes:
 
 * linux - the traditional Calico data-plane
-* epbf - A eBPF based data-plane ([no dual-stack support](
-         https://github.com/projectcalico/calico/issues/4736))
-* vpp - A VPP user-space data-plane (not working yet in xcluster)
+* epbf - A eBPF based data-plane
+* vpp - A VPP user-space data-plane
 
 The installation can be made with manifests or the `Tigera operator`.
 
@@ -61,13 +61,13 @@ xcadmin k8s_test --no-start test-template > $log
 
 Extra pre-loads needed by the operator and vpp:
 ```
-ver=v3.26.4
+ver=v3.27.0
 images lreg_cache docker.io/calico/pod2daemon-flexvol:$ver
 images lreg_cache docker.io/calico/typha:$ver
 images lreg_cache docker.io/calico/node-driver-registrar:$ver
 images lreg_cache docker.io/calico/csi:$ver
-images lreg_cache docker.io/calicovpp/agent:v3.26.0
-images lreg_cache docker.io/calicovpp/vpp:v3.26.0
+images lreg_cache docker.io/calicovpp/agent:$ver
+images lreg_cache docker.io/calicovpp/vpp:$ver
 ```
 
 While testing out configurations it may be best to start manually.
