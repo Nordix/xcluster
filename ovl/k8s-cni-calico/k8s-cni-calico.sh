@@ -107,7 +107,7 @@ test_start_vpp() {
 ##   test start_bpf
 ##     Start cluster with the eBPF data-plane. Kube-proxy is disabled.
 test_start_bpf() {
-	export xcluster_PROXY_MODE=disabled
+	#export xcluster_PROXY_MODE=disabled
 	export xcluster_CALICO_BACKEND=bpf
 	test_start_empty $@
 	otcr vip_routes
