@@ -45,39 +45,6 @@ cmd_tcase_vip_routes() {
 	tcase "Set VIP routes (ECMP)"
 	vip_route
 }
-cmd_tcase_start_k8s_cni_antrea() {
-	tcase "Start k8s-cni-antrea"
-	apply_k8s $yamld
-	if ipv6base; then
-		assign-lb-ip -svc k8s-cni-antrea -ip 1000::50
-	else
-		assign-lb-ip -svc k8s-cni-antrea -ip 10.0.0.50
-	fi
-	if test "$__mode" = "dual-stack"; then
-		assign-lb-ip -svc k8s-cni-antrea-ipv4 -ip 10.0.0.51
-		assign-lb-ip -svc k8s-cni-antrea-ipv6 -ip 1000::51
-		assign-lb-ip -svc k8s-cni-antrea-dual -ip 1000::52,10.0.0.52
-	fi
-	test_daemonset k8s-cni-antrea 180
-}
-cmd_tcase_external_traffic() {
-	tcase "External traffic"
-	if ipv6base; then
-		external_traffic [1000::50]:5001
-	else
-		external_traffic 10.0.0.50:5001
-	fi
-	if test "$__mode" = "dual-stack"; then
-		external_traffic 10.0.0.51:5001
-		external_traffic [1000::51]:5001
-		external_traffic 10.0.0.52:5001
-		external_traffic [1000::52]:5001
-	fi
-}
-external_traffic() {
-	tlog "Traffic to; $1"
-	do_mconnect $1 || tdie "mconnect to; $1"
-}
 
 . /etc/profile
 . /usr/lib/xctest
