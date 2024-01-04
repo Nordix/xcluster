@@ -3,6 +3,7 @@
 export PATH="/bin:/sbin:/usr/bin:/usr/sbin"
 . /etc/profile
 test -n "$PREFIX" || PREFIX=1000::1
+test -n "$DOMAIN" || DOMAIN=xcluster
 
 die() {
         echo "$@"
@@ -39,6 +40,9 @@ apiserver() {
 		--client-ca-file=/srv/kubernetes/ca.crt \
 		--tls-private-key-file=/srv/kubernetes/server.key \
 		--tls-cert-file=/srv/kubernetes/server.crt \
+		--service-account-issuer=https://kubernetes.default.svc.$DOMAIN \
+		--service-account-key-file=/srv/kubernetes/server.crt \
+		--service-account-signing-key-file=/srv/kubernetes/server.key \
 		>> $log 2>&1
 }
 
