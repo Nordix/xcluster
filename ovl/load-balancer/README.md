@@ -39,15 +39,11 @@ downloaded to `$ARCHIVE` (defaults to ~/Downloads).
 
 ## ECMP load-balancer
 
-Ecmp does not work with linux > 5.4.x so download;
-```
-curl https://artifactory.nordix.org/artifactory/cloud-native/xcluster/images/bzImage-linux-5.4.35 > \
-  $XCLUSTER_WORKSPACE/xcluster/bzImage-linux-5.4.35
-```
-
-This is the simplest form of load-balancer. Due to some kernel bug
-linux-5.5.x and above sprays packets regardless of hash so
-`linux-5.4.35` is used in tests.
+This is the simplest form of load-balancer. It just setup a multi-path
+route using [Equal Cost Multi Path](
+https://en.wikipedia.org/wiki/Equal-cost_multi-path_routing) Due to
+a [kernel bug](https://github.com/Nordix/xcluster/issues/41) kernels
+$\geq$ `linux-6.5.4` must be used.
 
 ```
 __nrouters=1 __nvm=10 ./load-balancer.sh test --scale=1 ecmp_scale_in > $log
@@ -74,9 +70,8 @@ The in-kernel load-balancer.
 
 ```
 # "dsr" or "masq"
-export xcluster_IPVS_SETUP=dsr
-./load-balancer.sh test ipvs > $log
-__nvm=10 ./load-balancer.sh test --view ipvs_scale > $log
+xcluster_IPVS_SETUP=dsr ./load-balancer.sh test ipvs > $log
+__nvm=10 xcluster_IPVS_SETUP=dsr ./load-balancer.sh test --view ipvs_scale > $log
 ```
 
 There are no individual scale_out and scale_in tests for ipvs since it
@@ -109,7 +104,7 @@ __nrouters=1 ./load-balancer.sh test start_nfqueue > $log
 # On vm-221;
 mconnect -address 10.0.0.0:5001 -nconn 100 -srccidr 50.0.0.0/16
 ctraffic -address 10.0.0.0:5003 -nconn 100 -srccidr 50.0.0.0/16 -timeout 1m -monitor -rate 100
-# On vm-201
+# On vm-201 (while ctraffic is running)
 nfqlb show
 nfqlb deactivate 101
 # ...
@@ -139,8 +134,7 @@ connections are preserved.
 As described [here](https://github.com/Nordix/nfqueue-loadbalancer/blob/master/syn-only.md).
 
 ```
-export xcluster_SYN_ONLY=yes
-__nrouters=1 ./load-balancer.sh test start_nfqueue > $log
+__nrouters=1 xcluster_SYN_ONLY=yes ./load-balancer.sh test start_nfqueue > $log
 # On vm-221
 ctraffic -address [1000::]:5003 -nconn 100 -srccidr 2000::/112 -timeout 30s -monitor -rate 100
 # On vm-201
@@ -181,11 +175,12 @@ mconnect -address 10.0.0.0:5001 -nconn 100
 
 ## XDP
 
+**OBSOLETE**; The XF_XDP setup has changed since this was written, so
+this example must be updated.
+
+
 [XDP](https://en.wikipedia.org/wiki/Express_Data_Path) (Express Data
 Path) provides yet another way to process packets in user-space.
-
-**BUG**; At present connections are stuck in "ESTABLISHED" on the
-  servers.
 
 In this example a `eBPF` program is attached to `eth2`, called the
 "ingress" interface. It filters packets with a VIP address as
