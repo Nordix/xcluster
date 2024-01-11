@@ -35,10 +35,10 @@ dbg() {
 ##   env
 ##     Print environment.
 cmd_env() {
-	test -n "$__containerd_ver" || __containerd_ver=1.7.0
+	test -n "$__containerd_ver" || __containerd_ver=1.7.11
 	test -n "$__containerd_ar" || __containerd_ar=containerd-$__containerd_ver-linux-amd64.tar.gz
 
-	test -n "$__crictl_ver" || __crictl_ver=v1.27.1
+	test -n "$__crictl_ver" || __crictl_ver=v1.29.0
 	test -n "$__crictl_ar" ||  __crictl_ar=crictl-$__crictl_ver-linux-amd64.tar.gz
 
 	if test "$cmd" = "env"; then
