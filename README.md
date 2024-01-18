@@ -1,7 +1,5 @@
 # Xcluster - Experimental Cluster Environment
 
-Unfortunately, this project doesn't have anyone who can maintain going forward. Maintainence will continue at https://github.com/uablrek/xcluster for now.
-
 A [very lightweight](doc/100nodes.md) and configurable cluster
 environment primarily intended for development and test of network
 functions.
