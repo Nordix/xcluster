@@ -16,11 +16,4 @@ spec:
       - name: alpine
         image: docker.io/library/alpine:latest
         imagePullPolicy: IfNotPresent
-        command: ["tail", "-f", "/dev/null"]
-        securityContext:
-          privileged: true
-      - name: mconnect
-        image: registry.nordix.org/cloud-native/mconnect:latest
-        imagePullPolicy: IfNotPresent
-        ports:
-        - containerPort: 5001
+        command: ["nc", "-lk", "-p", "6000", "-e", "hostname"]
