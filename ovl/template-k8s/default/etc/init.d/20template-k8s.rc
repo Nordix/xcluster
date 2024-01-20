@@ -1,0 +1,6 @@
+#! /bin/sh
+. /etc/profile
+
+if test -n "$DOMAIN"; then
+	grep -q '^search' /etc/resolv.conf || echo "search $DOMAIN" >> /etc/resolv.conf
+fi

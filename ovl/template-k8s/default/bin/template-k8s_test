@@ -14,7 +14,7 @@ tmp=/tmp/${prg}_$$
 
 . /etc/profile
 test -n "$DOMAIN" || DOMAIN=xcluster
-test -n "$PREFIX" || PREFIX=1000::1
+test -n "$PREFIX" || PREFIX=fd00:
 yamld=/etc/kubernetes/template-k8s
 
 die() {
@@ -43,24 +43,115 @@ cmd_tcase_check_namespaces() {
 cmd_tcase_check_nodes() {
 	test_nodes
 }
+##   tcase_vip_routes [via]
+##     Set VIP routes. Use ECMP if "via" is unspecified
 cmd_tcase_vip_routes() {
-	tcase "Set VIP routes (ECMP)"
-	vip_route
+	if test -n "$1"; then
+		tcase "Set VIP route via $1"
+        ip ro replace 10.0.0.0/24 via $1 || tdie Ipv4
+        ip -6 ro replace $PREFIX:10.0.0.0/120 via $PREFIX:$1 || tdie Ipv6
+	else
+		tcase "Set VIP route via ECMP"
+		if test "$TOPOLOGY" = "backend"; then
+			tlog "Using TOPOLOGY=backend"
+			vip_route 3
+			sed -i -e 's,192.168.1.1,192.168.3.1,' $KUBECONFIG
+		else
+			vip_route
+		fi
+	fi
 }
-##   tcase_start_servers
-##     Start application servers and a svc
-cmd_tcase_start_servers() {
-	tcase "Start application servers and a svc"
-	$kubectl create -f $yamld/alpine.yaml || tdie alpine
-	$kubectl create -f $yamld/svc.yaml || tdie svc
-	assign-lb-ip -svc alpine -ip 10.0.0.0,$PREFIX:10.0.0.0
-	test_deployment alpine 60
+##   tcase_wait
+##     Wait for serviceaccount "default" to appear
+cmd_tcase_wait() {
+	tcase 'Wait for serviceaccount "default" to appear'
+	pushv 60 60 1
+	tex kubectl get serviceaccount default 2>&1
+}
+##   tcase_svc <svc> [vip]
+##     Create a service and set the loadBalancerIP's (optional)
+cmd_tcase_svc() {
+	tcase "Create service [$1] ($2)"
+	test -n "$1" || tdie "No service"
+	local svc=$1
+	local f=$yamld/svc-$svc.yaml
+	test -r $f || f=$yamld/$svc.yaml
+	test -r $f || tdie "Can't find manifest"
+	$kubectl apply -f $f || tdie "kubectl apply"
+	if test -n "$2"; then
+		assign-lb-ip -svc $svc -ip $2,$PREFIX:$2 || tdie assign-lb-ip
+	fi
+}
+##   tcase_deployment [--replicas=] <deployment>
+##     Start a deployment
+cmd_tcase_deployment() {
+	tcase "Start deployment [$1] ($__replicas)"
+	test -n "$1" || tdie "No deployment"
+	local f=$yamld/$1.yaml
+	test -r $f || tdie "Can't find manifest"
+	test -n "$__replicas" && \
+		sed -i -E "s,replicas: [0-9]+,replicas: $__replicas," $f
+	$kubectl apply -f $f || tdie "kubectl apply"
+	test_deployment $1 120
+}
+##   tcase_daemonset <daemonset>
+##     Start a daemonset
+cmd_tcase_daemonset() {
+	tcase "Start daemonset [$1]"
+	test -n "$1" || tdie "No daemonset"
+	local f=$yamld/$1.yaml
+	test -r $f || tdie "Can't find manifest"
+	$kubectl apply -f $f || tdie "kubectl apply"
+	test_daemonset $1 120
+}
+##   tcase_mconnect [--pod=selector] [--udp] <address> [nconn] [targets] [margin]
+##     Connectivity test with mconnect
+cmd_tcase_mconnect() {
+	test "$__udp" = "yes" && mcopts=-udp
+	tcase "Mconnect to $1 $__pod $mcopts"
+	test -n "$1" || tdie "No dest"
+	adr=$1  # (used in mconnect_from_pod())
+	shift
+	# Add brackets to ipv6 addresses if needed
+	if echo $adr | grep -q :; then
+		echo $adr | grep -qF '[' || adr="[$adr]"
+	fi
+	pushv 60 10 2
+	if test -z "$__pod"; then
+		tex "do_mconnect $adr $@"
+		return
+	fi
+
+	pod=$(get_pod $__pod)  # (used in mconnect_from_pod())
+	tlog "From POD $pod"
+	echo "$pod" | grep -q null && tdie "Pod not found"
+	tex "mconnect_from_pod $@"
+}
+mconnect_from_pod() {
+	mkdir -p $tmp
+	local out=$tmp/out
+	local nconn=100
+	if test -n "$1"; then
+		nconn=$1
+		shift
+	fi
+	if echo $adr | grep -qF ']' ; then
+		echo $adr | grep -qF ']:' || adr=$adr:5001
+	else
+		echo $adr | grep -qF ':' || adr=$adr:5001
+	fi
+	if ! $kubectl exec $pod -- \
+		mconnect -address $adr -nconn $nconn -output json $mcopts > $out; then
+		cat $out | jq .
+		return 1
+	fi
+	check_mconnect_result $out $nconn $@
 }
 
 . /usr/lib/xctest
 indent='  '
 
-
+##
 # Get the command
 cmd=$1
 shift

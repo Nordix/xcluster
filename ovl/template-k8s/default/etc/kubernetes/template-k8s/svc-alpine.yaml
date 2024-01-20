@@ -9,5 +9,5 @@ spec:
   type: LoadBalancer
   allocateLoadBalancerNodePorts: false
   ports:
-  - port: 5001
+  - port: 6000
     name: nc

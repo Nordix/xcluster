@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: mconnect
+spec:
+  ipFamilyPolicy: RequireDualStack  
+  type: LoadBalancer
+  selector:
+    app: mconnect
+  ports:
+  - port: 5001

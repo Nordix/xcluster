@@ -1,0 +1,19 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mconnect
+spec:
+  selector:
+    matchLabels:
+      app: mconnect
+  replicas: 4
+  template:
+    metadata:
+      labels:
+        app: mconnect
+    spec:
+      containers:
+      - name: mconnect
+        image: registry.nordix.org/cloud-native/mconnect:latest
+        ports:
+        - containerPort: 5001
