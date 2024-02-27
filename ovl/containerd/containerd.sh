@@ -26,10 +26,12 @@ test -n "$1" || help
 echo "$1" | grep -qi "^help\|-h" && help
 
 log() {
-	echo "$prg: $*" >&2
+	echo "$*" >&2
 }
-dbg() {
-	test -n "$__verbose" && echo "$prg: $*" >&2
+findf() {
+	f=$ARCHIVE/$1
+	test -r $f || f=$HOME/Downloads/$1
+	test -r $f
 }
 
 ##   env
@@ -42,8 +44,9 @@ cmd_env() {
 	test -n "$__crictl_ar" ||  __crictl_ar=crictl-$__crictl_ver-linux-amd64.tar.gz
 
 	if test "$cmd" = "env"; then
-		set | grep -E '^(__.*)='
-		retrun 0
+		local opt="containerd.*|crictl.*"
+		set | grep -E "^(__($opt))="
+		exit 0
 	fi
 
 	test -n "$XCLUSTER" || die 'Not set [$XCLUSTER]'
@@ -54,28 +57,31 @@ cmd_env() {
 ##   version
 ##     Print the containerd version
 cmd_version() {
-	cmd_env
 	echo $__containerd_ver
 }
 ##   archive
 ##     Print the containerd archive or die trying
 cmd_archive() {
-	cmd_env
-	local ar=$ARCHIVE/$__containerd_ar
-	test -r $ar || ar=$HOME/Downloads/$__containerd_ar
-	test -r $ar || die "Not found [$__containerd_ar]"
-	echo $ar
+	findf $__containerd_ar || die "Not found [$__containerd_ar]"
+	echo $f
 }
-##   install <dir>
-##     Install in the specified dir (must exist)
+##   install [--containerd_ver=local] <dir>
+##     Install in the specified dir (must exist). If containerd_ver=local
+##     containerd is copied from $GOPATH/src/github.com/containerd/containerd
 cmd_install() {
 	test -n "$1" || die "No dir"
 	local dest=$1
 	test -d "$dest" || die "Not a directory [$dest]"
-	cmd_archive > /dev/null
+	if test "$__containerd_ver" = "local"; then
+		log "Installing containerd from local build"
+		local d=$GOPATH/src/github.com/containerd/containerd
+		test -x $d/bin/containerd || die "Not buil't locally"
+		cp $d/bin/* $dest
+		return 0
+	fi
+	findf $__containerd_ar || die "Not found [$__containerd_ar]"
 	log "Installing containerd [$__containerd_ver]"
-	local ar=$(cmd_archive)
-	tar --strip-components=1 -C $dest -xf $ar || die tar
+	tar --strip-components=1 -C $dest -xf $f || die tar
 }
 ##   install_crictl <dir>
 ##     Install "crictl" in the specified dir (must exist)
@@ -83,56 +89,58 @@ cmd_install_crictl() {
 	test -n "$1" || die "No dir"
 	local dest=$1
 	test -d "$dest" || die "Not a directory [$dest]"
-	cmd_env
-	ar=$ARCHIVE/$__crictl_ar
-	test -r $ar || ar=$HOME/Downloads/$__crictl_ar
-	test -r $ar || die "Not found [$__crictl_ar]"
+	findf $__crictl_ar || die "Not found [$__crictl_ar]"
 	log "Installing crictl [$__crictl_ver]"
-	tar -C $dest -xf $ar || die tar
+	tar -C $dest -xf $f || die tar
 }
 ##   download
+##     Download containerd and crictl from their github releases to $ARCHIVE
 cmd_download() {
-	cmd_env
 	local url ar
-	
-	if ! (cmd_archive) > /dev/null 2>&1; then
+	if findf $__containerd_ar; then
+		log "Already downloaded [$f]"
+	else
 		url=https://github.com/containerd/containerd/releases/download
 		ar=$ARCHIVE/$__containerd_ar
 		mkdir -p $ARCHIVE
 		curl -L $url/v$__containerd_ver/$__containerd_ar > $ar
 	fi
-	cmd_archive
-	ar=$ARCHIVE/$__crictl_ar
-	if ! test -r $ar; then
+	if findf $__crictl_ar; then
+		log "Already downloaded [$f]"
+	else
 		url=https://github.com/kubernetes-sigs/cri-tools/releases/download
 		curl -L $url/$__crictl_ver/$__crictl_ar > $ar
 	fi
 }
 
 ##
-##   test [--xterm] [--no-stop] [test...] > logfile
+##   test [--xterm] [--no-stop] [test...]
 ##     Exec tests
-##
 cmd_test() {
 	cmd_env
     start=starts
     test "$__xterm" = "yes" && start=start
     rm -f $XCLUSTER_TMP/cdrom.iso
 
-    if test -n "$1"; then
-        for t in $@; do
-            test_$t
-        done
-    else
-        test_start
-    fi      
+	local t=start_empty
+	if test -n "$1"; then
+		local t=$1
+		shift
+	fi		
 
-    now=$(date +%s)
-    tlog "Xcluster test ended. Total time $((now-begin)) sec"
+	if test -n "$__log"; then
+		date > $__log || die "Can't write to log [$__log]"
+		test_$t $@ >> $__log
+	else
+		test_$t $@
+	fi
+
+	now=$(date +%s)
+	log "Xcluster test ended. Total time $((now-begin)) sec"
 }
 
 ##   test start_empty
-##     Start cluster
+##     Start cluster with containerd, but without K8s
 test_start_empty() {
 	export __image=$XCLUSTER_HOME/hd.img
 	unset XOVLS
@@ -141,13 +149,6 @@ test_start_empty() {
 	export CONTAINERD_TEST=yes
 	xcluster_start network-topology iptools private-reg k8s-cni-bridge containerd $@
 	otc 1 version
-}
-
-##   test start (default)
-##     Start cluster and setup
-test_start() {
-	test -n "$__nrouters" || export __nrouters=0
-	test_start_empty
 }
 
 . $($XCLUSTER ovld test)/default/usr/lib/xctest
@@ -175,6 +176,7 @@ long_opts=`set | grep '^__' | cut -d= -f1`
 
 # Execute command
 trap "die Interrupted" INT TERM
+cmd_env
 cmd_$cmd "$@"
 status=$?
 rm -rf $tmp
