@@ -40,11 +40,37 @@ EOF
 	done
 }
 
+# Generate a version=3 config for containerd v2.x
+config_private_reg2() {
+	local r cfgpath=/etc/containerd/certs.d
+	cat >> $cfg <<EOF
+version = 3
+[plugins.'io.containerd.cri.v1.images'.PinnedImages]
+  sandbox = "registry.k8s.io/pause:3.8"
+[plugins.'io.containerd.cri.v1.images'.registry]
+  config_path = "$cfgpath"
+EOF
+	mkdir -p $cfgpath/_default
+	cat > $cfgpath/_default/hosts.toml <<EOF
+server = "http://example.com:80"
+[host."http://example.com:80"]
+  capabilities = ["pull"]
+  skip_verify = true
+EOF
+	# Use "example.com" since it's spoofed to the docker registry address
+}
+
 crictl config --set runtime-endpoint=unix:///run/containerd/containerd.sock
 
 cfg=/etc/containerd/config.toml
 mkdir -p /etc/containerd
-test -r /etc/spoofed-hosts && config_private_reg
+if test -r /etc/spoofed-hosts; then
+	if containerd --version | grep -qF v2.; then
+		config_private_reg2
+	else
+		config_private_reg
+	fi
+fi
 
 containerd > /var/log/containerd.log 2>&1 &
 sleep 0.2
