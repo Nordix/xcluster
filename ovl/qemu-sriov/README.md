@@ -8,14 +8,13 @@ having an emulated NIC with SR-IOV support to let you test and develop
 sr-iov applications with qemu instead of buying (and maintaining)
 expensive HW.
 
-Support for SR-IOV was added to `qemu` in commit `7c0fa8dff`. It is
-included in qemu `v7.0.0` (git tag --contains 7c0fa8dff).
+Support for the `igb` NIC with SR-IOV was added to `qemu` in `v8.x.x`,
+which is included in Ubuntu 24.04. If you have an older `qemu` you
+must build it locally (described below).
 
-A NIC that supports SR-IOV in `qemu` is now available. It is built on the
-Intel `igb` emulation by @knuto.
 
 The [multilan-router](../network-topology#multilan-router) network
-topology is most often used.
+topology is used.
 
 <img src="../network-topology/multilan-router.svg" width="60%" />
 
@@ -37,8 +36,8 @@ cd build
 ../configure --target-list=x86_64-softmmu
 make -j$(nproc)
 make DESTDIR=$PWD/sys install
-./qemu-system-x86_64 -net nic,model=? | grep igb
-./qemu-system-x86_64 -M ?  # -m q35 must be used!
+./qemu-system-x86_64 -nic model=help | grep igb
+./qemu-system-x86_64 -M help  # -m q35 must be used!
 ```
 
 ## Manual basic test
@@ -47,9 +46,10 @@ Requirement; `xcluster` must be started in an own [netns](
 https://github.com/Nordix/xcluster/blob/master/doc/netns.md).
 
 ```
+#export __log=/tmp/$USER/xcluster/test.log
 cdo qemu-sriov
 . ./Envsettings
-./qemu-sriov.sh test start_empty > $log
+./qemu-sriov.sh test start_empty
 # On vm-001
 lspci | grep 82576
 modprobe igb
@@ -99,6 +99,13 @@ chmod 660 /dev/kvm
 ./qemu-sriov.sh test > $log           # Default tests
 images lreg_preload default           # Pre-load the local registry
 ./qemu-sriov.sh test start_k8s > $log # Test with K8s.
+```
+
+For test with multus the whereabouts CNI-plugin is required:
+
+```
+eval $(./qemu-sriov.sh env | grep WHEREABOUTS_DIR)
+test -d $WHEREABOUTS_DIR || git clone https://github.com/k8snetworkplumbingwg/whereabouts.git --depth 1 $WHEREABOUTS_DIR
 ```
 
 ## CNI-plugin trace
