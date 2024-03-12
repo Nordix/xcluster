@@ -24,24 +24,23 @@ help() {
 }
 test -n "$1" || help
 echo "$1" | grep -qi "^help\|-h" && help
-
 log() {
-	echo "$prg: $*" >&2
-}
-dbg() {
-	test -n "$__verbose" && echo "$prg: $*" >&2
+	echo "$*" >&2
 }
 
 ##   env
 ##     Print environment.
 cmd_env() {
 
+	test -n "$__repo" || __repo=registry.nordix.org/cloud-native
+	test -n "$WHEREABOUTS_DIR" || WHEREABOUTS_DIR=$GOPATH/src/github.com/k8snetworkplumbingwg/whereabouts
+	test -n "$SRIOV_DIR"|| SRIOV_DIR=$GOPATH/src/github.com/k8snetworkplumbingwg/sriov-cni
 	if test "$cmd" = "env"; then
-		set | grep -E '^(__.*)='
-		retrun 0
+		local opt="repo|log|net_setup|machine"
+		set | grep -E "^(__($opt)|WHEREABOUTS_DIR|SRIOV_DIR)="
+		exit 0
 	fi
 
-	test -n "$__repo" || __repo=registry.nordix.org/cloud-native
 	images=$($XCLUSTER ovld images)/images.sh
 	test -n "$XCLUSTER" || die 'Not set [$XCLUSTER]'
 	test -x "$XCLUSTER" || die "Not executable [$XCLUSTER]"
@@ -53,13 +52,12 @@ cmd_env() {
 ##     Clone if necessary. --local builds sriov-network-device-plugin
 ##     with a local Dockerfile.
 cmd_build_sriov_images() {
-	cmd_env
 	cmd_clone_sriov
 	cd $SRIOV_CNI_DIR
 	make || dir "Make sriov-cni"
 	local tag=$__repo/sriov-cni:latest
 	docker build . -t $__repo/sriov-cni:latest
-	$images lreg_upload --force --strip-host $tag
+	$images lreg_upload --force $tag
 	if test "$__local" = "yes"; then
 		cmd_build_local_dev_plugin
 		return
@@ -67,15 +65,11 @@ cmd_build_sriov_images() {
 	cd $SRIOV_DP_DIR
 	tag=$__repo/sriov-network-device-plugin:latest
 	make TAG=$tag image || die "make sriov-network-device-plugin"
-	$images lreg_upload --force --strip-host $tag
+	$images lreg_upload --force $tag
 }
 cmd_build_local_dev_plugin() {
-	cmd_env
-	if ! test -n "$SRIOV_DP_DIR"; then
-		cd $dir
-		. ./Envsettings
-	fi
-	cd $SRIOV_DP_DIR
+	test -n "$SRIOV_DP_DIR" || . ./Envsettings
+	cd $SRIOV_DP_DIR || die
 	make build || die "make-device-plugin build"
 	if ! test -x build/ddptool; then
 		cd build
@@ -92,7 +86,6 @@ cmd_build_local_dev_plugin() {
 ##     - github.com/k8snetworkplumbingwg/sriov-cni
 ##     - github.com/k8snetworkplumbingwg/sriov-network-device-plugin
 cmd_clone_sriov() {
-	cd $dir
 	. ./Envsettings
 	test -d $SRIOV_CNI_DIR || git clone --depth 1 \
 		https://github.com/k8snetworkplumbingwg/sriov-cni.git $SRIOV_CNI_DIR
@@ -104,33 +97,37 @@ cmd_clone_sriov() {
 ##   test [--xterm] [--no-stop] [test [ovls...]] > logfile
 ##     Exec tests
 cmd_test() {
-	cmd_env
+	cd $dir
     start=starts
     test "$__xterm" = "yes" && start=start
     rm -f $XCLUSTER_TMP/cdrom.iso
 
-    if test -n "$1"; then
+	local t=net3
+	if test -n "$1"; then
 		local t=$1
 		shift
-        test_$t $@
-    else
-		test_net3
-    fi      
+	fi		
 
-    now=$(date +%s)
-    tlog "Xcluster test ended. Total time $((now-begin)) sec"
+	if test -n "$__log"; then
+		mkdir -p $(dirname "$__log")
+		date > $__log || die "Can't write to log [$__log]"
+		test_$t $@ >> $__log
+	else
+		test_$t $@
+	fi
 
+	now=$(date +%s)
+	log "Xcluster test ended. Total time $((now-begin)) sec"
 }
 ##   test start_empty
 ##     Starts an empty cluster without K8s
 test_start_empty() {
-	cd $dir
 	. ./Envsettings
 	export __image=$XCLUSTER_HOME/hd.img
 	echo "$XOVLS" | grep -q private-reg && unset XOVLS
 	export TOPOLOGY="multilan-router"
 	. $($XCLUSTER ovld network-topology)/$TOPOLOGY/Envsettings
-	xcluster_start network-topology lspci iptools qemu-sriov $@
+	xcluster_start network-topology lspci iptools . $@
 }
 ##   test start
 ##     Start a cluster without K8s but with igb modules loaded and
@@ -143,15 +140,20 @@ test_start() {
 }
 ##   test start_multus
 ##     Start a K8s cluster with Multus, whereabouts and igb devices.
-##     Extra network interfaces are up and have addresses.
+##     Extra network interfaces are up and have addresses. Local
+##     "whereabouts" and "" CNI-plugins are required
 test_start_multus() {
+	test -d $WHEREABOUTS_DIR || die "No local whereabouts clone"
+	test -x $WHEREABOUTS_DIR/bin/whereabouts || die "Whereabouts not built"
+	test -d $SRIOV_DIR || die "No local sriov-cni clone"
+	test -x $SRIOV_DIR/build/sriov || die "Sriov-cni not built"
 	. ./Envsettings
 	export TOPOLOGY="multilan-router"
 	export xcluster_XLAN_TEMPLATE=192.168.0.0/16/24
 	export PREFIX=fd00:
 	export xcluster_PREFIX=fd00:	
 	. $($XCLUSTER ovld network-topology)/$TOPOLOGY/Envsettings
-	xcluster_start lspci iptools network-topology multus qemu-sriov $@
+	xcluster_start lspci iptools network-topology multus . $@
 	otc 1 check_namespaces
 	otc 1 multus_crd
 	otc 1 deploy_whereabouts
@@ -209,6 +211,8 @@ long_opts=`set | grep '^__' | cut -d= -f1`
 
 # Execute command
 trap "die Interrupted" INT TERM
+cmd_env
+cd $dir
 cmd_$cmd "$@"
 status=$?
 rm -rf $tmp
