@@ -18,6 +18,7 @@ config_private_reg() {
 version = 2
 [plugins."io.containerd.grpc.v1.cri"]
   sandbox_image = "registry.k8s.io/pause:3.8"
+  enable_cdi = true
 EOF
 	cat >> $cfg <<EOF
 [plugins."io.containerd.grpc.v1.cri".registry]
@@ -45,7 +46,9 @@ config_private_reg2() {
 	local r cfgpath=/etc/containerd/certs.d
 	cat >> $cfg <<EOF
 version = 3
-[plugins.'io.containerd.cri.v1.images'.PinnedImages]
+[plugins.'io.containerd.cri.v1.runtime']
+  enable_cdi = true
+[plugins.'io.containerd.cri.v1.images'.pinned_images]
   sandbox = "registry.k8s.io/pause:3.8"
 [plugins.'io.containerd.cri.v1.images'.registry]
   config_path = "$cfgpath"
