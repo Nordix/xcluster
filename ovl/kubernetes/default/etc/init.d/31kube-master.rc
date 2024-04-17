@@ -43,6 +43,13 @@ apiserver() {
 		--service-account-issuer=https://kubernetes.default.svc.$DOMAIN \
 		--service-account-key-file=/srv/kubernetes/server.crt \
 		--service-account-signing-key-file=/srv/kubernetes/server.key \
+		--proxy-client-cert-file=/srv/kubernetes/server.crt \
+		--proxy-client-key-file=/srv/kubernetes/server.key \
+		--requestheader-client-ca-file=/srv/kubernetes/ca.crt \
+		--requestheader-allowed-names="" \
+		--requestheader-extra-headers-prefix=X-Remote-Extra \
+		--requestheader-group-headers=X-Remote-Group \
+		--requestheader-username-headers=X-Remote-User \
 		>> $log 2>&1
 }
 

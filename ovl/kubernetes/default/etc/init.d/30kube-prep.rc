@@ -58,11 +58,6 @@ fi
 modprobe br-netfilter
 sysctl -w net.bridge.bridge-nf-call-iptables=1
 
-# New security updates in v1.20
-key=/srv/kubernetes/server.key
-grep -q API_FLAGS /etc/profile || \
-	echo "API_FLAGS='--service-account-signing-key-file=$key --service-account-issuer=Nemo --service-account-key-file=$key'" >> /etc/profile
-
 f=/etc/kubernetes/kube-proxy.config
 for g in $(echo $FEATURE_GATES | tr ',' ' '); do
 	g=$(echo $g | sed -e 's,=,: ,')
