@@ -16,11 +16,16 @@ Cri-o have a binary release since v1.18. It can't be downloaded with
 https://github.com/cri-o/cri-o/releases) and store it in $ARCHIVE.
 
 ```
-ver=v1.24.1
+ver=v1.29.2
 ar=cri-o.amd64.$ver.tar.gz
 mv $HOME/Downloads/$ar $ARCHIVE/$ar
 tar -C default --strip-components=1 -xf $ARCHIVE/$ar cri-o/etc/crio.conf
 ```
+
+In crio v1.29, the binaries are pre-pended with "crio-". So, "crun"
+becomes "crio-crun". To keep backward compatibility, the old names are
+still used in `crio.conf` but are corrected in the `32cri-plugin.rc` script.
+
 
 ## Test
 
@@ -64,11 +69,11 @@ make binaries
 
 ## Runtime
 
-The [runc](https://github.com/opencontainers/runc) runtime is bundled
-with the `cri-o` static release bundle.
+Both [runc](https://github.com/opencontainers/runc) and
+[crun](https://github.com/containers/crun) runtimes are included
+in the `cri-o` static release bundle. `crun` is used by default, but
+you can alter that in `crio.conf`.
 
-It is possible to replace `runc` with
-[crun](https://github.com/containers/crun)
 
 
 ## Problems
