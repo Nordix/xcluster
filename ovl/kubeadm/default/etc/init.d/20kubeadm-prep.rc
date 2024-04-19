@@ -18,16 +18,16 @@ test $i -le 200 || exit 0
 # Work around for bad install of dropbear
 test -r /usr/bin/dbclient || ln /bin/dbclient /usr/bin/dbclient
 
-mount -t tmpfs tmpfs /sys/fs/cgroup
-for d in cpuset memory; do
-	mkdir /sys/fs/cgroup/$d
-	mount -t cgroup cgroup /sys/fs/cgroup/$d
-done
+mount -t cgroup2 cgroup2 /sys/fs/cgroup
 mount --make-rshared /
+mkdir -p /var/lib/kubelet
 
 modprobe br_netfilter
 echo 1 > /proc/sys/net/ipv4/ip_forward
-mkdir -p /etc/kubernetes/manifests
+echo 1 > /proc/sys/net/ipv6/conf/default/forwarding
+# https://github.com/kubernetes/kubernetes/issues/87426
+modprobe br-netfilter
+sysctl -w net.bridge.bridge-nf-call-iptables=1
 printf '35f15062-7e2b-11e9-b640-0000000100%02x\n' $i > /etc/machine-id
 
 # Disable "normal" k8s start scripts;
@@ -36,28 +36,31 @@ for f in 31kube-master.rc; do
 	chmod a-x /etc/init.d/$f
 done
 
-CRI_OPTS="--container-runtime=remote --container-runtime-endpoint=unix:///var/run/crio/crio.sock"
+#CRI_OPTS="--container-runtime-endpoint=unix:///var/run/crio/crio.sock"
 
+mkdir -p /etc/kubernetes/manifests /run/systemd/system
 export KUBECONFIG=/etc/kubernetes/kubelet.conf
 run_kubelet() {
 	local log=/var/log/kubelet.log
-	local bootstrap=/etc/kubernetes/bootstrap-kubelet.conf
-	if ! test -r $KUBECONFIG; then
-		if ! test -r /etc/kubernetes/bootstrap-kubelet.conf; then
-			echo "Waiting for config..." >> $log
-			return
-		fi
+	local cfg=/var/lib/kubelet/config.yaml
+	flags=/var/lib/kubelet/kubeadm-flags.env
+	if ! test -r $cfg -a -r $flags; then
+		echo "Waiting for config..." >> $log
+		return
 	fi
-	kubelet --node-ip=192.168.1.$i $CRI_OPTS \
+	sed -i -e '/cgroupDriver:/d' $cfg
+	. $flags
+	kubelet --config=$cfg $CRI_OPTS $KUBELET_KUBEADM_ARGS \
+		--node-ip=192.168.1.$i,$PREFIX:192.168.1.$i \
 		--register-node=true --kubeconfig $KUBECONFIG \
 		--cluster-domain=cluster.local \
 		--pod-manifest-path /etc/kubernetes/manifests \
-		--cluster-dns=192.168.1.1 \
 		--bootstrap-kubeconfig /etc/kubernetes/bootstrap-kubelet.conf \
-		--runtime-cgroups=/systemd/system.slice \
-		--kubelet-cgroups=/systemd/system.slice > $log 2>&1
+		--cluster-dns=192.168.1.1 \
+		--runtime-cgroups=/ \
+		--kubelet-cgroups=/ > $log 2>&1
 }
-
+# --runtime-cgroups=/systemd/system.slice
 monitor() {
 	while true; do
 		logger -t K8s-monitor "STARTING: $1"
