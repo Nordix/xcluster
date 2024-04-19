@@ -12,6 +12,12 @@ die() {
 log() {
 	echo "INFO: $*" >&2
 }
+findf() {
+	f=$ARCHIVE/$1
+	test -r $f && return
+	f=$HOME/Downloads/$1
+	test -r $f
+}
 
 test -n "$1" || die "No out-file"
 mkdir -p $tmp/sbin $tmp/bin
@@ -24,7 +30,6 @@ cp $f $tmp/sbin/modprobe
 f=/usr/bin/find
 test -x $f || die "Not executable [$f]"
 cp $f $tmp/bin/find
-
 jq=$(which jq)
 test -n "$jq" && cp $jq $tmp/bin
 
@@ -46,15 +51,13 @@ sed -i -e "s,%k8sver%,$k8sver," $tmp/etc/kubeadm-config.yaml
 mkdir -p $tmp/etc/ssl/certs
 cp /etc/ssl/certs/ca-certificates.crt $tmp/etc/ssl/certs/
 
-f=$ARCHIVE/assign-lb-ip.xz
-if test -r $f; then
-	xz -dc $f > $tmp/bin/assign-lb-ip
-	chmod a+x $tmp/bin/assign-lb-ip
-else
-	log "Not readable [$f]"
-fi
-
 $XCLUSTER cplib --dest=$tmp $tmp/bin/*
+
+if test "$KUBEADM_TEST" = "yes"; then
+	findf assign-lb-ip.xz || die "Can't find [assign-lb-ip.xz]"
+	xz -cd $f > $tmp/bin/assign-lb-ip
+	chmod a+x $tmp/bin/assign-lb-ip
+fi
 
 cd $tmp
 tar cf "$1" *

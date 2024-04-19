@@ -1,4 +1,4 @@
-apiVersion: kubeadm.k8s.io/v1beta2
+apiVersion: kubeadm.k8s.io/v1beta3
 bootstrapTokens:
 - groups:
   - system:bootstrappers:kubeadm:default-node-token
@@ -12,7 +12,7 @@ localAPIEndpoint:
   advertiseAddress: 192.168.1.1
   bindPort: 6443
 nodeRegistration:
-  criSocket: /var/run/crio/crio.sock
+  #criSocket: "unix:///var/run/crio/crio.sock"
   name: vm-001
   taints:
   - effect: NoSchedule
@@ -20,17 +20,16 @@ nodeRegistration:
 ---
 apiServer:
   timeoutForControlPlane: 4m0s
-apiVersion: kubeadm.k8s.io/v1beta2
+apiVersion: kubeadm.k8s.io/v1beta3
 certificatesDir: /etc/kubernetes/pki
 clusterName: kubernetes
 controllerManager: {}
-dns:
-  type: CoreDNS
+dns: {}
 etcd:
   local:
     dataDir: /var/lib/etcd
 featureGates:
-imageRepository: k8s.gcr.io
+imageRepository: registry.k8s.io
 kind: ClusterConfiguration
 kubernetesVersion: %k8sver%
 networking:

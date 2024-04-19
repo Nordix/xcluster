@@ -1,7 +1,7 @@
 # Xcluster ovl - kubeadm
 
 Install Kubernetes with `kubeadm` in xcluster.
-[kubeadm](https://github.com/kubernetes/kubeadm) is the standard
+[kubeadm](https://github.com/kubernetes/kubeadm) is the most common
 installation tool for Kubernetes.
 
 ## Prepare
@@ -9,26 +9,22 @@ installation tool for Kubernetes.
 Dependencies;
 
 * Local private docker registry ([ovl/private-reg](../private-reg))
-* K8s server binaries (can be found via the
-  [changelog](https://github.com/kubernetes/kubernetes/tree/master/CHANGELOG))
 * Some executables are taken from the host; `kmod`, `modprobe`, `find`, `jq`
 * `/etc/ssl/certs/ca-certificates.crt` taken from the host
 * A `cri-o` [static release bundle](https://github.com/cri-o/cri-o/releases)
 * `skopeo` installed on the host (for loading images to the private registry)
-* A CNI-plugin (see below)
-* Optional; [assign-lb-ip.xz](https://github.com/Nordix/assign-lb-ip/releases)
-  (needed for automatic tests)
+* A CNI-plugin (optional)
 
 Downloaded archives should be in the `$ARCHIVE` directory.
 
 Set the K8s version and unpack the K8s server binary;
 ```
-export __k8sver=v1.23.5
+export __k8sver=v1.30.0
 export KUBERNETESD=$HOME/tmp/kubernetes/kubernetes-$__k8sver/server/bin
 # (make sure the K8s server binary are unpacked at $KUBERNETESD)
 alias kubeadm="$KUBERNETESD/kubeadm"
 kubeadm config images list --kubernetes-version $__k8sver  # (just testing)
-log=/tmp/xcluster-$USER.log
+export __log=/tmp/xcluster-$USER.log
 ```
 
 These settings are assumed through this description.
@@ -40,24 +36,58 @@ If the local private registry is ok, just do;
 
 ```
 ./kubeadm.sh cache_images
-images lreg_cache k8s.gcr.io/pause:3.5  # (may be needed)
 ```
 
-[skopeo](https://github.com/containers/skopeo) is used for downloads.
+[skopeo](../skopeo/) is used for downloads.
+
+
+## Installation and test
+
+Prepare as described above.
+
+Examples;
+```
+#export __k8sver=v1.30.0
+./kubeadm.sh test start
+# On vm-001 (control plane)
+kubectl get nodes
+kubectl get pods -A
+```
+
+The [ovl/k8s-test](https://github.com/uablrek/xcluster-ovls/tree/main/k8s-test)
+is used.
+
+```
+./kubeadm.sh test start_app
+cdo k8s-test
+export xcluster_DOMAIN=cluster.local
+./k8s-test.sh test --no-start --no-stop mconnect
+./k8s-test.sh test --no-start --no-stop basic
+./k8s-test.sh test --no-start --no-stop connectivity
+```
+
+### Containerd
+
+To use `containerd` instead of `cri-o`, just add ovl/containerd:
+```
+./kubeadm.sh test start containerd
+# Or
+./kubeadm.sh test start_app containerd
+```
 
 
 ### CNI-plugin
 
-You must select a CNI-plugin. Tested and supported in xcluster are;
+Supported in xcluster are;
 
-* [bridge (xcluster internal)](../k8s-cni-bridge/)
-* [xcluster-cni](https://github.com/Nordix/xcluster-cni) (default)
+* [bridge (xcluster internal)](../k8s-cni-bridge/) This is the default
+* [xcluster-cni](https://github.com/Nordix/xcluster-cni)
 * [Calico](http://www.projectcalico.org/)
 * [Cilium](https://github.com/cilium/cilium)
 * [Flannel](https://github.com/coreos/flannel)
 
-These can be selected with the `--cni=` parameter. Other CNI-plugin
-might work but then you are on your own.
+These can be selected with the `--cni=` parameter.
+
 
 The images for the CNI-plugin must be in the local private
 registry. Check and cache to the local private registry;
@@ -69,26 +99,6 @@ images lreg_preload default
 ```
 
 
-## Automatic Tests or installation
-
-Prepare as described above.
-
-Examples;
-```
-export __k8sver=v1.23.5
-./kubeadm.sh test --list
-./kubeadm.sh test > $log  # Default; --cni=xcluster test_template
-./kubeadm.sh test --cni=cilium test_template > $log
-```
-
-Install and leave the cluster running;
-```
-./kubeadm.sh test --cni=cilium --no-stop install > $log
-./kubeadm.sh test --cni=bridge --no-stop install > $log
-```
-
-
-
 ## Manual Installation
 
 Read a description at;
@@ -96,35 +106,29 @@ Read a description at;
 * https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/create-cluster-kubeadm/
 
 The description assumes that `kubectl`, `kubelet`, `kubeadm` and a
-CRI-plugin (or docker) is installed on the system. An `xcluster` with
-this installed is started with;
+CRI-plugin is installed on the system. An `xcluster` with this
+installed is started with;
 
 ```
-# Dual-stack with --cni=bridge (default);
-./kubeadm.sh test start > $log
-# Dual-stack with Calico;
-./kubeadm.sh test --cni=calico start > $log
+./kubeadm.sh test start_empty > $log
 ```
 
 The rest of the commands are executed on the K8s nodes. Open a
 terminal to the to-be master node with `vm 1`.
 
-### Dual-stack manual installation
-
-In this example `Calico` is used.
-
 ```
-./kubeadm.sh test --cni=calico start > $log
 vm 1
 # On vm-001;
 # Check versions:
-echo $__k8sver
-kubeadm version -o short
+kubeadm version
 # Pull images (from the local registry);
-kubeadm config images pull --kubernetes-version $__k8sver
+kubeadm config images pull
 less /etc/kubeadm-config.yaml  # Check it
 kubeadm init --config /etc/kubeadm-config.yaml
-# just checking...
+# The install of the control-plane (if succesful) prints a
+# "kubeadm join ..." command to be executed on joining nodes
+# Execute this on vm-002, ...
+# Checks
 kubectl get nodes
 kubectl get pods -A
 ```
@@ -154,49 +158,6 @@ coredns -conf /etc/Corefile.k8s 2>&1 > /var/log/coredns.log &
 nslookup kubernetes.default.svc.cluster.local
 ```
 
-
 Now you have a working one-node dual-stack K8s cluster and other nodes
-can join.
-
-
-### Join nodes
-
-```
-vm 2
-# On vm-002
-kubeadm join 192.168.1.1:6443 --token 11n1ns.vneshg4ikfoyiy09 --discovery-token-unsafe-skip-ca-verification
-export KUBECONFIG=/etc/kubernetes/kubelet.conf
-kubectl get nodes
-killall coredns
-coredns -conf /etc/Corefile.k8s 2>&1 > /var/log/coredns.log &
-```
-
-Repeat for other nodes.
-
-You now have a working multi-node cluster.
-
-### Manual tests
-
-It may be a good idea to "untaint" the master node in this small cluster;
-
-```
-vm 1
-# On vm-001;
-kubectl taint node vm-001 node-role.kubernetes.io/master:NoSchedule- || tdie
-```
-
-Some images are "pre-pulled" and can be used immediately;
-
-```
-vm 1
-# On vm-001;
-images  # (alias that list pulled images)
-kubectl apply -f /etc/kubernetes/alpine.yaml
-kubectl get pods -o wide
-kubectl exec -it alpine-deployment-... -- sh
-# In the POD;
-nslookup kubernetes
-... whatever you like
-```
-
-
+can join with the "kubernetes join ..." command printed on install of
+the control plane.

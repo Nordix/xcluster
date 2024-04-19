@@ -26,10 +26,7 @@ test -n "$1" || help
 echo "$1" | grep -qi "^help\|-h" && help
 
 log() {
-	echo "$prg: $*" >&2
-}
-dbg() {
-	test -n "$__verbose" && echo "$prg: $*" >&2
+	echo "$*" >&2
 }
 
 cmd_tcase_check_namespaces() {
@@ -71,18 +68,20 @@ cmd_tcase_init_dual_stack() {
 		tdie "kubeadm init"
 	fi
 }
-
-cmd_tcase_init_ipv4() {
-	tcase "Init ipv4-only"
-	test -n "$1" || tdie "No k8s version"
-	kubeadm init --token=11n1ns.vneshg4ikfoyiy09 --kubernetes-version $1 \
-		--pod-network-cidr 11.0.0.0/16 2>&1 || tdie
+##   tcase_mount_hugep
+##     Mount the hugepages fs
+cmd_tcase_mount_hugep() {
+	tcase "Mount the hugepages fs"
+	local d=/dev/hugepages
+	mkdir -p $d
+    mount -t hugetlbfs nodev $d || tdie
 }
 
 cmd_tcase_join() {
 	tcase "Join node $(hostname)"
 	kubeadm join 192.168.1.1:6443 --token 11n1ns.vneshg4ikfoyiy09 \
-		--discovery-token-unsafe-skip-ca-verification 2>&1 || tdie
+		--discovery-token-unsafe-skip-ca-verification \
+		2>&1 || tdie
 	cat > /etc/resolv.conf <<EOF
 nameserver 192.168.1.1
 options use-vc
@@ -135,7 +134,7 @@ cmd_tcase_untaint_master() {
 cmd_tcase_masquerade() {
 	tcase "Output masquerade"
 	iptables -t nat -I POSTROUTING 1 -s 11.0.0.0/16 ! -d 11.0.0.0/16 -j MASQUERADE
-	ip6tables -t nat -I POSTROUTING 1 -s 1000::2:11.0.0.0/112 ! -d 1000::2:11.0.0.0/112 -j MASQUERADE
+	ip6tables -t nat -I POSTROUTING 1 -s $PREFIX:2:11.0.0.0/112 ! -d $PREFIX:2:11.0.0.0/112 -j MASQUERADE
 }
 cmd_tcase_get_kubeconfig() {
 	tcase "Get kubeconfig"
