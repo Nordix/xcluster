@@ -26,23 +26,30 @@ test -n "$1" || help
 echo "$1" | grep -qi "^help\|-h" && help
 
 log() {
-	echo "$prg: $*" >&2
+	echo "$*" >&2
 }
-dbg() {
-	test -n "$__verbose" && echo "$prg: $*" >&2
+findf() {
+	f=$ARCHIVE/$1
+	test -r $f && return
+	f=$HOME/Downloads/$1
+	test -r $f
 }
 
 ##   env
 ##     Print environment.
 cmd_env() {
 
-	test -n "$__criover" || __criover=cri-o.amd64.v1.28.1
-	test -n "$__crioar" || __crioar=$ARCHIVE/$__criover.tar.gz
+	test -n "$__criover" || __criover=cri-o.amd64.v1.29.2
+	if test -z "$__crioar"; then
+		__crioar=$ARCHIVE/$__criover.tar.gz
+		findf $__criover.tar.gz && __crioar=$f
+	fi
 	test -n "$__pausever" || __pausever=3.9
 
 	if test "$cmd" = "env"; then
-		set | grep -E '^(__.*)='
-		return 0
+		local opt="crio.*|log"
+		set | grep -E "^(__($opt))="
+		exit 0
 	fi
 
 	test -n "$XCLUSTER" || die 'Not set [$XCLUSTER]'
@@ -96,22 +103,27 @@ cmd_man() {
 ##     Exec tests
 ##
 cmd_test() {
-	cmd_env
 	test -r $__crioar || die "Not readable [$__crioar]"
 	start=starts
 	test "$__xterm" = "yes" && start=start
 	rm -f $XCLUSTER_TMP/cdrom.iso
 
+	local t=start
 	if test -n "$1"; then
-		for t in $@; do
-			test_$t
-		done
-	else
-		test_start
+		local t=$1
+		shift
 	fi		
 
+	if test -n "$__log"; then
+		mkdir -p $(dirname "$__log")
+		date > $__log || die "Can't write to log [$__log]"
+		test_$t $@ >> $__log
+	else
+		test_$t $@
+	fi
+
 	now=$(date +%s)
-	tlog "Xcluster test ended. Total time $((now-begin)) sec"
+	log "Xcluster test ended. Total time $((now-begin)) sec"
 }
 
 ##   test start_empty
@@ -140,8 +152,9 @@ test_start() {
 }
 
 
-
+test -z "$__nvm" && __nvm=X
 . $($XCLUSTER ovld test)/default/usr/lib/xctest
+test "$__nvm" = "X" && unset __nvm
 indent=''
 
 ##
@@ -166,6 +179,7 @@ long_opts=`set | grep '^__' | cut -d= -f1`
 
 # Execute command
 trap "die Interrupted" INT TERM
+cmd_env
 cmd_$cmd "$@"
 status=$?
 rm -rf $tmp
