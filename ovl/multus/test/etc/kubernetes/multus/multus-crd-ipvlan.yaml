@@ -6,26 +6,12 @@ spec:
   config: '{
     "cniVersion": "0.4.0",
     "type": "ipvlan",
-	"master": "eth2",
-	"ipam": {
+    "master": "eth2",
+    "ipam": {
       "type": "whereabouts",
-      "range": "4000::16.0.0.0/120",
-      "gateway": "4000::16.0.0.0"
-    }
-  }'
----
-apiVersion: "k8s.cni.cncf.io/v1"
-kind: NetworkAttachmentDefinition
-metadata:
-  name: ipvlan2
-spec:
-  config: '{
-    "cniVersion": "0.4.0",
-    "type": "ipvlan",
-	"master": "eth2",
-	"ipam": {
-      "type": "whereabouts",
-      "range": "16.0.0.0/24",
-      "gateway": "16.0.0.0"
+      "ipRanges": [
+            { "range": "16.0.0.0/24" },
+            { "range": "4000::16.0.0.0/120" }
+      ]
     }
   }'

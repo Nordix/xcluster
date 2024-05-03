@@ -1,5 +1,0 @@
-#! /bin/sh
-i=$(hostname | cut -d- -f2 | sed -re 's,^0+,,')
-cfg=$(jq -r .ipam.cfg)
-d=/etc/cni/node-local
-sed -e "s,%,$i," < $d/$cfg | /opt/cni/bin/host-local

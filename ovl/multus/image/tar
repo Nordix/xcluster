@@ -13,10 +13,17 @@ die() {
 log() {
 	echo "INFO: $*" >&2
 }
+findf() {
+	f=$ARCHIVE/$1
+	test -r $f && return 0
+	f=$HOME/Downloads/$1
+	test -r $f
+}
 
 test -n "$1" || die "No out-file"
 
 msh=$dir/../multus.sh
+eval $($msh env)
 csh=$($XCLUSTER ovld cni-plugins)/cni-plugins.sh
 test -x $csh || die "Not executable"
 
@@ -26,9 +33,8 @@ $msh cparchives $tmp/root || die "cp archives"
 uuid > $tmp/root/sentinel
 
 f=$tmp/root/multus-installer.sh
-v=$($msh version)
-sed -i -e "s,__multus_ver=unknown,__multus_ver=$v," $f
-echo "multus_ver=$v" >> $tmp/root/sentinel
+sed -i -e "s,__multus_ver=unknown,__multus_ver=$__multus_ver," $f
+echo "multus_ver=$__multus_ver" >> $tmp/root/sentinel
 v=$($csh version)
 sed -i -e "s,__cnibin_ver=unknown,__cnibin_ver=$v," $f
 echo "cnibin_ver=$v" >> $tmp/root/sentinel
@@ -38,17 +44,18 @@ f=$(which kubectl)
 mkdir -p $tmp/bin
 cp -L $f $tmp/bin
 
-test -n "$WHEREABOUTS_DIR" || WHEREABOUTS_DIR=$GOPATH/src/github.com/k8snetworkplumbingwg/whereabouts
-f=$WHEREABOUTS_DIR/bin/whereabouts
-if test -x $f; then
-	log "Including whereabouts ipam"
-	cp $f $tmp/root
+if findf whereabouts-amd64; then
+	chmod a+x $f
+	v=$($f --version 2>&1 | grep whereabouts)
+	log "Including $v"
+	cp $f $tmp/root/whereabouts
+	strip $tmp/root/whereabouts
 fi
 
 test -n "$NODEANNOTATION_DIR" || NODEANNOTATION_DIR=$GOPATH/src/github.com/Nordix/ipam-node-annotation
-f=$NODEANNOTATION_DIR/node-annotation
+f=$NODEANNOTATION_DIR/_output/kube-node
 if test -x $f; then
-	log "Including node-annotation ipam"
+	log "Including kube-node ipam"
 	cp $f $tmp/root
 fi
 

@@ -26,68 +26,54 @@ test -n "$1" || help
 echo "$1" | grep -qi "^help\|-h" && help
 
 log() {
-	echo "$prg: $*" >&2
+	echo "$*" >&2
 }
-dbg() {
-	test -n "$__verbose" && echo "$prg: $*" >&2
+findf() {
+	f=$ARCHIVE/$1
+	test -r $f && return 0
+	f=$HOME/Downloads/$1
+	test -r $f
 }
 
 ##  env
 ##    Print environment.
 ##
 cmd_env() {
-	test -n "$__multus_ver" || __multus_ver=3.9.2
+	test -n "$__multus_ver" || __multus_ver=4.0.2
     test -n "$__tag" || __tag="registry.nordix.org/cloud-native/multus-installer"
 
 	if test "$cmd" = "env"; then
-		set | grep -E '^(__.*)='
-		return 0
+		local opt="multus_ver|whereabouts_ver"
+		set | grep -E "^(__($opt))="
+		exit 0
 	fi
 
+	test -n "$long_opts" && export $long_opts
+	multus_ar=multus-cni_${__multus_ver}_linux_amd64.tar.gz
 	test -n "$xcluster_DOMAIN" || xcluster_DOMAIN=xcluster
 	test -n "$XCLUSTER" || die 'Not set [$XCLUSTER]'
 	test -x "$XCLUSTER" || die "Not executable [$XCLUSTER]"
 	eval $($XCLUSTER env)
-}
-##   version
-##     Print multus version
-cmd_version() {
-	cmd_env
-	echo $__multus_ver
-}
-##   archive
-##     Prints the multus archive (or fail).
-cmd_archive() {
-	cmd_env
-	local ar=multus-cni_${__multus_ver}_linux_amd64.tar.gz
-	if test -r $ARCHIVE/$ar; then
-		echo $ARCHIVE/$ar
-		return 0
-	fi
-	test -r $HOME/Downloads/$ar || die "Not found [$ar]"
-	echo $HOME/Downloads/$ar
 }
 ##   cparchives <dest>
 ##     Copy cni-plugin and multus archives to <dest>
 cmd_cparchives() {
 	test -n "$1" || die "No dest"
 	test -d "$1" || die "Not a directory [$1]"
-	cmd_archive > /dev/null
 	local cnish=$($XCLUSTER ovld cni-plugins)/cni-plugins.sh
 	test -x $cnish || die "Not executable [$cnish]"
 	$cnish archive > /dev/null || die
-
-	local ar=$(cmd_archive)
-	cp $(cmd_archive) $($cnish archive) $1
+	findf $multus_ar || die "Not found [$multus_ar]"
+	cp $f $($cnish archive) $1
 }
 ##   mkimage [--tag=]
 ##     Create the docker image and upload it to the local registry.
 cmd_mkimage() {
     cmd_env
     local imagesd=$($XCLUSTER ovld images)
-    $imagesd/images.sh mkimage --force --upload --strip-host --tag=$__tag:$__multus_ver $dir/image
+    $imagesd/images.sh mkimage --force --upload --tag=$__tag:$__multus_ver $dir/image
 	docker tag $__tag:$__multus_ver $__tag:latest
-	$imagesd/images.sh lreg_upload --strip-host $__tag:latest
+	$imagesd/images.sh lreg_upload $__tag:latest
 }
 
 ##
@@ -96,97 +82,120 @@ cmd_mkimage() {
 ##     Exec tests
 ##
 cmd_test() {
-	if test "$__list" = "yes"; then
-        grep '^test_' $me | cut -d'(' -f1 | sed -e 's,test_,,'
-        return 0
-    fi
+	cd $dir
+	start=starts
+	test "$__xterm" = "yes" && start=start
+	rm -f $XCLUSTER_TMP/cdrom.iso
 
-	cmd_env
-    start=starts
-    test "$__xterm" = "yes" && start=start
-    rm -f $XCLUSTER_TMP/cdrom.iso
-
-    if test -n "$1"; then
+	local t=default
+	if test -n "$1"; then
 		local t=$1
 		shift
-        test_$t $@
-    else
-		test_basic
-    fi      
+	fi		
 
-    now=$(date +%s)
-    tlog "Xcluster test ended. Total time $((now-begin)) sec"
+	if test -n "$__log"; then
+		mkdir -p $(dirname "$__log")
+		date > $__log || die "Can't write to log [$__log]"
+		test_$t $@ >> $__log
+	else
+		test_$t $@
+	fi
 
+	now=$(date +%s)
+	log "Xcluster test ended. Total time $((now-begin)) sec"
 }
-
-##   test start_empty
-##     Start without Multus
-test_start_empty() {
+##   test [--cni=] default
+##     Combo test
+test_default() {
+	export __cni
+	$me test ipvlan $@ || die ipvlan
+	$me test ipvlanl3 $@ || die ipvlanl3
+}
+##   test [--cni=] start
+##     Start with Multus. If --cni= is specified the multus-install
+##     method is used
+test_start() {
 	# Pre-checks
-	cmd_archive > /dev/null
+	findf $multus_ar || die "Not found [$multus_ar]"
 	export TOPOLOGY=multilan-router
 	. $($XCLUSTER ovld network-topology)/$TOPOLOGY/Envsettings
-	test -n "$SETUP" || export SETUP=test
-	xcluster_start multus network-topology $@
+	local cni_overlay
+	export MULTUS_TEST=yes
+	if test -n "$__cni"; then
+		cni_overlay=k8s-cni-$__cni
+		test "$__cni" != "bridge" && export MULTUS_TEST=image
+		# (the xcluster specific "bridge" cni-plugin has no image)
+	fi
+	xcluster_start . network-topology $cni_overlay $@
 
 	otc 1 check_namespaces
+	test "$MULTUS_TEST" != "image" && otc 1 multus_crds
 	otc 1 check_nodes
 	otcr vip_routes
+	otcwp "ifup eth2"
+	otcwp "ifup eth3"
+	otcwp "ifup eth4"
+	test "$MULTUS_TEST" = "image" && otc 1 "image --ver=$__multus_ver"
 }
-##   test start
-##     Start with Multus
-test_start() {
-	test_start_empty $@
-	otcw "ifup eth2"
-	otcw "ifup eth3"
-	otcw "ifup eth4"
-	otc 1 start_multus
-}
-##   test start_image
-##     Start with "multus-installer" image
-test_start_image() {
-	export SETUP=test+image
-	test_start_empty
-	otc 1 image
-}
-##   test start_server
-##     Start with multus_proxy and multus_service_controller
-test_start_server() {
+##   test ipvlan
+##     Test with pods with an extra "ipvlan1" interface
+test_ipvlan() {
 	test_start $@
 	otc 1 crds
-	otc 2 multus_service_controller
-	otcw multus_proxy
-	otc 1 multus_server
+	otc 1 "deployment alpine-ipvlan"
+	otc 1 "check_interfaces --label=alpine-ipvlan ipvlan1"
+	otc 1 "collect_addresses --label=alpine-ipvlan ipvlan1"
+	otc 1 "ping --label=alpine-ipvlan"
+	xcluster_stop
 }
-##   test basic (default)
-##     Execute basic tests
-test_basic() {
-	tlog "=== Execute basic tests"
+##   test multiif
+##     Test with multiple extra interfaces: ipvlan, macvlan and host-device
+test_multiif() {
 	test_start $@
 	otc 1 crds
-	otc 1 alpine
-	otc 1 check_interfaces
-	otc 1 ping
+	otc 1 "daemonset multus-alpine"
+	otc 1 "check_interfaces --label=multus-alpine net1 net2 net3"
+	otc 1 "collect_addresses --label=multus-alpine net1"
+	otc 1 "ping --label=multus-alpine"
+	otc 1 "collect_addresses --label=multus-alpine net2"
+	otc 1 "ping --label=multus-alpine"
+	otc 1 "collect_addresses --label=multus-alpine net3"
+	otc 1 "ping --label=multus-alpine"
 	xcluster_stop
 }
-##   test annotation
-##     Test with node-annotation IPAM
-test_annotation() {
-	tlog "=== Test with node-annotation IPAM"
-	test_start_empty $@
-	tcase "Apply Multus installer"
-	kubectl apply -f $dir/multus-install.yaml \
-		|| tdie "Multus installer"
-	otcw annotate
-	otc 1 bridge
+##   test bridge
+##     Test with cni-plugin bridge and the "kube-node" ipam
+test_bridge() {
+	test_start $@
+	otc 1 crds
+	otcw "annotate --addr=16.0.0.0 --annotation=kube-node.nordix.org/bridge1"
+	otc 1 "deployment multus-alpine-bridge"
+	otc 1 "check_interfaces --label=multus-alpine-bridge net1"
 	xcluster_stop
 }
-##   test upgrade
-##     Upgrade the multus-install image
+##   test ipvlanl3
+##     Test with cni-plugin ipvlan in "l3" mode, and the "kube-node" ipam
+test_ipvlanl3() {
+	test_start $@
+	otc 1 crds
+	otcw "annotate --addr=17.0.0.0 --annotation=kube-node.nordix.org/ipvlanl3"
+	otc 1 "deployment alpine-ipvlanl3"
+	otc 1 "check_interfaces --label=alpine-ipvlanl3 net1"
+	otc 1 "collect_addresses --label=alpine-ipvlanl3 net1"
+	otcwp "local_ipvlan --addr=17.0.0.0"
+	otcwp "node_addr --net=3 eth2"
+	otcwp "node_routing --addr=17.0.0.0 --net=3 eth2"
+	otc 1 "routing --label=alpine-ipvlanl3 net1"
+	otc 1 "collect_addresses --label=alpine-ipvlanl3 net1"
+	otc 1 "ping --label=alpine-ipvlanl3"
+	xcluster_stop
+}
+##   test --cni= upgrade
+##     Upgrade the multus-install image. --cni is mandatory
 test_upgrade() {
-	export SETUP=test+image
-	test_start_empty
-	otc 1 "image --ver=3.9"
+	test -n "$__cni" || tdie "--cni must be specified"
+	test_start
+	otc 1 "image --ver=3.9.2"
 	otc 1 "image --ver=latest"
 	xcluster_stop
 }
@@ -201,21 +210,22 @@ shift
 grep -q "^cmd_$cmd()" $0 $hook || die "Invalid command [$cmd]"
 
 while echo "$1" | grep -q '^--'; do
-    if echo $1 | grep -q =; then
-	o=$(echo "$1" | cut -d= -f1 | sed -e 's,-,_,g')
-	v=$(echo "$1" | cut -d= -f2-)
-	eval "$o=\"$v\""
-    else
-	o=$(echo "$1" | sed -e 's,-,_,g')
-	eval "$o=yes"
-    fi
-    shift
+	if echo $1 | grep -q =; then
+		o=$(echo "$1" | cut -d= -f1 | sed -e 's,-,_,g')
+		v=$(echo "$1" | cut -d= -f2-)
+		eval "$o=\"$v\""
+	else
+		o=$(echo "$1" | sed -e 's,-,_,g')
+		eval "$o=yes"
+	fi
+	long_opts="$long_opts $o"
+	shift
 done
 unset o v
-long_opts=`set | grep '^__' | cut -d= -f1`
 
 # Execute command
 trap "die Interrupted" INT TERM
+cmd_env
 cmd_$cmd "$@"
 status=$?
 rm -rf $tmp
