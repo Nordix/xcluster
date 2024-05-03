@@ -36,7 +36,7 @@ test -n "$1" || help
 echo "$1" | grep -qi "^help\|-h" && help
 
 log() {
-	echo "$prg: $*" >&2
+	echo "$*" >&2
 }
 
 ##   install_binaries [--dest=/opt/cni/bin]
@@ -46,16 +46,16 @@ cmd_install_binaries() {
 	test -n "$__dest" || __dest=/opt/cni/bin
 	echo "Installing cni-bin:$__cnibin_ver and multus:$__multus_ver in $__dest"
 	test -d $__dest || die "Not a directory [$__dest]"
-	local ar=multus-cni_${__multus_ver}_linux_amd64.tar.gz
-	test -r "$dir/$ar" || die "Not readable [$ar]"
-	tar -C $__dest --strip-components=1 -xf $dir/$ar multus-cni_${__multus_ver}_linux_amd64/multus-cni
-	ar=cni-plugins-linux-amd64-${__cnibin_ver}.tgz
-	test -r "$dir/$ar" || die "Not readable [$ar]"
-	tar -C $__dest -xf $dir/$ar
+	local ar=/root/multus-cni_${__multus_ver}_linux_amd64.tar.gz
+	test -r $ar || die "Not found [$ar]"
+	tar -C $__dest --strip-components=1 -xf $ar
+	ar=/root/cni-plugins-linux-amd64-${__cnibin_ver}.tgz
+	test -r $ar || die "Not readable [$ar]"
+	tar -C $__dest -xf $ar
 
-	local f
-	for f in whereabouts node-annotation sriov; do
-		test -x $dir/$f && cp $dir/$f $__dest
+	local n
+	for n in whereabouts kube-node sriov; do
+		test -x $dir/$n && cp $dir/$n $__dest
 	done
 }
 
@@ -80,7 +80,7 @@ cmd_enable() {
 {
     "cniVersion": "0.4.0",
     "name": "multus",
-    "type": "multus-cni",
+    "type": "multus",
     "logFile": "/var/log/multus.log",
     "logLevel": "debug",
     "kubeconfig": "/etc/cni/net.d/multus.d/multus.kubeconfig",

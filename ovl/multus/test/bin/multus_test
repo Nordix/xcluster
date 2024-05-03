@@ -45,112 +45,152 @@ cmd_tcase_vip_routes() {
 	tcase "Set VIP routes (ECMP)"
 	vip_route
 }
-
-cmd_tcase_start_multus() {
-	tcase "Start multus"
-	kubectl apply -f $yamld/multus-crd.yaml || tdie
-	kubectl apply -n kube-system -f $yamld/multus-crd-bridge.yaml || tdie
+##   tcase_multus_crds
+##     Load Multus CRDs
+cmd_tcase_multus_crds() {
+	tcase "Load Multus CRDs"
+	kubectl create -f /etc/kubernetes/multus/multus-crd.yaml
+	kubectl create -n kube-system -f /etc/kubernetes/multus/multus-crd-bridge.yaml
 }
-
+##   tcase_crds
+##     Load whereabouts CRDs and create test NADs
 cmd_tcase_crds() {
-	tcase "Load CRDs (whereabouts)"
-	#kubectl apply -n kube-system -f $yamld/multus-crd-bridge-spec.yaml || tdie
-	kubectl apply -f $yamld/multus-crd-ipvlan.yaml || tdie
-	kubectl apply -f $yamld/multus-crd-macvlan.yaml || tdie
-	kubectl apply -f $yamld/multus-crd-host-device.yaml || tdie
+	tcase "Load whereabouts CRDs and create test NADs"
+	kubectl create -f $yamld/multus-crd-bridge1.yaml || tdie
+	kubectl create -f $yamld/multus-crd-ipvlan.yaml || tdie
+	kubectl create -f $yamld/multus-crd-ipvlanl3.yaml || tdie
+	kubectl create -f $yamld/multus-crd-macvlan.yaml || tdie
+	kubectl create -f $yamld/multus-crd-host-device.yaml || tdie
+	
 	local d=/etc/kubernetes/whereabouts
-	kubectl apply -f $d/whereabouts.cni.cncf.io_ippools.yaml || tdie
-	kubectl apply -f $d/whereabouts.cni.cncf.io_overlappingrangeipreservations.yaml || tdie
+	kubectl create -f $d/whereabouts.cni.cncf.io_ippools.yaml || tdie
+	kubectl create -f $d/whereabouts.cni.cncf.io_overlappingrangeipreservations.yaml || tdie
+}
+##   tcase_annotate --addr=ipv4 --annotation=
+##     Annotate the own node with address ranges for ipam "kube-node".
+##     Cidr /24 and /120 is assumed, and the address must be A.B.0.0
+cmd_tcase_annotate() {
+	test -n "$__annotation" || tdie "No --annotation"
+	test -n "$__addr" || tdie "No --addr"
+	local mynode=$(mynode)
+	local adr=$(echo $__addr | sed -e "s,\.0\.0$,\.$mynode\.0,")
+	tcase "Annotate with $__annotation for $adr"
+	kubectl annotate node $(hostname) \
+		$__annotation=$adr/24,$PREFIX:$adr/120
 }
 
-cmd_tcase_alpine() {
-	tcase "Start alpine pods"
-	kubectl apply -f $yamld/multus-alpine.yaml || tdie
-	kubectl apply -f /etc/kubernetes/alpine.yaml || tdie
-	test_deployment alpine-deployment 180
-	test_daemonset multus-alpine 180
-}
-
-cmd_tcase_multus_server() {
-	tcase "Start multus server/client"
-	kubectl apply -f /etc/kubernetes/multus-service/deployment.yaml || tdie
-	test_deployment multus-server 180
-	test_deployment multus-client 30
-}
-
-cmd_tcase_multus_proxy() {
-	tcase "Start multus-proxy"
-	multus-proxy --kubeconfig $KUBECONFIG \
-		--container-runtime-endpoint unix:///var/run/crio/crio.sock \
-		> /var/log/multus-proxy.log 2>&1 &
-}
-cmd_tcase_multus_service_controller() {
-	tcase "Start multus-service-controller"
-	multus-service-controller --kubeconfig $KUBECONFIG \
-		> /var/log/multus-service-controller.log 2>&1 &
-}
+##   tcase_check_interfaces --label= <interface...>
+##     Check that the interfaces exist
 cmd_tcase_check_interfaces() {
-	tcase "Check extra interfaces"
+	tcase "Check extra interfaces [$@]"
+	test -n "$1" || tdie "No interfaces"
+	test -n "$__label" || tdie "No --label"
 	local pod dev
-	for pod in $(kubectl get pods -l app=multus-alpine -o name); do
-		for dev in net1 net2 net3; do
+	for pod in $(kubectl get pods -l app=$__label -o name); do
+		for dev in $@; do
+			#tlog "Check for $dev in pod $pod"
 			kubectl exec $pod -- ip link show dev $dev || tdie "$pod $dev"
 		done
 	done
 }
-
+##   tcase_collect_addresses --label= <interface...>
+##     Collect global addresses for the interfaces
+cmd_tcase_collect_addresses() {
+	tcase "Collect global addresses for [$@]"
+	local out=/tmp/$__label
+	rm -f $out
+	test -n "$1" || tdie "No interfaces"
+	test -n "$__label" || tdie "No --label"
+	local pod dev
+	for pod in $(kubectl get pods -l app=$__label -o name); do
+		for dev in $@; do
+			kubectl exec $pod -- ip addr show dev $dev >> $out || tdie
+		done
+	done	
+}
+##   ping --label=
+##     Ping all addresses from within a (random) pod.
+##     This must be preceeded by a tcase_collect_addresses
 cmd_tcase_ping() {
-	tcase "Ping on MACVLAN and IPVLAN (net1, net2)"
-	local pod i adr
-	for pod in $(kubectl get pods -l app=multus-alpine -o name); do
-		for i in 1 2 3 4; do
-			for adr in 15.0.$i.0 4000::15.0.$i.0; do
-				kubectl exec $pod -- ping -c1 -W1 $adr || tdie "Ping $pod $adr"
-			done
-		done
-		for i in 1 2 3 4; do
-			for adr in 4000::16.0.0.$i; do
-				kubectl exec $pod -- ping -c1 -W1 $adr || tdie "Ping $pod $adr"
-			done
-		done
+	tcase "Ping addresses in pods [$__label]"
+	test -n "$__label" || tdie "No --label"
+	local out=/tmp/$__label
+	test -r $out || tdie "Not readable [$out]"
+	local pod=$(kubectl get pods -l app=$__label -o name | shuf | head -1)
+	echo "Ping from POD [$pod]"
+	local adr
+	for adr in $(grep 'scope global' $out | tr -s ' ' | cut -d' ' -f3 | cut -d/ -f1); do
+		#tlog "ping $adr in $pod"
+		kubectl exec $pod -- ping -W1 -c1 $adr || tdie "ping $adr in $pod"
 	done
 }
-
+##   tcase_ifup <iface>
+##     Set the interface "up"
 cmd_tcase_ifup() {
 	tcase "Interface up [$1]"
 	test -n "$1" || tdie "No interface"
 	ip link set up dev $1 || tdie
 }
-
-##   tcase_annotate
-##     Annotate the own node with address ranges
-cmd_tcase_annotate() {
-	local n=$(mynode)
-	kubectl annotate node $(hostname) example.com/bridge-ranges="\"ranges\": [
-  [ { \"subnet\": \"4000::16.0.$n.0/120\" } ],
-  [ { \"subnet\": \"16.0.$n.0/24\" } ]
-]"
-}
-##   tcase_bridge
-##     Start a bridge network using node-annotation IPAM. Start
-##     an Alpine Deployment with "net1" interfaces and check addresses.
-cmd_tcase_bridge() {
-	tcase "Start a bridge network using node-annotation IPAM"
-	kubectl apply -f $yamld/multus-crd-bridge2.yaml || tdie
-	kubectl apply -f $yamld/multus-alpine-bridge.yaml || tdie
-	test_deployment multus-alpine-bridge 180
-	mkdir -p $tmp
-	local pod
-	for pod in $($kubectl get pods -l app=multus-alpine-bridge -o name); do
-		log "Check POD $pod ..."
-		$kubectl exec $pod -- ip addr show dev net1 > $tmp/adr || \
-			tdie "Get addresses"
-		cat $tmp/adr
-		grep -E '16\.0\.[0-9]+\.[0-9]+/24' $tmp/adr || tdie "IPv4 address"
-		grep -E '4000::1000:[0-9a-f]+/120' $tmp/adr || tdie "IPv6 address"
+##   tcase_routing --label= <iface>
+##     Setup routing in pods. Routes with gw A.B.<nodeid>.1 is setup
+##     for the intercase which must have an IPv4 address
+##     A.B.<nodeid>.x. Cidr /16 and /112 are assumed.
+cmd_tcase_routing() {
+	tcase "Routing in pods [$__label] for iface $1"
+	test -n "$__label" || tdie "No --label"
+	test -n "$1" || tdie "No interface"
+	local pod ipv4 gw cidr
+	for pod in $(kubectl get pods -l app=$__label -o name); do
+		ipv4=$(kubectl exec $pod -- ip addr show dev $1 \
+			| grep -E '.*inet .*scope global' | tr -s ' ' | cut -d' ' -f3 | cut -d/ -f1)
+		gw=$(echo $ipv4 | sed -E 's,\.[0-9]+$,\.1,')
+		cidr=$(echo $ipv4 | sed -E 's,\.[0-9]+\.[0-9]+$,\.0\.0,')
+		#tlog "$pod $ipv4 $gw $cidr"
+		kubectl exec $pod -- ip ro add $cidr/16 via $gw
+		kubectl exec $pod -- ip -6 ro add $PREFIX:$cidr/112 via $PREFIX:$gw
 	done
 }
-##   tcase_image
+##   tcase_local_ipvlan --addr=
+##     Create a local ipvlan0 device in main netns. --addr must be in
+##     format A.B.0.0, and the address will be A.B.<nodeid>.1
+cmd_tcase_local_ipvlan() {
+	local mynode=$(mynode)
+	local adr=$(echo $__addr | sed -E "s,\.0\.0$,\.$mynode\.1,")
+	tcase "Create a local ipvlan0 device ($adr)"
+	test -n "$__addr" || tdie "No --addr"
+	ip link add link eth2 name ipvlan0 type ipvlan mode l3 || tdie
+	ip link set dev ipvlan0 up
+	ip addr add $adr/24 dev ipvlan0
+	ip -6 addr add $PREFIX:$adr/120 dev ipvlan0
+}
+##   tcase_node_addr --net= <iface>
+##     Setup address on nodes
+cmd_tcase_node_addr() {
+	tcase "Setup address, net=$__net iface $1"
+	test -n "$1" || tdie "No interface"
+	test -n "$__net" || tdie "No --net"
+	local mynode=$(mynode)
+	ip addr add 192.168.$__net.$mynode/24 dev $1 || tdie
+	ip -6 addr add $PREFIX:192.168.$__net.$mynode/120 dev $1 || tdie
+}
+##   tcase_node_routing --net= --addr= <iface>
+##     Setup routing on nodes
+cmd_tcase_node_routing() {
+	tcase "Setup routing, net=$__net iface $1"
+	test -n "$1" || tdie "No interface"
+	test -n "$__net" || tdie "No --net"
+	test -n "$__addr" || tdie "No --addr"
+	local adr=$(echo $__addr | cut -d. -f-2)
+	local mynode=$(mynode)
+	local n
+	for n in $(seq 1 $__nvm); do
+		test $n -eq $mynode && continue
+		#tlog "$adr.$n.0/24 via 192.168.$__net.$n"
+		ip ro add $adr.$n.0/24 via 192.168.$__net.$n
+		ip -6 ro add $PREFIX:$adr.$n.0/120 via $PREFIX:192.168.$__net.$n
+	done
+}
+##   tcase_image [--ver=]
 ##     Install with the multus-install image
 cmd_tcase_image() {
 	local f=$yamld/multus-install.yaml
@@ -161,6 +201,28 @@ cmd_tcase_image() {
 	kubectl apply -f $f || tdie
 	kubectl="kubectl -n kube-system"
 	test_daemonset multus-install 120
+}
+##   tcase_deployment [--replicas=] <deployment>
+##     Start a deployment
+cmd_tcase_deployment() {
+	tcase "Start deployment [$1] ($__replicas)"
+	test -n "$1" || tdie "No deployment"
+	local f=$yamld/$1.yaml
+	test -r $f || tdie "Can't find manifest"
+	test -n "$__replicas" && \
+		sed -i -E "s,replicas: [0-9]+,replicas: $__replicas," $f
+	$kubectl apply -f $f || tdie "kubectl apply"
+	test_deployment $1 120
+}
+##   tcase_daemonset <daemonset>
+##     Start a daemonset
+cmd_tcase_daemonset() {
+	tcase "Start daemonset [$1]"
+	test -n "$1" || tdie "No daemonset"
+	local f=$yamld/$1.yaml
+	test -r $f || tdie "Can't find manifest"
+	$kubectl apply -f $f || tdie "kubectl apply"
+	test_daemonset $1 120
 }
 
 . /etc/profile

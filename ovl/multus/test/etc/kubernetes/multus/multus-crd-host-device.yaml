@@ -6,5 +6,12 @@ spec:
   config: '{
     "cniVersion": "0.3.1",
     "type": "host-device",
-	"device": "eth4"
+    "device": "eth4",
+    "ipam": {
+      "type": "whereabouts",
+      "ipRanges": [
+            { "range": "17.0.0.0/24" },
+            { "range": "4000::17.0.0.0/120" }
+      ]
+    }
 }'

@@ -8,7 +8,10 @@ spec:
     "type": "macvlan",
     "master": "eth3",
     "ipam": {
-      "type": "node-local",
-      "cfg": "macvlan"
-   }
+      "type": "whereabouts",
+      "ipRanges": [
+            { "range": "18.0.0.0/24" },
+            { "range": "4000::18.0.0.0/120" }
+      ]
+    }
 }'

@@ -1,23 +1,25 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: multus-alpine-bridge
+  name: alpine-ipvlanl3
 spec:
   replicas: 10
   selector:
     matchLabels:
-      app: multus-alpine-bridge
+      app: alpine-ipvlanl3
   template:
     metadata:
       labels:
-        app: multus-alpine-bridge
+        app: alpine-ipvlanl3
       annotations:
         k8s.v1.cni.cncf.io/networks: '[
-            { "name": "bridge1" }
+            { "name": "ipvlanl3" }
         ]'
     spec:
       containers:
       - name: alpine
-        image: alpine:latest
+        image: alpine
         imagePullPolicy: IfNotPresent
+        securityContext:
+          privileged: true
         command: ["tail", "-f", "/dev/null"]
