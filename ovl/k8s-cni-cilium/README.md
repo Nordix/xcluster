@@ -10,7 +10,7 @@ SCTP is not supported, issue [#5719](https://github.com/cilium/cilium/issues/571
 A manifest (yaml) is generated with `helm` and will be used by default;
 
 ```
-ver=v1.14.6
+ver=v1.15.4
 rm -rf $GOPATH/src/github.com/cilium/cilium
 git clone --depth 1 -b $ver https://github.com/cilium/cilium.git \
   $GOPATH/src/github.com/cilium/cilium
@@ -29,6 +29,7 @@ helm template cilium \
   --set securityContext.privileged=true \
   --set bpf.masquerade=false \
   --set nativeRoutingCIDR=11.0.0.0/16 \
+  --set cni.exclusive=false \
   > $($XCLUSTER ovld k8s-cni-cilium)/default/etc/kubernetes/load/quick-install.yaml
 #  --set global.datapathMode=ipvlan \
 #  --set global.ipvlan.masterDevice=eth1 \
