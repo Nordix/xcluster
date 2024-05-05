@@ -37,6 +37,10 @@ for f in dropbear scp dbclient; do
 	test -x $dropbeard/$f || die "Not executable [$dropbeard/$f]"
 	cp $dropbeard/$f $tmp/bin
 done
+f=/usr/lib/openssh/sftp-server
+test -x $f || die "Not executable [$f] (apt install openssh-sftp-server)"
+mkdir -p $tmp/usr/libexec
+cp -L $f $tmp/usr/libexec
 
 for f in $XCLUSTER_WORKSPACE/iproute2-$__ipver/ip/ip; do
 	test -x $f || die "Not executable [$f]"

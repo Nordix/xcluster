@@ -96,7 +96,7 @@ cmd_env() {
 	test -n "$KERNELDIR" || KERNELDIR=$HOME/tmp/linux
 	export ARCHIVE
 
-	test -n "$__kver" || __kver=linux-6.8
+	test -n "$__kver" || __kver=linux-6.8.7
 	test -n "$__kobj" || __kobj=$XCLUSTER_HOME/obj-$__kver
 	if test -z "$__kbin"; then
 		__kbin=$XCLUSTER_HOME/bzImage-$__kver
@@ -119,7 +119,7 @@ cmd_env() {
 	test -n "$__base_libs" || __base_libs=$XCLUSTER_HOME/base-libs.txt
 
 	__ipver=6.3.0
-	__dropbearver=2022.83
+	__dropbearver=2024.85
 	__diskimver=1.0.0
 	test -n "$DISKIM" || DISKIM=$XCLUSTER_WORKSPACE/diskim-$__diskimver/diskim.sh
 
