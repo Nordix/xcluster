@@ -7,7 +7,7 @@
 ##   Some influential environment variables:
 ##
 ##     xcluster_TZ="EST+5EDT,M3.2.0/2,M11.1.0/2"
-##     xcluster_PREFIX=fd00:
+##     xcluster_BASE_FAMILY=IPv6
 ##     xcluster_FEATURE_GATES=NFTablesProxyMode=true
 ##     xcluster_PROXY_MODE=iptables
 ##     xcluster_DOMAIN=cluster.local
@@ -40,20 +40,23 @@ log() {
 ##   env
 ##     Print environment.
 cmd_env() {
+	test "$envset" = "yes" && return 0
+	envset=yes
+
 	test -n "$__nvm" || __nvm=4
 	test -n "$__nrouters" || __nrouters=1
 	test -n "$__replicas" || __replicas=4
-	test -n "$__e2e" || __e2e=$GOPATH/src/k8s.io/kubernetes/_output/bin/e2e.test
 	test -n "$xcluster_DOMAIN" || export xcluster_DOMAIN=xcluster
 	test -n "$xcluster_PREFIX" || export xcluster_PREFIX=fd00:
 
 	if test "$cmd" = "env"; then
-		local opt="nvm|nrouters|replicas|log|e2e"
-		local xenv="DOMAIN|PREFIX"
+		local opt="nvm|nrouters|replicas|cni|log"
+		local xenv="DOMAIN|PREFIX|BASE_FAMILY"
 		set | grep -E "^(__($opt)|xcluster_($xenv))="
 		exit 0
 	fi
 
+	test -n "$long_opts" && export $long_opts
 	test -n "$XCLUSTER" || die 'Not set [$XCLUSTER]'
 	test -x "$XCLUSTER" || die "Not executable [$XCLUSTER]"
 	eval $($XCLUSTER env)
@@ -64,6 +67,7 @@ cmd_env() {
 ##   test [--log=] [--xterm] [--no-stop] <test-suite> [ovls...] > logfile
 ##     Exec tests
 cmd_test() {
+	cd $dir
 	start=starts
 	test "$__xterm" = "yes" && start=start
 	rm -f $XCLUSTER_TMP/cdrom.iso
@@ -75,6 +79,7 @@ cmd_test() {
 	fi		
 
 	if test -n "$__log"; then
+		mkdir -p $(dirname "$__log")
 		date > $__log || die "Can't write to log [$__log]"
 		test_$t $@ >> $__log
 	else
@@ -84,17 +89,33 @@ cmd_test() {
 	now=$(date +%s)
 	log "Xcluster test ended. Total time $((now-begin)) sec"
 }
-##   test [--wait] start_empty
+##   test default
+##     A combo test that setup an environment and execute selected tests.
+##     Intended for regression or CI testing
+test_default() {
+	$me test connectivity $@ || die "test connectivity"
+}
+##   test [--wait] [--taint] [--cni=] start_empty
 ##     Start empty cluster
 test_start_empty() {
-	cd $dir
 	if test -n "$TOPOLOGY"; then
 		tlog "Using TOPOLOGY=$TOPOLOGY"
 		. $($XCLUSTER ovld network-topology)/$TOPOLOGY/Envsettings
 	fi
-	xcluster_start network-topology . $@
+	local cni
+	test -n "$__cni" && cni=k8s-cni-$__cni
+	if test "$__cni" = "cilium"; then
+		# Cilium is a memory-hog and replaces kube-proxy
+		export __mem=$((__mem + 1024))
+		export __mem1=$((__mem1 + 1024))
+		test -n "$xcluster_PROXY_MODE" || export xcluster_PROXY_MODE=disabled
+	fi	
+
+	xcluster_start network-topology $cni . $@
 	otc 1 check_namespaces
 	otc 1 check_nodes
+	test "$__taint" = "yes" && kubectl taint nodes vm-001 \
+		node-role.kubernetes.io/control-plane:NoSchedule
 	test "$__wait" = "yes" && otc 1 wait
 }
 ##   test [--replicas=] start
@@ -113,18 +134,6 @@ test_start_alpine() {
 	otc 1 "svc alpine 10.0.0.1"
 	otc 1 "deployment --replicas=$__replicas alpine"
 }
-##   test default
-##     A combo test that setup an environment and execute selected tests.
-##     Intended for regression or CI testing
-test_default() {
-	unset __no_start
-	test_start $@
-	__no_start=yes
-	__no_stop=yes
-	test_connectivity
-	unset __no_stop
-	xcluster_stop
-}
 ##   test connectivity
 ##     Basic connectivity via a service
 test_connectivity() {
@@ -134,6 +143,8 @@ test_connectivity() {
 	otc 2 "mconnect mconnect.default.svc $nconn $__replicas"
 	otc 2 "mconnect 10.0.0.0 $nconn $__replicas"
 	otc 2 "mconnect $xcluster_PREFIX:10.0.0.0 $nconn $__replicas"
+	otc 201 "mconnect 10.0.0.0 $nconn $__replicas"
+	otc 201 "mconnect $xcluster_PREFIX:10.0.0.0 $nconn $__replicas"
 	xcluster_stop
 }
 
@@ -162,10 +173,10 @@ while echo "$1" | grep -q '^--'; do
 		o=$(echo "$1" | sed -e 's,-,_,g')
 		eval "$o=yes"
 	fi
+	long_opts="$long_opts $o"
 	shift
 done
 unset o v
-long_opts=`set | grep '^__' | cut -d= -f1`
 
 # Execute command
 trap "die Interrupted" INT TERM
