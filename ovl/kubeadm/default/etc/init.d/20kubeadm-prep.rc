@@ -13,6 +13,14 @@ echo "export KUBECONFIG=/etc/kubernetes/admin.conf" >> /etc/profile
 echo "export DOMAIN=cluster.local" >> /etc/profile
 . /etc/profile
 
+if test $i -ge 200 -a $i -le 220; then
+	# We are on a router. Block the ClusterIP and POD ranges
+	iptables -A FORWARD -d 10.96.0.0/16 -j REJECT
+	ip6tables -A FORWARD -d fd00:4000::/112 -j REJECT
+	iptables -A FORWARD -d 11.0.0.0/16 -j REJECT
+	ip6tables -A FORWARD -d 1100::/48 -j REJECT
+fi
+
 test $i -le 200 || exit 0
 
 # Work around for bad install of dropbear

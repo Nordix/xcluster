@@ -35,7 +35,7 @@ kubernetesVersion: %k8sver%
 networking:
   dnsDomain: cluster.local
   podSubnet: "11.0.0.0/16,1100::/48"
-  serviceSubnet: "12.0.0.0/16,fd00:4000::/112"
+  serviceSubnet: "10.96.0.0/16,fd00:4000::/112"
 scheduler: {}
 ---
 apiVersion: kubeproxy.config.k8s.io/v1alpha1
