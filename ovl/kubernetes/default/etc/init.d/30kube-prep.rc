@@ -15,6 +15,15 @@ echo "export KUBECONFIG" >> /etc/profile
 
 hostname | grep -Eq 'vm-[0-9]+$' || die "Invalid hostname [$(hostname)]"
 i=$(hostname | cut -d- -f2 | sed -re 's,^0+,,')
+
+if test $i -ge 200 -a $i -le 220; then
+	# We are on a router. Block the ClusterIP and POD ranges
+	iptables -A FORWARD -d 10.96.0.0/16 -j REJECT
+	ip6tables -A FORWARD -d fd00:4000::/112 -j REJECT
+	iptables -A FORWARD -d 11.0.0.0/16 -j REJECT
+	ip6tables -A FORWARD -d 1100::/48 -j REJECT
+fi
+
 test $i -le 200 || exit 0
 
 printf '35f15062-7e2b-11e9-b640-0000000100%02x\n' $i > /etc/machine-id
