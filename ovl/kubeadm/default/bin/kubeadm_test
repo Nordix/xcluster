@@ -11,6 +11,7 @@ prg=$(basename $0)
 dir=$(dirname $0); dir=$(readlink -f $dir)
 me=$dir/$prg
 tmp=/tmp/${prg}_$$
+yamld=/etc/kubernetes
 
 die() {
 	echo "ERROR: $*" >&2
@@ -141,7 +142,18 @@ cmd_tcase_get_kubeconfig() {
 	test -r $KUBECONFIG && return 0
 	dbclient -y -y 192.168.1.1 cat /etc/kubernetes/admin.conf > $KUBECONFIG 2> /dev/null
 }
-
+##   tcase_deployment [--replicas=] <deployment>
+##     Start a deployment
+cmd_tcase_deployment() {
+	tcase "Start deployment [$1] ($__replicas)"
+	test -n "$1" || tdie "No deployment"
+	local f=$yamld/$1.yaml
+	test -r $f || tdie "Can't find manifest"
+	test -n "$__replicas" && \
+		sed -i -E "s,replicas: [0-9]+,replicas: $__replicas," $f
+	$kubectl apply -f $f || tdie "kubectl apply"
+	test_deployment $1 120
+}
 
 . /etc/profile
 . /usr/lib/xctest
