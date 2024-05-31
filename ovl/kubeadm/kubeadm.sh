@@ -58,12 +58,10 @@ cmd_env() {
 	test -n "$KUBERNETESD" || \
 		export KUBERNETESD=$HOME/tmp/kubernetes/kubernetes-$__k8sver/server/bin	
 	kubeadm=$KUBERNETESD/kubeadm
-	test -x $kubeadm || tdie "Not executable [$kubeadm]"
 }
 ##   cache_images
 ##     Download the K8s release images to the local private registry.
 cmd_cache_images() {
-	cmd_env
 	local i images
 	images=$($XCLUSTER ovld images)/images.sh
 	for i in $($kubeadm config images list --kubernetes-version $__k8sver); do
@@ -80,9 +78,12 @@ cmd_cache_images() {
 ##   test [--xterm] [test...] > logfile
 ##     Exec tests
 cmd_test() {
-    start=starts
-    test "$__xterm" = "yes" && start=start
-    rm -f $XCLUSTER_TMP/cdrom.iso
+	test "$__k8sver" = "master" && die "Can't install [master]"
+	test -x $kubeadm || die "Not executable [$kubeadm]"
+	test -n "$long_opts" && export $long_opts
+	start=starts
+	test "$__xterm" = "yes" && start=start
+	rm -f $XCLUSTER_TMP/cdrom.iso
 
 	local t=default
 	if test -n "$1"; then
@@ -98,20 +99,20 @@ cmd_test() {
 		test_$t $@
 	fi
 
-    now=$(date +%s)
-    log "Xcluster test ended. Total time $((now-begin)) sec"
+	now=$(date +%s)
+	log "Xcluster test ended. Total time $((now-begin)) sec"
 }
 ##   test default
-##     Just install and stop
+##     Install, start a deployment, and stop
 test_default() {
-	test_start
+	test_start $@
+	otc 1 "deployment alpine"
 	xcluster_stop
 }
 
 ##   test start_empty
 ##     Start an empty cluster, but with crio and kubeadm
 test_start_empty() {
-	cmd_env
 	cmd_cache_images 2>&1
 	export __image=$XCLUSTER_WORKSPACE/xcluster/hd.img
 	unset BASEOVLS
@@ -125,7 +126,7 @@ test_start_empty() {
 	xcluster_start network-topology test crio iptools private-reg k8s-cni-$__cni . $@
 	test "$__hugep" = "yes" && otcwp mount_hugep
 }
-##   test [--k8sver] start 
+##   test [--k8sver=] start 
 ##     Start a cluster and install K8s using kubeadm
 test_start() {
 	test_start_empty $@
@@ -170,21 +171,22 @@ shift
 grep -q "^cmd_$cmd()" $0 $hook || die "Invalid command [$cmd]"
 
 while echo "$1" | grep -q '^--'; do
-    if echo $1 | grep -q =; then
-	o=$(echo "$1" | cut -d= -f1 | sed -e 's,-,_,g')
-	v=$(echo "$1" | cut -d= -f2-)
-	eval "$o=\"$v\""
-    else
-	o=$(echo "$1" | sed -e 's,-,_,g')
-	eval "$o=yes"
-    fi
-    shift
+	if echo $1 | grep -q =; then
+		o=$(echo "$1" | cut -d= -f1 | sed -e 's,-,_,g')
+		v=$(echo "$1" | cut -d= -f2-)
+		eval "$o=\"$v\""
+	else
+		o=$(echo "$1" | sed -e 's,-,_,g')
+		eval "$o=yes"
+	fi
+	long_opts="$long_opts $o"
+	shift
 done
 unset o v
-long_opts=`set | grep '^__' | cut -d= -f1`
 
 # Execute command
 trap "die Interrupted" INT TERM
+cmd_env
 cmd_$cmd "$@"
 status=$?
 rm -rf $tmp

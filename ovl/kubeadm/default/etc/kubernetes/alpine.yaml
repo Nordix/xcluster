@@ -1,7 +1,7 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: alpine-deployment
+  name: alpine
 spec:
   selector:
     matchLabels:
@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
       - name: alpine
-        image: docker.io/library/alpine:latest
+        image: alpine:latest
         imagePullPolicy: IfNotPresent
         command:
           - "/usr/bin/nc"
@@ -22,7 +22,7 @@ spec:
           - "-p"
           - "5001"
           - "-e"
-          - "hostname"
+          - "$MY_NODE_NAME"
         env:
           - name: MY_NODE_NAME
             valueFrom:
