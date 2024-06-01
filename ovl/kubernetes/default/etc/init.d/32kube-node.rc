@@ -4,6 +4,7 @@ export PATH="/bin:/sbin:/usr/bin:/usr/sbin"
 . /etc/profile
 test -n "$PREFIX" || PREFIX=1000::1
 test -n "$DOMAIN" || DOMAIN=xcluster
+test -n "$KUBELET_CFG" || KUBELET_CFG=/etc/kubernetes/kubelet.conf
 
 die() {
 	echo "$@"
@@ -14,8 +15,11 @@ hostname | grep -Eq 'vm-[0-9]+$' || die "Invalid hostname [$(hostname)]"
 i=$(hostname | cut -d- -f2 | sed -re 's,^0+,,')
 test $i -le 200 || exit 0
 
-# Read $CRI_OPTS;
-test -r /etc/cri-plugin.rc && . /etc/cri-plugin.rc
+test -n "$IMAGE_SERVICE_ENDPOINT" || IMAGE_SERVICE_ENDPOINT=$RUNTIME_ENDPOINT
+test -n "$RUNTIME_ENDPOINT" && cat >> $KUBELET_CFG <<EOF
+containerRuntimeEndpoint: "$RUNTIME_ENDPOINT"
+imageServiceEndpoint: "$IMAGE_SERVICE_ENDPOINT"
+EOF
 
 DNS_ADR=192.168.1.$i
 NODE_IP=192.168.1.$i,$PREFIX:192.168.1.$i
@@ -25,17 +29,26 @@ if test "$BASE_FAMILY" = "IPv6"; then
 	DNS_ADR=$PREFIX:192.168.1.$i
 	NODE_IP=$PREFIX:192.168.1.$i,192.168.1.$i
 fi
+cat >> $KUBELET_CFG <<EOF
+clusterDomain: $DOMAIN
+clusterDNS:
+  - $DNS_ADR
+EOF
 
-test -n "$FEATURE_GATES" && fg_param="--feature-gates $FEATURE_GATES"
+if test -n "$FEATURE_GATES"; then
+	echo "featureGates:" >> $KUBELET_CFG
+	for fg in $(echo $FEATURE_GATES | tr , ' '); do
+		v=$(echo $fg | sed -e 's,=,: ,')
+		echo "  $v" >> $KUBELET_CFG
+	done
+fi
 
-# --network-plugin=cni removed in v1.24!!
+
+
 run_kubelet() {
-	kubelet --address=:: $CRI_OPTS --node-ip=$NODE_IP $KUBELET_ARGS \
-		--register-node=true --kubeconfig $KUBECONFIG $fg_param \
-		--cluster-dns=$DNS_ADR \
-		--cluster-domain=$DOMAIN \
-		--runtime-cgroups=/ \
-		--kubelet-cgroups=/ >> /var/log/kubelet.log 2>&1
+	kubelet --config=$KUBELET_CFG $KUBELET_ARGS --node-ip=$NODE_IP \
+		--kubeconfig $KUBECONFIG $fg_param --runtime-cgroups=/ \
+		>> /var/log/kubelet.log 2>&1
 }
 
 run_kube_proxy() {
