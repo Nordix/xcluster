@@ -58,11 +58,15 @@ echo "$1" | grep -qi "^help\|-h" && help
 log() {
 	echo "$prg: $*" >&2
 }
-dbg() {
-	test -n "$__verbose" && echo "$prg: $*" >&2
+findf() {
+	f=$ARCHIVE/$1
+	test -r $f && return
+	# (order is important, test Downloads last)
+	f=$HOME/Downloads/$1
+	test -r $f
 }
 
-test -n "$xcluster_PREFIX" || xcluster_PREFIX=1000::1
+test -n "$xcluster_PREFIX" || xcluster_PREFIX=fd00:
 
 # This function is only here to be replaced in a $XCLUSTER_HOOK.
 # It should contain custom preparations for different commands.
@@ -79,7 +83,7 @@ cmd_env() {
 	envread=yes
 	prepare
 
-	test -n "$XCLUSTER_WORKSPACE" || die 'Not set [$XCLUSTER_WORKSPACE]'
+	test -n "$XCLUSTER_WORKSPACE" || XCLUSTER_WORKSPACE=/tmp/$USER/xcluster/workspace
 	test -n "$XCLUSTER" || export XCLUSTER=$me
 	test -n "$XCLUSTER_HOME" || XCLUSTER_HOME=$XCLUSTER_WORKSPACE/xcluster
 	if test -z "$XCLUSTER_TMP"; then
@@ -125,10 +129,12 @@ cmd_env() {
 
 	if test "$cmd" = "env"; then
 		set | grep -E '^(__.+=|XCLUSTER|ARCHIVE=|DISKIM=|KERNELDIR=)' | sort
-	else
-		mkdir -p $XCLUSTER_HOME || die "Failed mkdir [$XCLUSTER_HOME]"
-		mkdir -p $XCLUSTER_TMP || die "Failed mkdir [$XCLUSTER_TMP]"
+		exit 0
 	fi
+	echo $XCLUSTER_WORKSPACE | grep -q '^/tmp/' && \
+		echo 'WARNING: $XCLUSTER_WORKSPACE is on /tmp'
+	mkdir -p $XCLUSTER_HOME || die "Failed mkdir [$XCLUSTER_HOME]"
+	mkdir -p $XCLUSTER_TMP || die "Failed mkdir [$XCLUSTER_TMP]"
 }
 cmd_completion() {
 	grep -oE "^cmd_[a-zA-Z_0-9]+" $me | grep "cmd_$1" | sed -e 's,cmd_,,'
@@ -144,7 +150,6 @@ cmd_completion() {
 cmd_nsadd() {
 	test -n "$1" || die 'No index'
 	XCLUSTER_WORKSPACE=$tmp
-	cmd_env
 	local netns=${USER}_xcluster$1
 	ip netns | grep -qe "^$netns " && die "Netns already exist [$netns]"
 	sudo ip netns add $netns
@@ -168,7 +173,6 @@ cmd_nsadd() {
 cmd_nsadd_docker() {
 	test -n "$1" || die 'No index'
 	XCLUSTER_WORKSPACE=$tmp
-	cmd_env
 	local netns=${USER}_xcluster$1
 	ip netns | grep -qe "^$netns " && die "Netns already exist [$netns]"
 	sudo ip netns add $netns
@@ -205,7 +209,7 @@ cmd_docker_net() {
 			gw4=$n
 		fi
 	done
-	dbg "Docker subnets; $cidr4 $cidr6, GWs; $gw4 $gw6"
+	#log "Docker subnets; $cidr4 $cidr6, GWs; $gw4 $gw6"
 	n=$(echo $cidr4 | cut -d/ -f2)
 	test $n -gt 26 && die "Too narrow range; $cidr4"
 	# Now we steal a docker address and *hope* it will not collide
@@ -284,7 +288,6 @@ cmd_masq() {
 set_netns_ipv4_addresses() {
 	test -n "$1" || die "No index"
 	test -n "$ipv4_host" && return 0
-	test -n "$__ipv4_base" || cmd_env
 	local i=$1
 	
 	# The __ipv4_base can be specified in 2 ways;
@@ -340,9 +343,13 @@ cmd_br_setup() {
 ##   iproute2_build
 ##
 cmd_kernel_build() {
-	cmd_env
 	test "$__kbin" = "$XCLUSTER_HOME/bzImage" && __kbin="$__kbin-$__kver"
-	$DISKIM kernel_download --kver=$__kver
+	# diskim doesn't search for the kernel archive in $HOME/Downloads
+	if findf $__kver.tar.xz; then
+		echo $f | grep -q "$ARCHIVE" || mv $f $ARCHIVE
+	else
+		$DISKIM kernel_download --kver=$__kver
+	fi
 	if test -f "$__kpatch"; then
 		test -r "$__kpatch" || die "Kpatch not readable [$__kpatch]"
 		rm -rf $KERNELDIR/$__kver
@@ -363,7 +370,6 @@ cmd_kernel_build() {
 	fi
 }
 cmd_emit_cpio_list() {
-	cmd_env
 	test -n "$__tmp" || __tmp=$tmp
 	mkdir -p $__tmp
 	if grep -q "^CONFIG_MODULES=y" $__kcfg; then
@@ -396,10 +402,8 @@ cmd_cpio_list() {
 	done
 }
 cmd_busybox_build() {
-	cmd_env
-
-	local ar=$ARCHIVE/$__bbver.tar.bz2
-	if ! test -r $ar; then
+	local ar=$__bbver.tar.bz2
+	if ! findf $ar; then
 		local url=http://busybox.net/downloads/$__bbver.tar.bz2
 		curl -L $url > $ar || die "Could not download [$url]"
 	fi
@@ -407,7 +411,7 @@ cmd_busybox_build() {
 	local d=$XCLUSTER_WORKSPACE/$__bbver
 	test "$__clean" = "yes" && rm -rf $d
 	if ! test -d $d; then
-		tar -C $XCLUSTER_WORKSPACE -xf $ar || die "Failed to unpack [$ar]"
+		tar -C $XCLUSTER_WORKSPACE -xf $f || die "Failed to unpack [$f]"
 		patch -d $d -p1 < $dir/config/busybox.patch
 	fi
 
@@ -429,14 +433,15 @@ cmd_busybox_build() {
 	make -C $d -j$(nproc)
 }
 cmd_iproute2_build() {
-	cmd_env
-	local url=https://www.kernel.org/pub/linux/utils/net/iproute2/
 	d=$XCLUSTER_WORKSPACE/iproute2-$__ipver
 	test "$__clean" = "yes" && rm -rf $d
 	if ! test -d $d; then
-		ar=$ARCHIVE/iproute2-$__ipver.tar.xz
-		test -r $ar || wget -O $ar $url/$(basename $ar)
-		tar -C $(dirname $d) -xf $ar || die "Failed to unpack [$ar]"
+		local ar=iproute2-$__ipver.tar.xz
+		if ! findf $ar; then
+			local url=https://www.kernel.org/pub/linux/utils/net/iproute2
+			curl -L $url/$ar > $f || die "download [$ar]"
+		fi
+		tar -C $XCLUSTER_WORKSPACE -xf $f || die "Failed to unpack [$ar]"
 	fi
 
 	local kdir=$KERNELDIR/$__kver
@@ -454,23 +459,21 @@ cmd_iproute2_build() {
 	fi
 }
 cmd_dropbear_build() {
-	cmd_env
 	local ar=dropbear-$__dropbearver.tar.bz2
-	local arpath=$ARCHIVE/$ar
-	if ! test -r $arpath; then
+	if ! findf $ar; then
 		local url=https://matt.ucc.asn.au/dropbear/releases/$ar
-		curl -L $url > $arpath || die "Download failed [$DROPBEAR_AR]"
+		curl -L $url > $f || die "Download failed [$ar]"
 	fi
 	local d=$XCLUSTER_WORKSPACE/dropbear-$__dropbearver
 	test "$__clean" = "yes" && rm -rf $d
 	test -x $d/dropbear && die "Already built at [$d]"
-	tar -C $XCLUSTER_WORKSPACE -xf $arpath
+	tar -C $XCLUSTER_WORKSPACE -xf $f
 	cd $d
 	echo '#define DEFAULT_PATH "/usr/bin:/bin:/sbin:/usr/sbin"' > localoptions.h
 	./configure || die configure
-	print_compiler_flags
-	make -j $(nproc) PROGRAMS='dropbear scp dbclient' || die make
-	strip $d/dropbear $d/scp $d/dbclient
+	export PROGRAMS='dropbear scp dbclient dropbearkey dropbearconvert'
+	make -j $(nproc) || die make
+	make strip
 }
 
 ##  Image functions;
@@ -483,7 +486,6 @@ cmd_dropbear_build() {
 ##   libs [--base-libs=file]
 ##   cploader --dest=dir
 cmd_mkimage() {
-	cmd_env
 	test -r $__kbin || die "Kernel not built [$__kbin]"
 	test -x $XCLUSTER_WORKSPACE/$__bbver/busybox || cmd_busybox_build
 	test -x $XCLUSTER_WORKSPACE/iproute2-$__ipver/ip/ip || cmd_iproute2_build
@@ -505,7 +507,6 @@ cmd_mkimage() {
 	sed -i -e '/libpcre.so.3/d' $__base_libs
 }
 cmd_cache() {
-	cmd_env
 	if test "$__list" = "yes"; then
 		echo "Cache dir [$__cached];"
 		find "$__cached" -type f | sed -e "s,$__cached/,,"
@@ -529,7 +530,6 @@ cmd_cache() {
 }
 cmd_cached_tar() {
 	test -n "$1" || return 1
-	cmd_env
 	local n
 	for n in $(echo "$SETUP" | tr ',' ' ') default; do
 		if test -r $__cached/$n/$1.tar.xz; then
@@ -541,7 +541,6 @@ cmd_cached_tar() {
 }
 
 cmd_ximage() {
-	cmd_env
 	local c d ovls
 	# Find ovls
 	for d in $@; do
@@ -587,7 +586,6 @@ cmd_cplib() {
 	cmd_libs $@ | cpio -p --make-directories --dereference --quiet -u $__dest
 }
 cmd_libs() {
-	cmd_env
 	local f libs=$tmp/libs
 	mkdir -p $tmp
 	touch $libs
@@ -609,15 +607,12 @@ cmd_libs() {
 cmd_cploader() {
 	test -n "$__dest" || die 'No --dest'
 	test -d "$__dest" || die "Not a directory [$__dest]"
-	cmd_env
 	# TODO: Fix this!!
 	mkdir -p $__dest/lib64
 	cp -L /lib64/ld-linux-x86-64.so.2 $__dest/lib64
 }
 
 cmd_mkcdrom() {
-	cmd_env
-
 	if test -z "$1"; then
 		rm -f $__cdrom
 		return 0
@@ -721,7 +716,6 @@ cmd_inject() {
 ##
 cmd_ovld() {
 	test -n "$1" || die "No ovl"
-	cmd_env
 	local d
 	for d in $(echo $XCLUSTER_OVLPATH | tr : ' '); do
 		if test -d $d/$1; then
@@ -781,7 +775,6 @@ cmd_tcpdump() {
 }
 cmd_stop_vm() {
 	test -n "$1" || die "No VM"
-	cmd_env
 	local vm=$1
 	cmd_rsh $vm sync
 	local port=$((XCLUSTER_MONITOR_BASE + vm))
@@ -789,7 +782,6 @@ cmd_stop_vm() {
 }
 cmd_reset_vm() {
 	test -n "$1" || die "No VM"
-	cmd_env
 	local vm=$1
 	local port=$((XCLUSTER_MONITOR_BASE + vm))
 	# Sync (ext3) fs if the VM is running
@@ -808,7 +800,6 @@ cmd_reset_vm() {
 ##   scalein nodes...
 ##
 cmd_boot_vm() {
-	cmd_env
 	test -n "$1" || die 'No nodeid'
 	local nodeid=$1
 	shift
@@ -883,7 +874,6 @@ cmd_boot_vm() {
 	fi
 }
 cmd_svm() {
-	cmd_env
 	test -n "$1" || die 'No nodeid'
 	local nodeid=$1
 	test $nodeid -gt 0 || die "Invalid nodeid [$nodeid]"
@@ -897,7 +887,6 @@ cmd_svm() {
 		$me boot_vm --nets=$__nets --mem=$__mem --smp=$__smp $nodeid
 }
 cmd_xvm() {
-	cmd_env
 	test -n "$1" || die 'No nodeid'
 	local nodeid=$1
 	test $nodeid -gt 0 || die "Invalid nodeid [$nodeid]"
@@ -928,7 +917,6 @@ cmd_geometry() {
     echo "-geometry $sz+$X+$Y $xopt"
 }
 cmd_status() {
-	cmd_env
 	local nvm=8 nrouters=4 ntesters=2
 	test -n "$__nvm" && test "$__nvm" -gt $nvm && nvm=$__nvm
 	test -n "$__nrouters" && test $__nrouters -gt $nrouters && nrouters=$__nrouters
@@ -951,7 +939,6 @@ cmd_status() {
 }
 
 cmd_start() {
-	cmd_env
 	local n dev
 	if test -z "$__net_setup"; then
 		for n in 0 1 2; do
@@ -995,8 +982,6 @@ cmd_start() {
 }
 
 cmd_starts() {
-	cmd_env
-
 	local n dev
 	if test -z "$__net_setup"; then
 		for n in 0 1 2; do
@@ -1052,7 +1037,6 @@ cmd_starts() {
 }
 
 cmd_stop() {
-	cmd_env
 	local nodeid port vms
 	vms="$(livevms | sort -n | uniq)"
 	#log "Stopping [$(echo $vms | tr '\n' ' ')]"
@@ -1079,7 +1063,6 @@ livevms() {
 	seq 221 $lastt
 }
 cmd_scaleout() {
-	cmd_env
 	local cmd=cmd_xvm
 	test -r $XCLUSTER_TMP/screen/session && cmd=cmd_svm
 	local n
@@ -1098,7 +1081,6 @@ cmd_scaleout() {
 	done
 }
 cmd_scalein() {
-	cmd_env
 	local n port
 	for n in $@; do
 		port=$((XCLUSTER_MONITOR_BASE+n))
@@ -1132,6 +1114,7 @@ long_opts=`set | grep '^__' | cut -d= -f1`
 
 # Execute command
 trap "die Interrupted" INT TERM
+cmd_env
 cmd_$cmd "$@"
 status=$?
 rm -rf $tmp
