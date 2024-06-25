@@ -12,7 +12,8 @@ __retries=10
 __interval=1
 begin=$(date +%s)
 indent="  "
-kubectl=kubectl
+test -n "$KUBECTL" || KUBECTL=kubectl
+kubectl=$KUBECTL
 sshopt="-o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no"
 test -n "$__nvm" || __nvm=4
 
@@ -211,7 +212,7 @@ deployment_nready() {
 ##    Verify that all PODs in a deployment are ready
 test_daemonset() {
 	mkdir -p $tmp
-	local nodes=$(kubectl get nodes -o json | jq '.items|length')
+	local nodes=$($kubectl get nodes -o json | jq '.items|length')
 	tcase "Checking DaemonSet [$1] (nodes=$nodes)"
 	$kubectl get daemonset $1 -o json > $tmp/out || tdie
 	local desired=$(cat $tmp/out | jq -r .status.desiredNumberScheduled)
@@ -277,7 +278,7 @@ test_nodes() {
 	popv
 }
 all_nodes_ready() {
-	! kubectl get nodes -o json | \
+	! $kubectl get nodes -o json | \
 		jq -r '.items[]|.status.conditions[]|select(.type == "Ready")|.status' \
 		| grep -v True
 }
@@ -418,15 +419,16 @@ log_version() {
 	. /etc/os-release
 	test "$VERSION" != "1.0" && tlog "Xcluster: $VERSION"
 	tlog "$(uname -s -r -v)"
-	which kubectl > /dev/null || return 0
-	local ver=$(kubectl version 2> /dev/null | grep Server)
+	$kubectl version > /dev/null 2>&1 || return 0
+	local ver=$($kubectl version 2> /dev/null | grep Server)
 	tlog "$ver"
 	tlog "CNI-plugin; $(cni_plugin_info)"
-	tlog "Proxy-$(grep mode /etc/kubernetes/kube-proxy.config)"
+	local proxy_cfg=/etc/kubernetes/kube-proxy.config
+	test -r $proxy_cfg && tlog "Proxy-$(grep mode $proxy_cfg)"
 	if which containerd > /dev/null; then
 		ver=$(containerd --version | cut -d' ' -f3)
 		tlog "Containerd [$ver]"
-	else
+	elif which crio > /dev/null; then
 		tlog $(crio -v 2> /dev/null | grep "crio version")
 	fi
 	local baseFamily=IPv4
@@ -494,7 +496,7 @@ cni_plugin_info() {
 ##    Returns true if the "main" cluster family is ipv6
 ipv6base() {
 	tex kubectl get svc kubernetes > /dev/null 2>&1
-	kubectl get svc -o json kubernetes | jq -r .spec.clusterIP | grep -q :
+	$kubectl get svc -o json kubernetes | jq -r .spec.clusterIP | grep -q :
 }
 ##  apply_k8s <manifest-dir>
 ##    Applies k8s manifests in the passed dir and in dir/dual.
