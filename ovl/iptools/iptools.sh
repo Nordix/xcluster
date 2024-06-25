@@ -94,7 +94,7 @@ build() {
 	fi
 	test "$n" = "nftables" && sed -i -e 's,doc examples,,' Makefile
 	la_fix
-	make -j$(nproc) || die "Make failed"
+	make -j$(nproc) || die "Make failed [$n-$v]"
 	if test "$n" != "ipset7"; then
 		make DESTDIR=$sysd install || die "Install failed"
 		if test -r doc/Makefile; then
@@ -151,7 +151,7 @@ download() {
 		iproute2)
 			ar=iproute2-$v.tar.gz
 			u=https://git.kernel.org/pub/scm/network/iproute2/iproute2.git/snapshot/$ar;;
-		nftables|libnft*)
+		nftables|iptables|conntrack-tools|libnft*)
 			ar=$n-$v.tar.xz
 			u=$netfilter_url/$n/files/$ar;;
 		*)
@@ -170,23 +170,23 @@ download() {
 	fi
 }
 
-libmnl_ver=1.0.4
+libmnl_ver=1.0.5
 libnftnl_ver=1.2.6
-iptables_ver=1.8.8
-nftables_ver=1.0.8
+iptables_ver=1.8.10
+nftables_ver=1.0.9
 libnfnetlink_ver=1.0.1
 libnetfilter_acct_ver=1.0.3
-libnetfilter_cttimeout_ver=1.0.0
-libnetfilter_conntrack_ver=1.0.8
-libnetfilter_cthelper_ver=1.0.0
+libnetfilter_cttimeout_ver=1.0.1
+libnetfilter_conntrack_ver=1.0.9
+libnetfilter_cthelper_ver=1.0.1
 libnetfilter_log_ver=1.0.2
 libnetfilter_queue_ver=1.0.3
-conntrack_tools_ver=1.4.6
+conntrack_tools_ver=1.4.8
 ipvsadm_ver=1.31
-ipset7_ver=7.15
+ipset7_ver=7.22
 ipset_ver=6.38
-iproute2_ver=6.3.0
-ulogd_ver=2.0.7
+iproute2_ver=6.9.0
+ulogd_ver=2.0.8
 ver() {
 	eval "echo \$${1}_ver"
 }
