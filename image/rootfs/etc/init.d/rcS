@@ -20,6 +20,13 @@ echo $TZ > /etc/TZ
 klogd -c 4
 syslogd -s 1000 -b 10
 
+# Some programs need these links
+if ! test -e /dev/stdin; then
+	ln -s /proc/self/fd/0 /dev/stdin
+	ln -s /proc/self/fd/1 /dev/stdout
+	ln -s /proc/self/fd/2 /dev/stderr
+fi
+
 # Start other services
 for n in `find /etc/init.d -name "*.rc" | sort`; do
     $n start
