@@ -2,7 +2,7 @@
 /bin/busybox echo "Xcluster starting..."
 /bin/busybox mkdir -p /proc /sys /tmp /dev/pts /dev/shm /var/log \
 	/sbin /usr/bin /usr/sbin /dev/mqueue
-/bin/busybox rm -f /etc/mtab
+/bin/busybox rm -rf /etc/mtab /run
 /bin/busybox mount -t proc proc /proc
 /bin/busybox --install -s
 mount -t sysfs sysfs /sys
@@ -22,8 +22,8 @@ mdev -s
 mount /dev/mqueue
 mount -t cgroup2 cgroup2 /sys/fs/cgroup
 
-if ! test -r /run/initialboot; then
-	date > /run/initialboot
+if ! test -r /initialboot; then
+	date > /initialboot
 	# Get data from cdrom
 	mkdir -p /mnt
 	if mount -t iso9660 /dev/vdb /mnt > /dev/null 2>&1; then
