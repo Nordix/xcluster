@@ -19,21 +19,26 @@
 #include <poll.h>
 
 #define MAXMSG (1024*16)
+static int onePacket(int sd, ssize_t psize);
 
 static int cmdClient(int argc, char **argv)
 {
 	char const* addr = "::1";
 	char const* laddr = "::1";
 	char const* port = "6000";
+	char const* psize = NULL;
 	char const* loglevelarg = NULL;
 	struct Option options[] = {
 		{"help", NULL, 0,
 		 "client [options]\n"
-		 "  Start a client"},
+		 "  Start an interactive client. If --size is specified, only"
+		 "  one packet is sent, and the program will terminate after"
+		 "  the reply (intended for mtu/fragmentation test)"},
 		{"log", &loglevelarg, 0, "Log level 0-7"},
 		{"addr", &addr, 0, "Server addresses (default ::1)"},
 		{"laddr", &laddr, 0, "Local addresses (default ::1)"},
 		{"port", &port, 0, "Port (default 6000)"},
+		{"size", &psize, 0, "One-packet size"},
 		{0, 0, 0, 0}
 	};
 	(void)parseOptionsOrDie(argc, argv, options);
@@ -106,6 +111,9 @@ static int cmdClient(int argc, char **argv)
 		printAddrs("  ", addrs, cnt);
 		sctp_freepaddrs(addrs);		
 	}
+	
+	if (psize != NULL)
+		return onePacket(sd, atoi(psize));
 
 	char buf[MAXMSG];
 	ssize_t rc;
@@ -130,6 +138,35 @@ static int cmdClient(int argc, char **argv)
 	}
 
 	close(sd);
+	return 0;
+}
+// Send just one packet, and quit after the reply
+static int onePacket(int sd, ssize_t psize)
+{
+	char buf[MAXMSG] = {0};
+	if (psize < 1 || psize > sizeof(buf))
+		die("Invalid size: %z\n", psize);
+	ssize_t sent = send(sd, buf, psize, 0);
+	if (sent != psize) {
+		if (sent < 0)
+			die("Send failed: %s\n", strerror(errno));
+		else
+			die("Sent %ld bytes out of %ld\n", sent, psize);
+	}
+	notice("Sent %ld bytes\n", sent);
+	// Wait 1s for a response
+	struct pollfd pfd = {sd, POLLIN, 0};
+	if (poll(&pfd, 1, 1000) != 1)
+		die("No response");
+
+	ssize_t len = recv(sd, buf, sizeof(buf), 0);
+	if (len != psize) {
+		if (sent < 0)
+			die("Recv failed: %s\n", strerror(errno));
+		else
+			die("Got %ld bytes, but expected %ld\n", len, psize);
+	}
+	notice("Received %ld bytes\n", len);
 	return 0;
 }
 
