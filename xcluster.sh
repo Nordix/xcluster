@@ -761,7 +761,7 @@ cmd_tcpdump() {
 		__bg=yes
 		iface=$1; shift
 		file=$(printf "/tmp/vm-%03u-$iface.pcap" $vm)
-		cmd_rsh $vm tcpdump -Z root -ni $iface -w $file $@
+		cmd_rsh $vm tcpdump -ni $iface -w $file $@
 	elif test "$__get" = "yes"; then
 		cmd_rsh $vm killall tcpdump
 		sleep 0.5
