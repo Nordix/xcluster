@@ -1,7 +1,5 @@
 #! /bin/sh
 
-echo "tcpdump::100:0:tcpdump:/:/bin/false" >> /etc/passwd
-
 . /etc/profile
 
 if test "$ULOGD" = "yes"; then
