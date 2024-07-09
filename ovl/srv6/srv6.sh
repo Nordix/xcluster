@@ -36,43 +36,58 @@ dbg() {
 ##     Print environment.
 ##
 cmd_env() {
+	test "$envset" = "yes" && return 0
+	envset=yes
+	eset \
+		__nvm=1 \
+		PREFIX=fd00:
 
+	export xcluster_PREFIX=$PREFIX
 	if test "$cmd" = "env"; then
-		set | grep -E '^(__.*)='
-		retrun 0
+		set | grep -E "^($opts|xcluster_.*)="
+		exit 0
 	fi
 
+	test -n "$long_opts" && export $long_opts
 	test -n "$XCLUSTER" || die 'Not set [$XCLUSTER]'
 	test -x "$XCLUSTER" || die "Not executable [$XCLUSTER]"
 	eval $($XCLUSTER env)
 }
+# Set variables unless already defined. Vars are collected into $opts
+eset() {
+	local e k
+	for e in $@; do
+		k=$(echo $e | cut -d= -f1)
+		opts="$opts|$k"
+		test -n "$(eval echo \$$k)" || eval $e
+	done
+}
 
-##   test --list
 ##   test [--xterm] [--no-stop] [test...] > logfile
 ##     Exec tests
 ##
 cmd_test() {
-	if test "$__list" = "yes"; then
-        grep '^test_' $me | cut -d'(' -f1 | sed -e 's,test_,,'
-        return 0
-    fi
+	cd $dir
+	start=starts
+	test "$__xterm" = "yes" && start=start
+	rm -f $XCLUSTER_TMP/cdrom.iso
 
-	cmd_env
-    start=starts
-    test "$__xterm" = "yes" && start=start
-    rm -f $XCLUSTER_TMP/cdrom.iso
+	local t=simple
+	if test -n "$1"; then
+		local t=$1
+		shift
+	fi		
 
-    if test -n "$1"; then
-        for t in $@; do
-            test_$t
-        done
-    else
-		test_simple
-    fi      
+	if test -n "$__log"; then
+		mkdir -p $(dirname "$__log")
+		date > $__log || die "Can't write to log [$__log]"
+		test_$t $@ >> $__log
+	else
+		test_$t $@
+	fi
 
-    now=$(date +%s)
-    tlog "Xcluster test ended. Total time $((now-begin)) sec"
-
+	now=$(date +%s)
+	log "Xcluster test ended. Total time $((now-begin)) sec"
 }
 
 ##   test start_empty
@@ -80,17 +95,16 @@ cmd_test() {
 test_start_empty() {
 	export __image=$XCLUSTER_HOME/hd.img
 	echo "$XOVLS" | grep -q private-reg && unset XOVLS
-	test -n "$__nvm" || export __nvm=1
 	export TOPOLOGY=diamond
 	. $($XCLUSTER ovld network-topology)/$TOPOLOGY/Envsettings
-	xcluster_start network-topology iptools srv6
+	xcluster_start network-topology iptools . $@
 	otc 1 version
 	otcr flush_routes
 }
 ##   test start
 ##      Start cluster and setup srv6
 test_start() {
-	test_start_empty
+	test_start_empty $@
 	otcr enable_srv6
 }
 
@@ -112,7 +126,7 @@ test_simple() {
 	tlog "=== Simple SR routing"
 	test_start
 	default_sr
-	otc 1 "ping 1000::1:192.168.2.221"
+	otc 1 "ping $PREFIX:192.168.2.221"
 	otc 1 "ping 192.168.2.221"
 	xcluster_stop
 }
@@ -128,10 +142,12 @@ test_mtu1400() {
 	xcluster_stop
 }
 
-##
+test -z "$__nvm" && __nvm=X
 . $($XCLUSTER ovld test)/default/usr/lib/xctest
+test "$__nvm" = "X" && unset __nvm
 indent=''
 
+##
 # Get the command
 cmd=$1
 shift
@@ -153,6 +169,7 @@ long_opts=`set | grep '^__' | cut -d= -f1`
 
 # Execute command
 trap "die Interrupted" INT TERM
+cmd_env
 cmd_$cmd "$@"
 status=$?
 rm -rf $tmp

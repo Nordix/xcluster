@@ -78,17 +78,17 @@ cmd_tcase_enable_srv6() {
 	# we are topology aware. IRL this would be done by a routing protocol.
 	case $(hostname) in
 		vm-201)
-			ip -6 ro add fc00:203::/64 via 1000::1:192.168.3.203
-			ip -6 ro add fc00:204::/64 via 1000::1:192.168.4.204;;
+			ip -6 ro add fc00:203::/64 via $PREFIX:192.168.3.203
+			ip -6 ro add fc00:204::/64 via $PREFIX:192.168.4.204;;
 		vm-202)
-			ip -6 ro add fc00:203::/64 via 1000::1:192.168.5.203
-			ip -6 ro add fc00:204::/64 via 1000::1:192.168.6.204;;
+			ip -6 ro add fc00:203::/64 via $PREFIX:192.168.5.203
+			ip -6 ro add fc00:204::/64 via $PREFIX:192.168.6.204;;
 		vm-203)
-			ip -6 ro add fc00:201::/64 via 1000::1:192.168.3.201
-			ip -6 ro add fc00:202::/64 via 1000::1:192.168.5.202;;
+			ip -6 ro add fc00:201::/64 via $PREFIX:192.168.3.201
+			ip -6 ro add fc00:202::/64 via $PREFIX:192.168.5.202;;
 		vm-204)
-			ip -6 ro add fc00:201::/64 via 1000::1:192.168.4.201
-			ip -6 ro add fc00:202::/64 via 1000::1:192.168.6.202;;
+			ip -6 ro add fc00:201::/64 via $PREFIX:192.168.4.201
+			ip -6 ro add fc00:202::/64 via $PREFIX:192.168.6.202;;
 		*)
 			tdie "Unknown hostname [$(hostname)]"
 	esac
@@ -123,7 +123,7 @@ cmd_tcase_sr() {
 	for s in $@; do
 		segs="$segs,fc00:$s::6"
 	done
-	ip -6 route add 1000::1:$to/120 encap seg6 mode encap \
+	ip -6 route add $PREFIX:$to/120 encap seg6 mode encap \
 		segs $segs dev eth0 || tdie
 	segs=$(echo $segs | sed -e 's,::6,::4,g')
 	ip route add $to/24 encap seg6 mode encap segs $segs dev eth0 || tdie
@@ -132,13 +132,13 @@ cmd_tcase_sr() {
 cmd_tcase_default_route() {
 	tcase "Default route; $@"
 	ip route replace default via $@ || tdie
-	ip -6 route replace default via 1000::1:$@ || tdie
+	ip -6 route replace default via $PREFIX:$@ || tdie
 }
 
 cmd_tcase_http() {
 	tcase "Test mtu by http GET $1"
 	test -n "$1" || tdie "No address"
-	local adr="[1000::1:$1]"
+	local adr="[$PREFIX:$1]"
 	curl -s http://$adr/ > /tmp/index6.html || tdie "Curl $adr"
 	diff /root/www/index.html /tmp/index6.html || tdie "Diff $adr"
 	local adr="$1"
