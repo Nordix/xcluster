@@ -42,8 +42,8 @@ setup routes for them. Example from `vm-201`;
 
 ```
 # ip -6 ro
-fc00:203::/64 via 1000::1:c0a8:3cb dev eth2 metric 1024 pref medium
-fc00:204::/64 via 1000::1:c0a8:4cc dev eth3 metric 1024 pref medium
+fc00:203::/64 via $PREFIX:c0a8:3cb dev eth2 metric 1024 pref medium
+fc00:204::/64 via $PREFIX:c0a8:4cc dev eth3 metric 1024 pref medium
 ...
 ```
 
@@ -64,7 +64,7 @@ options.
 
 Start a cluster with srv6;
 ```
-./srv6.sh test start > $log
+./srv6.sh test start
 ```
 
 On the edge routers, `vm-201` and `vm-202`;
@@ -74,10 +74,10 @@ On the edge routers, `vm-201` and `vm-202`;
 
 ```
 # On vm-201;
-ip -6 route add 1000::1:192.168.2.0/120 encap seg6 mode encap segs fc00:203::6,fc00:202::6 dev eth0
+ip -6 route add $PREFIX:192.168.2.0/120 encap seg6 mode encap segs fc00:203::6,fc00:202::6 dev eth0
 ip -6 ro add fc00:201::6 encap seg6local action End.DX6 nh6 :: dev eth0 table localsid
 # On vm-202;
-ip -6 route add 1000::1:192.168.1.0/120 encap seg6 mode encap segs fc00:204::6,fc00:201::6 dev eth0
+ip -6 route add $PREFIX:192.168.1.0/120 encap seg6 mode encap segs fc00:204::6,fc00:201::6 dev eth0
 ip -6 ro add fc00:202::6 encap seg6local action End.DX6 nh6 :: dev eth0 table localsid
 ```
 
@@ -99,7 +99,7 @@ We are all set. Do some testing!
 
 ```
 # on vm-001;
-ping 1000::1:192.168.2.221
+ping $PREFIX:192.168.2.221
 # Yay!
 ```
 
@@ -109,10 +109,10 @@ You may capture traffic and inspect packets with `wireshark`;
 # On yout host;
 xc tcpdump --start 203 eth2
 # On vm-001;
-ping -c2 1000::1:192.168.2.221
+ping -c2 $PREFIX:192.168.2.221
 # On your host
-xc tcpdump --get 203 eth1
-wireshark /tmp/vm-203-eth1.pcap &
+xc tcpdump --get 203 eth2
+wireshark /tmp/vm-203-eth2.pcap &
 ```
 
 
