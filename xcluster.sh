@@ -83,9 +83,16 @@ cmd_env() {
 	envread=yes
 	prepare
 
-	test -n "$XCLUSTER_WORKSPACE" || XCLUSTER_WORKSPACE=/tmp/$USER/xcluster/workspace
-	test -n "$XCLUSTER" || export XCLUSTER=$me
-	test -n "$XCLUSTER_HOME" || XCLUSTER_HOME=$XCLUSTER_WORKSPACE/xcluster
+	eset XCLUSTER_WORKSPACE=/tmp/$USER/xcluster/workspace
+	eset \
+		XCLUSTER=$me \
+		XCLUSTER_HOME=$XCLUSTER_WORKSPACE/xcluster \
+		XCLUSTER_TMP='' \
+		XCLUSTER_MONITOR_BASE=4000 \
+		XCLUSTER_OVLPATH=$dir/ovl \
+		ARCHIVE=$HOME/Downloads \
+		KERNELDIR=$HOME/tmp/linux
+	export ARCHIVE XCLUSTER
 	if test -z "$XCLUSTER_TMP"; then
 		local mynetns=$(ip netns id)
 		if test -n "$mynetns"; then
@@ -94,47 +101,51 @@ cmd_env() {
 			XCLUSTER_TMP="/tmp/$USER/xcluster/tmp"
 		fi
 	fi
-	test -n "$XCLUSTER_MONITOR_BASE" || XCLUSTER_MONITOR_BASE=4000
-	test -n "$XCLUSTER_OVLPATH" || XCLUSTER_OVLPATH=$dir/ovl
-	test -n "$ARCHIVE" || ARCHIVE=$HOME/Downloads
-	test -n "$KERNELDIR" || KERNELDIR=$HOME/tmp/linux
-	export ARCHIVE
 
-	test -n "$__kver" || __kver=linux-6.9.3
-	test -n "$__kobj" || __kobj=$XCLUSTER_HOME/obj-$__kver
-	if test -z "$__kbin"; then
-		__kbin=$XCLUSTER_HOME/bzImage-$__kver
-		test -r $__kbin || __kbin=$XCLUSTER_HOME/bzImage
-	fi
-	test -n "$__kcfg" || __kcfg=$dir/config/$__kver
-	test -n "$__bbver" || __bbver=busybox-1.36.1
-	test -n "$__kvm" || __kvm=kvm
-	test -n "$__image" || __image=$XCLUSTER_HOME/hd.img
-	test -n "$__cdrom" || __cdrom=$XCLUSTER_TMP/cdrom.iso
-	test -n "$__machine" || __machine="pc"
-	test -n "$__mem" || __mem=128
-	test -n "$__smp" || __smp=2
-	test -n "$__ipv4_base" || __ipv4_base=172.30.0.0/24
-	test -n "$__ipv6_prefix" || __ipv6_prefix=fd00:1723::
-	test -n "$__loader" || __loader=/lib64/ld-linux-x86-64.so.2
-	test -n "$__cached" || __cached=$XCLUSTER_HOME/cache
-	test -n "$__nets_vm" || __nets_vm=0,1
-	test -n "$__nets_router" || __nets_router=0,1,2
-	test -n "$__base_libs" || __base_libs=$XCLUSTER_HOME/base-libs.txt
-
-	__ipver=6.3.0
-	__dropbearver=2024.85
-	__diskimver=1.0.0
-	test -n "$DISKIM" || DISKIM=$XCLUSTER_WORKSPACE/diskim-$__diskimver/diskim.sh
+	eset __kver=linux-6.10
+	eset \
+		__kobj=$XCLUSTER_HOME/obj-$__kver \
+		__kcfg=$dir/config/$__kver \
+		__kbin=$XCLUSTER_HOME/bzImage-$__kver \
+		__bbver=busybox-1.36.1 \
+		__kvm=kvm \
+		__image=$XCLUSTER_HOME/hd.img \
+		__cdrom=$XCLUSTER_TMP/cdrom.iso \
+		__machine="pc" \
+		__mem=128 \
+		__smp=2 \
+		__ipv4_base=172.30.0.0/24 \
+		__ipv6_prefix=fd00:1723:: \
+		__loader=/lib64/ld-linux-x86-64.so.2 \
+		__cached=$XCLUSTER_HOME/cache \
+		__nets_vm=0,1 \
+		__nets_router=0,1,2 \
+		__base_libs=$XCLUSTER_HOME/base-libs.txt \
+		__ipver=6.9.0 \
+		__dropbearver=2024.85 \
+		__diskimver=1.0.0
+	eset DISKIM=$XCLUSTER_WORKSPACE/diskim-$__diskimver/diskim.sh
 
 	if test "$cmd" = "env"; then
-		set | grep -E '^(__.+=|XCLUSTER|ARCHIVE=|DISKIM=|KERNELDIR=)' | sort
+		set | grep -E "^($opts)=" | sort
 		exit 0
 	fi
+	unset opts
+
 	echo $XCLUSTER_WORKSPACE | grep -q '^/tmp/' && \
 		echo 'WARNING: $XCLUSTER_WORKSPACE is on /tmp'
+	test -n "$long_opts" && export $long_opts
 	mkdir -p $XCLUSTER_HOME || die "Failed mkdir [$XCLUSTER_HOME]"
 	mkdir -p $XCLUSTER_TMP || die "Failed mkdir [$XCLUSTER_TMP]"
+}
+# Set variables unless already defined. Vars are collected into $opts
+eset() {
+	local e k
+	for e in $@; do
+		k=$(echo $e | cut -d= -f1)
+		opts="$opts|$k"
+		test -n "$(eval echo \$$k)" || eval $e
+	done
 }
 cmd_completion() {
 	grep -oE "^cmd_[a-zA-Z_0-9]+" $me | grep "cmd_$1" | sed -e 's,cmd_,,'
@@ -447,8 +458,8 @@ cmd_iproute2_build() {
 	local kdir=$KERNELDIR/$__kver
 	test -d "$kdir" || die "Not a directory [$kdir]"
 	cd $kdir/tools/lib/bpf || die cd
-	make -j$(nproc) || die "Make libbpf"
-	make DESTDIR=$XCLUSTER_WORKSPACE/sys prefix=/usr install \
+	make -j$(nproc) O=$__kobj || die "Make libbpf"
+	make DESTDIR=$XCLUSTER_WORKSPACE/sys O=$__kobj prefix=/usr install \
 		|| die "Make libbpf install sys"
 
 	if ! test -x $d/ip/ip; then

@@ -38,7 +38,7 @@ cmd_env() {
 	sysd=$XCLUSTER_WORKSPACE/sys
 	export PKG_CONFIG_PATH=$sysd/usr/lib/pkgconfig	
 	pkg_config_fix
-	kernel_fix
+	test "$__kernel_fix" = "yes" && kernel_fix
 }
 kernel_fix() {
 	# For kernels >= 5.9
@@ -149,7 +149,7 @@ download() {
 			ar=ipset-$v.tar.bz2
 			u=http://ipset.netfilter.org/$ar;;
 		iproute2)
-			ar=iproute2-$v.tar.gz
+			ar=iproute2-$v.tar.xz
 			u=https://git.kernel.org/pub/scm/network/iproute2/iproute2.git/snapshot/$ar;;
 		nftables|iptables|conntrack-tools|libnft*)
 			ar=$n-$v.tar.xz
