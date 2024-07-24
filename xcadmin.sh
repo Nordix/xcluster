@@ -118,7 +118,7 @@ cmd_base_archives() {
 	echo $__kver.tar.xz
 	echo $__bbver.tar.bz2
 	echo dropbear-$__dropbearver.tar.bz2
-	echo iproute2-$__ipver.tar.gz
+	echo iproute2-$__ipver.tar.xz
 	echo coredns_${__corednsver}_linux_amd64.tgz
 }
 cmd_build_base() {
@@ -155,14 +155,6 @@ cmd_build_base() {
 
 	$XCLUSTER kernel_build || die "Failed to build kernel"
 	cmd_mark "Kernel built"
-
-	if test -n "$__xkernels"; then
-		for __kver in $__xkernels; do
-			export __kver
-			$XCLUSTER kernel_build || die "Failed to build kernel $__kver"
-			cmd_mark "Kernel built $__kver"
-		done
-	fi
 
 	$XCLUSTER busybox_build || die "Failed to build busybox"
 	cmd_mark "Busybox built"
