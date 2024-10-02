@@ -9,6 +9,7 @@ spec:
     "device": "eth4",
     "ipam": {
       "type": "whereabouts",
+      "enable_overlapping_ranges": false,
       "ipRanges": [
             { "range": "17.0.0.0/24" },
             { "range": "4000::17.0.0.0/120" }

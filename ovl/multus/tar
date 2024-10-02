@@ -55,8 +55,7 @@ if findf whereabouts-amd64; then
 	chmod a+x $f
 	v=$($f --version 2>&1 | grep whereabouts)
 	log "Including $v"
-	cp $f $tmp/opt/cni/bin/whereabouts
-	strip $tmp/opt/cni/bin/whereabouts
+	cp -L $f $tmp/opt/cni/bin/whereabouts
 fi
 
 test -n "$NODEANNOTATION_DIR" || \

@@ -9,6 +9,7 @@ spec:
     "master": "eth3",
     "ipam": {
       "type": "whereabouts",
+      "enable_overlapping_ranges": false,
       "ipRanges": [
             { "range": "18.0.0.0/24" },
             { "range": "4000::18.0.0.0/120" }
