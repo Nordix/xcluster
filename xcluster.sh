@@ -881,7 +881,7 @@ cmd_boot_vm() {
 	else
 		eval "__append=\"$__append \${__append$nodeid}\""
 		exec $__kvm -kernel $__kbin $kvmboot -m $__mem $opt $__kvm_opt \
-			-append "noapic root=/dev/vda rw init=/init $append $@ $__append"
+			-append "root=/dev/vda rw init=/init $append $@ $__append"
 	fi
 }
 cmd_svm() {
