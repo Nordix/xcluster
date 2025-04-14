@@ -355,12 +355,7 @@ cmd_br_setup() {
 ##
 cmd_kernel_build() {
 	test "$__kbin" = "$XCLUSTER_HOME/bzImage" && __kbin="$__kbin-$__kver"
-	# diskim doesn't search for the kernel archive in $HOME/Downloads
-	if findf $__kver.tar.xz; then
-		echo $f | grep -q "$ARCHIVE" || mv $f $ARCHIVE
-	else
-		$DISKIM kernel_download --kver=$__kver
-	fi
+	findf $__kver.tar.xz || die "Kernel archive not found [$__kver.tar.xz]"
 	if test -f "$__kpatch"; then
 		test -r "$__kpatch" || die "Kpatch not readable [$__kpatch]"
 		rm -rf $KERNELDIR/$__kver
